@@ -1,18 +1,19 @@
 # 단계별 구현 계획
 
-상태: 0단계 저장소 준비. 공개 GitHub 저장소는 `joowonkime/commentscope`이며, 아래 구조와 스택은 구현 전 검토할 제안입니다.
+상태: 0단계 완료, 1단계 구조·데이터 계약 설계 검토. 공개 GitHub 저장소는 `joowonkime/commentscope`입니다.
+이번 단계의 구체적인 선택은 [구조 결정](ARCHITECTURE.md), 필드와 규칙은 [데이터 계약](DATA_CONTRACTS.md)에 기록합니다.
 
 ## 진행 방식
 
 각 단계마다 범위를 정하고, 산출물을 만들고, 완료 조건을 확인한 뒤 변경 내용을 공유합니다.
-이번 작업은 0단계까지 진행합니다. 이후 단계는 사용자와 앞 단계 결과를 확인하면서 순서대로 진행합니다.
+이번 작업은 1단계 설계까지 진행합니다. 이후 단계는 사용자와 앞 단계 결과를 확인하면서 순서대로 진행합니다.
 각 단계는 하나의 작은 PR을 기본으로 하되, 검토하기 크면 더 작은 PR로 나눕니다.
 실행해 확인한 결과와 아직 검증하지 못한 사항을 구분해 기록합니다.
 
 ## 제안 구조
 
 첫 구현은 Python 기반 단일 프로젝트와 로컬 JSON 저장을 제안합니다.
-Python은 claim 처리와 clustering 실험을 한 환경에서 다루기 위한 선택이며, 아직 확정하지 않았습니다.
+Python 3.12+와 JSON을 첫 구현의 기본값으로 선택했습니다. 근거와 적용 범위는 구조 결정 문서에 기록했습니다.
 모델 provider, 모델명, embedding 모델, API 서버 및 UI 프레임워크는 해당 단계에서 결정합니다.
 
 ```text
@@ -72,7 +73,9 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 | 다국어 품질 정책과 출력 언어 계약 | 데이터 계약과 추출 설계 단계 |
 | 최종 사용자 task와 Reflection 범위 | Factory 검증 이후 |
 
-## 첫 Issue 초안
+## 1단계 Issue
+
+[Issue #1](https://github.com/joowonkime/commentscope/issues/1)
 
 제목: `Design snapshot-to-perspective contracts`
 
