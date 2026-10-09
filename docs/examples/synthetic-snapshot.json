@@ -1,0 +1,254 @@
+{
+  "schema_version": "0.1",
+  "snapshot_id": "synthetic-contract-v1",
+  "source_kind": "synthetic",
+  "video": {
+    "video_id": "synthetic-ai-review",
+    "title": "Fictional discussion: model safety reviews",
+    "url": null,
+    "primary_language": "en"
+  },
+  "captured_at": "2026-10-08T00:00:00Z",
+  "sampling": {
+    "method": "authored-fixture",
+    "description": "Eleven invented comments for contract review; not sampled from YouTube.",
+    "target_count": 11
+  },
+  "usage": {
+    "basis": "Synthetic text authored for this public design example.",
+    "expires_at": null
+  },
+  "comments": [
+    {
+      "comment_id": "c1",
+      "text_original": "Safety reviews should be mandatory. Small labs should receive fee waivers.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c2",
+      "text_original": "사고를 줄이려면 안전 심사를 의무화해야 한다.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "ko",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c3",
+      "text_original": "Require safety reviews to prevent harm.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c4",
+      "text_original": "Fee waivers let small labs afford compliance.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c5",
+      "text_original": "소규모 연구실에는 심사 수수료를 면제해야 한다.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "ko",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c6",
+      "text_original": "Publish review results in an accessible audio format.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c7",
+      "text_original": "Exactly.",
+      "parent_id": "c3",
+      "parent_status": "present",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c8",
+      "text_original": "Only if that requirement applies to imported models too.",
+      "parent_id": "outside-snapshot",
+      "parent_status": "missing",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c9",
+      "text_original": "Require safety reviews to prevent harm.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c10",
+      "text_original": "Who conducts the reviews?",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    },
+    {
+      "comment_id": "c11",
+      "text_original": "Maybe mandatory review works; I cannot tell what counts as a review.",
+      "parent_id": null,
+      "parent_status": "root",
+      "replies_status": "unknown",
+      "published_at": null,
+      "language": {
+        "tag": "en",
+        "confidence": null,
+        "method": "provided"
+      },
+      "source_url": null,
+      "sampling_origins": [
+        {
+          "method": "authored-fixture",
+          "rank": null
+        }
+      ],
+      "likes": null
+    }
+  ]
+}

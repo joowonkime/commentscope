@@ -1,0 +1,698 @@
+{
+  "schema_version": "0.1",
+  "run_id": "design-only-not-an-executed-run",
+  "snapshot_id": "synthetic-contract-v1",
+  "example_kind": "hand-authored-design",
+  "normalized_comments": [
+    {
+      "comment_id": "c1",
+      "text_analysis": "Safety reviews should be mandatory. Small labs should receive fee waivers.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c2",
+      "text_analysis": "사고를 줄이려면 안전 심사를 의무화해야 한다.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c3",
+      "text_analysis": "Require safety reviews to prevent harm.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c4",
+      "text_analysis": "Fee waivers let small labs afford compliance.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c5",
+      "text_analysis": "소규모 연구실에는 심사 수수료를 면제해야 한다.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c6",
+      "text_analysis": "Publish review results in an accessible audio format.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c7",
+      "text_analysis": "Exactly.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c8",
+      "text_analysis": "Only if that requirement applies to imported models too.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c9",
+      "text_analysis": "Require safety reviews to prevent harm.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": "c3"
+    },
+    {
+      "comment_id": "c10",
+      "text_analysis": "Who conducts the reviews?",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    },
+    {
+      "comment_id": "c11",
+      "text_analysis": "Maybe mandatory review works; I cannot tell what counts as a review.",
+      "normalization_version": "nfc-whitespace-v1",
+      "duplicate_of": null
+    }
+  ],
+  "eligibility": [
+    {
+      "comment_id": "c1",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c2",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c3",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c4",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c5",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c6",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c7",
+      "status": "contextual_reaction",
+      "rationale": "Agreement supplies context but no independent argument.",
+      "context_comment_ids": [
+        "c3"
+      ],
+      "confidence": null
+    },
+    {
+      "comment_id": "c8",
+      "status": "unclear",
+      "rationale": "Parent is absent; the referenced requirement cannot be resolved.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c9",
+      "status": "spam_or_duplicate",
+      "rationale": "Exact normalized duplicate of c3 with the same parent.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c10",
+      "status": "question_or_request",
+      "rationale": "A question without a stated position.",
+      "context_comment_ids": [],
+      "confidence": null
+    },
+    {
+      "comment_id": "c11",
+      "status": "argument_or_experience",
+      "rationale": "Contains a claim that is eligible for extraction.",
+      "context_comment_ids": [],
+      "confidence": null
+    }
+  ],
+  "claims": [
+    {
+      "claim_id": "u1",
+      "source_comment_id": "c1",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 35,
+          "quote": "Safety reviews should be mandatory."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Safety reviews should be mandatory.",
+      "analysis_language": "en",
+      "issue": "mandatory safety review",
+      "stance": "support",
+      "reason": null,
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u2",
+      "source_comment_id": "c1",
+      "source_spans": [
+        {
+          "start": 36,
+          "end": 74,
+          "quote": "Small labs should receive fee waivers."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Small labs should receive review fee waivers.",
+      "analysis_language": "en",
+      "issue": "review fee waivers for small labs",
+      "stance": "support",
+      "reason": null,
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u3",
+      "source_comment_id": "c2",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 25,
+          "quote": "사고를 줄이려면 안전 심사를 의무화해야 한다."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Safety reviews should be mandatory to reduce accidents.",
+      "analysis_language": "en",
+      "issue": "mandatory safety review",
+      "stance": "support",
+      "reason": "Reduce accidents.",
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u4",
+      "source_comment_id": "c3",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 39,
+          "quote": "Require safety reviews to prevent harm."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Safety reviews should be mandatory to prevent harm.",
+      "analysis_language": "en",
+      "issue": "mandatory safety review",
+      "stance": "support",
+      "reason": "Prevent harm.",
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u5",
+      "source_comment_id": "c4",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 45,
+          "quote": "Fee waivers let small labs afford compliance."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Fee waivers help small labs afford compliance.",
+      "analysis_language": "en",
+      "issue": "review fee waivers for small labs",
+      "stance": "support",
+      "reason": "Make compliance affordable for small labs.",
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u6",
+      "source_comment_id": "c5",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 26,
+          "quote": "소규모 연구실에는 심사 수수료를 면제해야 한다."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Small labs should be exempt from review fees.",
+      "analysis_language": "en",
+      "issue": "review fee waivers for small labs",
+      "stance": "support",
+      "reason": null,
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u7",
+      "source_comment_id": "c6",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 53,
+          "quote": "Publish review results in an accessible audio format."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Publish review results in accessible audio.",
+      "analysis_language": "en",
+      "issue": "accessibility of review results",
+      "stance": "support",
+      "reason": null,
+      "condition": null,
+      "confidence": 0.9
+    },
+    {
+      "claim_id": "u8",
+      "source_comment_id": "c11",
+      "source_spans": [
+        {
+          "start": 0,
+          "end": 68,
+          "quote": "Maybe mandatory review works; I cannot tell what counts as a review."
+        }
+      ],
+      "context_comment_ids": [],
+      "claim_text": "Mandatory review may work, but the speaker is unsure what review means.",
+      "analysis_language": "en",
+      "issue": "mandatory safety review",
+      "stance": "unclear",
+      "reason": null,
+      "condition": null,
+      "confidence": 0.25
+    }
+  ],
+  "initial_clusters": [
+    {
+      "cluster_id": "k1",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u1",
+        "u2",
+        "u3",
+        "u4"
+      ],
+      "provisional_label": "Mixed review requirement and fee waiver",
+      "status": "candidate",
+      "parent_cluster_ids": [],
+      "created_by_review_id": null,
+      "uncertainty_notes": []
+    },
+    {
+      "cluster_id": "k2",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u5",
+        "u6"
+      ],
+      "provisional_label": "Review fee waivers",
+      "status": "candidate",
+      "parent_cluster_ids": [],
+      "created_by_review_id": null,
+      "uncertainty_notes": []
+    },
+    {
+      "cluster_id": "k3",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u7"
+      ],
+      "provisional_label": "Audio access to results",
+      "status": "candidate",
+      "parent_cluster_ids": [],
+      "created_by_review_id": null,
+      "uncertainty_notes": []
+    },
+    {
+      "cluster_id": "k7",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u8"
+      ],
+      "provisional_label": "Unclear meaning of review",
+      "status": "candidate",
+      "parent_cluster_ids": [],
+      "created_by_review_id": null,
+      "uncertainty_notes": []
+    }
+  ],
+  "review_created_clusters": [
+    {
+      "cluster_id": "k4",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u1",
+        "u3",
+        "u4"
+      ],
+      "provisional_label": "Mandatory safety review",
+      "status": "candidate",
+      "parent_cluster_ids": [
+        "k1"
+      ],
+      "created_by_review_id": "r1",
+      "uncertainty_notes": []
+    },
+    {
+      "cluster_id": "k5",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u2"
+      ],
+      "provisional_label": "Small lab fee waiver",
+      "status": "candidate",
+      "parent_cluster_ids": [
+        "k1"
+      ],
+      "created_by_review_id": "r1",
+      "uncertainty_notes": []
+    },
+    {
+      "cluster_id": "k6",
+      "unit_kind": "claim",
+      "member_ids": [
+        "u2",
+        "u5",
+        "u6"
+      ],
+      "provisional_label": "Review fee waivers for small labs",
+      "status": "candidate",
+      "parent_cluster_ids": [
+        "k5",
+        "k2"
+      ],
+      "created_by_review_id": "r2",
+      "uncertainty_notes": []
+    }
+  ],
+  "reviews": [
+    {
+      "review_id": "r1",
+      "operation": "split",
+      "input_cluster_ids": [
+        "k1"
+      ],
+      "output_cluster_ids": [
+        "k4",
+        "k5"
+      ],
+      "inspected_unit_ids": [
+        "u1",
+        "u2",
+        "u3",
+        "u4"
+      ],
+      "neighbor_cluster_ids": [
+        "k2"
+      ],
+      "rationale": "A mandatory review requirement and financial assistance are distinct claims.",
+      "uncertainty_notes": [],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": null,
+        "distinct": null,
+        "citation_support": null
+      }
+    },
+    {
+      "review_id": "r2",
+      "operation": "merge",
+      "input_cluster_ids": [
+        "k5",
+        "k2"
+      ],
+      "output_cluster_ids": [
+        "k6"
+      ],
+      "inspected_unit_ids": [
+        "u2",
+        "u5",
+        "u6"
+      ],
+      "neighbor_cluster_ids": [
+        "k4"
+      ],
+      "rationale": "These units support fee waivers for small labs.",
+      "uncertainty_notes": [],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": null,
+        "distinct": null,
+        "citation_support": null
+      }
+    },
+    {
+      "review_id": "r3",
+      "operation": "accept",
+      "input_cluster_ids": [
+        "k4"
+      ],
+      "output_cluster_ids": [
+        "k4"
+      ],
+      "inspected_unit_ids": [
+        "u1",
+        "u3",
+        "u4"
+      ],
+      "neighbor_cluster_ids": [
+        "k6"
+      ],
+      "rationale": "Three distinct canonical comments support mandatory review; harm reduction reasons are traceable.",
+      "uncertainty_notes": [],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": true,
+        "distinct": true,
+        "citation_support": true
+      }
+    },
+    {
+      "review_id": "r4",
+      "operation": "accept",
+      "input_cluster_ids": [
+        "k6"
+      ],
+      "output_cluster_ids": [
+        "k6"
+      ],
+      "inspected_unit_ids": [
+        "u2",
+        "u5",
+        "u6"
+      ],
+      "neighbor_cluster_ids": [
+        "k4"
+      ],
+      "rationale": "Three distinct canonical comments support small-lab fee waivers; affordability is explicit in u5.",
+      "uncertainty_notes": [],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": true,
+        "distinct": true,
+        "citation_support": true
+      }
+    },
+    {
+      "review_id": "r5",
+      "operation": "rare",
+      "input_cluster_ids": [
+        "k3"
+      ],
+      "output_cluster_ids": [
+        "k3"
+      ],
+      "inspected_unit_ids": [
+        "u7"
+      ],
+      "neighbor_cluster_ids": [],
+      "rationale": "The accessibility proposal has one source.",
+      "uncertainty_notes": [],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": null,
+        "distinct": null,
+        "citation_support": null
+      }
+    },
+    {
+      "review_id": "r6",
+      "operation": "uncertain",
+      "input_cluster_ids": [
+        "k7"
+      ],
+      "output_cluster_ids": [
+        "k7"
+      ],
+      "inspected_unit_ids": [
+        "u8"
+      ],
+      "neighbor_cluster_ids": [
+        "k4"
+      ],
+      "rationale": "The source does not establish a clear interpretation of review.",
+      "uncertainty_notes": [
+        "Only one source; ambiguous terminology and low extraction confidence."
+      ],
+      "reviewer": {
+        "kind": "fixture",
+        "identifier": "hand-authored-contract-example"
+      },
+      "checks": {
+        "coherent": null,
+        "distinct": null,
+        "citation_support": null
+      }
+    }
+  ],
+  "perspectives": [
+    {
+      "perspective_id": "p1",
+      "cluster_id": "k4",
+      "title": "안전 심사 의무화",
+      "issue": "mandatory safety review",
+      "stance": "support",
+      "output_language": "ko",
+      "summary": {
+        "text": "안전 심사를 의무화해야 한다.",
+        "claim_ids": [
+          "u1",
+          "u3",
+          "u4"
+        ]
+      },
+      "reasons": [
+        {
+          "text": "사고와 피해를 줄이기 위해서다.",
+          "claim_ids": [
+            "u3",
+            "u4"
+          ]
+        }
+      ],
+      "conditions": [],
+      "evidence_claim_ids": [
+        "u1",
+        "u3",
+        "u4"
+      ],
+      "representative_claim_ids": [
+        "u3",
+        "u4"
+      ],
+      "uncertainty_notes": [
+        "합성 예제이며 실제 댓글의 분포를 나타내지 않습니다."
+      ]
+    },
+    {
+      "perspective_id": "p2",
+      "cluster_id": "k6",
+      "title": "소규모 연구실의 심사 수수료 면제",
+      "issue": "review fee waivers for small labs",
+      "stance": "support",
+      "output_language": "ko",
+      "summary": {
+        "text": "소규모 연구실에는 심사 수수료 면제가 필요하다.",
+        "claim_ids": [
+          "u2",
+          "u5",
+          "u6"
+        ]
+      },
+      "reasons": [
+        {
+          "text": "규정 준수 비용을 감당할 수 있도록 하기 위해서다.",
+          "claim_ids": [
+            "u5"
+          ]
+        }
+      ],
+      "conditions": [],
+      "evidence_claim_ids": [
+        "u2",
+        "u5",
+        "u6"
+      ],
+      "representative_claim_ids": [
+        "u5",
+        "u6"
+      ],
+      "uncertainty_notes": [
+        "합성 예제이며 수수료 면제가 안전 심사 자체의 면제를 뜻하지 않습니다."
+      ]
+    }
+  ],
+  "expected": {
+    "source_count": 11,
+    "claim_count": 8,
+    "canonical_comment_count": 10,
+    "accepted_cluster_ids": [
+      "k4",
+      "k6"
+    ],
+    "rare_cluster_ids": [
+      "k3"
+    ],
+    "uncertain_cluster_ids": [
+      "k7"
+    ],
+    "superseded_cluster_ids": [
+      "k1",
+      "k2",
+      "k5"
+    ],
+    "unassigned_claim_ids": [],
+    "perspective_count": 2,
+    "support_comment_ids": {
+      "p1": [
+        "c1",
+        "c2",
+        "c3"
+      ],
+      "p2": [
+        "c1",
+        "c4",
+        "c5"
+      ]
+    }
+  }
+}
