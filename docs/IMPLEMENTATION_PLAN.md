@@ -1,12 +1,13 @@
 # 단계별 구현 계획
 
-상태: 0·1단계 main 반영 완료, 2단계 snapshot 검증·정규화 CLI 구현 및 검토. 공개 GitHub 저장소는 `joowonkime/commentscope`입니다.
+상태: 0·1·2단계 main 반영 완료. 사용자 결정에 따라 공식 API 수집 연결을 추가했습니다. 공개 GitHub 저장소는 `joowonkime/commentscope`입니다.
 이번 단계의 구체적인 선택은 [구조 결정](ARCHITECTURE.md), 필드와 규칙은 [데이터 계약](DATA_CONTRACTS.md)에 기록합니다.
 
 ## 진행 방식
 
 각 단계마다 범위를 정하고, 산출물을 만들고, 완료 조건을 확인한 뒤 변경 내용을 공유합니다.
-이번 작업은 2단계까지 진행합니다. 이후 단계는 사용자와 앞 단계 결과를 확인하면서 순서대로 진행합니다.
+내부 구현은 순서대로 진행하되, 다음 사용자 확인 단위는 실제 댓글에서 검토 가능한 cluster 결과가 나오는 MVP입니다.
+모델 인터페이스 문서만으로 별도 완료 지점을 만들지 않습니다. 그 전에 공식 API 수집 경로를 연결합니다.
 각 단계는 하나의 작은 PR을 기본으로 하되, 검토하기 크면 더 작은 PR로 나눕니다.
 실행해 확인한 결과와 아직 검증하지 못한 사항을 구분해 기록합니다.
 
@@ -43,6 +44,7 @@ commentscope/
 | 0. 저장소 | 독립 Git, 요구사항 기준본, 작업 계획, PR/Issue 템플릿 | 추적 파일과 제외 규칙 확인; GitHub 원격 연결 및 첫 push 확인 |
 | 1. 구조·데이터 계약 | 엔터티 필드, 단계별 입출력, 오류 처리, 스택 결정 기록 | 다중 claim, reply 문맥, 중복, 다국어, rare/uncertain 사례를 계약으로 표현할 수 있음 |
 | 2. 최소 실행 골격 | 패키지, CLI, snapshot 검증·정규화, 합성 fixture, 자동 검사 | 깨진 source ID·parent 관계 검출; 원문과 provenance 보존; 문서의 명령으로 재실행 가능 |
+| 2.5. 공식 API 수집 | 개발자용 collect-youtube CLI, bounded 표집, reply 연결 | key·영상 준비 후 소량 live 수집; 실제 개수와 partial 상태 확인 |
 | 3. Factory 기본 경로 | 모델 인터페이스, claim 추출, embedding, 후보 clustering, JSON 산출물 | 각 claim이 원문으로 추적됨; 상반된 stance의 혼합을 검사함; 모델 실패를 기록함 |
 | 4. Cluster Review | accept/split/merge/rare/uncertain 처리, PerspectiveSpec 생성 | 서로 다른 원문 3개 이상의 지지와 coherence를 확인; claim 중복 배정 방지; 희귀 관점 보존 |
 | 5. V0/V1/V2 검증 | 같은 corpus의 비교 실행, 표본 평가 양식, 2인 검토 결과 | coverage·coherence·separation·인용 지원·비용·지연을 비교; 실제 corpus 결과와 합성 테스트를 구분 |
@@ -55,7 +57,7 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 
 ## 먼저 보존할 설계 제약
 
-- 자동 수집 대신 준비된 DatasetSnapshot으로 시작합니다.
+- 개발자가 공식 API로 준비한 DatasetSnapshot을 사용합니다. 공개 앱에서 임의 URL을 자동 수집하는 범위는 포함하지 않습니다.
 - 합성 fixture로 구조를 검증할 수 있지만 실제 다국어 분석 성능의 근거로 사용하지 않습니다.
 - V0는 원문 embedding, V1은 구조화된 claim 기반, V2는 V1에 Cluster Auditor를 추가합니다.
 - Cluster Auditor의 필요성과 연구 기여는 V0/V1/V2 비교 후 판단합니다.
@@ -68,7 +70,7 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 | 항목 | 처리 시점 |
 | --- | --- |
 | GitHub 소유자·저장소·공개 범위 | 확정: `joowonkime/commentscope`, public |
-| corpus 확보 방식과 사용 가능 범위 | 실제 연구 데이터 반입 전; 합성 fixture 작업은 먼저 가능 |
+| corpus 확보 방식과 사용 가능 범위 | 공식 YouTube Data API 경로 선택; 실제 영상·키·다운스트림 분석 사용 범위는 별도 확인 |
 | provider·모델·키 소유자·실행 예산 | 실제 모델 호출 전; 지금 특정 provider에 고정하지 않음 |
 | 다국어 품질 정책과 출력 언어 계약 | 데이터 계약과 추출 설계 단계 |
 | 최종 사용자 task와 Reflection 범위 | Factory 검증 이후 |
@@ -97,3 +99,9 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 
 [Issue #3](https://github.com/joowonkime/commentscope/issues/3): snapshot 검증·정규화 CLI와 S01–S12 자동 검사를 구현합니다.
 1단계 PR #2는 main에 반영했습니다. 다음 단계는 현재 구현의 검토 후 별도 브랜치로 진행합니다.
+
+## 공식 수집 경로
+
+[Issue #5](https://github.com/joowonkime/commentscope/issues/5): 공식 API collector와 실행 안내.
+2단계 PR #4도 main에 반영했습니다. 지금은 키 없는 오프라인 검증이며 실제 수집을 했다고 보고하지 않습니다.
+사용자 선택으로 수집 경로를 구체화했으며, 요구사항 기준본 자체를 소급 변경하지 않았습니다.

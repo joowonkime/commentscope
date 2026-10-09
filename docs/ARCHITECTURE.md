@@ -1,6 +1,6 @@
 # 구조 결정 — 1단계
 
-상태: 1단계 설계를 기준으로 2단계 snapshot/comment 검증·정규화 CLI를 구현했습니다. 모델·Factory·UI는 후속 범위입니다.
+상태: snapshot/comment 검증·정규화와 개발자용 공식 API collector를 구현했습니다. 모델·Factory·UI는 후속 범위입니다.
 기준: [핸드오프 Section 16](requirements-handoff.md#16-implementation-default-specification-added-after-ambiguity-review).
 
 ## 첫 구현의 선택
@@ -36,6 +36,7 @@ CLI (이후 API도 같은 orchestration 호출)
 | --- | --- | --- |
 | `contracts` | JSON → 검증된 객체 또는 오류 | 타입, enum, 참조, 버전, ID 규칙; 모델/네트워크 호출 없음 |
 | `ingestion` | DatasetSnapshot → NormalizedComment[] | 원문 보존, parent 관계 확인, 분석용 정규화, 문맥을 고려한 중복 처리 |
+| `ingestion/youtube` | 선택한 영상+수집 설정 → DatasetSnapshot | 공식 API transport 주입, bounded 표집·답글 수집·provenance 기록 |
 | `factory/extraction` | 원문+명시적 문맥 → EligibilityRecord[] + ClaimUnit[] | eligibility와 추출 결과를 검증; 누락·실패를 0개 claim과 구분 |
 | `factory/candidates` | embedding item[] → CandidateCluster[] + unassigned IDs | 후보 생성; embedding space와 issue/stance 호환성 확인 |
 | `factory/review` | 활성 후보+근거 → ClusterReview[] | 변경 제안 검증, 원자적 split/merge, terminal 상태 결정 |
@@ -46,6 +47,10 @@ CLI (이후 API도 같은 orchestration 호출)
 
 orchestration이 단계를 연결하고 실패/버전을 기록합니다. 도메인 함수가 환경변수나 전체 corpus를 임의로 읽지 않게 합니다.
 API 키는 provider adapter 설정에만 전달합니다. source text와 모델 결과는 지시문이 아닌 입력 데이터로 취급합니다.
+
+YouTube API 키는 별도 read-only `YouTubeClient`에만 전달합니다. `collect-youtube` 명령만 네트워크를 사용하며
+기존 validate/normalize는 오프라인입니다. 댓글 데이터 확보를 구체화한 개발자용 도구이며 공개 URL ingestion 서비스는 아닙니다.
+[수집 안내](YOUTUBE_COLLECTION.md)에 API 반환 텍스트의 의미, partial 상태와 보관 한계를 기록했습니다.
 
 ## 단계 사이의 계약
 
