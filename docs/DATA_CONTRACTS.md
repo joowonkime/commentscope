@@ -58,6 +58,10 @@ language tag는 `ko`, `en` 등 언어 태그를 사용하며 불명은 `und`입�
 self-parent와 snapshot 내부 parent cycle은 오류입니다. missing parent는 빈 댓글로 생성하지 않습니다.
 사용자명·계정 프로필은 초기 계약에 넣지 않습니다.
 
+공식 YouTube 수집에서 `text_original`은 API가 plainText로 반환한 `snippet.textDisplay`입니다.
+작성자의 raw `textOriginal`과 동일함을 보장하지 않습니다. 수집 경로의 `sampling.description`에 이 provenance를 명시합니다.
+댓글 언어는 자동 추정하지 않고 `und/unknown`으로 기록합니다. [수집 계약](YOUTUBE_COLLECTION.md)을 참고합니다.
+
 ## NormalizedComment / EligibilityRecord
 
 NormalizedComment 필수 필드:

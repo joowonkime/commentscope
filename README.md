@@ -2,7 +2,7 @@
 
 한 영상의 sampled comments에서 서로 다른 관점과 근거를 탐색하는 연구용 프로젝트입니다.
 
-현재는 **2단계 snapshot 검증·정규화 CLI 구현 단계**입니다. 로컬 CLI와 자동 테스트가 있으며, 모델 파이프라인·웹 앱·실제 연구 corpus는 아직 없습니다.
+현재는 **snapshot 검증·정규화와 공식 YouTube API 수집 CLI 구현 단계**입니다. 모델 파이프라인·웹 앱·실제 연구 corpus는 아직 없습니다.
 이어서 작업할 때는 [다음 세션 시작점](docs/NEXT_SESSION.md)을 먼저 확인합니다.
 
 ## 읽는 순서
@@ -12,6 +12,7 @@
 3. [협업 방법](CONTRIBUTING.md): 브랜치, 변경 검토, 데이터 관리 규칙입니다.
 4. [구조 결정](docs/ARCHITECTURE.md)과 [데이터 계약](docs/DATA_CONTRACTS.md): 첫 구현의 경계와 필드·불변조건입니다.
 5. [검증 목록](docs/ACCEPTANCE_TESTS.md): 단계별로 구현할 실패 사례와 완료 조건입니다.
+6. [YouTube 댓글 수집 안내](docs/YOUTUBE_COLLECTION.md): API 키 발급, 첫 수집, 상한과 오류 처리입니다.
 
 ## 현재 범위
 
@@ -71,6 +72,20 @@ python3 -m pip --python .venv install -e .
 - JSON 산출물에 입력 SHA-256, snapshot 전체, 원문/정규화 텍스트, 실행/정규화 버전과 집계를 보존합니다.
 - 표본 예제의 결과는 원문 11개, top-level 9개, reply 2개, missing parent 1개, 중복 alias 1개입니다.
 
+## 공식 API 댓글 수집
+
+Google Cloud에서 YouTube Data API v3를 활성화하고 API 키를 만든 뒤 실행합니다.
+키는 화면에 표시되지 않는 프롬프트에 입력하며, 영상 URL을 실제 선택한 영상으로 바꿉니다.
+
+```bash
+python -m commentscope collect-youtube "https://www.youtube.com/watch?v=VIDEO_ID" --prompt-key --max-comments 100 --top-level-limit 40 --output data/first-video.json
+```
+
+일반 실행에서는 `YOUTUBE_API_KEY` 환경변수도 사용할 수 있습니다. `.env` 자동 로딩은 하지 않습니다.
+relevance/time을 섞어 조회하고 답글은 별도로 보완합니다. API의 표시 텍스트와 parent 관계를 보존합니다.
+본문 100개가 아니라 **최상위 댓글과 답글을 합쳐 최대 100개**이며, 부족하면 실제 개수를 보고합니다.
+실제 키를 사용한 호출은 아직 검증하지 않았습니다. 자세한 순서는 [수집 안내](docs/YOUTUBE_COLLECTION.md)를 따릅니다.
+
 같은 output 경로로 다시 실행하면 `OUTPUT_EXISTS` 오류를 반환합니다. 새 파일명을 지정해야 합니다.
 입력 또는 기존 결과를 덮어쓰는 옵션은 없습니다. 파일시스템의 hard-link 지원이 필요하며 지원하지 않으면 저장 오류를 반환합니다.
 
@@ -84,5 +99,6 @@ python3 -m pip --python .venv install -e .
 PR과 main push에서 GitHub Actions가 Linux/Windows Python 3.12 설치·테스트·CLI 실행을 확인합니다.
 CI 결과는 해당 PR의 Checks에서 확인합니다.
 
-다음 작업은 **3단계: eligibility/claim 추출 계약과 provider 경계**입니다. 실제 provider·모델·예산은 아직 정하지 않았습니다.
+다음 사용자 확인 지점은 **실제 영상·API 키로 소량 수집 후 cluster 결과까지 연결하는 MVP**입니다.
+실제 모델 provider·예산과 corpus 분석 사용 조건은 아직 정하지 않았습니다. 인터페이스만을 별도 MVP 완료로 간주하지 않습니다.
 합성 JSON 예제와 Factory trace는 직접 작성한 자료이며 모델 결과나 다국어 분석 성능의 근거가 아닙니다.
