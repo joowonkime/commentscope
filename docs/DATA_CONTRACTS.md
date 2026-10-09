@@ -1,6 +1,7 @@
-# 데이터 계약 v0.1 — 설계 초안
+# 데이터 계약 v0.1
 
-이 문서는 wire format과 검증 규칙의 구현 명세입니다. 실행 validator나 JSON Schema는 2단계 이후 구현합니다.
+이 문서는 wire format과 검증 규칙의 구현 명세입니다. 2단계에서 DatasetSnapshot/Comment 검증과 normalization을 구현했습니다.
+Eligibility 이후의 계약과 전체 RunManifest는 후속 구현 명세이며, JSON Schema 파일은 아직 제공하지 않습니다.
 합성 예시는 [snapshot](examples/synthetic-snapshot.json)과 [Factory trace](examples/synthetic-factory-trace.json)에 있습니다.
 
 ## 공통 규칙
@@ -14,6 +15,11 @@
 - 순서가 의미 없는 ID 배열도 중복을 허용하지 않습니다. 참조는 같은 snapshot/run 내부에서 해석합니다.
 - `null`은 모름/해당 없음이며, `[]`는 확인한 결과 항목 없음입니다. 오류를 빈 배열로 위장하지 않습니다.
 - confidence는 유한한 `[0,1]` 값이며 없으면 `null`입니다. confidence가 높다고 source 검사나 의미 검토를 생략하지 않습니다.
+
+초기 loader는 정확히 schema `0.1`만 허용하며 JSON의 중복 object key와 UTF-8에 없는 surrogate도 거절합니다.
+timestamp는 `YYYY-MM-DDTHH:MM:SS[.ffffff]Z` 또는 같은 날짜/시간에 `±HH:MM` 형식을 받습니다.
+offset의 시/분 범위와 실제 달력 날짜를 검사합니다. 입력 파일을 수정하지 않고 직렬화된 timestamp만 UTC로 통일합니다.
+언어 태그는 기본 문자열 형식만 검사하며 등록된 언어인지 또는 실제 댓글 언어와 일치하는지 추론하지 않습니다.
 
 ## DatasetSnapshot
 
@@ -64,6 +70,13 @@ URL 정규화 규칙은 URL이 표현하는 차이를 지우지 않는 방식으
 중복 key는 `(text_analysis, parent_id)`이며 빈 텍스트는 중복 묶음을 만들지 않습니다.
 같은 key에서는 comment_id 사전순 첫 항목을 대표로 선택합니다. 원문과 alias는 삭제하지 않습니다.
 중복 alias는 지지 source 수를 늘리지 않습니다. parent는 대표 ID로 재작성하지 않습니다.
+
+2단계 CLI는 별도 `artifact_kind=snapshot_normalization` envelope를 저장합니다.
+필드는 `schema_version`, `artifact_kind`, `run_id`, `snapshot_id`, `snapshot_sha256`, `pipeline_version`,
+`normalization_version`, `created_at`, `counts`, `snapshot`, `normalized_comments`입니다.
+snapshot 원문 전체를 함께 저장하므로 hash만 남기고 원문을 잃지 않습니다. 이 파일은 Factory 완료 결과나 RunManifest가 아닙니다.
+counts는 source/top-level/reply/missing-parent/canonical-comment/duplicate-alias/empty-analysis 수이며 eligibility를 추정하지 않습니다.
+빈 corpus도 명시적으로 source_count=0으로 반환합니다. 대상 표본 수를 만족했다거나 Factory 실행에 적합하다는 뜻은 아닙니다.
 
 EligibilityRecord 필수 필드:
 
@@ -194,6 +207,9 @@ PipelineError 필수 필드: `code`, `stage`, `entity_id: string|null`, `message
 | code | 처리 |
 | --- | --- |
 | `INVALID_SNAPSHOT` | 타입/필수 필드/URL/timestamp/중복 ID 오류; 실행 시작 전 거절 |
+| `INPUT_READ_ERROR` | 파일 읽기 실패; 코드 1, 원문 내용은 오류에 포함하지 않음 |
+| `OUTPUT_EXISTS` | 파일/링크/디렉터리 또는 동시 작성 결과가 이미 존재; 기존 경로 보존 |
+| `OUTPUT_WRITE_ERROR` | 디스크/권한/hard-link 지원 등 저장 실패; 완료 결과 공개 금지 |
 | `INVALID_REFERENCE` | 거짓 present parent, cycle, 잘못된 claim/source 참조; 실패 |
 | `INVALID_SOURCE_SPAN` | 범위 또는 quote 불일치; 추출 결과 거절 |
 | `INVALID_MODEL_OUTPUT` | 알 수 없는 상태/필드, 누락 응답; 단계 실패, 원본 응답은 로컬 진단용 |

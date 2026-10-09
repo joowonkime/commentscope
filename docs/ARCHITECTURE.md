@@ -1,6 +1,6 @@
 # 구조 결정 — 1단계
 
-상태: 구현을 위한 설계 초안. 이 단계에서는 앱이나 모델을 실행하지 않습니다.
+상태: 1단계 설계를 기준으로 2단계 snapshot/comment 검증·정규화 CLI를 구현했습니다. 모델·Factory·UI는 후속 범위입니다.
 기준: [핸드오프 Section 16](requirements-handoff.md#16-implementation-default-specification-added-after-ambiguity-review).
 
 ## 첫 구현의 선택
@@ -41,7 +41,7 @@ CLI (이후 API도 같은 orchestration 호출)
 | `factory/review` | 활성 후보+근거 → ClusterReview[] | 변경 제안 검증, 원자적 split/merge, terminal 상태 결정 |
 | `factory/perspectives` | accepted 후보+claim → PerspectiveSpec[] | 카드 문장마다 근거 연결; rare/uncertain은 별도 결과에 보존 |
 | `providers` | 범위가 제한된 요청 → 원시 모델 결과+호출 metadata | 추출·embedding·검토의 구현 교체; 결과 승인 권한은 없음 |
-| `storage` | 검증된 산출물 → run별 파일 | 임시 파일 작성 후 교체; 실패 중간 결과를 완료 결과로 표시하지 않음 |
+| `storage` | 검증된 산출물 → run별 파일 | 임시 파일 작성·동기화 후 hard link로 새 경로에 원자적 공개; 기존 파일 교체 금지 |
 | 이후 `agents` | PerspectiveSpec+질문+개별 history → AnswerDraft → AuditDecision | evidence 범위 검사와 의미 감사 후 답변 공개 |
 
 orchestration이 단계를 연결하고 실패/버전을 기록합니다. 도메인 함수가 환경변수나 전체 corpus를 임의로 읽지 않게 합니다.
@@ -97,10 +97,15 @@ fallback은 명시적으로 선택한 준비된 결과만 사용하며 원래 ru
 `pyproject.toml`, snapshot/comment 계약, snapshot loader, normalization, CLI `validate`/`normalize`, 합성 fixture 및 검사만 구현합니다.
 claim 추출·모델 호출·clustering·UI는 포함하지 않습니다. 다음 설계 필드가 모두 한 번에 구현되어야 한다는 뜻은 아닙니다.
 
-목표 명령(아직 실행 불가):
+패키지 설치 후 실행 가능한 명령:
 
 ```bash
 python -m commentscope validate tests/fixtures/synthetic-snapshot.json
 python -m commentscope normalize tests/fixtures/synthetic-snapshot.json --output artifacts/normalized.json
 python -m unittest discover -s tests
 ```
+
+2단계의 초기 JSON envelope는 normalization 결과 전용입니다. 향후 Factory run 저장 형태와 구분합니다.
+계약 오류/저장 실패 경로를 포함한 검사는 [tests/test_ingestion.py](../tests/test_ingestion.py)에 있습니다.
+GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 commit SHA로 고정했습니다:
+[checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python).

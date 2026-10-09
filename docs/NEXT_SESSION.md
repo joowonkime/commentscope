@@ -1,44 +1,47 @@
 # 다음 세션 시작점
 
-사용자 요청에 따라 **1단계 설계를 마친 뒤 중단**합니다. 2단계 구현은 시작하지 않았습니다.
+**2단계 snapshot 검증·정규화 CLI까지 구현했습니다.** 3단계 모델 연결·claim 추출·clustering은 시작하지 않았습니다.
 
 ## 현재 상태
 
 - 저장소: https://github.com/joowonkime/commentscope (public)
-- 작업 브랜치: `docs/snapshot-contracts`
-- Issue: https://github.com/joowonkime/commentscope/issues/1
-- 이 브랜치는 설계 검토용입니다. main 반영 여부는 다음 세션에서 PR 상태를 확인합니다.
-- 앱, Python 패키지, 실행 CLI, 실제 모델 연결, 연구 corpus는 아직 없습니다.
-- `artifacts/`의 GitHub body 초안은 로컬 도구용이며 Git 추적 대상이 아닙니다.
+- 작업 브랜치: `feat/snapshot-ingestion`
+- Issue: https://github.com/joowonkime/commentscope/issues/3
+- 1단계 설계 PR #2는 main에 반영했습니다. 2단계 PR의 병합/CI 상태는 다음 세션에서 확인합니다.
+- 실제 연구 corpus와 모델 provider는 아직 없습니다. 합성 표본으로 ingestion만 검증합니다.
 
-## 이번 단계 산출물
+## 실행 위치와 명령
 
-1. [구조 결정](ARCHITECTURE.md): Python 3.12+, JSON, 첫 표준 라이브러리 구현, 모듈 의존 방향.
-2. [데이터 계약](DATA_CONTRACTS.md): 필수 필드, source span, 문맥/근거 경계, 상태 전이, 실패 처리.
-3. [검증 목록](ACCEPTANCE_TESTS.md): 2단계부터 구현할 성공·실패 사례.
-4. [합성 snapshot](examples/synthetic-snapshot.json)과 [설계 trace](examples/synthetic-factory-trace.json).
+저장소 루트는 `term-project/commentscope/`입니다. 현재 WSL에 `.venv`를 만들고 editable install했습니다.
+이 환경은 ensurepip가 없어 기존 pip의 `--python .venv` 설치 경로를 사용했습니다. 일반 설치와 Windows 실행법은 README를 따릅니다.
 
-## 확인한 것과 한계
+```bash
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m commentscope validate tests/fixtures/synthetic-snapshot.json
+.venv/bin/python -m commentscope normalize tests/fixtures/synthetic-snapshot.json --output artifacts/next-normalized.json
+```
 
-JSON을 읽는 일회성 검증으로 다음을 확인했습니다.
+output이 이미 있으면 새 파일명을 사용합니다. 로컬 결과 `artifacts/step2-normalized.json`과 GitHub body 초안은 Git에서 제외됩니다.
 
-- 댓글 11개, canonical 원문 10개, claim 8개의 ID와 참조가 일치합니다.
-- 원문 좌표/quote가 한국어·영어 원문과 일치합니다.
-- parent 관계, missing parent, eligibility와 duplicate alias가 일관됩니다.
-- review를 순서대로 재생하면 split/merge에서 claim 유실·중복이 없습니다.
-- accepted 2개, rare 1개, uncertain 1개가 남으며 accepted에만 PerspectiveSpec이 있습니다.
-- 각 관점의 지지 원문은 3개이고, 카드의 인용은 배정된 claim 안에 있습니다.
-- 설계 문서의 로컬 파일 링크와 Git whitespace 검사를 통과했습니다.
+## 구현한 것과 확인 결과
 
-검증 스크립트는 일회성 설계 점검이며 제품 validator 또는 자동 테스트 suite가 아닙니다.
-claim·review·카드는 직접 작성한 예시입니다. 실제 모델 추출, clustering 품질, 1,000개 규모 처리, UI는 검증하지 않았습니다.
+- strict UTF-8 JSON parser, immutable snapshot/comment 계약, parent 관계와 cycle 검사.
+- 원문 보존, 분석용 NFC/공백 정규화, parent별 중복 alias.
+- 입력 byte SHA-256, 버전·집계·원문을 포함하는 normalization artifact.
+- 기존 파일을 덮어쓰지 않는 원자적 저장과 구조화된 CLI 오류.
+- S01–S12를 포함하는 29개 unittest 메서드: 로컬 Python 3.12에서 통과.
+- console entry point와 module CLI 직접 실행: 표본 원문 11개, canonical 10개, alias 1개 확인.
+- GitHub Linux/Windows Python 3.12 CI 설정. 최종 결과는 PR Checks에서 확인합니다.
+
+테스트의 2,000개 합성 reply chain은 관계 검사 범위입니다. 1,000개 corpus의 모델 처리 성능을 검증한 것이 아닙니다.
+실제 의미 분류, 다국어 추출, embedding, Factory, agent, UI는 아직 구현하지 않았습니다.
 
 ## 재개 순서
 
-1. `git status --short --branch`와 원격 PR 상태를 확인합니다. 기존 변경을 덮어쓰지 않습니다.
-2. 이 설계를 검토하고 필요한 수정을 반영한 뒤 main에 통합합니다.
-3. 별도 브랜치에서 2단계만 구현합니다: `pyproject.toml`, snapshot/comment 계약, loader, normalization, `validate`/`normalize` CLI, 합성 fixture, `unittest`.
-4. 검증 목록의 S01–S12를 중심으로 검사하고 결과를 공유합니다.
+1. `git status --short --branch`와 해당 PR의 CI·검토 상태를 확인합니다.
+2. 2단계 변경을 검토해 main에 반영한 뒤 새 브랜치를 만듭니다.
+3. 3단계는 먼저 EligibilityRecord/ClaimUnit 계약과 provider 인터페이스를 구현합니다.
+4. source span, 조건 보존, context와 evidence 분리, 누락 응답 및 실패 처리 검사를 먼저 추가합니다.
+5. 실제 모델 연결 전 provider·모델·키 소유자·예산을 결정합니다. 실제 연구 corpus 확보 방식도 아직 미결정입니다.
 
-provider/모델·embedding·실제 corpus 확보·최종 사용자 task는 아직 선택하지 않았습니다.
-다음 단계의 구조 검증은 합성 fixture만으로 진행할 수 있습니다.
+[구조 결정](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 이어갑니다.
