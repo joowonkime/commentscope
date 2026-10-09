@@ -2,7 +2,7 @@
 
 한 영상의 sampled comments에서 서로 다른 관점과 근거를 탐색하는 연구용 프로젝트입니다.
 
-현재는 **1단계 구조·데이터 계약 설계 검토 단계**입니다. 실행 가능한 앱, 모델 파이프라인, 실제 연구 corpus는 아직 없습니다.
+현재는 **2단계 snapshot 검증·정규화 CLI 구현 단계**입니다. 로컬 CLI와 자동 테스트가 있으며, 모델 파이프라인·웹 앱·실제 연구 corpus는 아직 없습니다.
 이어서 작업할 때는 [다음 세션 시작점](docs/NEXT_SESSION.md)을 먼저 확인합니다.
 
 ## 읽는 순서
@@ -38,5 +38,51 @@
 기본 브랜치는 `main`입니다. GitHub Issues/PR로 단계별 작업을 관리합니다.
 실제 연구 데이터와 비밀 값은 공개 저장소에 포함하지 않습니다.
 
-설계 검토 후 다음 작업은 **2단계: snapshot 검증·정규화 CLI와 테스트**입니다.
-합성 JSON 예제는 설계 검토용이며 실행 모델의 결과가 아닙니다.
+## 설치와 실행
+
+Python 3.12 이상이 필요하며 현재 테스트 기준은 3.12입니다. runtime 외부 의존성은 없습니다.
+저장소 폴더에서 실행합니다.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install -e .
+python -m commentscope validate tests/fixtures/synthetic-snapshot.json
+python -m commentscope normalize tests/fixtures/synthetic-snapshot.json --output artifacts/normalized.json
+python -m unittest discover -s tests -v
+```
+
+Windows PowerShell에서는 `py -3.12 -m venv .venv`로 생성한 뒤 활성화 없이 `.venv\Scripts\python.exe`로 위의 `python` 명령을 실행할 수 있습니다.
+설치하면 `commentscope validate ...` 형태의 console 명령도 제공됩니다.
+
+현재 WSL처럼 `ensurepip`가 없지만 기존 Python에 pip가 있는 환경에서는 다음 경로를 사용할 수 있습니다.
+
+```bash
+python3 -m venv --without-pip .venv
+python3 -m pip --python .venv install -e .
+.venv/bin/python -m unittest discover -s tests -v
+.venv/bin/python -m commentscope validate tests/fixtures/synthetic-snapshot.json
+```
+
+## 이번 단계에서 확인할 수 있는 것
+
+- `validate`: 필드/타입/enum, UTF-8 JSON, 원문 ID, parent 관계, cycle, URL 및 timestamp 형식을 검사합니다.
+- `normalize`: 원문을 보존하고 분석용 NFC·공백 정규화와 문맥별 중복 alias를 생성합니다.
+- JSON 산출물에 입력 SHA-256, snapshot 전체, 원문/정규화 텍스트, 실행/정규화 버전과 집계를 보존합니다.
+- 표본 예제의 결과는 원문 11개, top-level 9개, reply 2개, missing parent 1개, 중복 alias 1개입니다.
+
+같은 output 경로로 다시 실행하면 `OUTPUT_EXISTS` 오류를 반환합니다. 새 파일명을 지정해야 합니다.
+입력 또는 기존 결과를 덮어쓰는 옵션은 없습니다. 파일시스템의 hard-link 지원이 필요하며 지원하지 않으면 저장 오류를 반환합니다.
+
+성공은 stdout의 JSON과 종료 코드 0입니다. 입력 계약 오류는 stderr의 JSON과 코드 2,
+입출력 오류는 stderr의 JSON과 코드 1입니다. CLI 인자 오류는 argparse의 도움말과 코드 2를 반환합니다.
+`validate`는 파일을 생성하지 않고, 실패한 `normalize`는 완료 결과 파일을 남기지 않습니다.
+
+## 검증과 다음 범위
+
+[자동 테스트](tests/test_ingestion.py)는 S01–S12, 긴 reply chain, 중복 JSON key, 동시 저장, 파일 보존을 검사합니다.
+PR과 main push에서 GitHub Actions가 Linux/Windows Python 3.12 설치·테스트·CLI 실행을 확인합니다.
+CI 결과는 해당 PR의 Checks에서 확인합니다.
+
+다음 작업은 **3단계: eligibility/claim 추출 계약과 provider 경계**입니다. 실제 provider·모델·예산은 아직 정하지 않았습니다.
+합성 JSON 예제와 Factory trace는 직접 작성한 자료이며 모델 결과나 다국어 분석 성능의 근거가 아닙니다.
