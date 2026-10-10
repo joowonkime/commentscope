@@ -2,7 +2,7 @@
 
 한 영상의 sampled comments에서 서로 다른 관점과 근거를 탐색하는 연구용 프로젝트입니다.
 
-현재는 **공식 API로 로컬 표본 1,000개 확보, 원문 기반 V0 clustering 실행, 로컬 주장 추출 검증 단계**입니다.
+현재는 **공식 API 표본 1,000개 확보, 원문 V0 clustering 및 소표본 주장 추출→후보→검수 화면 연결 단계**입니다.
 주장 기반 전체 파이프라인·검증된 대표 agent·웹 앱은 아직 없습니다. 실제 corpus는 공개 저장소에 포함하지 않습니다.
 이어서 작업할 때는 [다음 세션 시작점](docs/NEXT_SESSION.md)을 먼저 확인합니다.
 
@@ -166,3 +166,30 @@ python -m commentscope.cluster_baseline tests/fixtures/synthetic-snapshot.json -
 처음에는 embedding 모델을 다운로드합니다. 실제 데이터로 실행하려면 입력 snapshot 경로만 교체합니다.
 결과 화면은 `artifacts/synthetic-clusters.json.html`입니다. 이는 **원문 묶음 기준선**이며 claim 추출 결과를 연결하거나 agent를 생성하지 않습니다.
 ML 의존성은 GPU 없이도 CPU에서 실행할 수 있지만 시간은 환경에 따라 달라집니다. 모델 실행은 CI에 포함되지 않으며 CI는 오프라인 계약 테스트를 수행합니다.
+
+### 5. 주장 추출 → 후보 클러스터 연결 (소표본 개발용)
+
+2단계의 추출 JSON을 4단계와 같은 ML 환경에서 연결합니다. LLM 서버를 다시 호출하지 않습니다.
+
+```bash
+python -m commentscope.factory.claim_clusters tests/fixtures/synthetic-snapshot.json artifacts/synthetic-probe.json --output artifacts/synthetic-claim-clusters.json
+```
+
+`artifacts/synthetic-claim-clusters.json.html`에서 주장·원문·부모 문맥·실패/제외 목록을 확인합니다.
+snapshot hash와 원문을 재검증하며 실패 결과를 성공으로 취급하지 않습니다. 벡터와 입력 텍스트도 JSON에 저장합니다.
+현재 60개 이하 선택 원문/300개 이하 claim만 지원합니다. 원본 snapshot 상한은 1,000개입니다.
+서로 다른 원문 3개 이상이어도 **검수 전 후보**일 뿐입니다. 합성 예제는 연결 확인이며 의미 품질의 증거가 아닙니다.
+
+기존 V0 그룹을 목적 표집하려면 추출 명령에 `--v0-report artifacts/YOUR-V0.json --clusters C001 C002`를 추가할 수 있습니다.
+그룹 전체를 사용하므로 이때 `--limit`은 적용하지 않습니다. `--replay-report`/`--exclude-report`와 동시에 사용할 수 없습니다.
+유망한 그룹을 골랐다는 사실을 반드시 평가에 표시하며, 이전 실험을 본 표본을 독립 평가셋으로 간주하지 않습니다.
+
+AI 검수 초안은 별도 로컬 JSON으로 보존하고 candidate artifact hash와 근거 소속을 검사합니다.
+새 HTML에 붙이는 명령은 다음과 같습니다(실제 파일 경로로 교체).
+
+```bash
+python -m commentscope.factory.claim_clusters data/YOUR-SNAPSHOT.json artifacts/YOUR-EXTRACTION.json --render-only artifacts/YOUR-CANDIDATES.json --review artifacts/YOUR-REVIEW.json --output artifacts/YOUR-REVIEWED.html
+```
+
+이는 자동 의미 검수나 사람 승인 UI가 아닙니다. 원문 충실성을 사용자가 확인한 뒤 다음 구현에서 승인 절차로 연결합니다.
+claim 기반 전체 corpus 처리·split/merge·PerspectiveSpec·agent는 아직 구현하지 않았습니다.

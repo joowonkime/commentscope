@@ -29,6 +29,18 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 초기 probe-0.1 결과는 그대로 보관. 0.2로 재사용하려면 원본을 새 prompt/schema로 재추출하며 무표시 변환하지 않음.
 - 전체 Factory envelope, eligibility 사유/언어/confidence, 재시도·문맥 해석은 아직 완성된 계약 구현이 아님.
 
+## 소표본 후보/검수 artifact claim-candidates-0.1 (2026-10-11)
+
+- `factory/claim_clusters.py`가 claims-0.2 추출 JSON과 snapshot의 hash·target·parent 문맥·종료 상태를 재검증합니다. 기존 `bound_claims`/계약 성공 표시는 신뢰하지 않습니다.
+- 이 형식은 전체 Factory run 계약을 대체하지 않는 개발 진단용입니다. 최대 60개 선택 원문/300개 claim이며 source별 blocked/duplicate_alias/included를 모두 기록합니다.
+- embedding input text/claim ID 순서/모델 revision/벡터, threshold, 후보 소속을 저장합니다. 후보마다 서로 다른 canonical source 수를 세고, 모든 입력 claim을 정확히 한 후보에 배정합니다.
+- 같은 원문의 여러 claim이 다른 후보에 속할 수 있습니다. 지지 원문 수를 후보 사이에서 합산해 전체 사람 수처럼 해석하지 않습니다.
+- `candidate_needs_review`는 unique sources >=3일 때의 후보 표시일 뿐 승인 아님. 작은 묶음은 `rare_unreviewed`로 보존합니다. 모든 결과의 accepted_perspectives는 0입니다.
+- AI 검수 JSON은 `candidate_report_sha256`, `reviewer=assistant`, `human_approved=false`, `findings`를 요구합니다. 원문/모델 결과가 승인 권한을 갖지 않습니다.
+- finding은 cluster_id, status, evidence_claim_ids를 가집니다. 상태는 propose_for_user_review/split_needed/reject/uncertain/rare. 전체 묶음 제안은 모든 member와 3개 이상 unique sources, common_claim을 요구합니다.
+- 선택적 proposed_groups는 split_needed에서만 허용. 자식 ID·공통 주장·증거·상태를 기록하고 부모 claim 전체를 중복/누락 없이 나누어야 합니다. 자식 제안도 승인 아님. 이는 split의 검증 가능한 **제안**이며 실행된 lineage 변경은 아닙니다.
+- 인용이 실제로 주장을 뒷받침하는지는 사람의 의미 검토 대상입니다. AI 검수 제안만으로 PerspectiveSpec이나 agent를 생성하지 않습니다.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

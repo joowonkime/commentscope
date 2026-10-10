@@ -7,6 +7,8 @@ import runpy
 import tempfile
 import unittest
 from unittest.mock import patch, MagicMock
+from commentscope.ingestion import load_snapshot
+from commentscope.storage import write_json_exclusive
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / 'experiments/local_claim_probe.py'
@@ -60,3 +62,17 @@ class LocalProbeTests(unittest.TestCase):
                 return [r['comment_id'] for r in json.loads(path.read_text(encoding='utf-8'))['results']]
             self.assertFalse(set(ids(first)) & set(ids(second)))
             self.assertEqual(ids(first), ids(third))
+
+    def test_v0_selection_records_purposive_sampling(self):
+        loaded = load_snapshot(FIXTURE)
+        with tempfile.TemporaryDirectory() as tmp:
+            source = Path(tmp) / 'v0.json'
+            output = Path(tmp) / 'result.json'
+            selected = [c.comment_id for c in loaded.snapshot.comments[:2]]
+            write_json_exclusive(source, {'artifact_kind': 'v0_semantic_candidate_review',
+                'snapshot_sha256': loaded.sha256, 'clusters': [{'id': 'C001', 'members': selected}]})
+            self.execute(output, ['--v0-report', str(source), '--clusters', 'C001'])
+            report = json.loads(output.read_text(encoding='utf-8'))
+            self.assertEqual(report['sampling']['mode'], 'purposive_v0_groups')
+            self.assertFalse(report['sampling']['independent_gold'])
+            self.assertEqual([r['comment_id'] for r in report['results']], sorted(selected))

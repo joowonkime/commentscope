@@ -130,7 +130,7 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 | 프롬프트 | `claim_prompt.py` revision 0.2 | 대상/문맥 역할 설명 → 모델 지시문 | 추출 이후; 원본/V0는 재사용 |
 | 로컬 추론 | `experiments/local_claim_probe.py`의 loopback HTTP 실험 | prompt+target+parent → JSON/시간/token/종료 이유 | 모델 변경 시 추출 및 후속 단계만; provider adapter 분리는 후속 |
 | 후보 clustering | `cluster_baseline.py`의 raw V0 구현 | canonical 원문 → 후보/근거/검수 HTML | embedding 고정이면 clustering 이후; 현재 V0는 벡터를 별도 저장하지 않아 재임베딩 필요 |
-| claim clustering | `factory/candidates` 설계만 존재 | ClaimUnit+embedding → 후보 | 후보 이후 |
+| claim clustering | `factory/claim_clusters.py` 소표본 연결 구현 (2026-10-11) | 추출 artifact+snapshot → 검증된 출처/실패 목록+claim embedding+후보 | 후보 이후; 벡터와 정확한 입력을 저장하되 CLI 자동 재사용은 후속 |
 | 의미 검수 | AI 보조 탐색 기록만 존재 | 후보+원문 → 검수 판단 | review 이후 |
 | 대표 명세 | `factory/perspectives` 설계만 존재 | 승인 후보+검수 → PerspectiveSpec | 명세/agent 이후 |
 | agent / 답변 검수 | 설계만 존재 | 명세+허용 근거+질문 → 감사된 답변 | 해당 agent 단계; upstream 명세는 유지 |
@@ -190,6 +190,18 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 새 seed408 표본 12개는 기존 12개 ID를 제외. 계약 11/12지만 의미 검수에서 조건 반전·개인 범위 오분류·짧은 주장 누락 확인. 출시/agent 승격 보류.
 - 공개 실행기는 private ID/정답을 내장하지 않음. local 보고서로 replay/exclude하며 snapshot hash를 검사. 실제 원문/결과와 모델 파일은 Git 제외.
 - 영향 범위: `contracts/claim_generation.py`, 진단 CLI, README. provider adapter와 전체 Factory 연결은 여전히 후속.
+
+### ADR-007 — 작은 claim-cluster 연결부터 검증 (accepted development slice, 2026-10-11)
+
+- 결정: 기존 V0의 자동화·물가·짧은 반응 묶음을 골라 주장 추출부터 후보/검수 HTML까지 연결. 목적 표집임을 명시하며 정확도·대표성 실험으로 보고하지 않음.
+- 대안: 아직 검증되지 않은 extractor를 즉시 1,000개 전체/agent에 적용하지 않음. 이번에는 prompt-0.2와 grammar-0.3을 유지해 연결 단계에서 생기는 문제를 분리.
+- 새 경계: `factory/claim_clusters.py`가 snapshot hash, 실제 target/parent 텍스트, claims-0.2, 종료 상태를 재검증. 저장된 contract_pass/bound_claims는 신뢰하지 않고 ID를 재생성.
+- 모든 선택 source를 included/blocked/duplicate_alias로 기록. 오류와 0 claims를 구분. 크기는 unique canonical source 수로 세며 하나의 댓글의 여러 claim으로 지지수를 부풀리지 않음.
+- embedding은 기존 고정 MiniLM/CPU chunk pooling. 입력 문장과 claim ID 순서 및 벡터를 함께 저장. 작은 표본용 결정적 cosine-average-linkage 구현을 사용하며 60 sources/300 claims로 제한. stance label은 경고로 표시하고 자동 분할/승인 기준으로 쓰지 않음.
+- semantic gate 이전 후보 생성은 진단용으로만 허용. AI review artifact는 candidate 파일 hash와 소속 claim을 검사. 전체 묶음 제안은 모든 member와 3개 이상 source를 설명해야 함. AI가 accepted로 승격하는 경로는 제공하지 않음.
+- 상위 계획의 실패 run 노출 금지와 구분: 실패를 포함한 결과 화면은 개발자 진단 artifact이며 정상 완료된 제품 Factory run이 아님. agent가 소비할 수 없음.
+- 분리 제안은 부모 claim 전체를 자식에 중복/누락 없이 배정하는지 검증하고 저장. 제안된 자식의 공통 주장·근거·유보사항을 HTML에서 확인 가능. 실제 후보 재배정/승인으로 간주하지 않음.
+- 미구현: 생산용 provider/orchestrator, 자동 의미 검수, 실행된 split/merge lineage, 사람 승인 저장 흐름, PerspectiveSpec/agent. 현재 검수 초안은 사용자가 확인할 제안이지 최종 승인 아님.
 
 ## 변경 시 필수 체크리스트
 

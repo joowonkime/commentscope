@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보 및 V0 로컬 의미 클러스터링 실행 완료. 주장 기반 V1/V2, 검증된 PerspectiveSpec 및 에이전트는 아직 미완료입니다.**
+**기본소득 댓글 1,000개 확보, V0 및 37개 소표본 claim→후보→AI 검수 화면 연결 완료. 전체 V1/V2, 검증된 PerspectiveSpec 및 에이전트는 아직 미완료입니다.**
 
 ## 사용자 결정과 작업 단위
 
@@ -15,6 +15,7 @@
 
 - 저장소: https://github.com/joowonkime/commentscope (public)
 - 수집 브랜치: `feat/youtube-collection`; 로컬 모델/검증 문서는 이를 기반으로 한 `feat/local-model-validation`에서 관리합니다.
+- 소표본 claim 연결: `feat/claim-cluster-slice` (`feat/local-model-validation` 기반). PR #7의 Linux/Windows CI 성공 확인 후 분기; main 병합은 아직 하지 않음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -100,6 +101,21 @@
 - 공개 runner는 snapshot/output/model metadata 인자를 받음. `--replay-report`/`--exclude-report`로 private 보고서 ID를 재사용/제외하며 원본 hash 확인. 개인 corpus ID를 소스에서 제거. 최신 명령은 README 참고(과거 `--revision v2` 단독 명령은 이제 필수 인자가 필요).
 - README는 모델 다운로드 출처/revision, loopback 서버, 합성 실행, 실제 snapshot 교체, 오류·품질 해석, 종료까지 안내. GGUF/safetensors와 models 폴더도 Git 제외.
 - 다음: 사용자와 의미 검수 기준 확인 → 인용/조건/범위 추출 수정 → 새 표본으로 검증 → claim clustering 연결. 확정 PerspectiveSpec/agent는 여전히 0.
+
+## claim-cluster 작은 연결 결과 (2026-10-11)
+
+- 사용자가 작은 표본부터 claim→검수된 cluster로 연결하도록 진행 요청. 기존 1,000개 재사용; YouTube API 추가 호출 0회.
+- V0 C005(반응13개)+C006(자동화12개)+C008(물가12개) = 목적 표집37개. 유망한 묶음과 실패 묶음을 골랐으므로 독립 평가/전체 분포 증거 아님.
+- 프롬프트0.2, 생성 grammar0.3 유지. 로컬 추출37개 JSON 전부 파싱, contract28/37, 잘림0, 총125.63초/중앙값2.53초. 실패9개는 조용히 고치지 않고 후보 입력에서 차단.
+- included28개 = argument_or_experience19 + non_substantive9. 주장25개 → 후보9개, unique sources>=3 후보3개. accepted0/agent0.
+- `artifacts/claim-slice-20261011-extraction.json` 및 `.html`: 원시 추출. `...-candidates.json` 및 `.json.html`: 벡터/입력/후보/출처/실패. `...-review.json`: AI 검수 제안. 최신 사용자 화면 `artifacts/claim-slice-20261011-reviewed-v2.html`.
+- CC001의 자동화 원문9개는 필요성/해결책5개(CC001-A)와 도입 예측4개(CC001-B)로 나누는 초안을 저장. 모든 claim을 중복/누락 없이 설명하는지 검사. 아직 적용된 split/사람 승인 아님.
+- CC001-A 공통 설명 초안: '자동화·AI 확산에 대한 대응으로 UBI가 필요해지거나 해결책이 될 수 있다.' 필요성과 가능성 강도를 통일하지 않으며, modality/이유 필드 교정은 남음. 사용자 피드백 후 승인 여부 결정.
+- CC001-B는 예측을 지지로 해석하거나 짧은 원문에 없는 job displacement 이유를 추가한 오류가 있어 보류. 물가 CC002/CC003도 질문/메커니즘/평가 혼합 때문에 보류. 희소 주장/추출 오류를 숨기지 않음.
+- 코드 경계: `factory/claim_clusters.py` prepare/build/render. API/LLM 호출 없이 추출 결과를 재검증하고 후보 생성. 현재 최대60 selected sources/300claims. 모델 벡터/입력을 저장하나 CLI 자동 cache/resume은 미구현.
+- 검증: 오프라인 unittest88개 통과. 합성 README 경로 실행 결과 selected3 중 duplicate_alias1/included2, claim1/candidate>=3은0으로 정상 표시. 검수 JSON의 hash/소속/분리 제안 전체 배정 검사 통과. HTML은 escape 처리와 근거 링크를 확인했으며 별도 브라우저 시각 검사는 하지 않음.
+- 실행: `python -m commentscope.factory.claim_clusters data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json --output artifacts/NEW.json` (ML 환경, 신규 경로).
+- 다음은 CC001-A/B 설명에 대한 사용자 피드백 → 추출 필드 교정 방식/승인 기록 구현 → 새 표본 검사. 전체1,000개 claim 추출·agent로 즉시 확대하지 않음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

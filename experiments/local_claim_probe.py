@@ -10,6 +10,7 @@ import json
 import random
 import statistics
 import time
+from datetime import datetime, timezone
 from pathlib import Path
 from urllib.request import Request, build_opener, HTTPRedirectHandler, ProxyHandler
 
@@ -46,12 +47,16 @@ def main():
     selection=parser.add_mutually_exclusive_group()
     selection.add_argument('--replay-report',type=Path,help='Reuse IDs from a local earlier report with identical snapshot hash')
     selection.add_argument('--exclude-report',type=Path,help='Exclude earlier report IDs from seeded sampling')
+    selection.add_argument('--v0-report',type=Path,help='Purposive integration sample from named raw V0 groups; not an evaluation set')
+    parser.add_argument('--clusters',nargs='+',help='V0 group IDs to sample in full (requires --v0-report)')
     parser.add_argument('--limit',type=int,default=12)
     parser.add_argument('--seed',type=int,default=407)
     parser.add_argument('--model-label',required=True,help='Actual local model/quantization; recorded as operator supplied')
     parser.add_argument('--model-revision',required=True)
     parser.add_argument('--runtime',required=True,help='Actual llama.cpp build/backend')
     args=parser.parse_args()
+    if bool(args.v0_report) != bool(args.clusters):
+        parser.error('--v0-report and --clusters must be provided together')
     if not 1 <= args.limit <= 1000:
         parser.error('--limit must be between 1 and 1000')
     v2=args.revision!='v1'
@@ -62,17 +67,28 @@ def main():
     if output.exists() or html_path.exists():
         raise FileExistsError('Probe results already exist; do not overwrite')
     loaded = load_snapshot(args.snapshot)
+    if loaded.snapshot.usage.expires_at and datetime.fromisoformat(loaded.snapshot.usage.expires_at.replace('Z','+00:00')) <= datetime.now(timezone.utc):
+        parser.error('Snapshot expired; do not process stale research data')
     if len(loaded.snapshot.comments)>1000:
         parser.error('Current research phase is limited to 1000 source comments')
     sources = {c.comment_id:c for c in loaded.snapshot.comments}
     previous={}
-    report_path=args.replay_report or args.exclude_report
+    report_path=args.replay_report or args.exclude_report or args.v0_report
     if report_path:
         previous=json.loads(report_path.read_text(encoding='utf-8'))
         if previous['snapshot_sha256']!=loaded.sha256:
             parser.error('Previous report snapshot hash does not match')
     prior={r['comment_id']:r for r in previous.get('results',[])}
-    if args.replay_report:
+    if args.v0_report:
+        if previous.get('artifact_kind')!='v0_semantic_candidate_review':
+            parser.error('Expected a raw V0 report')
+        groups={g['id']:g['members'] for g in previous['clusters']}
+        if not set(args.clusters)<=set(groups):
+            parser.error('Unknown V0 group')
+        selected=sorted({cid for group in args.clusters for cid in groups[group]})
+        if not selected or not set(selected)<=set(sources):
+            parser.error('Selected IDs must belong to snapshot')
+    elif args.replay_report:
         selected=list(prior)
         if not selected or not set(selected)<=set(sources):
             parser.error('Replay IDs must be nonempty and belong to snapshot')
@@ -105,7 +121,7 @@ def main():
         if v2 and choice['finish_reason']!='stop':
             contract_errors.append('incomplete_generation')
         results.append({'comment_id':cid,'source':c.text_original,'parent_context':parent.text_original if parent else None,
-                        'selection':'replay' if args.replay_report else 'seeded_random',
+                        'selection':'purposive_v0_groups' if args.v0_report else ('replay' if args.replay_report else 'seeded_random'),
                         'assistant_draft_expectation':prior.get(cid,{}).get('assistant_draft_expectation'),'user_feedback':None,
                         'output':parsed,'raw':raw,'seconds':elapsed,'usage':result.get('usage'),
                         'timings':result.get('timings'),'finish_reason':choice['finish_reason'],'quote_substrings_valid':quotes_ok,
@@ -124,7 +140,9 @@ def main():
             'generation_schema':schema if v2 else None,
             'request_settings':{'temperature':0,'max_tokens':payload['max_tokens']},
             'semantic_review_status':'pending','comparison_caveat':'v3 vs v2 changes generation grammar only; semantic review and unseen evaluation still required',
-            'sampling':{'mode':'replay' if args.replay_report else 'seeded_random','excluded_ids':list(prior) if args.exclude_report else [],'independent_gold':False},
+            'sampling':{'mode':'purposive_v0_groups' if args.v0_report else ('replay' if args.replay_report else 'seeded_random'),
+                        'v0_groups':args.clusters,'selection_report_sha256':hashlib.sha256(report_path.read_bytes()).hexdigest() if report_path else None,
+                        'excluded_ids':list(prior) if args.exclude_report else [],'independent_gold':False},
             'summary':{'count':len(results),'median_seconds':statistics.median(times),'total_seconds':sum(times),
                        'valid_json':sum(r['output'] is not None for r in results),'quote_checks_pass':sum(r['quote_substrings_valid'] for r in results),
                        'truncated':sum(r['finish_reason']=='length' for r in results),
