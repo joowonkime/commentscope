@@ -240,3 +240,14 @@ python -m commentscope.factory.draft_audit data/ubi-research-20261010.json artif
 pairwise는 쌍별 `.case-N.PXX.json`도 보존합니다. HTML에서 원문·제안 문장·이전/현재 판단·규칙/모델 출처를 대조할 수 있습니다.
 실제 개발 표본 22쌍에서 18회 모델 호출 + ID-only 4쌍 규칙 차단을 확인했습니다. 일부 과장은 잡았지만 원문과 동등한 문장의 잘못된 거절도 남았습니다.
 검사만 달라졌으며 초안 내용·cluster 배정은 수정하지 않았습니다. 승인된 PerspectiveSpec/agent는 여전히 0입니다.
+
+#### 프롬프트만 바꾸는 비교 실험
+
+위 audit 명령에 `--prompt-revision v2`를 추가하면 사실 검증과 원문 충실성 검사를 구분하는 새 지시문을 시험합니다.
+기본값은 `v1`을 유지합니다. 동일 draft에 `--mode pairwise`를 유지하고 `--compare-to`에는 이전 pairwise 결과를 지정하세요.
+`comparison_metadata_changes`에서 모델/설정/검사 방식이 함께 바뀌지 않았는지 확인할 수 있습니다. 실행자 선언 metadata이며 독립 평가가 아닙니다.
+기존 개발 회귀 8사례에서 기대 판단 일치는 5→5였습니다. 타당한 예측 거절 2건을 고쳤지만 과장 2건을 다시 놓쳐, 개선 버전으로 채택하지 않았습니다.
+
+대표 초안 명령의 `--revision v3`는 v2의 입력·배정 스키마·원문 연결을 유지하고 생성 프롬프트만 바꿉니다. 기본값은 `v2`입니다.
+새 경로에 저장해야 하며 v3 결과도 같은 audit 명령으로 검사할 수 있습니다. `draft --revision`과 `audit --prompt-revision`은 별개 버전입니다.
+실제 후보3개 중 구조 통과2개였지만 예측/필요성 혼합과 다른 주장을 잘못 묶는 오류가 남았습니다. 프롬프트 수정만으로 해결됐다고 간주하지 않습니다.

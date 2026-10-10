@@ -55,6 +55,9 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 한 pair 실패 시 다른 pair 검사는 계속하되 전체 추천은 audit_failed입니다. 실패 pair를 성공 output에 채우지 않습니다. `model_calls`는 실패한 시도도 포함하며 `lint_blocked_pairs`와 구분합니다.
 - 비교 결과는 동일 draft hash와 pair 집합 및 이전 verdict 누락 여부를 확인한 뒤 `previous_output`으로 따로 붙입니다. 비교 판단은 모델 입력이 아니며 변화 자체를 정확도 개선으로 해석하지 않습니다.
 - 한 쌍씩 검사해도 의미 오판이 남으므로 후속 semantic review를 생략하지 않습니다. `human_approved=false`와 accepted_perspectives=0을 유지합니다.
+- audit의 `--prompt-revision v1|v2`는 지시문만 선택합니다. `prompt_version`/`system_prompt`/`prompt_sha256`를 저장하고 pair payload, verdict schema, lint, 승인 권한은 유지합니다. 기본값은 v1입니다.
+- `comparison_metadata_changes`는 이전/현재 mode, lint, model/revision, runtime, request settings, prompt hash의 차이를 기록합니다. 서버 설정의 독립 검증이나 정확도 보장이 아닙니다.
+- draft의 `--revision v3`는 생성 prompt-0.3이며 wire 형식은 여전히 perspective-assignment-0.2입니다. v2와 동일 입력·스키마·validator·binding 사용; prompt revision을 wire 계약 변경으로 해석하지 않습니다. 기본 생성 revision은 v2입니다.
 
 ## 공통 규칙
 

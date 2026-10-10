@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 로컬 대표 초안→쌍별 근거 검사 실행 완료. ID-only는 규칙으로 차단했으나 초안/검사 의미 오류가 남아 승인된 PerspectiveSpec/agent는 0입니다.**
+**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 대표 초안/쌍별 검사 실행 완료. 검사·생성 프롬프트 단독 변경도 시험했으나 회귀/의미 오류가 남아 기본값 승격 보류. 승인된 PerspectiveSpec/agent는 0입니다. 최신 사용자 검토 화면은 `artifacts/perspective-feedback-20261011.html`입니다.**
 
 ## 사용자 결정과 작업 단위
 
@@ -18,6 +18,7 @@
 - 소표본 claim 연결: `feat/claim-cluster-slice` (`feat/local-model-validation` 기반). PR #7의 Linux/Windows CI 성공 확인 후 분기; main 병합은 아직 하지 않음.
 - 로컬 대표 초안/검사: `feat/local-perspective-drafts` (`feat/claim-cluster-slice` 기반). 이전 PR을 임의 병합하지 않음.
 - 쌍별 근거 검사: `feat/pairwise-source-audit` (`feat/local-perspective-drafts` 기반). PR #9의 Ubuntu/Windows CI 성공 확인 후 분기. main 병합은 하지 않음.
+- 프롬프트 단독 비교: `feat/entailment-audit-prompt` (`feat/pairwise-source-audit` 기반). PR #10 Ubuntu/Windows CI 통과 상태에서 진행. 상위 브랜치 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -144,6 +145,18 @@
 - 코드: `draft_audit.py`의 `--mode pairwise`, `--compare-to`, origin/lint 및 쌍별 checkpoint. 비교는 draft hash/pair/이전 verdict 누락 검사. 실패 시 전체 audit_failed, 성공해도 human_approved=false. 자동 resume 없음.
 - 초안/cluster 배정을 교정하거나 agent를 만들지는 않았음. 승인 PerspectiveSpec/agent0. 오프라인 테스트118개 통과. 서버는 실험 후 종료.
 - 다음: 같은 쌍별 입력을 고정하고 audit prompt만 바꿔, 원문의 함의 검사와 사실/정책 필요성 판단이 혼동되지 않는지 실험. 이후 생성 초안의 예측/필요성 분리와 상세 문장 수정 → 사용자 피드백 → 새 표본 검증. 기존 결과를 덮어쓰거나 1,000개로 바로 확대하지 않음.
+
+## 검사/생성 프롬프트 단독 비교 (2026-10-11, 최신)
+
+- 사용자 요청에 따라 기존 원문/초안/모델/설정을 고정하고 audit prompt만 변경. `audit_prompt_v2.py`, `draft_audit --prompt-revision v2` 구현. 이전 prompt는 v1 기본값으로 유지.
+- `artifacts/perspective-drafts-20261011-entailment-audit.json` 및 `.json.html`: 모델18회 + lint4쌍, 총16.99초. 비교 metadata 차이는 prompt hash뿐임을 확인. 사전 기대8사례 일치5→5; P11/P13 교정, P02/P08 회귀, P09 오판 지속. P04/P05 과장도 supported로 놓침. 일반 정확도/독립 gold가 아님.
+- 생성 쪽은 `perspective_prompt_v3.py`, `perspective_drafts --revision v3`로 v2 입력/스키마/validator/binding을 고정하고 prompt만 변경. 동일 input/members/generation_schema/model/runtime/request_settings를 실제 artifact 대조로 확인. 기본값은 v2 유지.
+- `artifacts/perspective-drafts-20261011-v3.json` 및 `.json.html`: 후보3개, 구조 통과2개, 총32.24초. CC001은 가능한 해결책1개를 분리했으나 나머지8개를 필요성/대부분 일자리 소멸로 과장. CC002는 non-X 배정에 exclusion_reason을 넣어 unexpected_exclusion_reason으로 차단. CC003은 ID-only가 사라졌지만 일부 원문에 없는 common에 잘못 배정하고 상세에 financial stability 이유를 추가.
+- 후속 audit는 새 prompt를 채택하지 않고 v1/pairwise로 실행. `artifacts/perspective-drafts-20261011-v3-audit.json` 및 `.json.html`: CC00114쌍/14.89초, CC00310쌍/10.70초, 둘 다 revise. 실제 문제 일부를 잡지만 타당한 문장도 거절하므로 단독 승인 gate로 사용 금지.
+- assistant 분석과 수정 제안: `artifacts/prompt-comparison-20261011-assistant-review.json`. 실제 파일 hash에 연결. CC001-A 필요성/해결책5개, B 도입 예측4개 제안은 아직 미적용/미승인. 최신 사용자용 `artifacts/perspective-feedback-20261011.html`은 원문9개·한국어 설명·검토 질문·실제 모델 결과 링크를 제공. 로컬 모델 성공 산출물과 구분.
+- 사용자에게 A의 필요성과 가능성을 함께 묶고 강도 차이를 상세에 보존할지, 더 분리할지 피드백 요청. 답변이 오면 기록하되 아직 받지 않은 승인을 가정하지 말 것.
+- 원문/결과는 Git 제외. YouTube 추가 호출0, 유료 API/댓글 외부 전송/추가 모델 다운로드 없음. 실험 서버 종료. 오프라인 테스트125개 통과.
+- 다음: 사용자 피드백을 반영한 소표본 기준 고정 → 원문별 assertion type/modality/조건 확인과 그룹 공통 명제 생성을 분리하는 실험 설계/실행 → 새 표본 검증. 프롬프트만 계속 늘리거나 실패를 수동 수정해 로컬 모델 성공으로 보고하지 않음. 다른 로컬 모델 비교는 대안이며 아직 실행하지 않음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

@@ -15,6 +15,7 @@ from urllib.error import URLError
 
 from commentscope import perspective_prompt
 from commentscope import perspective_prompt_v2
+from commentscope import perspective_prompt_v3
 from commentscope.contracts import perspective_draft as contract
 from commentscope.contracts import perspective_assignment
 from commentscope.factory.claim_clusters import prepare, read_json, sha, VERSION as CANDIDATE_VERSION
@@ -40,7 +41,15 @@ def load_candidates(snapshot, extraction, candidates):
     return prepared, clusters
 
 
+def draft_prompt_for(revision):
+    prompts = {'v1': perspective_prompt, 'v2': perspective_prompt_v2, 'v3': perspective_prompt_v3}
+    if revision not in prompts:
+        raise ValueError('Unknown draft revision')
+    return prompts[revision]
+
+
 def inputs_for(prepared, ids, revision='v1'):
+    draft_prompt_for(revision)
     if not 1 <= len(ids) <= 20:
         raise ValueError('Draft slice supports 1..20 claims per candidate')
     units = {c['claim_id']: c for c in prepared['claims']}
@@ -51,15 +60,16 @@ def inputs_for(prepared, ids, revision='v1'):
                                   'target': prepared['sources'][claim['source_comment_id']]['text'],
                                   'extracted_claim': claim['claim'], 'scope_quote': claim['quote']}
     # Keep real source IDs in host provenance, not generated output.
-    scope_key = 'scope_quote' if revision == 'v2' else 'extracted_claim'
+    scope_key = 'scope_quote' if revision in ('v2', 'v3') else 'extracted_claim'
     payload = {'members': [{'member_id': mid, 'target': m['target'], scope_key: m[scope_key]}
                            for mid, m in members.items()]}
     return members, payload
 
 
 def draft(members, payload, provider=generate, revision='v1'):
-    schema = perspective_assignment.schema(members) if revision == 'v2' else contract.schema(members)
-    prompt = perspective_prompt_v2 if revision == 'v2' else perspective_prompt
+    assignment_wire = revision in ('v2', 'v3')
+    schema = perspective_assignment.schema(members) if assignment_wire else contract.schema(members)
+    prompt = draft_prompt_for(revision)
     started = time.perf_counter()
     response, parsed, raw, finish, canonical = None, None, None, None, None
     errors = []
@@ -69,7 +79,7 @@ def draft(members, payload, provider=generate, revision='v1'):
         finish = choice['finish_reason']
         raw = choice['message']['content']
         parsed = json.loads(raw)
-        if revision == 'v2':
+        if assignment_wire:
             try:
                 canonical = perspective_assignment.canonicalize(parsed, members)
             except ValueError as exc:
@@ -86,7 +96,7 @@ def draft(members, payload, provider=generate, revision='v1'):
     return {'input': payload, 'members': members, 'generation_schema': schema,
             'generation_schema_sha256': hashlib.sha256(json.dumps(schema, sort_keys=True).encode()).hexdigest(),
             'raw': raw, 'output': parsed, 'canonical_output': canonical, 'finish_reason': finish,
-            'citation_mode': 'host_bound_full_target' if revision == 'v2' else 'model_selected_substring',
+            'citation_mode': 'host_bound_full_target' if assignment_wire else 'model_selected_substring',
             'usage': response.get('usage') if isinstance(response, dict) else None,
             'timings': response.get('timings') if isinstance(response, dict) else None,
             'seconds': time.perf_counter()-started, 'contract_errors': errors,
@@ -131,22 +141,23 @@ def main():
     parser.add_argument('--clusters', nargs='+', required=True)
     parser.add_argument('--model-label', required=True); parser.add_argument('--model-revision', required=True)
     parser.add_argument('--runtime', required=True)
-    parser.add_argument('--revision', choices=['v1', 'v2'], default='v2')
+    parser.add_argument('--revision', choices=['v1', 'v2', 'v3'], default='v2')
     args = parser.parse_args()
     prepared, clusters = load_candidates(args.snapshot, args.extraction, args.candidates)
     if len(set(args.clusters)) != len(args.clusters) or not set(args.clusters) <= set(clusters) or len(args.clusters) > 3:
         parser.error('Choose 1..3 distinct known candidate IDs')
     # Prevalidate every input and output before starting any model call.
     inputs = [inputs_for(prepared, clusters[c], args.revision) for c in args.clusters]
-    prompt = perspective_prompt_v2 if args.revision == 'v2' else perspective_prompt
+    prompt = draft_prompt_for(args.revision)
     checkpoints = [Path(str(args.output)+f'.case-{i+1}.json') for i in range(len(inputs))]
     if any(os.path.lexists(p) for p in [args.output, Path(str(args.output)+'.html'), *checkpoints]):
         parser.error('Output exists; choose new paths')
     report = {'artifact_kind': 'local-perspective-draft-probe-0.1', 'schema_version': contract.VERSION,
               'snapshot_sha256': prepared['snapshot_sha256'], 'expires_at': prepared['expires_at'],
               'extraction_sha256': prepared['extraction_sha256'], 'candidate_report_sha256': sha(args.candidates),
-              'wire_schema_version': perspective_assignment.VERSION if args.revision == 'v2' else contract.VERSION,
-              'comparison_caveat': 'v2 changes prompt, assignment schema, citation mechanism and source input together; not isolated causal evidence',
+              'wire_schema_version': perspective_assignment.VERSION if args.revision in ('v2', 'v3') else contract.VERSION,
+              'comparison_caveat': ('v3 changes only the prompt relative to v2; same development inputs, not independent accuracy evaluation'
+                  if args.revision == 'v3' else 'v2 changes prompt, assignment schema, citation mechanism and source input together; not isolated causal evidence'),
               'system_prompt': prompt.SYSTEM, 'prompt_version': prompt.VERSION,
               'prompt_sha256': hashlib.sha256(prompt.SYSTEM.encode()).hexdigest(),
               'model': args.model_label, 'model_revision': args.model_revision, 'runtime': args.runtime,

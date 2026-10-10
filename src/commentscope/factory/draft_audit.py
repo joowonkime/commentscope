@@ -10,6 +10,7 @@ import re
 import time
 from urllib.error import URLError
 
+from commentscope import audit_prompt_v2
 from commentscope.contracts.perspective_draft import obj
 from commentscope.contracts.perspective_assignment import canonicalize
 from commentscope.factory.claim_clusters import read_json, sha
@@ -45,11 +46,20 @@ def pairs_for(canonical):
     return pairs
 
 
-def audit(canonical, members, provider=generate):
-    return audit_pairs(pairs_for(canonical), members, provider)
+def prompt_for(revision):
+    if revision == 'v1':
+        return 'source-statement-prompt-0.1', SYSTEM
+    if revision == 'v2':
+        return audit_prompt_v2.VERSION, audit_prompt_v2.SYSTEM
+    raise ValueError('Unknown audit prompt revision')
 
 
-def audit_pairs(pairs, members, provider=generate):
+def audit(canonical, members, provider=generate, *, prompt_revision='v1'):
+    return audit_pairs(pairs_for(canonical), members, provider, prompt_revision=prompt_revision)
+
+
+def audit_pairs(pairs, members, provider=generate, *, prompt_revision='v1'):
+    _, system = prompt_for(prompt_revision)
     verdicts = ['supported', 'partial', 'unsupported', 'unclear']
     schema = obj({key: obj({'verdict': {'type': 'string', 'enum': verdicts},
                             'reason': {'type': 'string', 'minLength': 1}}) for key in pairs})
@@ -59,7 +69,7 @@ def audit_pairs(pairs, members, provider=generate):
         return {'pairs': {}, 'output': {}, 'errors': [], 'raw': None, 'seconds': 0,
                 'recommendation': 'no_drafts', 'human_approved': False}
     try:
-        response = provider(SYSTEM, payload, schema)
+        response = provider(system, payload, schema)
         choice = response['choices'][0]; raw = choice['message']['content']; parsed = json.loads(raw)
         if not isinstance(parsed, dict) or set(parsed) != set(pairs):
             errors.append('pair_coverage')
@@ -84,7 +94,8 @@ def statement_lint(text):
     return []
 
 
-def audit_pairwise(canonical, members, provider=generate, on_pair=None):
+def audit_pairwise(canonical, members, provider=generate, on_pair=None, *, prompt_revision='v1'):
+    prompt_for(prompt_revision)  # Validate even if every pair is blocked by lint.
     pairs = pairs_for(canonical)
     output, errors, records = {}, [], {}
     for key, pair in pairs.items():
@@ -98,7 +109,7 @@ def audit_pairwise(canonical, members, provider=generate, on_pair=None):
             # A fresh system+user request containing exactly one statement and its cited TARGET.
             # No other authors, group statements, prior verdicts, or assistant review enter it.
             mid = pair['member_id']
-            result = {**audit_pairs({key: pair}, {mid: members[mid]}, provider),
+            result = {**audit_pairs({key: pair}, {mid: members[mid]}, provider, prompt_revision=prompt_revision),
                       'verdict_origin': 'local_model', 'lint_errors': []}
         records[key] = result
         if result['errors']:
@@ -128,6 +139,9 @@ def attach_comparison(report, previous):
             raise ValueError('Comparison pairs differ or prior audit failed')
         result['previous_output'] = prior['output']
     report['comparison_caveat'] = 'Same development pairs; verdict change is not measured accuracy. ID-placeholder blocks are deterministic, not model improvement.'
+    report['comparison_metadata_changes'] = {key: {'previous': previous.get(key), 'current': report.get(key)}
+        for key in ['audit_mode', 'lint_version', 'model', 'model_revision', 'runtime', 'request_settings', 'prompt_sha256']
+        if previous.get(key) != report.get(key)}
 
 
 def render(report):
@@ -141,7 +155,7 @@ def render(report):
             origin = result.get('pair_results', {}).get(key, {}).get('verdict_origin', 'local_model_batch')
             parts.append('<h3>'+esc(key)+' · 그룹 '+str(pair['group'])+' / '+esc(pair['statement_kind'])+'</h3><p>'+esc(pair['text'])+'</p><blockquote>'+esc(result['members'][pair['member_id']]['target'])+'</blockquote><p>이번 검사 ('+esc(origin)+'): '+esc(verdict)+'</p>')
             if 'previous_output' in result:
-                parts.append('<p>이전 일괄 검사: '+esc(result['previous_output'].get(key))+'</p>')
+                parts.append('<p>이전 비교 검사: '+esc(result['previous_output'].get(key))+'</p>')
         parts.append('</article>')
     return '\n'.join(parts)
 
@@ -153,8 +167,10 @@ def main():
     parser.add_argument('--model-label', required=True); parser.add_argument('--model-revision', required=True)
     parser.add_argument('--runtime', required=True)
     parser.add_argument('--mode', choices=['batch', 'pairwise'], default='batch')
+    parser.add_argument('--prompt-revision', choices=['v1', 'v2'], default='v1')
     parser.add_argument('--compare-to', type=Path, help='Previous audit of the exact same draft/pairs; never sent to model')
     args = parser.parse_args()
+    prompt_version, system = prompt_for(args.prompt_revision)
     prepared, clusters = load_candidates(args.snapshot, args.extraction, args.candidates)
     drafts = read_json(args.drafts)
     if drafts.get('candidate_report_sha256') != sha(args.candidates) or drafts.get('wire_schema_version') != 'perspective-assignment-0.2':
@@ -173,8 +189,9 @@ def main():
     report = {'artifact_kind': PAIRWISE_VERSION if args.mode == 'pairwise' else VERSION,
               'audit_mode': args.mode, 'lint_version': LINT_VERSION if args.mode == 'pairwise' else None,
               'draft_sha256': sha(args.drafts), 'expires_at': prepared['expires_at'],
-              'created_at': datetime.now(timezone.utc).isoformat(), 'system_prompt': SYSTEM,
-              'prompt_sha256': hashlib.sha256(SYSTEM.encode()).hexdigest(),
+              'created_at': datetime.now(timezone.utc).isoformat(), 'system_prompt': system,
+              'prompt_version': prompt_version,
+              'prompt_sha256': hashlib.sha256(system.encode()).hexdigest(),
               'model': args.model_label, 'model_revision': args.model_revision, 'runtime': args.runtime,
               'model_metadata_source': 'operator_supplied_not_attested',
               'request_settings': {'temperature': 0, 'seed': 407, 'max_tokens': 3000},
@@ -190,7 +207,8 @@ def main():
                 'cluster_id': cid, 'members': {result['pairs'][key]['member_id']: members[result['pairs'][key]['member_id']]},
                 'pair_result': result})
             print(json.dumps({'cluster': cid, 'pair': key, 'origin': result['verdict_origin'], 'errors': result['errors']}), flush=True)
-        checked = audit_pairwise(canonical, members, on_pair=on_pair) if args.mode == 'pairwise' else audit(canonical, members)
+        checked = (audit_pairwise(canonical, members, on_pair=on_pair, prompt_revision=args.prompt_revision)
+                   if args.mode == 'pairwise' else audit(canonical, members, prompt_revision=args.prompt_revision))
         result = {'cluster_id': cid, 'members': members, **checked}
         write_json_exclusive(checkpoint, {**report, 'results': [result], 'checkpoint_only': True})
         report['results'].append(result)
