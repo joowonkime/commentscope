@@ -1,8 +1,33 @@
 # 데이터 계약 v0.1
 
 이 문서는 wire format과 검증 규칙의 구현 명세입니다. 2단계에서 DatasetSnapshot/Comment 검증과 normalization을 구현했습니다.
-Eligibility 이후의 계약과 전체 RunManifest는 후속 구현 명세이며, JSON Schema 파일은 아직 제공하지 않습니다.
+Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명세입니다.
+2026-10-10부터 추출 실험 전용 `claims-0.2` JSON Schema/validator는 `src/commentscope/contracts/claims.py`에 제공합니다.
+기존 snapshot-0.1이나 아래 전체 Factory 명세를 자동으로 0.2로 바꾸는 것은 아닙니다.
 합성 예시는 [snapshot](examples/synthetic-snapshot.json)과 [Factory trace](examples/synthetic-factory-trace.json)에 있습니다.
+
+## 추출 실험 계약 claims-0.2 (2026-10-10)
+
+로컬 모델의 출력은 `{eligibility, claims}`입니다. 각 claim의 필수 키:
+
+| 필드 | 의미 |
+| --- | --- |
+| `issue`, `claim` | 구체적인 쟁점과 원문에 충실한 주장. 개인/가능성/조건을 문장에도 보존 |
+| `quote` | 해당 주장을 지지하는 target 댓글의 정확한 substring |
+| `stance_target`, `stance` | 평가 대상과 그에 대한 입장. 대안 정책 지지를 UBI 지지로 자동 해석하지 않음 |
+| `reason`, `reason_quote` | 별도로 명시된 이유와 원문 근거; 없으면 둘 다 null |
+| `condition`, `condition_quote` | 명시된 if/when/only-if 조건과 근거; 없으면 둘 다 null |
+| `scope` | personal / general / unclear |
+| `modality` | asserted / possible / conditional / unclear |
+
+- `argument_or_experience`만 비어 있지 않은 claims를 허용. 나머지는 빈 배열. v0.2 실험은 최대6개; 장문/과다 주장 처리는 전체 파이프라인에서 별도 설계 필요.
+- support/oppose/conditional/mixed에는 stance_target 필수. 명시적 정책 선호가 없는 기술적 주장/경험은 neutral과 null target을 기본으로 함.
+- 모델은 source ID를 출력하지 않음. 호스트의 `bind_source()`가 실제 target ID와 schema/source/claim 기반 deterministic claim ID를 부여.
+- claim ID는 실험용 내용 기반 ID이며 전체 Factory의 run-scoped ID 구현을 대체하지 않음. 동일 claim 표현이 달라지면 ID도 달라짐.
+- 구조·enum·target substring·reason/condition 쌍·eligibility 불변조건 실패는 오류 목록으로 반환. 원시 모델 결과를 조용히 고치거나 실패를 0 claims로 대체하지 않음.
+- 검증 성공은 `semantic_review_status=pending`. quote가 존재해도 claim/이유/조건을 실제로 함의하는지, 누락된 주장이 없는지는 별도 검수.
+- 초기 probe-0.1 결과는 그대로 보관. 0.2로 재사용하려면 원본을 새 prompt/schema로 재추출하며 무표시 변환하지 않음.
+- 전체 Factory envelope, eligibility 사유/언어/confidence, 재시도·문맥 해석은 아직 완성된 계약 구현이 아님.
 
 ## 공통 규칙
 

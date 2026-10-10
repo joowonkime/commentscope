@@ -1,6 +1,8 @@
 # 구조 결정 — 1단계
 
-상태: snapshot/comment 검증·정규화와 개발자용 공식 API collector를 구현했습니다. 모델·Factory·UI는 후속 범위입니다.
+상태 (2026-10-10): 공식 API 수집·snapshot 검증·정규화 및 로컬 V0 원문 clustering 실행 완료.
+로컬 claim 추출은 실험 중이며 claims-0.2 계약/검증과 prompt revision을 추가했습니다. 전체 Factory·에이전트·서비스 UI는 미구현입니다.
+이 문서의 하단 결정 기록과 모듈별 상태가 과거 단계 설명보다 우선합니다.
 기준: [핸드오프 Section 16](requirements-handoff.md#16-implementation-default-specification-added-after-ambiguity-review).
 
 ## 첫 구현의 선택
@@ -76,6 +78,9 @@ YouTube API 키는 별도 read-only `YouTubeClient`에만 전달합니다. `coll
 
 이 단계는 평가 경계를 정합니다. 실제 평가 도구·모델 성능·1,000개 처리 능력은 아직 검증하지 않았습니다.
 
+정정 (2026-10-10): 1,000개 중 999 canonical comments에 대한 raw V0 실행은 완료했습니다.
+현재 `cluster_baseline.py`는 eligibility를 적용하지 않은 탐색용 기준선입니다. 위의 공정한 V0/V1/V2 비교 설정을 충족한 논문 실험으로 간주하지 않습니다.
+
 ## 실행 결과와 실패
 
 `artifacts/<run_id>/`에 manifest, normalized comments, eligibility, claims, embeddings, candidates, review events,
@@ -114,3 +119,83 @@ python -m unittest discover -s tests
 계약 오류/저장 실패 경로를 포함한 검사는 [tests/test_ingestion.py](../tests/test_ingestion.py)에 있습니다.
 GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 commit SHA로 고정했습니다:
 [checkout](https://github.com/actions/checkout), [setup-python](https://github.com/actions/setup-python).
+
+## 교체 가능한 경계와 실제 상태 (2026-10-10)
+
+| 단계 | 현재 구현/설계 위치 | 입력 → 출력 | 교체 시 재실행 범위 |
+| --- | --- | --- | --- |
+| 수집 | `ingestion/youtube.py`, `youtube_client.py` 구현 | 영상/설정 → snapshot-0.1 | 데이터 변경이면 전 단계; 기존 snapshot은 그대로 보관 |
+| 정규화 | `ingestion/normalize.py` 구현 | snapshot → 원문 ID를 유지한 분석 텍스트 | 추출/embedding 이후 |
+| 추출 계약 | `contracts/claims.py` 구현 | 원시 모델 JSON + target → 오류 또는 source-bound claim | 호환되지 않는 변경이면 추출 이후 |
+| 프롬프트 | `claim_prompt.py` revision 0.2 | 대상/문맥 역할 설명 → 모델 지시문 | 추출 이후; 원본/V0는 재사용 |
+| 로컬 추론 | `experiments/local_claim_probe.py`의 loopback HTTP 실험 | prompt+target+parent → JSON/시간/token/종료 이유 | 모델 변경 시 추출 및 후속 단계만; provider adapter 분리는 후속 |
+| 후보 clustering | `cluster_baseline.py`의 raw V0 구현 | canonical 원문 → 후보/근거/검수 HTML | embedding 고정이면 clustering 이후; 현재 V0는 벡터를 별도 저장하지 않아 재임베딩 필요 |
+| claim clustering | `factory/candidates` 설계만 존재 | ClaimUnit+embedding → 후보 | 후보 이후 |
+| 의미 검수 | AI 보조 탐색 기록만 존재 | 후보+원문 → 검수 판단 | review 이후 |
+| 대표 명세 | `factory/perspectives` 설계만 존재 | 승인 후보+검수 → PerspectiveSpec | 명세/agent 이후 |
+| agent / 답변 검수 | 설계만 존재 | 명세+허용 근거+질문 → 감사된 답변 | 해당 agent 단계; upstream 명세는 유지 |
+
+단일 프로세스/로컬 JSON을 유지합니다. 모듈 교체를 위해 별도 마이크로서비스를 만들지는 않습니다.
+각 단계는 자신이 받은 입력과 명시된 근거만 사용하며, 모델 결과가 원문 ID/승인 상태를 임의 결정하지 못하게 합니다.
+
+## 아키텍처 결정 기록
+
+새 결정은 아래에 추가하며 과거 결정을 조용히 지우지 않습니다. 각 항목은 상태·이유·대안·영향 범위를 기록합니다.
+
+### ADR-001 — 대표성 우선 (accepted, 2026-10-10)
+
+- 결정: 의미 있는 공통 주장을 충실히 대변하는 agent가 목적. 대립/찬반 균형은 요구하지 않음.
+- 이유: 댓글을 토론 구도에 맞추면 원문을 왜곡할 수 있음.
+- 대안: 찬반 진영을 먼저 정해 배정하는 방식은 채택하지 않음.
+- 영향: eligibility, cluster gate, PerspectiveSpec, 사용자 평가. 같은 공통 주장 아래의 서로 다른 경험은 자동 split하지 않음.
+
+### ADR-002 — 로컬 모델 우선, 품질 승인은 별개 (accepted direction, 2026-10-10)
+
+- 결정: 로컬 소형 모델을 우선 평가. 현재 시험 모델은 Qwen3-4B-Instruct-2507 Q4_K_M / llama.cpp CUDA.
+- 이유: RTX4060 Laptop 8GB에서 실행 가능하며 호출 비용과 외부 전송을 줄임.
+- 대안: 더 큰 로컬 모델, 유료 API, 혼합 구성은 비교 후 선택. 현재 모델을 영구 고정하거나 API와 동등하다고 간주하지 않음.
+- 영향: provider 구현과 실행 설정. contracts/claim IDs/품질 기준은 모델과 독립적으로 유지.
+
+### ADR-003 — 구조 검증과 의미 검수 분리 (accepted, 2026-10-10)
+
+- 결정: JSON grammar + deterministic validator + semantic review를 별개로 둠.
+- 이유: 첫 probe는 JSON/인용 문자열 검사12/12 성공했지만 의미 있는 경험 누락과 eligibility 모순이 있었음.
+- 계약0.2: stance_target, personal/general scope, modality, reason/condition별 target 원문 quote. 모델은 source ID를 생성하지 않음.
+- 구조 검증 실패 시 원시 결과와 오류를 보존하고 downstream 승인 불가. 조용한 자동 수정/삭제 금지.
+- 구조 검증 성공도 `semantic_review_status=pending`; 실제 이유/인용의 함의 관계와 누락은 자동 보장되지 않음.
+- 대안: 문법만 강제하고 바로 agent로 승격하는 방식은 채택하지 않음.
+
+### ADR-004 — AI 초안 + 사용자 피드백 (accepted development workflow, 2026-10-10)
+
+- 결정: AI가 표본과 검수 초안을 만들고 사용자가 피드백. 전체 1,000개 인간 전수 라벨링은 초기 요구가 아님.
+- 이유: 검수 부담을 줄이면서 실제 실패를 발견하고 의미 기준을 맞춤.
+- 한계: 초안은 독립 gold가 아님. 개선에 쓴 표본은 development set; 새 평가 표본과 분리.
+- 영향: 평가 기록에 작성자/수정자, 버전, 선택 규칙, 불일치·수정 이력을 남김. 논문용 최종 평가 설계는 후속.
+
+### ADR-005 — 버전과 산출물로 교체/회귀 추적 (accepted, 2026-10-10)
+
+- 결정: source snapshot은 불변, prompt/schema/모델 revision은 명시, 실행 결과는 새 파일로 보존.
+- 실험 manifest: snapshot SHA256, prompt 본문/version/hash, schema version/hash, 모델 revision/quantization/runtime, seed/temperature/max_tokens/context, 개별 output·오류·시간/token.
+- 현재 probe v1→v2는 prompt/schema/grammar/output budget을 함께 변경하므로 단일 요소의 인과 효과를 주장하지 않음.
+- 앞으로 기본 rule: 코드/설계는 Git commit, 실제 원문·출력·키·모델 weights는 Git 제외. prompt 변경 후 같은 development case로 회귀 검사하고 별도 표본으로 일반화 검사.
+- 대안: 결과 덮어쓰기, prompt를 코드 곳곳에 복제, 모델 변경과 corpus 변경을 섞는 실행은 금지.
+- 한계: 전체 DAG 자동 invalidation/cache/replay는 아직 미구현. 위의 재실행 범위는 수동 운영 규칙이며 자동 기능으로 보고하지 않음.
+
+### ADR-006 — 표본 고정 및 생성 grammar 분리 (accepted experiment, 2026-10-10)
+
+- 첫 cluster 품질 확인까지 기존 1,000개를 재사용하고 추가 YouTube 호출/전체 수집 확장을 하지 않음. 보관 만료는 별도로 준수.
+- claim-generation-0.3은 claims-0.2 출력 계약을 바꾸지 않고, 생성 grammar의 anyOf 분기로 substantive는 1개 이상, 나머지는 빈 claims만 허용.
+- 대안: 모델 출력에서 claims를 사후 삭제하는 자동 수정은 하지 않음. 실패 결과와 validator를 유지.
+- 같은 snapshot/prompt/모델/설정에서 v2→v3의 실제 JSON 변경은 사례 7/8뿐. 계약 통과 8/12→10/12. 의미적 정확도 개선 전체를 증명하지 않음.
+- 새 seed408 표본 12개는 기존 12개 ID를 제외. 계약 11/12지만 의미 검수에서 조건 반전·개인 범위 오분류·짧은 주장 누락 확인. 출시/agent 승격 보류.
+- 공개 실행기는 private ID/정답을 내장하지 않음. local 보고서로 replay/exclude하며 snapshot hash를 검사. 실제 원문/결과와 모델 파일은 Git 제외.
+- 영향 범위: `contracts/claim_generation.py`, 진단 CLI, README. provider adapter와 전체 Factory 연결은 여전히 후속.
+
+## 변경 시 필수 체크리스트
+
+1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
+2. 입출력 변경은 `DATA_CONTRACTS.md`와 runtime validator, schema version에 함께 반영한다.
+3. 합성 단위 테스트와 고정 development case를 실행한다. 실패 및 회귀도 보존한다.
+4. 실행 manifest와 새 artifact를 남긴다. 이전 실행은 덮어쓰지 않는다.
+5. `NEXT_SESSION.md`에 실제 실행 결과와 미구현 상태를 갱신한다. 문서상의 계획을 완료 기능으로 표시하지 않는다.
+6. 코드/문서는 Git에 기록하되 corpus/모델 출력/비밀키가 포함되지 않았는지 확인한다.
