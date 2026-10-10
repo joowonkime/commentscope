@@ -215,6 +215,17 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 승인 PerspectiveSpec과 구분해 accepted_perspectives=0, semantic_review_status=pending 유지. 생성→검사 성공만으로 agent를 만들지 않음.
 - 다음 검토 대상: ID만 적힌 placeholder 문장 차단, 문장-원문 단위 입력으로 검사 문맥 간섭 완화, 예측/필요성 구분. 전체 corpus 확대보다 현재 실패 수정 우선.
 
+### ADR-009 — 쌍별 독립 요청과 규칙 차단의 분리 (experimental, 2026-10-11)
+
+- 결정: `draft_audit --mode pairwise`에서 한 제안 문장–한 인용 TARGET만 새 요청으로 검사. 기존 batch/SYSTEM/판정 스키마/모델 설정은 비교용으로 유지합니다. 독립 요청은 독립 평가자나 독립 gold를 뜻하지 않습니다.
+- 이유: batch에서 다른 문장의 필요성·일자리 논리를 가져와 타당한 예측을 거절하거나, ID placeholder를 주장으로 해석하는 실패가 관찰됐습니다.
+- ID-only는 좁은 deterministic lint로 모델 호출 전에 차단. `verdict_origin`으로 코드 규칙과 모델 판단을 구분하고 합산 정확도를 주장하지 않습니다. 모든 의미 검사를 규칙으로 대체하지 않습니다.
+- 변경 범위: audit 실행/저장/진단 HTML만 변경. 수집·claim 추출·embedding·후보·대표 초안은 재생성하지 않음. pair별 checkpoint 보존, 자동 resume/승인은 미구현.
+- 실제 22쌍 = 모델18회 + 규칙4쌍. 총 모델 호출시간 합15.38초(서버 로딩 제외, prompt cache 포함). 이전 batch14.32초와 단일 실행 비교일 뿐 일반 성능 추정 아님.
+- 실행 전 작성한 assistant 기대 판단 8개 중 모델 판정 일치5개(이전1개), ID-only 기대4개는 규칙으로4개 차단. 알려진 실패 중심의 개발 회귀 표본이므로 정확도 점수나 인간 gold로 보고하지 않음.
+- 과장 일부를 잡았으나 원문과 동등한 문장도 여전히 partial로 판정. 다른 문장이 없어도 필요성/인과성 조건을 불필요하게 요구하므로 문맥 분리만으로 해결되지 않음. prompt 내 경고의 과잉 적용은 다음에 검증할 가설이지 확정 원인 아님.
+- 다음 대안: 동일 pairwise 입력/설정을 고정하고 텍스트 함의 검사 prompt만 수정하는 실험. 댓글 주장의 사실 여부와 제안 문장이 댓글에 충실한지를 구분. 검사 자동승격 금지 및 새로운 표본/사용자 검토 필요성 유지.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

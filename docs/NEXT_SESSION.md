@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 로컬 대표 초안→별도 근거 검사 실행 완료. 초안/검사 모두 의미 오류가 남아 승인된 PerspectiveSpec/agent는 0입니다.**
+**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 로컬 대표 초안→쌍별 근거 검사 실행 완료. ID-only는 규칙으로 차단했으나 초안/검사 의미 오류가 남아 승인된 PerspectiveSpec/agent는 0입니다.**
 
 ## 사용자 결정과 작업 단위
 
@@ -17,6 +17,7 @@
 - 수집 브랜치: `feat/youtube-collection`; 로컬 모델/검증 문서는 이를 기반으로 한 `feat/local-model-validation`에서 관리합니다.
 - 소표본 claim 연결: `feat/claim-cluster-slice` (`feat/local-model-validation` 기반). PR #7의 Linux/Windows CI 성공 확인 후 분기; main 병합은 아직 하지 않음.
 - 로컬 대표 초안/검사: `feat/local-perspective-drafts` (`feat/claim-cluster-slice` 기반). 이전 PR을 임의 병합하지 않음.
+- 쌍별 근거 검사: `feat/pairwise-source-audit` (`feat/local-perspective-drafts` 기반). PR #9의 Ubuntu/Windows CI 성공 확인 후 분기. main 병합은 하지 않음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -132,6 +133,17 @@
 - 실행기 context8192/no-context-shift/parallel1, 최대출력3000. 실행 후 서버 종료. 후보별 checkpoint는 보존하되 자동 resume 없음.
 - 오프라인 테스트108개 통과. 모델 검사 결과를 코드 테스트 성공률과 혼동하지 않음.
 - 다음은 placeholder 차단 및 원문-문장 한 쌍씩 독립 검사하는 실험(아직 미구현), 예측/필요성 구분 개선. 1,000개 확장/agent 승격 전에 새 표본으로 검증. 프롬프트만으로 충분하다고 아직 결론낼 수 없음.
+
+## 쌍별 근거 검사 + placeholder 차단 (2026-10-11, 최신)
+
+- 바로 위의 다음 작업을 구현/실행 완료. 기존 1,000개/초안 재사용; YouTube 호출0, 댓글 외부 전송 없음. 모델/설정/SYSTEM 유지, 요청 경계를 한 문장–한 원문으로 변경. ID-only는 별도 규칙 차단.
+- `artifacts/perspective-drafts-20261011-pairwise-audit.json` 및 `.json.html`: 이전 batch와 현재 판단을 나란히 확인. CC001 14회/12.07초, CC003 모델4회/3.31초 + ID-only4쌍 규칙 차단. 총22쌍, 모델18회, 오류/잘림0, 총15.38초. 둘 다 revise_before_human_approval.
+- CC001 P02/P07/P08: 이전 supported→partial로 과장/빠진 근거를 탐지. P14: 이전 partial→supported로 타당한 예측 인정. P09/P11/P13은 여전히 타당한 문장을 partial로 거절. P01 판정도 supported→partial로 바뀌었고 이유에 원문과 모순되는 설명이 있어 검토 필요.
+- 실행 전 `artifacts/pairwise-audit-20261011-regression-expectations.json`에 assistant 기대 판단을 기록했으며 모델에는 주지 않음. 알려진 실패 중심 모델8사례 중 기대 일치1→5, 별도 규칙4사례는4개 차단. 인간 gold/일반 정확도 아님. 결과 분석: `artifacts/pairwise-audit-20261011-assistant-review.json`.
+- 새로운 의미 문제: P04 이유는 원문에 있는 80%+ 일자리 조건도 없다고 설명. P09/P11/P13은 문장에 없는 필요성/독점 인과 요구. 같은 모델의 추가 호출만으로 신뢰 가능한 승인 gate가 된 것은 아님.
+- 코드: `draft_audit.py`의 `--mode pairwise`, `--compare-to`, origin/lint 및 쌍별 checkpoint. 비교는 draft hash/pair/이전 verdict 누락 검사. 실패 시 전체 audit_failed, 성공해도 human_approved=false. 자동 resume 없음.
+- 초안/cluster 배정을 교정하거나 agent를 만들지는 않았음. 승인 PerspectiveSpec/agent0. 오프라인 테스트118개 통과. 서버는 실험 후 종료.
+- 다음: 같은 쌍별 입력을 고정하고 audit prompt만 바꿔, 원문의 함의 검사와 사실/정책 필요성 판단이 혼동되지 않는지 실험. 이후 생성 초안의 예측/필요성 분리와 상세 문장 수정 → 사용자 피드백 → 새 표본 검증. 기존 결과를 덮어쓰거나 1,000개로 바로 확대하지 않음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

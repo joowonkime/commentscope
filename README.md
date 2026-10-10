@@ -228,3 +228,15 @@ python -m commentscope.factory.draft_audit data/ubi-research-20261010.json artif
 각 명령의 결과 화면은 output에 `.html`을 덧붙인 경로입니다. 중단 대비 후보별 `.case-N.json`도 보존하지만 자동 resume은 없습니다. 새 실행은 새 output 경로를 사용합니다.
 한 번에 최대 후보3개, 후보별 claim20개를 시험합니다. 오류나 출력 잘림은 차단하고 원시 출력을 남깁니다.
 검사는 같은 모델의 두 번째 판단이며 독립적인 정답 평가가 아닙니다. 모두 supported여도 사람 검토 대기이며, agent 승격 권한이 없습니다.
+
+한 문장과 인용 원문 하나만 새 요청으로 검사하려면 `--mode pairwise`를 사용합니다. 기본값은 과거 비교를 위한 `batch`입니다.
+pairwise에서는 `M01` 같은 ID만 적힌 문장을 모델 호출 전에 규칙으로 차단합니다. 이는 모델 정확도 개선으로 세지 않습니다.
+같은 초안의 이전 검사 결과가 있으면 선택적으로 `--compare-to`를 붙입니다. draft hash와 pair 일치를 확인하며 이전 판단은 모델에 전달하지 않습니다.
+
+```bash
+python -m commentscope.factory.draft_audit data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json artifacts/claim-slice-20261011-candidates.json artifacts/YOUR-drafts.json --mode pairwise --compare-to artifacts/YOUR-audit.json --output artifacts/YOUR-pairwise-audit.json --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 context8192 no-context-shift parallel1"
+```
+
+pairwise는 쌍별 `.case-N.PXX.json`도 보존합니다. HTML에서 원문·제안 문장·이전/현재 판단·규칙/모델 출처를 대조할 수 있습니다.
+실제 개발 표본 22쌍에서 18회 모델 호출 + ID-only 4쌍 규칙 차단을 확인했습니다. 일부 과장은 잡았지만 원문과 동등한 문장의 잘못된 거절도 남았습니다.
+검사만 달라졌으며 초안 내용·cluster 배정은 수정하지 않았습니다. 승인된 PerspectiveSpec/agent는 여전히 0입니다.

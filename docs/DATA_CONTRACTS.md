@@ -49,7 +49,12 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - host의 bind가 실제 claim/source ID를 붙입니다. unique sources>=3이라도 needs_semantic_review이며 나머지는 rare_needs_review입니다. 두 경우 모두 accepted_perspectives=0.
 - reasons/conditions/variations의 근거는 일부 source에만 해당할 수 있습니다. 공통 문장은 모든 배정 source의 지원이 필요하지만, 이 의미 요건은 문자열 validator로 보장되지 않습니다.
 - `source-statement-audit-0.1`은 각 문장과 각 인용 source의 pair마다 verdict/reason을 요구합니다. 검사 누락·잘림·잘못된 응답은 audit_failed. 모두 supported여도 needs_human_review, 나머지는 revise_before_human_approval입니다. 이는 모델의 진단 추천이지 실제 사람의 승인 상태가 아닙니다.
-- 현재 실험은 source ID만 쓴 detail 같은 의미적으로 빈 문자열을 완전히 차단하지 못합니다. 검사 모델도 오판하므로 후속 semantic review를 생략하지 않습니다.
+- `source-statement-audit-pairwise-0.2`는 같은 verdict 계약을 사용하되 요청마다 정확히 한 pair와 해당 TARGET만 전달합니다. 다른 원문/문장·이전 판단·assistant 검수는 요청에 포함하지 않습니다.
+- pairwise의 `statement-placeholder-0.1`은 `M`+숫자 ID만 나열한 문장(공백/일부 구두점 포함)을 `id_only_placeholder`로 차단합니다. 일반적인 의미 없음 판별기는 아니며 draft 생성 계약이나 batch에는 적용되지 않습니다.
+- `pair_results`는 쌍별 raw/output/errors/seconds와 `verdict_origin=local_model|deterministic_lint`, `lint_errors`를 보존합니다. 규칙 차단은 unsupported/raw=null/모델 호출0이며, 모델이 판정했다고 표시하지 않습니다.
+- 한 pair 실패 시 다른 pair 검사는 계속하되 전체 추천은 audit_failed입니다. 실패 pair를 성공 output에 채우지 않습니다. `model_calls`는 실패한 시도도 포함하며 `lint_blocked_pairs`와 구분합니다.
+- 비교 결과는 동일 draft hash와 pair 집합 및 이전 verdict 누락 여부를 확인한 뒤 `previous_output`으로 따로 붙입니다. 비교 판단은 모델 입력이 아니며 변화 자체를 정확도 개선으로 해석하지 않습니다.
+- 한 쌍씩 검사해도 의미 오판이 남으므로 후속 semantic review를 생략하지 않습니다. `human_approved=false`와 accepted_perspectives=0을 유지합니다.
 
 ## 공통 규칙
 
