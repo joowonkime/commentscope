@@ -193,3 +193,38 @@ python -m commentscope.factory.claim_clusters data/YOUR-SNAPSHOT.json artifacts/
 
 이는 자동 의미 검수나 사람 승인 UI가 아닙니다. 원문 충실성을 사용자가 확인한 뒤 다음 구현에서 승인 절차로 연결합니다.
 claim 기반 전체 corpus 처리·split/merge·PerspectiveSpec·agent는 아직 구현하지 않았습니다.
+
+### 6. 로컬 대표 주장 초안 + 근거 검사 (품질 미승인)
+
+후보에서 공통 주장·일부 댓글의 이유/조건/차이를 로컬 모델로 생성하는 실험입니다.
+**승인된 PerspectiveSpec/agent 생성기가 아닙니다.** 개발 표본에서 과장·예측/필요성 혼합과 검사 모델의 오판을 확인했습니다.
+기존 assistant의 검수 초안을 모델 입력에 넣지 않습니다. 실제 댓글/결과를 공개 GitHub에 올리지 마세요.
+
+기존 서버를 종료하고, 이 실험에서는 더 큰 입력을 위해 8192 context와 context shift 비활성화 설정을 사용합니다.
+설치 경로를 실제 경로로 바꾸세요. 실제 확인한 환경은 앞서 설명한 WSL/RTX4060 Laptop 8GB입니다.
+
+```bash
+llama-server -m /absolute/path/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --host 127.0.0.1 --port 8091 -c 8192 --no-context-shift -ngl 99 -t 6 --parallel 1
+```
+
+Python 기본 설치 환경에서 다음 명령을 실행합니다. 입력은 앞 단계의 동일 snapshot/추출/후보 JSON이며, 파일명과 후보 ID는 실제 파일에 맞춥니다.
+아래는 프로젝트 로컬 데이터 경로 예시입니다. 연구 데이터는 clone에 포함되지 않습니다. 합성 연결 확인에는 5단계의 파일들과 CC001을 사용할 수 있습니다.
+
+```bash
+python -m commentscope.factory.perspective_drafts data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json artifacts/claim-slice-20261011-candidates.json --output artifacts/YOUR-drafts.json --clusters CC001 CC002 CC003 --revision v2 --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 context8192 no-context-shift parallel1"
+```
+
+v1은 모델이 부분 인용을 생성합니다. v2는 모든 입력 ID의 배정을 필수로 하고, 모델이 선택한 ID에 실제 **전체 원문**을 코드로 연결합니다.
+v2의 인용 일치는 생성 정확도가 아니라 프로그램의 출처 연결 보장입니다. 전체 원문이 연결됐다고 문장을 실제로 뒷받침하는 것은 아닙니다.
+세부 문장의 근거 ID는 해당 그룹 안에 있어야 합니다. 같은 원문의 여러 claim은 지지 source 수를 늘리지 않습니다.
+프롬프트·출력 형식·입력 방식·인용 방식을 함께 바꿨으므로 v1/v2는 단일 요인의 효과 비교가 아닙니다.
+
+v2의 구조 통과 초안에 대해 별도 로컬 검사를 실행할 수 있습니다.
+
+```bash
+python -m commentscope.factory.draft_audit data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json artifacts/claim-slice-20261011-candidates.json artifacts/YOUR-drafts.json --output artifacts/YOUR-audit.json --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 context8192 no-context-shift parallel1"
+```
+
+각 명령의 결과 화면은 output에 `.html`을 덧붙인 경로입니다. 중단 대비 후보별 `.case-N.json`도 보존하지만 자동 resume은 없습니다. 새 실행은 새 output 경로를 사용합니다.
+한 번에 최대 후보3개, 후보별 claim20개를 시험합니다. 오류나 출력 잘림은 차단하고 원시 출력을 남깁니다.
+검사는 같은 모델의 두 번째 판단이며 독립적인 정답 평가가 아닙니다. 모두 supported여도 사람 검토 대기이며, agent 승격 권한이 없습니다.

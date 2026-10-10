@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보, V0 및 37개 소표본 claim→후보→AI 검수 화면 연결 완료. 전체 V1/V2, 검증된 PerspectiveSpec 및 에이전트는 아직 미완료입니다.**
+**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 로컬 대표 초안→별도 근거 검사 실행 완료. 초안/검사 모두 의미 오류가 남아 승인된 PerspectiveSpec/agent는 0입니다.**
 
 ## 사용자 결정과 작업 단위
 
@@ -16,6 +16,7 @@
 - 저장소: https://github.com/joowonkime/commentscope (public)
 - 수집 브랜치: `feat/youtube-collection`; 로컬 모델/검증 문서는 이를 기반으로 한 `feat/local-model-validation`에서 관리합니다.
 - 소표본 claim 연결: `feat/claim-cluster-slice` (`feat/local-model-validation` 기반). PR #7의 Linux/Windows CI 성공 확인 후 분기; main 병합은 아직 하지 않음.
+- 로컬 대표 초안/검사: `feat/local-perspective-drafts` (`feat/claim-cluster-slice` 기반). 이전 PR을 임의 병합하지 않음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -116,6 +117,21 @@
 - 검증: 오프라인 unittest88개 통과. 합성 README 경로 실행 결과 selected3 중 duplicate_alias1/included2, claim1/candidate>=3은0으로 정상 표시. 검수 JSON의 hash/소속/분리 제안 전체 배정 검사 통과. HTML은 escape 처리와 근거 링크를 확인했으며 별도 브라우저 시각 검사는 하지 않음.
 - 실행: `python -m commentscope.factory.claim_clusters data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json --output artifacts/NEW.json` (ML 환경, 신규 경로).
 - 다음은 CC001-A/B 설명에 대한 사용자 피드백 → 추출 필드 교정 방식/승인 기록 구현 → 새 표본 검사. 전체1,000개 claim 추출·agent로 즉시 확대하지 않음.
+
+## 로컬 대표 주장 생성 + 근거 검사 (2026-10-11)
+
+- 사용자 요청: 후보를 대변하는 공통/상세 주장 생성 방법 설명 후 자동화 진행. Qwen4B Q4_K_M 유지, API 추가 수집/댓글 외부 전송 없음.
+- candidate CC001/CC002/CC003을 입력. 기존 assistant의 5개/4개 분리 제안은 모델에 주지 않음. 이미 검토한 목적 표본이므로 독립 평가 아님.
+- draft v1: 부분 인용 복사/배정 누락으로 0/3 계약 통과, 총58.56초. `artifacts/perspective-drafts-20261011.json` 및 `.json.html`. 실패 그대로 보존.
+- draft v2: 고정 member assignment key, 원문 우선 입력, 호스트의 전체 원문 연결 방식으로 변경. 2/3 계약 통과, 총28.11초. `artifacts/perspective-drafts-20261011-v2.json` 및 `.json.html`. 원문 연결은 코드 보장이지 의미 정확도 아님.
+- CC001은 8개를 'AI가 대부분의 일자리를 대체해 UBI가 필요하다'로 일반화하고 도입 예측도 혼합. CC002는 그룹 밖 detail 근거 인용으로 차단. CC003은 모두 unique source1인 rare 초안이며 details.text에 M01 같은 ID만 출력하는 오류.
+- 별도 로컬 audit: CC001 14쌍(9.31초), CC003 8쌍(5.01초)을 검사; 둘 다 revise_before_human_approval. `artifacts/perspective-drafts-20261011-v2-audit.json` 및 `.json.html`.
+- **검사도 정답 아님.** CC001 P07에서 could→필연성 과장을 supported로 놓침. P13/P14에서는 타당한 도입 예측을 '필요성/고용 근거 없음'으로 잘못 거절. CC003 P02에서 ID placeholder를 supported로 해석. 같은 모델의 문맥 간섭/오판을 보존.
+- assistant 검수 초안: `artifacts/perspective-drafts-20261011-assistant-review.json`, 실제 출력 파일 hash 연결. 사람 승인/독립 gold가 아님.
+- 새 코드: `perspective_prompt*.py`, `contracts/perspective_*.py`, `providers/local_llama.py`, `factory/perspective_drafts.py`, `factory/draft_audit.py`. README Section6 재현 명령 제공.
+- 실행기 context8192/no-context-shift/parallel1, 최대출력3000. 실행 후 서버 종료. 후보별 checkpoint는 보존하되 자동 resume 없음.
+- 오프라인 테스트108개 통과. 모델 검사 결과를 코드 테스트 성공률과 혼동하지 않음.
+- 다음은 placeholder 차단 및 원문-문장 한 쌍씩 독립 검사하는 실험(아직 미구현), 예측/필요성 구분 개선. 1,000개 확장/agent 승격 전에 새 표본으로 검증. 프롬프트만으로 충분하다고 아직 결론낼 수 없음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

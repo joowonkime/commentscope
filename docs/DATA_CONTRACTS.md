@@ -41,6 +41,16 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 선택적 proposed_groups는 split_needed에서만 허용. 자식 ID·공통 주장·증거·상태를 기록하고 부모 claim 전체를 중복/누락 없이 나누어야 합니다. 자식 제안도 승인 아님. 이는 split의 검증 가능한 **제안**이며 실행된 lineage 변경은 아닙니다.
 - 인용이 실제로 주장을 뒷받침하는지는 사람의 의미 검토 대상입니다. AI 검수 제안만으로 PerspectiveSpec이나 agent를 생성하지 않습니다.
 
+## 대표 주장 실험: 미승인 draft (2026-10-11)
+
+- `perspective-draft-0.1`의 groups는 members, common(text/evidence), details(kind/text/evidence)를 갖고, excluded는 member_id/reason을 갖습니다. 원문 내 인용·그룹 내 근거·전체 member의 정확히 한 번 배정을 검사합니다.
+- `perspective-assignment-0.2` wire 형식은 assignments의 필수 member key마다 group_id/exclusion_reason을 요구합니다. groups는 group_id/common/details를 가지며 details는 kind/text/member_ids를 가집니다.
+- v2에서 모델은 인용을 재작성하지 않습니다. `canonicalize`가 실제 target 전체를 연결하여 0.1 공통 형식으로 명시적으로 변환합니다. 사용하지 않는 group, group 누락, 그룹 밖 detail 인용, 제외 사유 누락은 오류입니다. raw와 canonical output을 따로 보존합니다.
+- host의 bind가 실제 claim/source ID를 붙입니다. unique sources>=3이라도 needs_semantic_review이며 나머지는 rare_needs_review입니다. 두 경우 모두 accepted_perspectives=0.
+- reasons/conditions/variations의 근거는 일부 source에만 해당할 수 있습니다. 공통 문장은 모든 배정 source의 지원이 필요하지만, 이 의미 요건은 문자열 validator로 보장되지 않습니다.
+- `source-statement-audit-0.1`은 각 문장과 각 인용 source의 pair마다 verdict/reason을 요구합니다. 검사 누락·잘림·잘못된 응답은 audit_failed. 모두 supported여도 needs_human_review, 나머지는 revise_before_human_approval입니다. 이는 모델의 진단 추천이지 실제 사람의 승인 상태가 아닙니다.
+- 현재 실험은 source ID만 쓴 detail 같은 의미적으로 빈 문자열을 완전히 차단하지 못합니다. 검사 모델도 오판하므로 후속 semantic review를 생략하지 않습니다.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

@@ -132,7 +132,7 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 | 후보 clustering | `cluster_baseline.py`의 raw V0 구현 | canonical 원문 → 후보/근거/검수 HTML | embedding 고정이면 clustering 이후; 현재 V0는 벡터를 별도 저장하지 않아 재임베딩 필요 |
 | claim clustering | `factory/claim_clusters.py` 소표본 연결 구현 (2026-10-11) | 추출 artifact+snapshot → 검증된 출처/실패 목록+claim embedding+후보 | 후보 이후; 벡터와 정확한 입력을 저장하되 CLI 자동 재사용은 후속 |
 | 의미 검수 | AI 보조 탐색 기록만 존재 | 후보+원문 → 검수 판단 | review 이후 |
-| 대표 명세 | `factory/perspectives` 설계만 존재 | 승인 후보+검수 → PerspectiveSpec | 명세/agent 이후 |
+| 대표 명세 | 승인된 PerspectiveSpec은 설계만; `factory/perspective_drafts.py`에 미승인 로컬 초안 실험 구현 (2026-10-11) | 후보/원문 → 배정·공통 주장·세부 문장/근거 | 초안/검수 이후 |
 | agent / 답변 검수 | 설계만 존재 | 명세+허용 근거+질문 → 감사된 답변 | 해당 agent 단계; upstream 명세는 유지 |
 
 단일 프로세스/로컬 JSON을 유지합니다. 모듈 교체를 위해 별도 마이크로서비스를 만들지는 않습니다.
@@ -202,6 +202,18 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 상위 계획의 실패 run 노출 금지와 구분: 실패를 포함한 결과 화면은 개발자 진단 artifact이며 정상 완료된 제품 Factory run이 아님. agent가 소비할 수 없음.
 - 분리 제안은 부모 claim 전체를 자식에 중복/누락 없이 배정하는지 검증하고 저장. 제안된 자식의 공통 주장·근거·유보사항을 HTML에서 확인 가능. 실제 후보 재배정/승인으로 간주하지 않음.
 - 미구현: 생산용 provider/orchestrator, 자동 의미 검수, 실행된 split/merge lineage, 사람 승인 저장 흐름, PerspectiveSpec/agent. 현재 검수 초안은 사용자가 확인할 제안이지 최종 승인 아님.
+
+### ADR-008 — 대표 주장 생성과 근거 검사의 권한 분리 (experimental, 2026-10-11)
+
+- `providers/local_llama.py`: loopback만 호출, proxy/redirect 금지. 생성 transport는 승인 권한 없음. 기존 claim probe는 아직 자체 transport를 사용하며 전체 통합은 후속.
+- `factory/perspective_drafts.py`: 기존 assistant 검수 초안 없이 원문/후보에서 로컬 초안 생성. 저장된 후보를 snapshot/추출 hash와 전체 claim partition으로 재검증.
+- v1 `perspective-draft-0.1`: 모델이 member 배정과 부분 인용을 생성. 누락/변형 인용 때문에 3개 후보 전부 계약 실패.
+- v2 `perspective-assignment-0.2`: 모든 member를 필수 object key로 요구. 공통 주장에는 해당 그룹 전체 원문, detail에는 모델이 고른 그룹 내 ID의 전체 원문을 호스트가 연결. 누락·위조 인용 기회를 줄이나 의미 지원은 보장하지 않음.
+- v2는 prompt/input/schema/citation 방식이 모두 달라 단일 요소 개선 효과로 주장하지 않음. 출력 변환은 명시적 wire→canonical binding이며 원시 모델 JSON을 보존.
+- `factory/draft_audit.py`: 원문–문장 쌍에 supported/partial/unsupported/unclear 제안. 같은 모델의 두 번째 판단이며 독립 gold 아님. supported 오판·불필요한 기각을 실제 발견; 승인 gate로 단독 사용 금지.
+- 양쪽 모두 후보별 checkpoint/원시 결과/오류/버전/hash를 보존. 대형 입력 실험 설정은 context8192/no-context-shift, 모든 metadata는 실행자 선언임을 표시.
+- 승인 PerspectiveSpec과 구분해 accepted_perspectives=0, semantic_review_status=pending 유지. 생성→검사 성공만으로 agent를 만들지 않음.
+- 다음 검토 대상: ID만 적힌 placeholder 문장 차단, 문장-원문 단위 입력으로 검사 문맥 간섭 완화, 예측/필요성 구분. 전체 corpus 확대보다 현재 실패 수정 우선.
 
 ## 변경 시 필수 체크리스트
 
