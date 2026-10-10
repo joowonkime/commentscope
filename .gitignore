@@ -9,6 +9,9 @@
 /data/
 /artifacts/
 /runs/
+/models/
+*.gguf
+*.safetensors
 *.sqlite
 *.sqlite3
 *.db
