@@ -76,5 +76,20 @@ class SharedCoreTests(unittest.TestCase):
             self.assertTrue(c.validate_proposal(value))
         self.assertFalse(c.validate_proposal({'core':''}))
 
+    def test_lexical_modal_witnesses_and_ambiguous_contraction(self):
+        for text in ["I'd still take a job.","I would choose to work.","Automation will replace jobs."]:
+            value=t.lexical_prediction([text])
+            self.assertEqual(value['overrides'],{'commitment':'prediction','time':'future'})
+            for w in value['witnesses']: self.assertEqual(text[w['start']:w['end']],w['text'])
+        for text in ["I'd finished yesterday.","I hope it will happen.","It would have happened.","They should work."]:
+            self.assertFalse(t.lexical_prediction([text])['overrides'])
+
+    def test_conditions_use_complete_antecedent_not_dangling_if(self):
+        calls=[]
+        def scorer(a,b): calls.append((a,b));return score(a,b)
+        self.assertTrue(c.condition_compatibility('If rent rises, help.','If rents increase, help.',scorer)['allowed'])
+        self.assertEqual(calls,[('rent rises','rents increase'),('rents increase','rent rises')])
+        self.assertFalse(c.condition_compatibility('Unless rent rises, help.','If rent rises, help.',scorer)['allowed'])
+
 
 if __name__=='__main__': unittest.main()

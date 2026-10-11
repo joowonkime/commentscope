@@ -38,11 +38,36 @@ def has_errors(value):
     return False
 
 
+def reuse_checkpoints(origin, destination, manifest):
+    old=read_json(origin/'llm'/'manifest.json')
+    fields=['snapshot_sha256','baseline_sha256','model','nli_model','nli_revision','threshold',
+            'runtime_config','prompt_sha256','expires_at']
+    if any(old[k]!=manifest[k] for k in fields): raise ValueError('Reuse model/input policy changed')
+    if read_json(origin/'nli'/'manifest.json')!=old: raise ValueError('Inconsistent reuse manifests')
+    for code in ['src/commentscope/factory/automatic.py','src/commentscope/factory/claim_frame.py',
+                 'src/commentscope/providers/local_nli.py']:
+        if old['code_sha256'][code]!=manifest['code_sha256'][code]: raise ValueError('Reuse inference code changed')
+    copied=0
+    for folder,prefix in [('llm','call-'),('nli','score-')]:
+        for path in sorted((origin/folder).glob(prefix+'*.json')):
+            stored=read_json(path)
+            if (path.name!=prefix+digest(stored['request'])+'.json'
+                    or digest(stored['result'])!=stored['result_sha256']):
+                raise ValueError('Reuse checkpoint changed')
+            target=destination/folder/path.name
+            if target.exists():
+                if read_json(target)!=stored: raise ValueError('Reuse destination changed')
+            else: write_json_exclusive(target,stored)
+            copied+=1
+    return copied
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ['snapshot','baseline_report','reference_evaluation']: parser.add_argument(name)
     parser.add_argument('--run-dir',type=Path,required=True)
     parser.add_argument('--fixtures',default='tests/fixtures/claim-frame-cases.json')
+    parser.add_argument('--reuse-run',type=Path,help='Reuse exact requests only after model/prompt/runtime/hash checks')
     args=parser.parse_args()
     if any((args.run_dir/p).exists() for p in ['report.json','overview.html']): parser.error('Completed output exists')
     baseline,cases=prepare_cases(args.snapshot,args.baseline_report,args.reference_evaluation,args.fixtures)
@@ -59,6 +84,9 @@ def main():
               'next_stage_criterion':'All frozen synthetic and real development positives/negatives correct, no changed expected labels; assistant inspects new cores before fresh integration. Not independent gold.',
               'accepted_perspectives':0,'human_handling':False,'independent_gold':False,'service_time_input':False,
               'protocol_change':'Discover a common core instead of accepting the old anchor verbatim. Prior experiments unchanged.'}
+    if args.reuse_run:
+        require_live(baseline['expires_at'])
+        manifest['reuse_origin_manifest_sha256']=sha(args.reuse_run/'llm'/'manifest.json')
     calls=Calls(args.run_dir/'llm',manifest,local_provider)
     model=None
     def score(a,b):
@@ -66,6 +94,7 @@ def main():
         if model is None: model=LocalNLI()
         return model.score(a,b)
     scores=CachedScores(args.run_dir/'nli',manifest,score)
+    if args.reuse_run: reuse_checkpoints(args.reuse_run,args.run_dir,manifest)
     rows=[]
     for case in cases:
         trace=shared_core.discover(case['anchor'],case['member'],calls,scores)
