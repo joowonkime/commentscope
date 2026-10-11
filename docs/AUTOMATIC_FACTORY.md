@@ -180,7 +180,55 @@ assistant 평가와 모델 자체 판정은 독립 gold가 아닙니다. 논문�
 Python231개와 Node DOM계약4개, Windows/Linux CI는 통과했습니다. 실제 모델 품질은 실패했으므로
 PR #21은 연구용 draft로 유지하고 main의 검증된 기본 경로로 승격하지 않습니다. 서버는 검증 후 종료합니다.
 
-다음 교체 순서: (1) 독립 주장과 parent 참조 동의 관계를 분리하고, parent를 보지 않는 원문 gate 및
+이 실행 당시 정한 다음 교체 순서: (1) 독립 주장과 parent 참조 동의 관계를 분리하고, parent를 보지 않는 원문 gate 및
 생성 claim을 증거로 취급하지 않는 답변 감사 비교, (2) author/general scope·시점·조건 호환성 필드,
 (3) 검색 recall·예산 배분·중복 agent 측정, (4) 미사용 표본 평가 후 상호작용 연결.
-이는 아직 구현·검증하지 않은 후속 실험입니다. 매 서비스 실행에서 사람이 승인하는 방식으로 되돌리지 않습니다.
+이 중 입력/감사 분리는 아래0.2 실험에서 구현했습니다. 나머지는 후속 실험이며,
+매 서비스 실행에서 사람이 승인하는 방식으로 되돌리지 않습니다.
+
+## 2026-10-11 원문 격리 회귀 결과
+
+Factory0.2의 부모 입력 제거·별도 원문 검사는 `01cf6cf`, 답변 범위 감사의 독립 지침 보완은 `b46d09d`입니다.
+실패했던0.1 report/agents는 그대로 보존하며 현재 loader에서도 동일한8개 profile로 읽힙니다.
+
+| 검사 | 실제 결과 | 해석 |
+| --- | --- | --- |
+| 기존 배정 주장27개 원문 검사 | 15통과 / 12거절 | 동일 로컬 모델 판단이며 정답 수가 아님 |
+| 이전 assistant 라벨18개와 대조 | 충실9/9유지, 오류7/8차단, 불명확1개는 통과 | unit 충실성만 비교; 공통 주장/전체 정확도 평가 아님 |
+| 부모 내용 전이7개 | 7개 모두 거절 | 기존 실패 회귀 개선, 독립 평가 아님 |
+| 기존27 source + 고정 hash 추가16 재추출 | 43 source → claims34 / uncertain9 → 주장91개 | 문맥 의존 label은0건; 모든 새 claim을 검수하지 않음 |
+| 고정64 source 통합 실행 | 주장123개 / edge61건 / agent0개 / coverage0 | 예산 미소진; 품질 성공 아님 |
+| 기존8 agent에 일반 설명 질문 | A002/A003/A004 공개, 나머지5개 보류 | 공개3개가 모두 정확하다는 뜻이 아님 |
+| 근거 밖 한국 지급액/시행연도 질문 | 8개 모두 보류 | 이 질문에 한정된 회귀 |
+
+짧은 동의3개는 재추출에서 모두 빈 claim이 됐습니다. 다른 전이 사례에서도 부모의 개인 경험 복사가 사라졌지만,
+사용자명을 주제어로 오해한 새 주장, mode 오류, 선행 문맥이 빠진 span은 남습니다. 조건부 자동화 예시를
+무조건적 주장으로 인정한 오류도 원문 gate에서 남았습니다. 원문 감사 이유26/27건이300자 출력 상한에 닿아
+설명 문장이 잘리거나 깨졌으므로 그 자유 서술을 신뢰할 수 있는 근거로 쓰지 않습니다.
+
+64개 실행은 동일 snapshot/고정 hash 선택이며 실행 코드는01cf6cf입니다. 원문 검사 대상은 중복을 제외한14개
+claim, common gate 호출41건, 원문 거절 edge20건입니다. 실험을 같은 로컬 서버에 함께 실행했으므로 시간은
+격리 성능 비교에 쓰지 않습니다. 전체1,000개0.2 재실행은 하지 않았습니다.
+
+답변 감사 첫 수정은 scope 지침에 source 지침이 남아8개 모두 보류했습니다. 독립 지침으로 수정한 뒤 다시
+8개 모두 실행했습니다. A002의 인플레이션 답변은 사후 읽기에서 원문과 부합했지만, A003의 생활 수준 과장·
+소비 유도 해석 추가와 A004의 취직→직장 유지 변화는 감사에서 통과했습니다. 한국어 생성·scope 검증과
+정상 답변 과잉 거절은 미해결입니다. 과거8개 bundle을 고정한 답변 회귀이지 새0.2 factory가8개를 만든 것은 아닙니다.
+
+재현 명령(새 디렉터리 필요):
+
+```bash
+PYTHONPATH=src python experiments/source_isolation_probe.py data/ubi-research-20261010.json \
+  runs/automatic-factory-20261011-full1000/report.json --run-dir runs/NEW-source-isolation-probe
+```
+
+기존 배정을 진단 대상으로 쓰는 offline probe이며 서비스 source 선택/승인 입력이 아닙니다. 모델 선언은 baseline의
+metadata를 계승하므로 동일 로컬 모델/runtime에서만 비교합니다. 추가16개도 같은 개발 corpus라 미사용 gold가 아닙니다.
+Python235개·Node4개 및 Windows/Linux CI는 통과했습니다. 새 브라우저 시각 검사는 하지 않았고 실제 모델 질의는 CLI로 수행했습니다.
+
+비공개 산출물: `runs/source-isolation-probe-20261011/report.json`,
+`runs/automatic-factory-20261011-sourceonly64/overview.html`,
+`artifacts/source-isolation-runtime-20261011-v2.json`,
+`artifacts/source-isolation-runtime-20261011-outside.json`,
+`artifacts/source-isolation-evaluation-20261011.json`.
+다음은 scope·시점·조건의 명시적 호환성, 한국어 실현 오류 평가, 그 후 검색 recall/예산/중복 분석입니다.

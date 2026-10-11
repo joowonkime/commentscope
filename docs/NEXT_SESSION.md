@@ -1,5 +1,27 @@
 # 다음 세션 시작점
 
+## 최신 원문 격리 보완
+
+- PR #21의 같은 브랜치에0.2 입력/감사 분리(`01cf6cf`)와 scope 독립 지침(`b46d09d`)을 추가했습니다.
+  ADR-018, DATA_CONTRACTS, AUTOMATIC_FACTORY 최신 회귀 절을 먼저 읽습니다. 아직 draft이고 main 미병합입니다.
+- 추출에는 자기 댓글만, source gate에는 자기 span과 검사할 claim만 제공합니다. parent/common claim을 원문 검사에
+  주지 않습니다. 답변 생성에서는 profile/title/allowed_claim을 제외하고, source 감사와 scope 감사를 별도 요청으로 분리합니다.
+  source 실패를 scope로 구제하지 않습니다. context_dependent 계약은 추가했지만 실제43개 재추출에서는 uncertain으로 보류했습니다.
+- 기존27배정 claim 원문 재검사15통과/12거절. 이전 assistant 라벨18개 대조는 충실9/9유지·오류7/8차단·불명확1통과.
+  부모 전이7개는 모두 차단됐지만 조건부 자동화의 무조건적 해석은 남았습니다. 독립 gold가 아닙니다.
+- 43source 재추출91claims. 동의3개 빈 claim, 부모 개인 경험 복사 제거. 사용자명→주제어 오해 등 새 오류는 남습니다.
+  source gate reason26/27개가300자 상한에 닿았습니다. 검사 설명을 완결된 근거로 취급하지 않습니다.
+- `runs/automatic-factory-20261011-sourceonly64/`: 실제64개 →123claims→61edge→0agent. 예산 미소진,
+  품질 성공 아님. 현재 loader 재검증 완료. 전체1,000개0.2 실행은 하지 않았습니다.
+- 기존8profile을 바꾸지 않고 CLI 답변 회귀: scope 지침 첫 분리본은8개 모두 보류, 지침 충돌 수정 후 A002/A003/A004만 공개.
+  A002는 사후 읽기에서 부합하지만 A003의 생활 수준·소비 유도 해석, A004의 취직→직장 유지 변화가 남습니다.
+  근거 밖 한국 지급액/연도 질문은8개 모두 보류. 새 factory가8개를 생성한 것이 아닙니다.
+- 상세 private 결과: `artifacts/source-isolation-evaluation-20261011.json`,
+  `runs/source-isolation-probe-20261011/report.json`, `artifacts/source-isolation-runtime-20261011-v2.json`.
+  코드를 제외한 corpus/출력은 Git 제외이며 원본 배정은 수정하지 않았습니다. 테스트235개/Node4개 및 Windows/Linux CI 통과.
+- 다음은 scope·시점·조건 명시적 필드/호환성, 한국어 실현 오류 및 과잉 거절 평가. 그 다음 검색 recall·예산·중복.
+  모델/프롬프트 승인이나 무작정 전체 재실행으로 넘어가지 않습니다. 모델 서버는 검증 후 종료합니다.
+
 ## 최신 작업과 서비스 자동화 요구
 
 - 사용자는 서비스 실행 중 사람이 clustering을 다루지 않는다고 명확히 했습니다. 요구사항 Section16.10,
