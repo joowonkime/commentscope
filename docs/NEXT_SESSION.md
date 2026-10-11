@@ -13,6 +13,9 @@
 
 ## 현재 Git 운영 기준
 
+- 통합 작업: [PR #18](https://github.com/joowonkime/commentscope/pull/18), base=`main`, branch=`chore/main-prototype-baseline`.
+  준비 시점에는 사용자 병합 선택을 기다리는 Draft입니다. 현재 병합 여부는 PR 상태를 확인하며, 병합 전 main을 최신 구현으로 오인하지 않습니다.
+- 다음 시스템 작업은 [Roadmap #19](https://github.com/joowonkime/commentscope/issues/19)로 추적합니다. 수집 Issue #5와 누적 PR은 실제 main 통합 뒤 정리합니다.
 - `main`을 최신 연구 프로토타입의 공통 시작점으로 통합합니다. 코드 통합과 모델 품질 승인은 별개입니다.
 - 통합 범위: 기존 PR #6~#17의 14개 커밋(공식 수집→실험/검수→개발 agent→로컬 UI)과 현재 상태 문서 정리.
 - 통합 전 main은 snapshot ingestion까지만 포함했습니다. 최신 구현이 없었던 것이 아니라 Draft PR에만 누적된 상태였습니다.

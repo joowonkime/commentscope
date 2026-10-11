@@ -11,6 +11,8 @@
 
 `main`은 **검수 지원 입력을 사용하는 로컬 연구 프로토타입**의 통합 기준선으로 관리합니다.
 main 반영은 코드 통합이지 모델 품질 승인·실험 성공·제품 완성을 뜻하지 않습니다.
+[통합 PR #18](https://github.com/joowonkime/commentscope/pull/18)에서 실제 병합 상태를 확인하고,
+[남은 시스템 작업 #19](https://github.com/joowonkime/commentscope/issues/19)에서 다음 작업을 확인할 수 있습니다.
 
 | 구간 | 현재 상태 | 남은 경계 |
 | --- | --- | --- |
