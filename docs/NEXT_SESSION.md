@@ -11,7 +11,17 @@
 - 내부 구현은 순서대로 하되, 인터페이스/계약만 구현한 상태를 사용자 MVP 완료로 보고하지 않습니다.
 - 로컬 모델 우선으로 검증합니다. 모델의 최종 품질 승인과 실제 corpus의 분석·외부 전송 사용 조건은 미결정입니다.
 
-## Git 상태
+## 현재 Git 운영 기준
+
+- `main`을 최신 연구 프로토타입의 공통 시작점으로 통합합니다. 코드 통합과 모델 품질 승인은 별개입니다.
+- 통합 범위: 기존 PR #6~#17의 14개 커밋(공식 수집→실험/검수→개발 agent→로컬 UI)과 현재 상태 문서 정리.
+- 통합 전 main은 snapshot ingestion까지만 포함했습니다. 최신 구현이 없었던 것이 아니라 Draft PR에만 누적된 상태였습니다.
+- 이번에는 기존 커밋·브랜치·실패 실험을 삭제하지 않습니다. 원문·모델 파일·대화 기록도 계속 Git 제외입니다.
+- 이후 새 기능은 최신 main에서 분기하고 한 작업의 검증/통합을 마친 뒤 다음 작업을 진행합니다. 누적 Draft 체인을 반복하지 않습니다.
+- 실제 원격 병합/열린 PR 상태는 GitHub에서 확인합니다. 아래 과거 브랜치 기록은 실행 당시 이력이며 현재 작업 지시가 아닙니다.
+
+<details>
+<summary>통합 이전의 브랜치·PR 누적 이력 (보존용)</summary>
 
 - 저장소: https://github.com/joowonkime/commentscope (public)
 - 수집 브랜치: `feat/youtube-collection`; 로컬 모델/검증 문서는 이를 기반으로 한 `feat/local-model-validation`에서 관리합니다.
@@ -28,6 +38,8 @@
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
+
+</details>
 
 ## 실행
 
@@ -46,7 +58,7 @@
 기존 결과는 덮어쓰지 않으므로 재실행 때 새 파일명을 사용합니다.
 키 발급부터 상세 순서는 [공식 수집 안내](YOUTUBE_COLLECTION.md)에 있습니다.
 
-## 구현과 확인 범위
+## 공식 수집 단계의 확인 범위 (과거 기록)
 
 - 기존 snapshot validation/normalization과 원자적 저장.
 - 공식 videos/commentThreads/comments GET, 키 header 전달, redirect 차단, 제한된 retry.
@@ -56,7 +68,8 @@
 - CI도 실제 API 키 없이 fake HTTP 응답을 사용합니다. 최신 결과는 PR Checks를 확인합니다.
 
 공개 API의 `textDisplay`를 plainText로 보존하며 작성자의 raw `textOriginal`을 확보했다고 주장하지 않습니다.
-`usage.expires_at`은 최대 30일의 metadata일 뿐, 자동 삭제/갱신 또는 만료 사용 차단은 아직 없습니다.
+이 수집 단계 자체에는 자동 삭제/갱신이 없습니다. 이후 추가한 agent/UI 경로는 만료된 입력의 실행·열람을 차단합니다.
+기존 다운로드 파일의 접근 차단이나 자동 삭제까지 구현한 것은 아닙니다.
 실제 키·영상 응답과 100/1,000개 표본의 validation/normalization은 검증했습니다. 분석 성능은 아직 검증하지 않았습니다.
 수집 설정·만료·후보 비교·표본 한계는 [수집 기록](YOUTUBE_COLLECTION.md#첫-live-후보-기본소득-토론-2026-10-10-kst)을 확인합니다.
 
@@ -81,6 +94,11 @@
   `LD_LIBRARY_PATH=/home/taeng/.local/opt/commentscope-llama/cudart-llama-b11541-bin-ubuntu-cuda-12.8-x64:/usr/lib/wsl/lib` 필요.
 - Python210/JS 계약3 통과, wheel asset 포함 확인. HTTP/최소 DOM 검증은 실제 브라우저 시각·키보드 QA 대체가 아님.
   모델/UI 서버 종료됨. 다시 시작하려면 README12 사용. `runs/agent-ui` 자동 저장은 reset/종료 때 삭제되지 않으며 자동 resume 없음.
+
+## 과거 실험 이력 — 아래의 '다음 작업'은 당시 기록
+
+아래 기록의 agent0·미구현·테스트 개수는 해당 실험 당시 상태입니다. 현재 상태/다음 작업은 이 문서 상단과 README를 우선합니다.
+실패 사례와 대안 비교는 연구 재현을 위해 보존하며, main에 통합했다는 이유로 성공 실험으로 바꾸지 않습니다.
 
 ## 로컬 LLM 타당성 검사 / 사용자 평가 방식 (2026-10-10)
 

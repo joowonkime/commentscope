@@ -1,7 +1,18 @@
 # 단계별 구현 계획
 
-상태: 0·1·2단계 main 반영 완료. 사용자 결정에 따라 공식 API 수집 연결을 추가했습니다. 공개 GitHub 저장소는 `joowonkime/commentscope`입니다.
+현재 상태: 공식 API 수집, 소표본 검수, 개발용 agent와 로컬 비교/질의 UI까지 구현했습니다.
+아래 단계 표는 완료 순번이 아니라 전체 계획입니다. 3~5단계의 자동 품질 검증을 마쳤다고 보고하지 않습니다.
+요구사항 Section16.4에 따라 검수 지원 입력으로 6~7단계의 개발 경로를 먼저 연결했습니다.
+공개 GitHub 저장소는 `joowonkime/commentscope`이며 main을 공통 연구 프로토타입 기준선으로 관리합니다.
 이번 단계의 구체적인 선택은 [구조 결정](ARCHITECTURE.md), 필드와 규칙은 [데이터 계약](DATA_CONTRACTS.md)에 기록합니다.
+
+## 현재 상태 요약
+
+- 구현/실행 확인: snapshot 검증·공식 API 1,000개 표본, 검수 묶음→개발 agent 2개, 독립 질문/감사/인용 비교 로컬 UI.
+- 부분 구현/미승인: 자동 claim/cluster 형성·검수 도구. 실제 최신 입력은 assistant가 검수한 21개 중 11개를 두 agent에 연결.
+- 미완료: 정식 관점 승격, 전체 corpus 자동 품질, agent 간 상호작용, Reflection, 브라우저 사용자 검증, 독립 논문 평가.
+- 코드 회귀: Python210개/JS 최소 DOM3개. 모델 의미 정확도 점수가 아님.
+- 완료율 하나로 표현하지 않습니다. 실행 가능한 사용자 경로와 연구 검증 여부를 [README](../README.md)의 표로 구분합니다.
 
 ## 진행 방식
 
@@ -11,31 +22,31 @@ Debate는 후속 활용이며, 서로 대립하는 입장·균형 잡힌 진영�
 여러 세부 주장이 하나의 충실한 공통 claim으로 표현 가능하면 불필요하게 분리하지 않습니다.
 
 각 단계마다 범위를 정하고, 산출물을 만들고, 완료 조건을 확인한 뒤 변경 내용을 공유합니다.
-내부 구현은 순서대로 진행하되, 다음 사용자 확인 단위는 실제 댓글에서 검토 가능한 cluster 결과가 나오는 MVP입니다.
-모델 인터페이스 문서만으로 별도 완료 지점을 만들지 않습니다. 그 전에 공식 API 수집 경로를 연결합니다.
+내부 구현은 순서대로 진행하되, 자동 clustering 완성을 기다리느라 전체 사용자 경로를 막지 않습니다.
+검수 지원 입력을 사용하는 개발 경로와 자동 pipeline의 원시 성능을 명확히 구분합니다.
 각 단계는 하나의 작은 PR을 기본으로 하되, 검토하기 크면 더 작은 PR로 나눕니다.
 실행해 확인한 결과와 아직 검증하지 못한 사항을 구분해 기록합니다.
 
 ## 제안 구조
 
-첫 구현은 Python 기반 단일 프로젝트와 로컬 JSON 저장을 제안합니다.
-Python 3.12+와 JSON을 첫 구현의 기본값으로 선택했습니다. 근거와 적용 범위는 구조 결정 문서에 기록했습니다.
-모델 provider, 모델명, embedding 모델, API 서버 및 UI 프레임워크는 해당 단계에서 결정합니다.
+Python 3.12+ 단일 프로젝트와 로컬 JSON 저장을 사용합니다. 근거와 적용 범위는 구조 결정 문서에 기록했습니다.
+현재 로컬 모델은 Qwen3-4B-Instruct-2507 Q4_K_M/llama.cpp이며 UI는 Python HTTP 서버와 HTML/JS/CSS입니다.
+모델 identity는 운영자 선언이고, 현재 선택이 품질 검증 완료나 향후 교체 금지를 뜻하지 않습니다.
 
 ```text
 commentscope/
 ├── docs/                  요구사항, 설계 결정, 실험 방법
-├── src/commentscope/      2단계부터 생성
+├── src/commentscope/      실행 코드
 │   ├── contracts/         snapshot, claim, cluster, perspective 데이터 계약
 │   ├── ingestion/         준비된 snapshot 로드, 검증, 정규화
 │   ├── providers/         모델·embedding 호출 인터페이스
 │   ├── factory/           추출, 후보 clustering, 검토, PerspectiveSpec 생성
-│   ├── agents/            독립 증거·대화 상태, 답변 Auditor
-│   └── api/               검증된 기능을 노출하는 API
+│   └── agents/            독립 증거·상태, Auditor, web.py 및 비교 UI assets
+├── experiments/           연구 비교/진단 실행기, 성공 품질 기본값과 구분
 ├── tests/fixtures/        합성 댓글과 오류 사례
 ├── data/                  실제 연구 corpus; Git 제외
 ├── artifacts/             실행 결과·감사 로그; Git 제외
-└── web/                   사용자 task 확정 후 UI 구현
+└── runs/                  비공개 로컬 UI 세션·질문·감사 checkpoint; Git 제외
 ```
 
 빈 구현 폴더를 미리 만들지 않고 필요한 단계에서 생성합니다.
@@ -87,8 +98,8 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 | 항목 | 처리 시점 |
 | --- | --- |
 | GitHub 소유자·저장소·공개 범위 | 확정: `joowonkime/commentscope`, public |
-| corpus 확보 방식과 사용 가능 범위 | 공식 YouTube Data API 경로 선택; 실제 영상·키·다운스트림 분석 사용 범위는 별도 확인 |
-| provider·모델·키 소유자·실행 예산 | 실제 모델 호출 전; 지금 특정 provider에 고정하지 않음 |
+| corpus 확보 방식과 사용 가능 범위 | 공식 API로 실제 1,000개 확보; downstream 연구/공개 사용 조건과 추가 영상은 별도 확인 |
+| provider·모델·키 소유자·실행 예산 | 로컬 Qwen/llama.cpp 실행 확인; 유료/외부 추론·공유 배포는 별도 결정 |
 | 다국어 품질 정책과 출력 언어 계약 | 데이터 계약과 추출 설계 단계 |
 | 최종 사용자 task와 Reflection 범위 | Factory 검증 이후 |
 
@@ -120,5 +131,6 @@ M3의 Figma low-fi와 사용자 테스트는 별도 수업 산출물입니다. �
 ## 공식 수집 경로
 
 [Issue #5](https://github.com/joowonkime/commentscope/issues/5): 공식 API collector와 실행 안내.
-2단계 PR #4도 main에 반영했습니다. 지금은 키 없는 오프라인 검증이며 실제 수집을 했다고 보고하지 않습니다.
+2단계 PR #4 이후 공식 API 수집을 구현했고 실제 UBI 영상에서 1,000개 표본을 확보했습니다.
+100/1,000개 실행과 한계는 YOUTUBE_COLLECTION.md에 기록했습니다. 전체 댓글을 확보했다는 뜻은 아닙니다.
 사용자 선택으로 수집 경로를 구체화했으며, 요구사항 기준본 자체를 소급 변경하지 않았습니다.
