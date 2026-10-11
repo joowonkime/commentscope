@@ -13,6 +13,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha, embed
 from commentscope.ingestion import load_snapshot, normalize_snapshot
 from commentscope.providers.local_nli import LocalNLI, MODEL, REVISION, THRESHOLD
+from commentscope.providers.schema_visible import SchemaVisibleCalls
 from commentscope.storage import write_json_exclusive
 from experiments.claim_support_probe import CachedScores
 from experiments.grounded_core_probe import no_model, check_inputs
@@ -26,7 +27,8 @@ CODE = [__file__, 'src/commentscope/factory/evidence_units.py', 'src/commentscop
         'src/commentscope/factory/automatic_contract.py', 'src/commentscope/factory/claim_clusters.py',
         'src/commentscope/cluster_baseline.py', 'src/commentscope/providers/local_nli.py',
         'src/commentscope/providers/local_llama.py', 'src/commentscope/agents/runtime.py',
-        'experiments/claim_support_probe.py', 'experiments/shared_core_integration.py']
+        'experiments/claim_support_probe.py', 'experiments/shared_core_integration.py',
+        'src/commentscope/providers/schema_visible.py']
 
 
 def source_plan(snapshot, baseline, full, prior):
@@ -85,6 +87,7 @@ def main():
     p.add_argument('--run-dir', type=Path, required=True)
     p.add_argument('--phase', choices=['probe', 'baseline64', 'dense32', 'verify'], required=True)
     p.add_argument('--diagnostic-only', action='store_true', required=True)
+    p.add_argument('--schema-visible', action='store_true', help='Expose selection/eligibility schemas only; context/support audit unchanged')
     args = p.parse_args()
     baseline, full, prior = map(read_json, [args.baseline64, args.full_report, args.prior_sample])
     build_bundle(args.snapshot, baseline); build_bundle(args.snapshot, full)
@@ -98,7 +101,8 @@ def main():
                 'runtime': {'torch': version('torch'), 'transformers': version('transformers'), 'device':'cpu',
                             'threads':6, 'temperature':0, 'seed':407, 'max_tokens':900},
                 'policy': {'semantic_budget':64, 'seed_limit':2, 'min_sources':3, 'context_chars':500,
-                           'selection_only':True, 'parent_context':False, 'manual_runtime_decisions':False},
+                           'selection_only':True, 'parent_context':False, 'manual_runtime_decisions':False,
+                           'schema_visible':args.schema_visible, 'schema_visible_scope':['selection','eligibility'] if args.schema_visible else []},
                 'quality_gate_passed':False, 'independent_gold':False,
                 'confirmation_scope':'Source IDs withheld from this revision until code/fixtures frozen; not an untouched corpus (older full1000 used all sources).',
                 'dense_scope':'Automatic nonrepresentative32-source functional sample from old retrieval geometry. Old claims/labels not given to the new extractor.',
@@ -106,6 +110,7 @@ def main():
     check_inputs(manifest)
     if args.phase == 'verify' and not (args.run_dir/'llm'/'manifest.json').exists(): p.error('Missing replay cache')
     calls = Calls(args.run_dir/'llm', manifest, no_model if args.phase == 'verify' else local_provider)
+    selection_calls = SchemaVisibleCalls(calls, [evidence_units.SELECT_SYSTEM, evidence_units.ELIGIBILITY_SYSTEM]) if args.schema_visible else calls
     nli_model = None
     def score(a, b):
         nonlocal nli_model
@@ -117,7 +122,7 @@ def main():
         rows = []
         for sid in ids:
             text = sources[sid].text_original
-            result = evidence_units.extract(sid, text, calls)
+            result = evidence_units.extract(sid, text, selection_calls)
             for u in result['units']: evidence_units.validate_bound(u, text)
             rows.append({'source_id':sid, 'source':text, 'result':result})
             if args.phase != 'verify': print(json.dumps({'source':sid,'units':len(result['units'])}), flush=True)
@@ -137,7 +142,7 @@ def main():
     def probe():
         fixed = []
         for c in read_json(FIXTURE)['cases']:
-            result = evidence_units.extract(c['id'], c['source'], calls)
+            result = evidence_units.extract(c['id'], c['source'], selection_calls)
             fixed.append({**c,'result':result})
         summary = {}
         for split in ['development','transfer']:
@@ -179,10 +184,10 @@ def main():
             write_json_exclusive(vector_path, {'texts':texts,'vectors':vectors,'vectors_sha256':digest(vectors)})
         candidates = candidate_search.search(units, vectors, 'cross_mode')
         def discover(a,b):
-            result = evidence_core.discover(a,b,calls,scores)
+            result = evidence_core.discover(a,b,selection_calls,scores)
             if args.phase != 'verify': print(json.dumps({'pair':a['claim_id'],'core':result['selected_core']}),flush=True)
             return result
-        def attach(u, core): return evidence_core.check(u, core, calls, scores)
+        def attach(u, core): return evidence_core.check(u, core, selection_calls, scores)
         assemblies = {}
         # Two seed orders, identical units/candidates/model/budget. Cache raw
         # requests so the second ordering does not reroll prior judgments.
