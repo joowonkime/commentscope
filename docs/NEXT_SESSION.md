@@ -24,7 +24,7 @@
 - 로컬 NLI 비교: `feat/local-nli-comparison` (`feat/extractive-keypoint-baseline` 기반). PR #13 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
 - 원문 계열/검수 루프: `feat/source-facet-review-loop` (`feat/local-nli-comparison` 기반). PR #14 Ubuntu/Windows CI 통과 이후 작업. 상위/main 임의 병합 없음.
 - 에이전트 연결: `feat/evidence-agent-vertical-slice` (`feat/source-facet-review-loop` 기반). PR #15 CI 통과 이후 진행. 초기 runtime commit67e226a, 보완 문법/실행 문서가 후속 commit. 상위/main 임의 병합 없음.
-- 로컬 질의 UI: `feat/local-agent-comparison-ui` (`feat/evidence-agent-vertical-slice` 기반). PR #16 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
+- 로컬 질의 UI: `feat/local-agent-comparison-ui` (`feat/evidence-agent-vertical-slice` 기반), draft PR #17. PR #16 Ubuntu/Windows CI 통과 확인 후 진행. 구현 commit772a4e8. 상위/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -68,6 +68,19 @@
 4. Auditor는 질문의 전제를 원문 지원 검사에 섞어 과도하게 거절하는 문제가 있습니다. 이 부분은 runtime 검사 경계의 후속 개선 대상이며 clustering 재실험으로 돌아갈 이유가 아닙니다. 전체1,000개 자동 확장/유료 외부 API는 여전히 별도 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
+
+### 로컬 UI 실제 검증과 환경
+
+- 최신 결과 `artifacts/local-agent-ui-20261011-smoke-v3.json.html` (JSON 동일 basename). 코드 hash/원문 binding/HTML 재생성 확인.
+- 3질문×2agent: 첫 질문 둘 다 원문 인용, 조건 후속 질문은 필요성 보류/예측 답변, 한국 수치 질문 둘 다 근거 부재로 보류.
+  필요성 후속 초안에 인용 원문에 없는 AI/AGI·장기 조건이 있어 차단. assistant 대조이지 독립 gold가 아님. 승인0 유지.
+- full GPU `-ngl99`는 이번 여유 VRAM에서 OOM. 기존 모델을 `-ngl24 -b128 -ub128 -c8192 --no-context-shift -t6 --parallel1`로 실행.
+  원문/실패 결과/감사 기록은 로컬 Git 제외. 첫 연결 실패 기록과 중간 v2도 보존. 최종 모델 호출17회/시간합172.50초.
+- 실제 WSL 모델 경로 `/home/taeng/.cache/commentscope-models/Qwen3-4B-Instruct-2507-Q4_K_M.gguf`,
+  바이너리 `/home/taeng/.local/opt/commentscope-llama/llama-b11541/llama-server`.
+  `LD_LIBRARY_PATH=/home/taeng/.local/opt/commentscope-llama/cudart-llama-b11541-bin-ubuntu-cuda-12.8-x64:/usr/lib/wsl/lib` 필요.
+- Python210/JS 계약3 통과, wheel asset 포함 확인. HTTP/최소 DOM 검증은 실제 브라우저 시각·키보드 QA 대체가 아님.
+  모델/UI 서버 종료됨. 다시 시작하려면 README12 사용. `runs/agent-ui` 자동 저장은 reset/종료 때 삭제되지 않으며 자동 resume 없음.
 
 ## 로컬 LLM 타당성 검사 / 사용자 평가 방식 (2026-10-10)
 
