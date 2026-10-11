@@ -1,11 +1,13 @@
 """Bounded diagnostic assembly: freeze a seed core, then require direct support from each member."""
+import math
 from commentscope.factory.automatic_contract import digest
 
 VERSION='common-core-assembly-0.1'
 
 
 def assemble(units, candidates, discover, attach, *, budget=64, seed_limit=2, max_chars=10000,
-             cross_mode=False):
+             cross_mode=False, seed_order='degree'):
+    if seed_order not in ('degree', 'source_density'): raise ValueError('Invalid seed order')
     if type(cross_mode) is not bool: raise ValueError('Invalid mode policy')
     if type(budget) is not int or not 1<=budget<=250: raise ValueError('Invalid diagnostic budget')
     if type(seed_limit) is not int or not 1<=seed_limit<=2: raise ValueError('Invalid seed limit')
@@ -21,9 +23,23 @@ def assemble(units, candidates, discover, attach, *, budget=64, seed_limit=2, ma
     groups,decisions=[],[]
     exhausted=False
     size=lambda uid:sum(len(s['text']) for s in by_id[uid]['spans'])
-    for aid in sorted(by_id,key=lambda uid:(-len(candidates[uid]),uid)):
+    def priority(uid):
+        if seed_order == 'degree': return (-len(candidates[uid]), uid)
+        diverse = {}
+        for r in candidates[uid]:
+            value = r.get('cosine')
+            if type(value) not in (float, int) or not math.isfinite(value) or not -1 <= value <= 1:
+                raise ValueError('Invalid density score')
+            sid = by_id[r['claim_id']]['source_comment_id']
+            diverse[sid] = max(diverse.get(sid, -1), value)
+        scores = sorted(diverse.values(), reverse=True)
+        # A high-similarity pair alone is insufficient: prioritize the second
+        # distinct supporting source. Similarity is still NOT a membership vote.
+        return (-(scores[1] if len(scores) >= 2 else -1), -(scores[0] if scores else -1), uid)
+    for aid in sorted(by_id,key=priority):
         if aid not in remaining or (not cross_mode and by_id[aid]['mode']=='unclear'): continue
-        choices=[r['claim_id'] for r in candidates[aid] if r['claim_id'] in remaining]
+        rows = candidates[aid] if seed_order == 'degree' else sorted(candidates[aid], key=lambda r:(-r['cosine'],r['claim_id']))
+        choices=[r['claim_id'] for r in rows if r['claim_id'] in remaining]
         if len({by_id[uid]['source_comment_id'] for uid in [aid,*choices]})<3: continue
         for mid in choices[:seed_limit]:
             if len(decisions)>=budget: exhausted=True;break
@@ -51,7 +67,9 @@ def assemble(units, candidates, discover, attach, *, budget=64, seed_limit=2, ma
                 break
             if exhausted: break
         if exhausted: break
-    return {'artifact_kind':'common-core-assembly-0.2' if cross_mode else VERSION,
+    return {'artifact_kind':('common-core-assembly-0.3' if seed_order != 'degree' else
+                            'common-core-assembly-0.2' if cross_mode else VERSION),
+            **({'seed_order':seed_order} if seed_order != 'degree' else {}),
             **({'cross_mode':True} if cross_mode else {}),
             'unit_digest':digest(units),'candidate_digest':digest(candidates),
             'budget':budget,'seed_limit':seed_limit,'max_chars':max_chars,'decisions':decisions,'groups':groups,
@@ -77,6 +95,7 @@ def replay(units,candidates,stored,verify_seed,verify_attach):
         if verify_attach(u,core)!=row['result']:raise ValueError('Attachment replay changed')
         return row['result']
     rebuilt=assemble(units,candidates,discover,attach,budget=stored['budget'],
-                     seed_limit=stored['seed_limit'],max_chars=stored['max_chars'],cross_mode=stored.get('cross_mode',False))
+                     seed_limit=stored['seed_limit'],max_chars=stored['max_chars'],cross_mode=stored.get('cross_mode',False),
+                     seed_order=stored.get('seed_order','degree'))
     if next(stream,None) is not None or rebuilt!=stored:raise ValueError('Assembly changed')
     return rebuilt
