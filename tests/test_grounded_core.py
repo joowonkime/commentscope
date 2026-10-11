@@ -40,6 +40,12 @@ class GroundedCoreTests(unittest.TestCase):
         self.assertFalse(result['allowed'])
         self.assertIn('presuppositions', result['blocked_reasons'])
 
+    def test_explicit_time_or_condition_veto_cannot_be_rescued_by_models(self):
+        def forbidden(*args): self.fail('Mechanical veto must not call audit')
+        for a, b in [('Automation will replace jobs.', 'Automation is replacing jobs.'),
+                     ('If jobs disappear, help is needed.', 'Help is needed.')]:
+            self.assertFalse(core.verify(a, b, forbidden, score)['allowed'])
+
     def test_original_source_and_claim_both_checked(self):
         checked = []
         def calls(system, data, schema):

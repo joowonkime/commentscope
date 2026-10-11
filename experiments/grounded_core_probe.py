@@ -21,6 +21,7 @@ from experiments.claim_support_probe import CachedScores
 from experiments.shared_core_integration import profiles
 
 CODE = [__file__, 'src/commentscope/factory/candidate_search.py', 'src/commentscope/factory/grounded_core.py',
+        'src/commentscope/factory/qualification_guards.py',
         'src/commentscope/factory/core_groups.py', 'src/commentscope/factory/shared_core.py',
         'src/commentscope/factory/automatic.py', 'src/commentscope/factory/automatic_contract.py',
         'src/commentscope/providers/local_nli.py', 'src/commentscope/providers/local_llama.py',
@@ -32,6 +33,29 @@ FIXTURES = ['tests/fixtures/claim-frame-cases.json', 'tests/fixtures/shared-core
 
 def no_model(*args):
     raise RuntimeError('Read-only replay cannot call a model')
+
+
+def reuse_raw(origin, destination, manifest):
+    """Reuse identical inference requests, never decisions made by old host code."""
+    old = read_json(origin/'llm'/'manifest.json')
+    if read_json(origin/'nli'/'manifest.json') != old: raise ValueError('Reuse manifests differ')
+    for field in ['inputs', 'model', 'nli', 'runtime', 'prompts']:
+        if old[field] != manifest[field]: raise ValueError('Reuse inference/input policy changed')
+    for path in ['src/commentscope/factory/automatic.py', 'src/commentscope/providers/local_llama.py',
+                 'src/commentscope/providers/local_nli.py', 'experiments/claim_support_probe.py']:
+        if old['code_sha256'][path] != manifest['code_sha256'][path]: raise ValueError('Inference implementation changed')
+    count = 0
+    for folder, prefix in [('llm', 'call-'), ('nli', 'score-')]:
+        for path in sorted((origin/folder).glob(prefix+'*.json')):
+            stored = read_json(path)
+            if path.name != prefix+digest(stored['request'])+'.json' or digest(stored['result']) != stored['result_sha256']:
+                raise ValueError('Reuse checkpoint changed')
+            target = destination/folder/path.name
+            if target.exists():
+                if read_json(target) != stored: raise ValueError('Reuse destination changed')
+            else: write_json_exclusive(target, stored)
+            count += 1
+    return count
 
 
 def vectors_for(report_path, report):
@@ -96,6 +120,7 @@ def main():
     parser.add_argument('--run-dir', type=Path, required=True)
     parser.add_argument('--phase', choices=['probe', 'integrate', 'verify'], required=True)
     parser.add_argument('--diagnostic-only', action='store_true', required=True)
+    parser.add_argument('--reuse-run', type=Path)
     args = parser.parse_args()
     baseline = read_json(args.baseline64)
     build_bundle(args.snapshot, baseline)
@@ -107,7 +132,7 @@ def main():
                       'anchor': unit(c['id']+':a', c['left'], c.get('left_claim', c['left'])),
                       'member': unit(c['id']+':b', c['right'], c.get('right_claim', c['right']))})
     exact = read_json(FIXTURES[2])['cases']
-    manifest = {'artifact_kind': 'grounded-core-diagnostic-0.1', 'expires_at': baseline['expires_at'],
+    manifest = {'artifact_kind': 'grounded-core-diagnostic-0.2', 'expires_at': baseline['expires_at'],
                 'inputs': {p: sha(p) for p in [args.snapshot, args.baseline64, args.baseline_full, args.reference_evaluation,
                                               *FIXTURES, str(Path(args.baseline64).parent/'embeddings.json'),
                                               str(Path(args.baseline_full).parent/'embeddings.json')]},
@@ -121,6 +146,8 @@ def main():
                 'protocol': 'Unchanged pair labels scored separately from exact-target fidelity. Bounded integration is diagnostic even if regressions fail; no default promotion or full1000 run.',
                 'promotion': 'Requires no critical false acceptance in fixed checks, exact-core review, unused real evaluation and source-faithful agent answers; pair compatibility alone is insufficient.'}
     require_live(manifest['expires_at'])
+    if args.reuse_run:
+        manifest['reuse_origin_manifest_sha256'] = sha(args.reuse_run/'llm'/'manifest.json')
     if args.phase == 'verify' and (not (args.run_dir/'llm'/'manifest.json').exists() or
                                  not (args.run_dir/'nli'/'manifest.json').exists()):
         parser.error('Replay requires existing checkpoints')
@@ -131,6 +158,7 @@ def main():
         if model is None: model = LocalNLI()
         return model.score(a, b)
     scores = CachedScores(args.run_dir/'nli', manifest, no_model if args.phase == 'verify' else score)
+    if args.reuse_run and args.phase == 'probe': reuse_raw(args.reuse_run, args.run_dir, manifest)
     candidates = candidate_search.search(baseline['units'], vectors_for(args.baseline64, baseline))
     if args.phase == 'probe':
         if (args.run_dir/'probe.json').exists(): parser.error('Completed probe exists')
