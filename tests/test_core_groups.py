@@ -6,15 +6,23 @@ import unittest
 
 from commentscope.factory import core_groups as g
 from commentscope.factory.automatic import bind_claims
+from commentscope.factory.automatic import Calls
 from commentscope.ingestion import load_snapshot
 from commentscope.storage import write_json_exclusive
 from commentscope.agents.runtime import AgentSession
 from experiments.shared_core_integration import profiles
 from experiments.shared_core_probe import reuse_checkpoints
+from experiments.verify_shared_core import no_model
 from commentscope.factory.automatic_contract import digest
 
 
 class CoreGroupTests(unittest.TestCase):
+    def test_read_only_replay_missing_call_cannot_write_error_checkpoint(self):
+        with tempfile.TemporaryDirectory() as d:
+            calls=Calls(d,{'expires_at':'2099-01-01T00:00:00Z'},no_model)
+            with self.assertRaises(RuntimeError):calls('system',{}, {})
+            self.assertEqual([p.name for p in Path(d).iterdir()],['manifest.json'])
+
     def data(self,n=4):
         units=[{'claim_id':str(i),'source_comment_id':'s'+str(i),'mode':'normative',
                 'statement':'Claim '+str(i),'spans':[{'text':'Source '+str(i)}]} for i in range(n)]

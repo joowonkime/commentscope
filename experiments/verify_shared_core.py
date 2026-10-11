@@ -11,6 +11,11 @@ from experiments.claim_support_probe import CachedScores
 from experiments.shared_core_probe import has_errors
 
 
+def no_model(*args):
+    # request() catches ValueError as a malformed response and would cache it. Propagate instead.
+    raise RuntimeError('Missing checkpoint; verification must not run a model')
+
+
 def verify(snapshot, baseline_report, reference_evaluation, report_path,
            fixtures='tests/fixtures/claim-frame-cases.json'):
     path=Path(report_path)
@@ -27,9 +32,8 @@ def verify(snapshot, baseline_report, reference_evaluation, report_path,
     if any(report[k]!=sha(file) for k,file in hashes.items()): raise ValueError('Input hash changed')
     _,cases=prepare_cases(snapshot,baseline_report,reference_evaluation,fixtures)
     if cases!=report['cases'] or len(cases)!=len(report['results']): raise ValueError('Case inventory changed')
-    def forbidden(*args): raise ValueError('Missing checkpoint; verification must not run a model')
-    calls=Calls(path.parent/'llm',manifest,forbidden)
-    scores=CachedScores(path.parent/'nli',manifest,forbidden)
+    calls=Calls(path.parent/'llm',manifest,no_model)
+    scores=CachedScores(path.parent/'nli',manifest,no_model)
     for case,row in zip(cases,report['results']):
         if {k:row[k] for k in case}!=case: raise ValueError('Case binding changed')
         if shared_core.discover(case['anchor'],case['member'],calls,scores)!=row['trace']:

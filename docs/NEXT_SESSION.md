@@ -1,5 +1,27 @@
 # 다음 세션 시작점
 
+## 최신 공통 주장과 시간 보존 구현 2026-10-12
+
+- ADR-021 / AUTOMATIC_FACTORY의 공통 주장 탐색 절 / DATA_CONTRACTS 진단 계약이 최신입니다.
+  temporal_guard→shared_core→core_groups→진단 profile/기존 AgentSession 연결을 구현했습니다. 기본 Factory0.2는 유지합니다.
+- 로컬 모델은 공통 후보1개만 제안합니다. 기존 claim2개와 함께 고정 비교하며 NLI 원문/claim 지지, 시간/강도,
+  명시적 영어 조건/개인 행동 범위를 검사합니다. 모델 제안은 근거가 아니며 수동 service 판단은 추가하지 않았습니다.
+- 최초 개발: 합성6/7·9/9, 실제5/7·11/11. modal 표지 보정 후 실제6/7이지만 개인→일반 회귀로 합성음성8/9.
+  범위 차단 보완 최종: 합성6/7·9/9, 실제6/7·11/11. self 제외 실제 정상 연결2/3이며 취직/계속 근무 뉘앙스는 사후 주의 사례입니다.
+- 새 주제12개(첫 실행 전에 fixture 고정): 정상5/6·오류6/6. 기존 실제18개 반복 결과도 일치. 독립 gold/미사용 실제 자료 아님.
+  임대료 조건 동의어, 물가 원문1개, 도서관 권고의 시간 오분류가 남습니다. 원래 모든 사례 일치 조건은 실패입니다.
+- 사용자의 전체 진행 요청에 따라 품질 승격과 분리한 기능 진단을 명시적으로 추가했습니다. manifest quality_gate_passed=false,
+  CLI --diagnostic-only 필수. source-only0.2의64개/123claims→28seed→0agent, 예산64 미소진, 미배정123입니다.
+  원문3개 공통 지지를 얻지 못했으므로 실제 새 agent 질의는 하지 않았습니다. 전체1,000개 재추출/새 수집도 없음.
+- private runs/shared-core-probe-20261012(-v2,-v3), shared-core-transfer-20261012, shared-core-integration-20261012의
+  report.json/overview.html. hash/명령은 AUTOMATIC_FACTORY에 기록했습니다. 첫 코드b13f10b, 두 번째8090a86으로 중간 실패도 보존.
+  최신 실제 실행 코드0924733. 사후 private 검토는 artifacts/shared-core-evaluation-20261012.json이며 기존 기대값과 구분합니다.
+- Python271개/Node4개 로컬 테스트 통과. 고정34개·추가30개와28개 조립 결정을 모델 재호출 없이 replay했습니다.
+  source-bound3개 합성 profile→기존 AgentSession 응답까지 mock 기능 검사했으며 의미 품질 점수로 세지 않습니다.
+- 다음 병목은 정상 주장에 대한 시간/강도 분류의 과잉거절, 조건/함의 판정과 공통 명제의 세부 뉘앙스입니다.
+  field equality/영어 표지 몇 개가 일반 의미 보증인 것처럼 보고하지 말고, 기존 기대 라벨과 새 대표 문장 충실성도 구분해야 합니다.
+  PR21 draft/main 미병합 유지. 기본 승격이나 전체 재실행 전에 미사용 실제 평가와 후보 coverage 분석이 필요합니다.
+
 ## 최신 NLI 직접 지지 판정 비교
 
 - ADR-020과 LOCAL_NLI_COMPARISON의 최신 원문 span/claim 절이 최신입니다. 기본 Factory0.2와

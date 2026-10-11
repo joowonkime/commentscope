@@ -91,7 +91,7 @@ def main():
         return result
     assembly=core_groups.assemble(baseline['units'],baseline['candidates'],discover,attach,budget=args.budget)
     # Recompute from existing exact requests with provider disabled; no second-model lottery.
-    def forbidden(*args):raise ValueError('Replay attempted a model call')
+    def forbidden(*args):raise RuntimeError('Replay attempted a model call')
     calls.provider=forbidden;scores.score=forbidden
     core_groups.replay(baseline['units'],baseline['candidates'],assembly,discover,attach)
     agents=profiles(snapshot,baseline['units'],assembly)

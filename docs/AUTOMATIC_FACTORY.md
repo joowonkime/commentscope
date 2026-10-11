@@ -4,7 +4,78 @@
 공통 주장에 대한 근거 검사를 통과한 묶음만 잠정 에이전트로 만듭니다. 개발·논문을 위한 사후 표본 평가는
 이 실행 경로와 별개입니다. 자동 판정은 독립 품질 검증이나 사실 검증을 뜻하지 않습니다.
 
-## 최신 직접 지지 판정 비교
+## 공통 주장 탐색과 시점 보존 2026-10-12
+
+이전의 '한 claim 전체를 공통 주장으로 고정'하는 방식과 별도로, 공통 주장 후보를 자동 제안하고 각 원문에 다시 검증하는
+교체 가능한 모듈을 구현했습니다. 생성 모델의 제안 자체는 근거가 아니며 별도 NLI/time/scope/condition 검사를 통과해야 합니다.
+실행 중 수동 검수 입력은 추가하지 않았습니다. 설계는 ADR-021, 저장 형식은 DATA_CONTRACTS의 공통 주장 진단 절을 참고하세요.
+
+| 고정 개발 실행 | 합성 정상 유지 | 합성 오류 차단 | 실제 정상 유지 | 실제 오류 차단 |
+| --- | --- | --- | --- | --- |
+| 최초 시간 분리와 공통 후보 탐색 | 6/7 | 9/9 | 5/7 | 11/11 |
+| modal 표지 보정과 조건절 분리 | 6/7 | 8/9 | 6/7 | 11/11 |
+| 개인 행동 범위 차단 추가 | 6/7 | 9/9 | 6/7 | 11/11 |
+
+두 번째 실행의 개인→일반 회귀도 보존했습니다. 세 번째 실행의 실제 양성 중 anchor self4개를 제외하면2/3유지입니다.
+다만 원래 기대 라벨과 일치한다고 생성된 대표 문장의 모든 뉘앙스가 검증된 것은 아닙니다.
+취직할 의향/계속 일할 의향을 같은 표현으로 묶은 결과는 별도 주의 사례이며 기존 기대 라벨을 사후 변경해 점수를 올리지 않았습니다.
+
+첫 실행 전에 고정한 추가 주제12개는 정상5/6·오류6/6입니다. 기존 실제18개도 동일 결과6/7·11/11로 재현됐습니다.
+추가 자료는 assistant가 작성한 개발 사례이지 blind holdout/사람 gold가 아닙니다.
+조건부 임대료 재표현, 물가 원문1개, 새 도서관 권고 사례의 시간 분류에서 과잉 거절이 남습니다.
+영어용 NLI와 제한된 영어 표지 규칙이므로 한국어1개 통과를 다국어 검증으로 보고하지 않습니다.
+
+원래 모든 고정 양성·음성 일치 조건은 실패입니다. 이후 실행한64개 작업은 품질 승인 목적이 아니라
+명시적 protocol amendment를 둔 **기능 진단**입니다. source-only0.2의64개 원문/123claims를 재사용했고,
+전체1,000개 재추출·새 수집은 하지 않았습니다.28seed decisions, 새 agent0개, 미배정123, 결정 예산64 미소진입니다.
+검사된 unique claim14개 중 source fidelity 거절4개, commitment 불일치5개, time 불일치5개(중복 가능)가 있었습니다.
+원문/쌍 사전 검사를 통과해 공통 후보 제안까지 간 seed는3개였으며 모두 최종 core 확보에 실패했습니다.
+나머지 member 연결과 실제 새 agent 답변 단계는 도달하지 못했습니다.0-agent는 품질 성공이나 corpus에 관점이 없다는 증거가 아닙니다.
+
+현재 판정 구현과 조립/프로필 연결은 구현됐고 합성 테스트에서는 실제 AgentSession 계약까지 이어집니다.
+실제 corpus의 agent 생성 품질 및 한국어 답변 품질은 여전히 미완료이며 기본 Factory나 main으로 승격하지 않습니다.
+Python271개와 Node4개 로컬 테스트 통과. 고정34개/추가30개 실행은 모델 호출0으로 replay했고,
+기능 진단의28개 결정과 조립도 원시 checkpoint로 재검증했습니다. 추가30개 중18개는 반복 개발 사례입니다.
+
+비공개 결과 및 SHA256:
+
+- 첫 실행 `runs/shared-core-probe-20261012/report.json`: `72232424ced5766cd496bbe7c49353d23a1e936acfab2d3b9f48e76f02e5b7d3` (실행 코드 `b13f10b`)
+- 두 번째 `runs/shared-core-probe-20261012-v2/report.json`: `89fa0dc7568b389959db9c0b8d15934db848788582a6af78f14284a002002eca` (실행 코드 `8090a86`)
+- 최신 고정 `runs/shared-core-probe-20261012-v3/report.json`: `deffa48788b3a0b084e5cf3e97c4d110818b8befdd6e9003710530dd0111ae1b`
+- 추가 주제 `runs/shared-core-transfer-20261012/report.json`: `7a2ec2543be960290089fe93d1b6fc4eba96fa94ba00d3964e491dace8434647`
+- 64개 기능 진단 `runs/shared-core-integration-20261012/report.json`: `4424d69193c6761a27b785e739f7cc4b5fbdf1c89e51531fd5340c312e10565f`
+
+각 디렉터리의 `overview.html`에서 원문/제안/결과를 확인합니다. 원문 포함 파일은 공개 Git에 올리지 않습니다.
+최신 고정/추가/기능 진단의 실행 코드는 `0924733`에 보존했습니다. 후속 변경은 cache 누락 시 replay가
+오류 checkpoint도 만들지 않도록 한 예외 처리 보완이며, 실제 완료된 replay는 누락 없이 통과했습니다.
+사후 뉘앙스/실패 검토는 private `artifacts/shared-core-evaluation-20261012.json`에 저장했습니다.
+v2/v3는 모델/prompt/runtime/입력·결과 hash가 일치하는 요청만 이전 cache에서 복사했으며 코드 판정을 다시 계산했습니다.
+v3의 새 LLM 요청은0회입니다. NLI 기록 시간에는 재사용된 요청도 포함돼 새 실행 시간으로 해석하면 안 됩니다.
+
+### 재현 명령
+
+README의 기존 로컬 Qwen 서버 및 clustering 환경을 사용합니다. 설치된 모델만 사용하며 NLI는 offline CPU입니다.
+
+```bash
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m experiments.shared_core_probe \
+  data/ubi-research-20261010.json runs/automatic-factory-20261011-full1000/report.json \
+  artifacts/automatic-factory-20261011-assistant-evaluation.json --run-dir runs/shared-core-new
+
+python -m experiments.verify_shared_core data/ubi-research-20261010.json \
+  runs/automatic-factory-20261011-full1000/report.json artifacts/automatic-factory-20261011-assistant-evaluation.json \
+  runs/shared-core-probe-20261012-v3/report.json
+
+HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m experiments.shared_core_integration \
+  data/ubi-research-20261010.json runs/automatic-factory-20261011-sourceonly64/report.json \
+  --run-dir runs/shared-core-integration-new --diagnostic-only --budget 64
+```
+
+추가 주제에는 `--fixtures tests/fixtures/shared-core-transfer-cases.json`을 사용합니다.
+`--reuse-run`은 같은 snapshot/기준 보고서/모델/prompt/runtime인 과거 요청만 재사용하며 과거 판정을 재사용하지 않습니다.
+검증 명령은 저장된 실행 코드 hash까지 맞아야 하므로 과거 실행은 해당 commit에서 확인합니다.
+기능 진단 입력에는 평가표/사람 승인 파일이 없으며 기존 추출 보고서만 받습니다. 기본 앱 loader는 이 진단 artifact를 받지 않습니다.
+
+## 이전 직접 지지 판정 비교
 
 필드 생성 대신 기존 로컬 NLI 모델로 같은34개 사례를 비교했습니다. 합성 정상7/7유지·오류8/9차단,
 실제 정상5/7유지·오류는 단방향10/11, 양방향11/11차단입니다. 실제 정상 중 anchor self를 제외하면1/3유지입니다.

@@ -417,6 +417,26 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - summary는 양성 유지/음성 차단/오류/각 실패 ID를 별도로 기록합니다. `next_stage_eligible`도 품질 승인을 뜻하지 않으며
   이번 실제 실행에서는 양 정책 모두 false입니다. 개인 댓글 포함 report/overview/checkpoint는 Git 제외입니다.
 
+### 공통 주장 진단 계약
+
+- `temporal-guard-0.2`: input_digest/parts(commitment,time)/lexical(overrides,witnesses)/output/errors.
+  lexical witness의 정확한 offset/텍스트 및 component 조합을 재계산합니다. 기존 raw 모델 판단은 덮어쓰지 않습니다.
+- `shared-core-0.3`: 두 unit 입력 digest, source fidelity 및 source/claim 시간 검사, 개인 행동 표지,
+  proposal, 원래 claim2개+생성안1개 이하 candidates, candidate별 source/claim→core NLI/시간/조건 검사,
+  selected_core/blocked_reasons. 생성안은250자 경계 미만이며 빈 문자열은 제안 없음입니다. 최대1회 형식 repair만 허용합니다.
+- `shared-core-diagnostic-0.1`은 새 공통 주장 검색을 별도 offline protocol로 기록합니다.
+  기존 reference 기대값은 inference에 전달하지 않습니다. 모든 중간 실행과 prototype version을 보존하고
+  `next_stage_eligible=false`를 최종 품질 실패로 유지합니다. cache 재사용은 request/model/prompt/runtime/expiry/hash를 확인합니다.
+- `common-core-assembly-0.1`: unit/candidate digest, 결정 예산, seed_limit, seed/attach decisions, groups, unassigned_ids.
+  seed별 core는 고정하고 member마다 직접 지지를 요구합니다. 3개 distinct source 미만은 그룹을 승격하지 않습니다.
+  greedy disjoint 배정/최대9member/10,000자이며 미배정은 검증된 희소 관점이 아닙니다. replay는 원시 cache로 결과와 전이를 재계산합니다.
+- `shared-core-integration-0.1`은 `--diagnostic-only` 전용입니다. 최대64개 source를 처리한 source-only0.2 추출만 재사용합니다.
+  inference 전 manifest에 protocol amendment, quality_gate_passed=false, 원본/code/model hash 및 예산을 기록합니다.
+  조립 결과와 source-bound provisional profiles를 저장하되 기본 자동 bundle/정식 PerspectiveSpec으로 재표기하지 않습니다.
+- 진단 profile은 기존 AgentSession의 auto_accepted_unvalidated 계약을 따르고 original span offset/3개 distinct source를
+  검증합니다. source 만료/입력 hash 변경을 거절합니다. 실제 최신 진단은 profiles=[]이므로 실제 새 agent 질의는 실행되지 않았습니다.
+  기존 앱 자동 loader는 새 진단 report를 승인된 입력으로 취급하지 않습니다. corpus/원시 결과는 계속 Git 제외입니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
