@@ -119,9 +119,56 @@ JSON 다운로드에는 거절 초안과 전체 검사 기록이 포함되고, �
 - Python210개 + Node 최소 DOM 계약3개 통과, wheel에 HTML/JS/CSS 포함 확인. 실제 브라우저 시각/키보드 QA는 미수행.
   점검 후 모델/UI 서버는 종료했습니다. 웹 질의는 README12단계로 다시 실행합니다.
 
+## main 통합 후 생성 완료 여부 재검증 (2026-10-11)
+
+### 무엇을 실제 실행했는가
+
+1. PR #18을 `a3ead01`로 main에 merge. 누적 PR #6은 merged, #7~#17은 main ancestry 확인 후 통합 참조로 closed.
+   collector Issue #5 완료. 브랜치·커밋·원문·실패 기록은 삭제하지 않음. main push CI Ubuntu/Windows 통과.
+2. 기존 공식 API1,000개 snapshot을 다시 validate/normalize(567root+433reply, canonical999).
+   새로운 댓글 수집은 하지 않음. `main-acceptance-20261011-normalized.json`에 보존.
+3. 기존 assistant 검수21개에서 bundle을 새 경로 `main-acceptance-20261011-agents.json`에 생성.
+   필요성7/예측4의 개발 agent2개, 희소2/미배정8개 유지. 생성은 출처 검증과 코드 조립이며 새 LLM 공통 주장 합성/별도 모델 학습 아님.
+4. 실제 Chromium153.0.8010.12에서 키보드로3질문 제출. 실제 로컬 Qwen 호출17회. 최초 질문은 두 agent 인용 답변,
+   조건 후속 질문은 필요성 보류/예측 답변, 한국 수치 질문은 둘 다 not_in_evidence. 표시6문장(중복 포함)을 assistant가 원문 대조.
+5. 인용 펼치기·HTML/JSON 다운로드·새 탭의 빈 세션·대화 초기화·390px 모바일 가로 넘침 없음 확인.
+   최종 browser 실행97.00초, page error0, 외부 네트워크 요청0. 이는 자동화된 브라우저 수용 검사이지 사용자 연구/전체 접근성 인증 아님.
+
+처음 browser 실행은 마지막 초기화 검사에서 문자열 eval이 CSP에 차단됐습니다. 그전 실제 질의/다운로드는 완료됐지만
+검사 전체를 실패로 보존했습니다. `wait_for_function`의 문자열 식을 함수 식으로 수정하고 새 세션에서 전부 재실행해 통과했습니다.
+앱 보안 정책·모델·생성/감사 프롬프트는 변경하지 않았습니다. 스크린샷은 assistant가 직접 확인했습니다.
+
+### 생성 부분이 끝났는가
+
+| 완료 조건 | 판정 |
+| --- | --- |
+| 검수 지원 묶음 → 출처가 고정된 개발 profile → 독립 모델 세션·근거 답변 | 개발 기능으로 동작 확인 |
+| 원시 댓글 → 올바른 관점 자동 발견·검증 → 정식 PerspectiveSpec | 미완료 |
+| 임의 영상·전체1,000개에서 자동 생성 품질 보장 | 미완료 |
+
+자동 쪽도 기존12개 회귀를 실제 재실행했습니다. 계약10/12, 사전 assistant type/polarity/topic 전체 일치6/12.
+개인 목표를 예측으로, 희망을 이점으로 읽거나 인용문을 변형하는 오류가 남았습니다. 기존 사례 반복이며 독립 평가셋이 아닙니다.
+현재 연결된 `source_facets` 경로는 AI·자동화/UBI 전용 분류와 최대24개 입력의 개발 실험입니다.
+모든 주제에서 의미 있는 공통 주장을 찾아내는 범용 agent factory나 전체 corpus 자동화가 완료됐다는 뜻이 아닙니다.
+
+자동 재실행 결과는 **진단 branch**에만 남겼습니다. agent 입력은 **기존 검수 artifact**를 사용했습니다.
+원시 분류 실패를 고쳐 쓴 뒤 자동 성공으로 계산하지 않았으며 `human_approved=false`, `accepted_perspectives=0`을 유지합니다.
+
+### 결과 위치와 재현
+
+- 한눈에 보는 로컬 보고서: `artifacts/main-acceptance-20261011-overview.html`.
+- 실제 브라우저 다운로드: `artifacts/main-acceptance-20261011-browser-v2.comparison.json` 및 `.html`.
+  JSON SHA256 `a5821bfdfa01b062b9c995f5039acfe0c89b72041f81fd181cd990d04362777c`.
+- 브라우저 검사/화면: 같은 prefix의 `.checks.json`, `.initial.png`, `.first-answer.png`, `.final.png`, `.mobile.png`.
+- 자동 회귀: `artifacts/main-acceptance-20261011-auto-regression.json` 및 `.json.html`.
+  SHA256 `80dd13bb4a6a9d4e2fdff3838a565ba2f884d04851ec2ecab43cd604f43312c2`.
+- 새 bundle SHA256 `b34925000c404b5eb04a05f83642258125278333107f76b2071233bed1bde096`으로 기존 검수 기반 bundle과 동일.
+- 공개한 재실행 도구 `experiments/browser_agent_smoke.py`는 선택적 Playwright 설치가 필요. 앱의 필수 dependency는 늘리지 않음.
+  설치/실행은 README12 참조. 원문·출력·이미지는 Git 제외, 만료 상속. 검사 후 모델/UI 서버 종료.
+
 ## 아직 남은 기능
 
-- 실제 브라우저에서의 레이아웃·키보드 접근성·WSL 전달 사용자 확인(현재 HTTP 및 최소 DOM 계약 테스트만 수행).
+- 실제 비개발자 팀원의 Windows/WSL 실행·사용성 및 전체 접근성 검증(Chromium 기본 동작/화면은 확인).
 - 승인된 claim-level PerspectiveSpec, 복합 주장 분해와 정식 관점 승격.
 - 에이전트 간 반문·토론의 메시지 경계와 다른 에이전트 발언을 새 근거로 오인하지 않는 검사.
 - Reflection의 최소 기능 및 최소3개 연결 task 범위 확정.
