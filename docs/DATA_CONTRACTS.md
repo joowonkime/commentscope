@@ -6,6 +6,27 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 기존 snapshot-0.1이나 아래 전체 Factory 명세를 자동으로 0.2로 바꾸는 것은 아닙니다.
 합성 예시는 [snapshot](examples/synthetic-snapshot.json)과 [Factory trace](examples/synthetic-factory-trace.json)에 있습니다.
 
+## 후보 검색과 방향성 검사 진단 계약
+
+`candidate-search-0.1`은 동일 claim/vector의 same_mode, cross_mode, hybrid 검색을 분리합니다.
+hybrid는 embedding8+추가 lexical4, source 중복 제외, 유형 제한 없음이며 의미 승인 결과가 아닙니다.
+입력은 이 진단에서512claims 이하입니다. 실제 실행은 기존64개 댓글의123claims를 재사용합니다.
+
+`grounded-core-0.1`의 verify는 원문과 target의 digest, NLI 원시 점수, relational audit,
+차단 사유와 allowed를 반환합니다. NLI threshold0.8과 scope/time/modality/conditions/polarity/presuppositions
+전부 preserved 및 support=supported가 필요합니다. evidence_quote는 원문의 정확한 substring이어야 합니다.
+인용 검사는 구조 검증이며 모델의 의미 판정을 독립적으로 보증하지 않습니다.
+
+discover는 원문→추출 claim 검사를 먼저 수행하고, 제안1개+입력 claim2개를 고정 비교합니다.
+각 core를 원문 및 claim에 별도로 검증하고 첫 통과 후보를 선택합니다. 제안 우선이지 최단 문자열 우선이 아닙니다.
+core_groups의 cross_mode=true는 `common-core-assembly-0.2`로 기록하며 기존 false 경로는0.1을 유지합니다.
+기본 Factory/artifact loader에는 이 진단을 연결하지 않습니다.
+
+`grounded-core-diagnostic-0.1`은 입력·fixture·코드·모델·프롬프트 hash, 실행 정책,
+quality_gate_passed=false를 저장합니다. probe는 exact target 평가와 관점 연결 평가를 분리하고,
+integration은 최소3source/결정64개 한도로만 조립합니다. verify는 cache miss에 RuntimeError를 내며
+모델 호출 없이 고정 입력과 결과를 재계산합니다. 완료 artifact를 덮어쓰지 않습니다.
+
 ## 추출 실험 계약 claims-0.2 (2026-10-10)
 
 로컬 모델의 출력은 `{eligibility, claims}`입니다. 각 claim의 필수 키:
