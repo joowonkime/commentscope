@@ -304,3 +304,20 @@ python -m commentscope.factory.extractive_keypoints data/ubi-research-20261010.j
 뜻은 아니며, 전체 원문 카드를 개별 근거로 보존합니다. 로컬 모델 단독 성공이나 승인된 agent로 보고하지 않습니다.
 개발9개는 두 revision 모두8/9, 추가12개는 계약을 포함한 사전 기준 일치5/12로 자동 성공 기준을 실패했습니다.
 실행/검수 계약과 평가 한계는 [검수 루프](docs/SOURCE_FACET_REVIEW_LOOP.md)를 확인하세요.
+
+### 11. 묶음 → 개발용 에이전트 → 질문·근거 비교
+
+이제 검수 결과를 에이전트 프로필로 만들고 같은 질문에 독립적으로 답하게 할 수 있습니다.
+에이전트별 근거/대화 상태를 분리하고, 문장별 출처 검사 → 최대1회 수정 → 통과 또는 보류를 실행합니다.
+저장된 HTML에서 답변을 비교하고 원문을 펼쳐 볼 수 있습니다. 정식 승인된 PerspectiveSpec/제품용 agent가 아니므로
+`--allow-unapproved`를 명시해야 합니다. 같은 모델의 검사 통과는 의미 정확성을 보장하지 않습니다.
+
+```bash
+python -m commentscope.agents.demo build data/ubi-research-20261010.json artifacts/source-facet-loop-20261011-reviewed.json --allow-unapproved --output artifacts/YOUR-dev-agents.json
+python -m commentscope.agents.demo ask data/ubi-research-20261010.json artifacts/source-facet-loop-20261011-reviewed.json artifacts/YOUR-dev-agents.json --allow-unapproved --question "이 관점에서 AI와 UBI는 어떤 관계인가요?" --question "그 판단에 붙은 조건은 무엇인가요?" --output artifacts/YOUR-agent-comparison.json --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 CUDA12.8 context8192 no-context-shift parallel1"
+```
+
+ask에는 위에서 설명한 로컬 모델 서버가 필요합니다. 실제 데이터/검수 파일은 Git에 없고 위 경로는 로컬 실행 예시입니다.
+결과 화면은 output + `.html`입니다. 최대6개 질문을 순서대로 보내며 이전2개 자기 대화만 참조합니다.
+웹에서 새 질문을 입력하는 서버, 에이전트 간 토론, Reflection은 아직 아닙니다.
+자세한 동작·경계·검증은 [에이전트 연결 단계](docs/AGENT_VERTICAL_SLICE.md)에 있습니다.

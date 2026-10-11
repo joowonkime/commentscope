@@ -95,6 +95,16 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 검수 결과는 원래 model_result와 새 result(origin=assistant_review)를 같이 보존. raw model 평가 수치는 변경하지 않음. human_approved=false/independent_gold=false/accepted_perspectives=0. assistant 수정 후 자체 기대값 일치를 독립 정확도로 계산하지 않음.
 - snapshot/hash/expiry/source 일치/중복 검증과 새 출력 경로를 사용. 실제 계획/판정/원문/HTML은 비공개 로컬 파일이며 원본 보관 만료 상속. 사람 승인된 PerspectiveSpec 계약을 대체하지 않음.
 
+## 개발용 관점 에이전트 bundle / comparison (0.1)
+
+- `development-perspective-bundle-0.1`은 정식 PerspectiveSpec이 아님. snapshot_sha256/reviewed_sha256/expires_at/dataset/agents/non_agents/limitations를 보존. source 원문·canonical source·검수 origin·assembly를 재검증하고 ask 때 bundle을 다시 계산해 전체 비교. build/ask 모두 명시적 --allow-unapproved 필요.
+- profile은 agent_id/title/assertion_family/polarity/status=development_only_not_approved/evidence/constraints/human_approved=false. evidence는 evidence_id/source_comment_id/original_text/source_url/reviewer_reading_ko/cautions_ko/interpretation_origin/parent_context. 검수 해석은 원문 번역이나 새 증거가 아님. parent는 문맥만 제공하고 may_cite_as_support=false.
+- `development-agent-comparison-0.1`: bundle/만료/hash/runtime/prompt/schema/code hash와 질문별rounds를 보존. 같은 질문을 각 AgentSession에 독립 전달하고 자기 state만 유지. 외부 source/다른 agent/희소·보류 source ID는 생성 스키마 및 validator에서 차단.
+- 답변 grammar0.2: answerability grounded/partial은1..2개의{text,evidence_id} points, not_in_evidence는0개. text<=400자, missing_information<=240자(partial은비어있지않음). 질문은1..1000자, session<=6질문, 이전2회 자기대화만 전달. raw 답변/오류/시도/시간/usage는 보존.
+- Auditor는 각 point와 해당 original 하나만 지지 근거로 검사하고 질문 관련성도 판단. supported/revise/unclear 및 짧은 reason을 반환. 모델 지지 판정은 독립 검증 아님. 구조 실패·모호·거절 시 최대1회 재생성, 최종 실패는 abstain 및 points=[]. 통과 상태는 model_audit_passed_development_only이며 human_approved/semantic_guarantee=false.
+- 표시된 point에 호스트가 citation 전체를 연결. 실패 초안은 HTML 답변/후속 history에서 제외. 미검사 missing_information도 JSON에만 보관하고 UI에는 호스트의 일반적 부분 답변 표시만 사용. citation URL은 YouTube HTTPS allowlist, 모든 HTML 내용 escape.
+- 모든 실행은 새 출력 경로/checkpoint로 저장. 실제 댓글 유래 artifact는 Git 제외/expiry 상속. 승인 관점0과 실행 개발 agent 수를 구분. 모델 ID는 운영자 선언이며 서버 실행 모델 자동 인증은 없음.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

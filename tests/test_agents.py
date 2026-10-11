@@ -6,7 +6,7 @@ import unittest
 from urllib.error import URLError
 
 from commentscope.agents.profiles import build_bundle,load_bundle,require_live
-from commentscope.agents.runtime import AgentSession,SYSTEM,AUDIT_SYSTEM,validate_answer
+from commentscope.agents.runtime import AgentSession,SYSTEM,AUDIT_SYSTEM,validate_answer,schema
 from commentscope.agents.demo import render,citation_html
 from commentscope.factory.claim_clusters import sha
 from commentscope.factory.source_facets import assemble
@@ -35,6 +35,14 @@ def profile(prefix='A'):
 
 
 class AgentRuntimeTests(unittest.TestCase):
+    def test_generation_branches_enforce_answer_or_abstention(self):
+        branches=schema(['A-0'])['anyOf']
+        for branch in branches:
+            props=branch['properties']; kind=props['answerability']['const']
+            if kind=='not_in_evidence': self.assertEqual(props['points']['maxItems'],0)
+            else: self.assertEqual(props['points']['minItems'],1)
+            self.assertEqual(props['points']['items']['properties']['evidence_id']['enum'],['A-0'])
+
     def scripted(self,items):
         self.calls=[]
         def provider(system,data,schema):

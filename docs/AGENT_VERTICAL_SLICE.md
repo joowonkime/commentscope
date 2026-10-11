@@ -1,0 +1,99 @@
+# 검수 묶음에서 근거 기반 에이전트 응답까지
+
+## 프로젝트 목표와 이번 범위
+
+프로젝트/논문 대상은 clustering 자체가 아니라 댓글에 근거한 관점 에이전트 시스템입니다.
+요구사항 Section16.4도 먼저 수동/검수된 입력으로 end-to-end 경험을 확인하고 관점 형성을 자동화하는 순서를 명시합니다.
+이번에는 추가 clustering 실험 대신 기존 검수21개에서 개발용 프로필을 만들고 독립 질문·답변·근거 검사·비교 화면까지 연결했습니다.
+
+```text
+기존 댓글 snapshot + assistant 검수 결과
+             ↓ 출처/만료/원문/중복/배정 재검증
+DevelopmentPerspectiveBundle (정식 PerspectiveSpec과 별도)
+             ↓ 근거 3개 이상 계열만, 수는 동적
+각 AgentSession: 자기 evidence + 자기 history만 접근
+             ↓ 인용된 문장 단위로 답변
+구조 검사 → 별도 로컬 Auditor 요청
+             ↓ 문제 있으면 최대 한 번 수정
+검사 통과한 개발용 답변 / 답변 보류
+             ↓
+질문별 비교 HTML + 원문/부모 문맥 열람 + JSON/checkpoint
+```
+
+현재 입력에서는 필요성7개와 도입 예측4개가 각각 하나의 개발용 에이전트가 됩니다.
+가능한 이점2개 및 보류8개는 에이전트로 만들지 않습니다. 2라는 수를 코드에 고정하지 않았습니다.
+계열 제목은 강한 공통 명제나 모든 작성자의 동일한 입장을 뜻하지 않습니다. 각 조건·이유는 개별 원문에 귀속됩니다.
+
+## 모듈과 계약
+
+- `agents/profiles.py`: snapshot과 검수 artifact를 재검증하고 개발용 bundle 생성. source/citation은 호스트가 고정.
+  동일 source의 중복 alias는 거절하고 3개 미만/보류 상태는 non_agents에 남깁니다.
+- `agents/runtime.py`: 각 세션은 profile을 복사하고 자신의 근거만 요청에 전달. 질문/대화는 근거가 아니며 다른 agent의
+  결과를 공유하지 않습니다. 같은 기저 모델을 별도 evidence/state로 사용하는 것이지 서로 다른 모델을 학습한 것이 아닙니다.
+- `agents/demo.py`: build/ask CLI 및 저장된 비교 HTML. bundle을 매번 source에서 재계산해 변경을 검사합니다.
+  파일/출처/유효기간 오류는 실행 전에 거절합니다. CLI에서 연결 실패는 보류 결과로 노출하고 임의 fixture 응답으로 대체하지 않습니다.
+
+`--allow-unapproved`는 개발 경로 진입에만 쓰이며 인간 승인으로 변환하지 않습니다.
+bundle artifact_kind=development-perspective-bundle-0.1, agent status=development_only_not_approved,
+human_approved=false, accepted_perspectives=0입니다. 기존 accepted cluster→PerspectiveSpec 계약은 그대로 유지합니다.
+추가된 것은 실험 명세와 runtime이지 승인 gate 우회로 production agent를 발행하는 기능이 아닙니다.
+
+## 응답 및 Auditor
+
+모델은 answerability(grounded/partial/not_in_evidence), 최대2개 points(text/evidence_id), missing_information을 반환합니다.
+답변 branch는1개 이상 인용 문장을 요구하고 abstention branch는 points=[]만 허용합니다.
+조건부 답변에는 한계 설명을 요구하지만, 이 미검사 자유문 설명은 JSON에만 남기고 사용자 답변으로 표시하지 않습니다.
+질문에 없는 외부 사실·수치·다른 agent 의견을 근거로 사용하지 않도록 제한합니다.
+
+각 point는 한 개의 자기 근거를 인용해야 합니다. 존재/소속/형식 검사는 코드로, 원문과의 의미 지원 및 질문 관련성은
+별도 모델 요청으로 검사합니다. 모두 supported일 때만 model_audit_passed_development_only로 표시합니다.
+revise/unclear/형식 오류가 있으면 한 번만 다시 생성하고, 여전히 실패하면 답변은 보류합니다.
+한 문장만 실패해도 전체 답변을 통과시키지 않습니다. 거절된 초안은 JSON에 남지만 최종 HTML 답변/후속 대화에는 넣지 않습니다.
+
+Auditor도 같은 Qwen4B의 별도 요청입니다. **독립 평가가 아니고, 오승인·과도한 거절 모두 가능합니다.**
+UI는 정식 승인/정확성 보장과 구분한 개발용 상태를 표시합니다. 이 단계의 모델 검사 통과 수를 충실성 정확도로 보고하지 않습니다.
+모델의 설명문도 내부 판단 과정의 증명으로 취급하지 않습니다. 원문과 출력, 검사·수정 기록을 확인 가능한 형태로 남깁니다.
+
+## 실행과 재현
+
+README11단계 명령으로 실행합니다. Python 기본 설치 외에 새 라이브러리/외부 API는 필요하지 않습니다.
+로컬 Qwen 서버 실행은 README의 기존 안내를 사용합니다. build는 모델 호출이 없고 ask만 localhost:8091을 호출합니다.
+기본 transport는 proxy/redirect를 허용하지 않습니다. 서버의 실제 모델 identity는 운영자 선언이며 원격 증명은 없습니다.
+
+각 실행은 새 경로에 저장합니다. bundle/snapshot/검수 hash, 만료, prompt 본문/hash, generation/audit schema,
+runtime 코드 hash, 모델/revision/설정, 질문/agent별 checkpoint, 원시 생성·검사·재시도·시간·token 사용량을 보존합니다.
+최대6개 질문, 최근2개의 자기 대화, 생성 최대2회, 요청 max_tokens1200입니다. 프롬프트가 길면 모델 실패로 보류될 수 있습니다.
+여러 --question은 같은 실행에서의 후속 질문입니다. 별도 ask 명령은 새 세션이며 자동 resume/세션 영속 복원은 아직 없습니다.
+
+개발 비교 화면은 출력 JSON에 `.html`을 붙인 파일입니다. 파일을 브라우저에서 열면 됩니다.
+웹 입력창/웹 서버는 아니며 새 질문은 CLI를 다시 실행해야 합니다. 실제 댓글을 담은 화면과 JSON은 Git에서 제외합니다.
+원문 링크는 허용된 YouTube HTTPS URL만 표시하고, 모든 질문/답변/원문 HTML은 escape합니다.
+부모 댓글이 있으면 문맥 전용으로 표시하며 단독 지지 근거로 인용할 수 없습니다.
+
+## 2026-10-11 실제 실행
+
+- 프로필2개: 필요성7개, 도입 예측4개. 검수된21개 중 희소2/보류8개는 비에이전트 상태로 유지.
+- 같은 질문3개를 각 에이전트에 순서대로 전달: 관점 설명 / 모두 찬성·80% 소멸만이 도입 조건인지 / 한국 지급액·연도·물가율.
+- 첫 실행은 필요성 에이전트가 근거가 있어도 빈 partial 답변을2회 반환해 차단. 도입 예측 에이전트만 첫 질문에 답변.
+  초기 구현은 commit67e226a, 실행 `artifacts/development-agents-20261011-comparison.json`에 보존.
+- 보완 실행은 answerability 분기 grammar로 빈 답변 방지, 의견 전달과 정책 사실성 입증을 구분한 지시, 짧은 출력 한도를 함께 적용.
+  여러 요소 변경이므로 단일 원인 효과나 일반 성능 개선을 주장하지 않음.
+- 최신 `artifacts/development-agents-20261011-comparison-v2.json` 및 `.json.html`: 총6회 응답 중 첫 질문2개는 모델 검사 통과,
+  두 번째 질문2개는 수정 후 보류, 세 번째 질문2개는 근거 부재로 보류. 승인 관점은0, 개발용 실행 에이전트는2.
+- assistant가 표시된4문장을 원문과 대조: M01/M02의 필요성·이유와 M03/M05의 예측·조건을 유지하고 각 agent의 근거만 사용.
+  이는 자체 검수이지 독립 정답 평가가 아님. 세 번째 질문의 국가별 수치 생성은 하지 않았음.
+- 두 번째 질문의 보류는 전부 올바른 감사라고 주장할 수 없음. 특히 M05에는 조건이 있고 답변에도 남아 있는데 Auditor가
+  조건이 없다고 설명하는 오류가 있었음. 질문의 잘못된 전제를 원문 지원 검사와 혼동하는 과도한 거절이 남음.
+  거절된 초안을 최종 답변으로 공개하지 않았지만, Auditor 의미 정확성이 검증된 것은 아님.
+- 코드 테스트195개 통과. 실제 원문/결과/checkpoint/검수는 비공개. 추가 댓글 수집·외부 추론 API·새 모델 다운로드0.
+
+## 아직 남은 기능
+
+- 실제 사용자 입력을 받는 로컬 비교/질의 UI와 source inspect 동선 통합.
+- 승인된 claim-level PerspectiveSpec, 복합 주장 분해와 정식 관점 승격.
+- 에이전트 간 반문·토론의 메시지 경계와 다른 에이전트 발언을 새 근거로 오인하지 않는 검사.
+- Reflection의 최소 기능 및 최소3개 연결 task 범위 확정.
+- 독립적인 사람 검수, 새 질문/댓글·다국어 평가, 응답 충실성/관점 이해에 대한 시스템 전체 연구 평가.
+
+현재 완성한 것은 기존 수집/검수 결과에서 시작하는 첫 agent 질문·응답 연결입니다. 완전 자동 영상→agent,
+대화형 웹앱, 전체 MAS/논문 검증 완료로 보고하지 않습니다.

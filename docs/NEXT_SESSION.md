@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**최신: 사용자가 assistant 평가→수정 루프를 요청. 원문 보존형 주장 계열 실험 두 revision은 개발8/9로 자동 성공 실패, 추가12개도 사전 기준5/12. 실패를 보존한 뒤 assistant가 총21개 전수 검수하여13개 확인/8개 수정. 결과 필요성7·도입 예측4·가능한 이점2·보류8. 최신 한글 화면 `artifacts/source-facet-loop-20261011-reviewed.json.html`. 이는 검수 지원형 계열 제안이지 자동 clustering 성공/독립 gold/승인 agent가 아님. accepted_perspectives=0.**
+**최신: 프로젝트 목표를 clustering 연구가 아니라 전체 관점 에이전트 시스템으로 다시 명확화. 기존 검수 묶음→개발용 프로필2개→독립 질문/근거 검사/수정·보류→비교 HTML까지 연결. 최신 화면 `artifacts/development-agents-20261011-comparison-v2.json.html`. 첫 질문에는 두 관점의 인용 답변, 과장 전제 질문에는 보류(감사 과잉거절 문제 포함), 근거 없는 국가별 수치에는 보류. 실제 개발agent2개가 실행됐지만 승인 PerspectiveSpec은0. 다음은 UI/시스템 연결이며 clustering 실험을 다시 최종 목표로 삼지 말 것.**
 
 ## 사용자 결정과 작업 단위
 
@@ -23,6 +23,7 @@
 - 원문 선택형 B: `feat/extractive-keypoint-baseline` (`feat/source-stage-diagnostic` 기반). PR #12 CI 통과 이후 진행. 상위 브랜치/main 임의 병합 없음.
 - 로컬 NLI 비교: `feat/local-nli-comparison` (`feat/extractive-keypoint-baseline` 기반). PR #13 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
 - 원문 계열/검수 루프: `feat/source-facet-review-loop` (`feat/local-nli-comparison` 기반). PR #14 Ubuntu/Windows CI 통과 이후 작업. 상위/main 임의 병합 없음.
+- 에이전트 연결: `feat/evidence-agent-vertical-slice` (`feat/source-facet-review-loop` 기반). PR #15 CI 통과 이후 진행. 초기 runtime commit67e226a, 보완 문법/실행 문서가 후속 commit. 상위/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -61,9 +62,9 @@
 ## 이어서 할 일
 
 1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
-2. 최신 한글 검수21개 결과와 SOURCE_FACET_REVIEW_LOOP.md부터 확인합니다. 모델 판단과 assistant 수정이 모두 남아 있습니다. 사용자가 원문을 전수 검수해야 한다고 다시 요구하지 않습니다.
-3. 자동 분류 성공 기준은 실패한 채로 보존했습니다. 검수된 계열을 유용한 시작점으로 사용할 수 있지만, 계열명을 모든 댓글이 공유하는 완전한 명제로 쓰면 안 됩니다. 다음은 논문 평가 기준/독립 검수 표본과 복합 주장 분해·agent 입력 명세 중 우선순위를 정합니다. 동일 표본에서 모델/threshold 튜닝을 반복해 성공으로 꾸미지 않습니다.
-4. 고정 개발 오류를 해결한 뒤 미사용 소표본에서 재확인합니다. 성공 전에는 1,000개 확장/agent 기능을 붙이지 않습니다. 다른 로컬 판정기 검토는 가능하지만 아직 구현/검증되지 않았고, 외부 API 비교에는 데이터 전송/비용 조건 결정이 필요합니다.
+2. AGENT_VERTICAL_SLICE.md와 최신 비교 HTML부터 확인합니다. 필요성7/예측4의 개발 agent가 실제 응답했습니다. 검수 입력과 자동 모델 성능, 개발 agent와 정식 승인 PerspectiveSpec을 구분합니다.
+3. 다음은 비교/질의 UI·source inspect 동선, 근거 경계를 지키는 대화/반문, Reflection 최소 기능과 시스템 전체 평가로 연결합니다. 자동 형성 완성까지 전체 시스템 구현을 다시 막지 않습니다. 다만 미승인 입력을 자동 승인으로 가장하지 않고 독립 평가/정식 승격은 별도로 남깁니다.
+4. Auditor는 질문의 전제를 원문 지원 검사에 섞어 과도하게 거절하는 문제가 있습니다. 이 부분은 runtime 검사 경계의 후속 개선 대상이며 clustering 재실험으로 돌아갈 이유가 아닙니다. 전체1,000개 자동 확장/유료 외부 API는 여전히 별도 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
 
@@ -205,6 +206,17 @@
 - 최신 결과 `artifacts/source-facet-loop-20261011-reviewed.json` SHA256 `8b737d3216c3470c0151e7c6b0290afb001ab40e58051d4e539a208417416cdc`, 화면 `.json.html`. 필요성7(M01/M02/M06/M09/H01/H05/H12), 예측4(M03/M04/M05/M07), 가능한 이점2(M08/H08), 나머지8 보류. 21개 모두 원문/출처/기존 모델 출력 일치와 중복·누락 없는 partition 검사 완료.
 - 테스트175개 통과. 로컬 Qwen 서버 종료. 추가 YouTube/유료 API/외부 댓글 전송/모델 다운로드0. 실제 계획/출력/검수는 Git 제외, 기존 만료 상속. 코드/설계/실행법만 공개.
 - 자동 clustering/논문용 독립 성능/MVP/agent가 완료된 것이 아님. 검수 지원 prototype의 작은 결과가 생긴 상태. 독립 평가/미사용 실제 표본/다국어/복합 주장 분해/agent 발화 검증은 남음.
+
+## 개발용 관점 에이전트 연결 (2026-10-11, 최신)
+
+- 사용자 정정: 논문 대상은 전체 프로젝트이며 clustering은 준비 모듈. Section16.4에서도 검수 입력으로 end-to-end 검증을 우선함. 기존21개를 재사용하고 추가 추출/군집 실험을 하지 않음.
+- `agents/profiles.py`, `runtime.py`, `demo.py`: profile 생성·독립 세션·문장별 인용·별도 Auditor·최대1회 수정·보류·HTML 비교 구현. 개발 전용 --allow-unapproved 필요. build는 모델 호출0, ask는 기존 local Qwen만 호출.
+- bundle `artifacts/development-agents-20261011.json`: A001 필요성7개, A002 도입 예측4개. 희소2/보류8은 agent로 만들지 않음. agent별 원문/검수 해석/주의점/부모 문맥 보존, peer 응답/state 공유 없음.
+- 첫 실행 `...-comparison.json`: 첫 질문 A001은 빈 partial 답변으로2회 실패, A002는 답변. 보완 실행은 분기 grammar로 빈 답변 방지, 의견 전달과 정책 사실성 입증 구분, 출력 길이 제한 변경. prompt/schema/출력 한도가 함께 달라 단일 요소 효과 주장 금지.
+- 최신 `artifacts/development-agents-20261011-comparison-v2.json` SHA256 `1bdebbae658896498d07925e990f49a6c3735174d400abdb6c8295af7e7cf7ed`. 질문3×agent2에서 첫 질문2답변 통과, 과장 전제 질문2건 수정 후 보류, 국가별 금액/연도/물가2건 근거 없음 보류. 출력 HTML은 `.json.html`.
+- assistant 검수 `artifacts/development-agents-20261011-assistant-review.json`: 표시4문장을 원문 M01/M02/M03/M05와 대조해 근거/조건 보존 확인. 모든 표시 인용은 자기 agent의 정확한 source card, 거절 초안 최종 노출0. 독립 정답 평가는 아님.
+- 과장 전제 질문의 Auditor는 질문 조건을 원문과 혼동하는 오류가 있음. 특히 M05의 조건이 있는 원문/답변을 조건 누락이라고 설명하며 거절. 보류를 모두 올바른 왜곡 탐지로 세지 않음. 현재 보수적 동작과 과잉 거절 한계를 함께 기록.
+- 테스트195개 통과. 로컬 서버 종료. 댓글 추가 수집/외부 추론 API/새 모델 다운로드0. raw 초안·검사·checkpoint·비교 HTML은 Git 제외/기존 만료 상속. 승인 관점0, 개발 agent 실행2. 브라우저 채팅 입력/peer 토론/Reflection/전체 자동 MVP는 아직 미구현.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

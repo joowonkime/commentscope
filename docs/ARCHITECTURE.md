@@ -276,6 +276,17 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 검수 결과 필요성7/도입 예측4/가능한 이점2/보류8. 지지수3개 이상 계열2개는 검수 제안일 뿐 accepted_perspectives=0. 원문 보존이 agent 발화의 충실성을 보장하지 않음. 기존 pipeline 기본값/모델 변경 없음.
 - 한계/후속: assistant 자기 검수는 독립 gold가 아니므로 정확도100%로 보고 금지. 독립 평가·미사용 표본·다국어·복합 주장 분해·실제 agent 검증이 남음. 자세한 기록/실행/프로토콜은 SOURCE_FACET_REVIEW_LOOP.md.
 
+### ADR-015 — 검수 입력에서 독립 에이전트 응답으로 연결 (development vertical slice, 2026-10-11)
+
+- 사용자 정정: clustering 연구가 아니라 댓글 기반 관점 에이전트 시스템 전체가 프로젝트/논문 대상. Section16.4의 end-to-end 우선 순서로 돌아가 기존 검수 입력을 runtime에 연결. 추가 clustering 튜닝은 하지 않음.
+- `agents/profiles.py`: snapshot/검수 hash, 만료, 원문, canonical source, 전체 배정을 재검증. 3개 이상 계열만 동적으로 개발용 프로필 생성. 이유·조건은 개별 원문/검수 해석/주의사항에 귀속, 희소/보류 항목은 에이전트로 승격하지 않음.
+- 기존 production PerspectiveSpec은 accepted claim cluster를 요구하므로 별도 development-perspective-bundle-0.1 사용. build와ask 모두 --allow-unapproved를 요구. 사람 승인/accepted_perspectives=0을 유지하면서 실제 개발용 AgentSession2개는 실행됨. 이 수와 승인 agent 수를 혼동하지 않음.
+- `agents/runtime.py`: 같은 기반 모델을 독립 evidence/state로 호출. 다른 agent 응답을 전달하지 않고 자기 최근2개 대화만 참조. 질문/이전 출력은 증거가 아님. 한 문장=한 source ID, 호스트가 원문 인용을 고정.
+- 형식/ID 검사→별도 모델Auditor→최대1회수정→통과 또는보류. 모든 문장이 supported여야 개발용 답변 표시. 거절 초안과 미검사 자유문 한계 설명은 최종 HTML에서 숨김. 원시/검사/수정 기록은 private JSON에 보존. Auditor는 같은 모델로 독립 정확성 보장이 없으며 실제 과도한 거절을 발견함.
+- 현재 로컬 CLI+저장 HTML 비교. 웹서비스/사용자 입력 서버/에이전트간 토론/Reflection은 구현하지 않음. 전달 경로와 보관은 기존 localhost/JSON/expiry 경계 유지. 상태 변경/재시도/오류/코드·모델·schema·prompt provenance 기록.
+- 실제3질문×2agent 보완 실행: 관점 설명2답변은 원문 지원 확인, 과장 전제 질문2건은 보류(감사 오류 포함), 근거 없는 국가별 수치2건은 보류. 4개 표시 문장을 assistant가 원문 대조했지만 독립 평가 아님. 전체 프로젝트/논문 검증 완료로 보고하지 않음.
+- 다음 시스템 단계: 비교/질의 웹UI와 원문 inspect 동선, 정식 PerspectiveSpec 승격과 evidence-bounded 대화/토론, Reflection/전체시스템 독립평가. Auditor의 질문 관련성/원문 지원 혼동은 별도 수정 지점으로 기록하고 clustering 실험으로 되돌리지 않음.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

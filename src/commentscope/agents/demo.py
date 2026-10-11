@@ -8,7 +8,7 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 from commentscope.agents.profiles import build_bundle, load_bundle, require_live
-from commentscope.agents.runtime import AgentSession, prompt_metadata
+from commentscope.agents.runtime import AgentSession, prompt_metadata, schema, AUDIT_SCHEMA
 from commentscope.factory.claim_clusters import sha
 from commentscope.storage import write_json_exclusive
 
@@ -94,6 +94,8 @@ def main():
                        'metadata_source':'operator_supplied_not_attested','temperature':0,'seed':407,'max_tokens':1200,
                        'max_generation_attempts':2,'max_session_questions':6},
             'prompts':prompt_metadata(),'code_sha256':sha(Path(__file__).with_name('runtime.py')),
+            'generation_schemas':{a['agent_id']:schema([c['evidence_id'] for c in a['evidence']]) for a in bundle['agents']},
+            'auditor_schema':AUDIT_SCHEMA,'generation_contract':'answerability-branches-0.2',
             'human_approved':False,'accepted_perspectives':0,'rounds':[]}
     write_json_exclusive(str(args.output)+'.manifest.json',{**report,'questions':args.question})
     for i,question in enumerate(args.question,1):
