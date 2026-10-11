@@ -4,12 +4,39 @@
 
 - 사용자는 서비스 실행 중 사람이 clustering을 다루지 않는다고 명확히 했습니다. 요구사항 Section16.10,
   ADR-017, `AUTOMATIC_FACTORY.md`를 우선 확인합니다. 아래 검수 지원 시연은 과거 기준선입니다.
-- `feat/automatic-perspective-factory`에서 검수 파일 없는 자동 경로를 구현 중입니다.
+- `feat/automatic-perspective-factory`에서 검수 파일 없는 자동 경로를 구현하고 실제 전체 실행을 마쳤습니다.
   `factory.automatic_cli build` → 원문 span claim → embedding 후보 → 직접 근거 gate → automatic bundle.
   `agents.web --automatic`으로 기존 UI를 사용합니다. 기존 `--allow-unapproved` 시연 경로와 혼동하지 않습니다.
-- Python229개(자동 경로19개 포함), Node DOM계약4개를 로컬에서 확인했습니다. 의미 품질 검증은 아닙니다.
-- 실제64개 hash-order 표본을 처리 중이며, 결과는 완료 후 아래 실행 기록에 확정합니다.
-  이미 검수한21개/기대 라벨은 입력에 쓰지 않습니다. 현시점에서 전체1000개 자동 성공/생성 MVP 품질 완료로 보고하지 않습니다.
+- Python231개(자동 경로21개 포함), Node DOM계약4개가 통과합니다. PR #21의 Windows/Linux CI도 통과했습니다.
+  의미 품질 검증과는 별개입니다. 현재 PR은 draft이며 아직 main 병합 전입니다.
+- 실제64개 hash-order 표본은 주장134개·gate82건·agent0개로 종료했습니다. 품질 성공이 아닙니다.
+  결과는 `runs/automatic-factory-20261011-smoke64/`에 보존했습니다. 이 실행에서300자 상한에 닿은 잘린 문장을 발견해
+  이후 validator가 차단하도록 수정했습니다. 따라서 과거 smoke를 현재 loader로 승격하지 않습니다.
+- 전체1000개 snapshot 실행 완료: `runs/automatic-factory-20261011-full1000/`, duplicate1개 제외999개 선택,
+  주장1829개 → 의미 gate2000건(예산 소진) → 잠정 agent8개 / 반영 원문27개(2.7%) / 미배정 주장1802개.
+  source 상태는 claims719/uncertain279/extraction_failed1. 관측 실행 간격 약95분, 즉시 응답형 서비스 성능이 아닙니다.
+  모델은 loopback8091, Qwen4B Q4_K_M, ngl99/ctx8192/batch128/ubatch128/threads6/parallel1/no-context-shift.
+  유료 API나 새 댓글 수집 없음. 최종 출력과 검증을 완료하고 소유한 UI/모델 서버는 종료했습니다.
+- full1000 실행 코드는 `4287773`으로 고정했습니다. 후속 빈 snapshot 집계 수정은 실행 중인 비어 있지 않은 데이터의
+  판단을 바꾸지 않습니다. 완료한 출력은 현재 loader로도 재검증했습니다. manifest나 기존 출력을 수정하지 않습니다.
+  변경 알고리즘의 재실행에는 새 run directory를 사용합니다.
+- 이미 검수한21개/기대 라벨은 새 자동 입력에 쓰지 않습니다. 사후 점검 계획은 private
+  `artifacts/automatic-factory-20261011-evaluation-plan.json`에 gate 출력 전에 고정했습니다.
+  선택한5개 group의 전18member, 미배정10개, zero-claim5개를 assistant가 점검했습니다. 모든 member의 충실성/공통 주장
+  지지가 성립한 group1/5, member7/18. 부모 주장→짧은 동의 답글 전이, 개인/일반 범위, 미래/현재 혼합 실패.
+  독립 gold나 전체 정확도가 아닙니다. 출력 배정을 수동 수정하지 않았습니다.
+- 실제 Chromium에서8개 agent ×2질문 실행 및 인용/다운로드/모바일/초기화/새 탭 분리 통과.
+  일반 설명은8개 모두 모델 감사가 통과시켰지만, 오염된 claim 재사용과 한국어 오역·scope 누출을 assistant가 발견했습니다.
+  근거 밖 한국 지급액/시행연도 질문에는8개 모두 보류. 기능 통과≠의미 품질 통과.
+- 먼저 볼 결과: `artifacts/automatic-factory-20261011-summary.html`. 원문별 결과는
+  `runs/automatic-factory-20261011-full1000/overview-ko.html`, 실제 답변은
+  `artifacts/automatic-factory-20261011-full1000-browser.comparison.html`, 평가 이유는
+  `artifacts/automatic-factory-20261011-assistant-evaluation.json`. 전부 Git 제외입니다.
+- PR #21은 품질 실패가 명시된 draft로 유지하며 main은327e5c9 기준선입니다. 코드 테스트 통과를 근거로 완료/승격하지 않습니다.
+  다음은 독립 주장/동의 관계 분리와 parent-blind 원문 검사, model-authored claim을 증거로 취급하지 않는 감사 비교부터.
+  이어 scope·시점·조건 호환성 → 검색 recall/예산/중복 → 미사용 평가 표본 순서입니다. 아직 후속 개선은 구현하지 않았습니다.
+- 별도1-source 입력으로0-agent UI를 실제 Chromium에서 검증했습니다. 질문/내보내기 비활성화, 자동 보류 표시,
+  모바일 overflow 없음. `artifacts/automatic-factory-20261011-empty-browser.checks.json` 및 screenshots.
 - 자동 실행용 embedding 환경은 `/home/taeng/.venvs/commentscope-clustering/bin/python`, `PYTHONPATH=src`입니다.
   프로젝트 `.venv`에는 numpy/torch/sentence-transformers가 없어64개 추출 후 embedding import에서 첫 실행이 중단됐습니다.
   동일 manifest의64개 추출 checkpoint를 재사용해 기존 clustering 환경에서 재개했습니다. 새 CLI는 모델 호출 전 의존성을 검사합니다.
