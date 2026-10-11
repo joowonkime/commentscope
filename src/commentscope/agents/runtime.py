@@ -38,9 +38,10 @@ Your judgment is advisory, not independent gold or human approval.'''
 AUDIT_SCHEMA = obj({'verdict':{'type':'string','enum':['supported','revise','unclear']},
                     'reason':{'type':'string','minLength':1,'maxLength':240}})
 AUTOMATIC_AUDIT_SYSTEM = AUDIT_SYSTEM + '''
-Also require POINT to stay within ALLOWED_CLAIM, a fallible scope label, never extra evidence.
-Other assertions even in the same excerpt are outside this agent. Reasons explicitly supporting
-that claim may be reported with source attribution.'''
+This separate request checks SCOPE ONLY, after a source-only audit has already passed.
+ALLOWED_CLAIM is the proposed scope, NOT evidence of source fidelity. Does POINT stay within it?
+Return revise for additional assertions or changed person, time, uncertainty or conditions.
+Do not turn a successful scope comparison into proof the original author expressed the claim.'''
 
 
 def schema(ids):
@@ -119,11 +120,14 @@ class AgentSession:
         if self.profile['status'] == 'auto_accepted_unvalidated':
             # Original full comments remain in citations, not as additional model evidence.
             evidence = [{'evidence_id': c['evidence_id'], 'original_text': '\n'.join(p['text'] for p in c['support_spans']),
-                         'allowed_claim': c['allowed_claim']} for c in evidence]
+                         } for c in evidence]
         payload={'PROFILE':{'title':self.profile['title'],'assertion_family':self.profile['assertion_family'],
                             'constraints':self.profile['constraints']},
                  'YOUR_EVIDENCE':evidence, 'QUESTION':question,
                  'OWN_HISTORY':deepcopy(self.history[-2:])}
+        if self.profile['status'] == 'auto_accepted_unvalidated':
+            # Neither generated titles nor allowed_claim labels may seed unsupported assertions.
+            payload.pop('PROFILE')
         attempts=[]; published=[]; status='abstain'; final_reason='no_supported_answer'; limit=''; answerability='not_in_evidence'
         for attempt in range(2):
             result=request(SYSTEM,payload,schema(self.sources),self.provider)
@@ -143,8 +147,6 @@ class AgentSession:
                 audit_system = AUDIT_SYSTEM
                 if self.profile['status'] == 'auto_accepted_unvalidated':
                     audit_data['ORIGINAL_COMMENT'] = '\n'.join(p['text'] for p in source['support_spans'])
-                    audit_data['ALLOWED_CLAIM'] = source['allowed_claim']
-                    audit_system = AUTOMATIC_AUDIT_SYSTEM
                 audit=request(audit_system,audit_data,AUDIT_SCHEMA,self.provider)
                 v=audit['output']
                 if not audit['errors'] and (not isinstance(v,dict) or set(v)!={'verdict','reason'} or
@@ -152,6 +154,17 @@ class AgentSession:
                         or not v['reason'].strip() or len(v['reason'])>240):
                     audit['errors'].append('invalid_audit')
                 result['audit'].append({'point':point,**audit})
+                if (self.profile['status'] == 'auto_accepted_unvalidated' and not audit['errors']
+                        and audit['output']['verdict'] == 'supported'):
+                    scope = request(AUTOMATIC_AUDIT_SYSTEM,
+                                    {'QUESTION': question, 'POINT': point['text'],
+                                     'ALLOWED_CLAIM': source['allowed_claim']}, AUDIT_SCHEMA, self.provider)
+                    v = scope['output']
+                    if not scope['errors'] and (not isinstance(v, dict) or set(v) != {'verdict', 'reason'}
+                            or v['verdict'] not in ['supported', 'revise', 'unclear']
+                            or not isinstance(v['reason'], str) or not 1 <= len(v['reason'].strip()) <= 240):
+                        scope['errors'].append('invalid_audit')
+                    result['audit'].append({'point': point, 'audit_kind': 'scope_only', **scope})
             if all(not a['errors'] and a['output']['verdict']=='supported' for a in result['audit']):
                 published=[{**p,'citation':deepcopy(self.sources[p['evidence_id']])} for p in output['points']]
                 status='model_audit_passed_development_only'; final_reason='all_points_model_supported'

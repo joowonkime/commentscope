@@ -22,6 +22,7 @@ REASONS = {
     'segmentation_limit': '원문 구간 수 상한 초과',
     'non_substantive': '모델이 실질적인 주장 없음으로 분류',
     'uncertain': '모델이 해석 불확실로 분류',
+    'context_dependent': '동의·참조 등 문맥 의존 반응 — 독립 주장 근거로 사용하지 않음',
 }
 
 

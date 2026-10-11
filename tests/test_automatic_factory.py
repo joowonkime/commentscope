@@ -10,6 +10,7 @@ from commentscope.factory.automatic import (Config, run, build_bundle, load_bund
     neighbors, group_claims, checked_call, Calls)
 from commentscope.factory.automatic_contract import (EXTRACT, GATE, CHECKS, segments, extraction_schema,
     validate_extraction, validate_gate, passed, digest)
+from commentscope.factory.automatic_contract import SOURCE_AUDIT
 from commentscope.factory.automatic_cli import render
 from commentscope.ingestion import load_snapshot
 from commentscope.storage import write_json_exclusive
@@ -107,6 +108,8 @@ class AutomaticPipelineTests(unittest.TestCase):
             return response(extraction())
         if system == GATE:
             return response(supported())
+        if system == SOURCE_AUDIT:
+            return response({'verdict': 'supported', 'reason': 'Synthetic explicit assertion'})
         raise AssertionError('Unexpected request')
 
     def factory(self, **kwargs):
@@ -120,8 +123,8 @@ class AutomaticPipelineTests(unittest.TestCase):
         self.assertFalse(bundle['human_handling'])
         self.assertEqual(report['summary']['covered_unique_sources'], 3)
         self.assertEqual(report['summary']['coverage_of_selected'], 1)
-        self.assertEqual(len(self.calls), 6)
-        self.assertTrue(all(system in [EXTRACT, GATE] for system, _, _ in self.calls))
+        self.assertEqual(len(self.calls), 9)
+        self.assertTrue(all(system in [EXTRACT, GATE, SOURCE_AUDIT] for system, _, _ in self.calls))
         before = len(self.calls)
         self.assertEqual(report, self.factory())
         self.assertEqual(len(self.calls), before)
@@ -267,10 +270,50 @@ class AutomaticPipelineTests(unittest.TestCase):
         turn = AgentSession(profile, provider).ask('What do you claim?')
         self.assertEqual(turn['status'], 'model_audit_passed_development_only')
         self.assertNotIn('Fee waivers', json.dumps(calls[0][1]['YOUR_EVIDENCE']))
-        self.assertIn('ALLOWED_CLAIM', calls[1][1])
-        self.assertIn('ALLOWED_CLAIM', calls[1][0])
+        self.assertNotIn('allowed_claim', json.dumps(calls[0][1]))
+        self.assertNotIn('PROFILE', calls[0][1])
+        self.assertNotIn('ALLOWED_CLAIM', calls[1][1])
+        self.assertIn('ALLOWED_CLAIM', calls[2][1])
+        self.assertNotIn('ORIGINAL_COMMENT', calls[2][1])
         bad = deepcopy(profile); bad['evidence'][0]['support_spans'][0]['text'] = 'forged'
         with self.assertRaises(ValueError): AgentSession(bad, provider)
+
+    def test_parent_text_never_enters_factory_requests(self):
+        self.factory()
+        for system, data, _ in self.calls:
+            self.assertNotIn('PARENT_CONTEXT', data)
+            self.assertNotIn('FULL_COMMENT', data)
+            if system == SOURCE_AUDIT:
+                self.assertEqual(set(data), {'PROPOSED_CLAIM', 'SOURCE_SPANS'})
+
+    def test_context_relation_is_not_evidence(self):
+        def provider(*args):
+            return response({'status': 'context_dependent', 'claims': []})
+        report = self.factory(provider=provider)
+        self.assertEqual(report['summary']['source_statuses'], {'context_dependent': 3})
+        self.assertEqual(build_bundle(self.snapshot, report)['agents'], [])
+
+    def test_source_rejection_cannot_be_rescued_by_common_gate(self):
+        def provider(system, data, schema):
+            if system == EXTRACT: return response(extraction())
+            if system == SOURCE_AUDIT: return response({'verdict': 'unsupported', 'reason': 'Invented claim'})
+            raise AssertionError('Rejected sources must not reach common gate')
+        report = self.factory(provider=provider)
+        self.assertEqual(report['summary']['auto_agents'], 0)
+        bad = deepcopy(report); bad['gates'][0]['result'].pop('source_audit')
+        with self.assertRaises(ValueError): build_bundle(self.snapshot, bad)
+
+    def test_runtime_source_failure_cannot_be_rescued_by_scope(self):
+        profile = build_bundle(self.snapshot, self.factory())['agents'][0]
+        eid = profile['evidence'][0]['evidence_id']
+        def provider(system, data, schema):
+            self.assertNotIn('ALLOWED_CLAIM', data)
+            if 'POINT' in data: return response({'verdict': 'revise', 'reason': 'Invented'})
+            return response({'answerability': 'grounded', 'points': [{'text': 'Invented', 'evidence_id': eid}],
+                             'missing_information': ''})
+        turn = AgentSession(profile, provider).ask('Explain')
+        self.assertEqual(turn['status'], 'abstain')
+        self.assertEqual(len(turn['attempts']), 2)
 
 
 if __name__ == '__main__':

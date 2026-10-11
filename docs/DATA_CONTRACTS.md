@@ -354,11 +354,17 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 ## Automatic Factory와 잠정 에이전트
 
 서비스 실행 시 수동 처리가 없는 별도 자동 경로입니다. 기존 assistant-reviewed artifact나 수동 승인을 입력으로 받지 않습니다.
-정식 PerspectiveSpec 품질 인증과 구분하기 위해 `automatic-factory-0.1` 및 `automatic-perspective-bundle-0.1`을 사용합니다.
+새 실행은 `automatic-factory-0.2`, bundle은 `automatic-perspective-bundle-0.1`을 사용합니다.
+과거 `automatic-factory-0.1`도 재검증해 읽되0.2 실행으로 재표기하지 않습니다.
 
-- 추출: `{status: claims|non_substantive|uncertain, claims: [{statement, mode, segment_ids}]}`.
+- 추출: `{status: claims|non_substantive|uncertain|context_dependent, claims: [{statement, mode, segment_ids}]}`.
   최대4개; claims 상태와 비어 있지 않은 배열이 일치해야 함. 중복/외부 segment ID 거절.
   코드가 정확한 `{start,end,text}` span과 source/claim ID를 부착. model은 offset/출처를 생성하지 않음.
+- 0.2 추출에는 parent 텍스트를 전달하지 않음. `context_dependent`는 독립 명제가 없는 동의/참조이며 claims가 비어야 함.
+  이것만으로 부모에 대한 동의/반대 edge를 확정하지 않으며 독립 근거 수에 포함하지 않음.
+- 0.2 각 gate result에 `source_audit` 필수: `{verdict: supported|unsupported|unclear, reason}`의 request 결과.
+  입력은 `PROPOSED_CLAIM`, `SOURCE_SPANS`뿐. 원문 검사 실패는 `source_audit_rejected`, common gate 미호출.
+  source audit가 supported이며 뒤의 common gate도 통과해야 member를 배정. 동일 입력 cache 재사용.
 - 의미 검사: `{unit_faithful, core_supported, compatible, reason}`. 각 판정은 supported/unsupported/unclear.
   모두 supported이고 형식/전송/완료 오류가 없어야 잠정 통과. 같은 모델의 판정은 독립 gold가 아님.
 - run: snapshot hash/expiry/config/code/prompt/model 선언, 전체 selected record, claim unit, top-k 후보,
@@ -369,8 +375,10 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - profile: `status=auto_accepted_unvalidated`, 각 evidence에 `support_spans`, `allowed_claim`, full original/URL/parent.
   의미 검증 완료/사람 승인을 뜻하지 않음. `human_handling=false`, `human_approved=false`, `accepted_perspectives=0`.
   auto_agents와 정식 PerspectiveSpec 수를 구분. profile 생성은 저장된 group 전이와 source binding을 재계산해 검증.
-- AgentSession: 자동 profile의 배정 span·claim scope만 모델에 전달. full original/parent는 citation context이며
-  다른 주장의 지지 근거가 아님. 기존 검수 profile의 계약은 유지. 자동/검수 지원 origin을 UI와 export에서 구분.
+- AgentSession: 자동 생성 입력에는 배정 span만 전달하며 profile/title/allowed_claim을 제외.
+  원문 감사에 allowed_claim을 주지 않고, 별도 scope 감사에만 전달. 후자는 `audit_kind=scope_only`로 기록하며
+  둘 다 supported여야 답변 공개. full original/parent는 citation context이고 다른 주장의 지지 근거가 아님.
+  기존 검수 profile의 계약은 유지. 자동/검수 지원 origin을 UI와 export에서 구분.
 - 0 agent도 유효한 bundle이며 UI는 질문을 차단하고 자동 보류를 표시. 이웃 부족은 검증된 rare가 아니라
   `insufficient_neighbors_unverified`. snapshot의 미선택/중복/비주장/실패/미배정 정보를 숨기지 않음.
 

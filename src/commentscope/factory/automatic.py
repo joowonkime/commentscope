@@ -10,8 +10,9 @@ from pathlib import Path
 from commentscope.agents.profiles import require_live
 from commentscope.agents.runtime import request
 from commentscope.cluster_baseline import MODEL, REVISION
-from commentscope.factory.automatic_contract import (VERSION, EXTRACT, GATE, GATE_SCHEMA, digest,
-    segments, extraction_schema, validate_extraction, validate_gate, passed)
+from commentscope.factory.automatic_contract import (VERSION, LEGACY_VERSION, EXTRACT, GATE, GATE_SCHEMA, digest,
+    segments, extraction_schema, validate_extraction, validate_gate, passed,
+    SOURCE_AUDIT, SOURCE_SCHEMA, validate_source, source_passed)
 from commentscope.factory.claim_clusters import embed, read_json, sha
 from commentscope.ingestion import load_snapshot, normalize_snapshot
 from commentscope.providers.local_llama import generate
@@ -163,12 +164,21 @@ def checked_call(calls, system, data, schema, validator):
 
 
 def gate_data(anchor, member, sources):
-    source = sources[member['source_comment_id']]
-    parent = sources.get(source.parent_id)
     return {'COMMON_CLAIM': anchor['statement'], 'MEMBER_CLAIM': member['statement'],
-            'MEMBER_SPANS': [p['text'] for p in member['spans']],
-            'FULL_COMMENT': source.text_original,
-            'PARENT_CONTEXT': parent.text_original if parent else None}
+            'MEMBER_SPANS': [p['text'] for p in member['spans']]}
+
+
+def source_data(unit):
+    return {'PROPOSED_CLAIM': unit['statement'], 'SOURCE_SPANS': [p['text'] for p in unit['spans']]}
+
+
+def isolated_judge(calls, anchor, member, sources):
+    # Cached by exact payload: the same member is checked once across different anchors.
+    audit = checked_call(calls, SOURCE_AUDIT, source_data(member), SOURCE_SCHEMA, validate_source)
+    if not source_passed(audit):
+        return {'output': None, 'errors': ['source_audit_rejected'], 'attempts': [], 'source_audit': audit}
+    result = checked_call(calls, GATE, gate_data(anchor, member, sources), GATE_SCHEMA, validate_gate)
+    return {**result, 'source_audit': audit}
 
 
 def group_claims(units, candidates, sources, config, judge):
@@ -260,21 +270,22 @@ def run(snapshot_path, directory, config=Config(), *, provider=local_provider, e
                 'code_sha256': {name: sha(Path(__file__).parent.parent / name) for name in
                                ['factory/automatic.py', 'factory/automatic_contract.py', 'factory/claim_clusters.py',
                                 'cluster_baseline.py', 'agents/runtime.py', 'providers/local_llama.py']},
-                'prompt_sha256': {'extract': digest(EXTRACT), 'gate': digest(GATE)},
+                'prompt_sha256': {'extract': digest(EXTRACT), 'gate': digest(GATE), 'source': digest(SOURCE_AUDIT)},
+                'isolation_policy': 'no_parent_text; source_audit_before_common_claim; context_relations_not_evidence',
                 'request_settings': {'temperature': 0, 'seed': 407, 'max_tokens': 900},
                 'human_handling': False, 'semantic_guarantee': False}
     calls = Calls(directory, manifest, provider)
     records, units = [], []
     for index, source in enumerate(selected):
         parent = sources.get(source.parent_id)
-        if len(source.text_original) > config.max_source_chars or (parent and len(parent.text_original) > config.max_source_chars):
+        if len(source.text_original) > config.max_source_chars:
             records.append({'source_comment_id': source.comment_id, 'status': 'context_budget_exceeded', 'claims': []})
             continue
         parts = segments(source.text_original)
         if not parts or len(parts) > 80:
             records.append({'source_comment_id': source.comment_id, 'status': 'segmentation_limit', 'claims': []})
             continue
-        data = {'COMMENT': parts, 'PARENT_CONTEXT': parent.text_original if parent else None}
+        data = {'COMMENT': parts}
         result = checked_call(calls, EXTRACT, data, extraction_schema(parts), lambda v: validate_extraction(v, parts))
         claims = [] if result['errors'] else bind_claims(source, result['output'])
         records.append({'source_comment_id': source.comment_id,
@@ -296,7 +307,7 @@ def run(snapshot_path, directory, config=Config(), *, provider=local_provider, e
     checked = 0
     def judge(anchor, member):
         nonlocal checked
-        result = checked_call(calls, GATE, gate_data(anchor, member, sources), GATE_SCHEMA, validate_gate)
+        result = isolated_judge(calls, anchor, member, sources)
         checked += 1
         progress({'stage': 'gate', 'checked': checked, 'budget': config.max_gate_calls})
         return result
@@ -316,7 +327,7 @@ def build_bundle(snapshot_path, report):
     loaded = load_snapshot(snapshot_path)
     snapshot = loaded.snapshot
     require_live(snapshot.usage.expires_at)
-    if (report.get('artifact_kind') != VERSION or report.get('snapshot_sha256') != loaded.sha256
+    if (report.get('artifact_kind') not in [VERSION, LEGACY_VERSION] or report.get('snapshot_sha256') != loaded.sha256
             or report.get('expires_at') != snapshot.usage.expires_at or report.get('human_handling') is not False):
         raise ValueError('Automatic report provenance mismatch')
     config = Config(**report['config']); config.validate()
@@ -332,7 +343,8 @@ def build_bundle(snapshot_path, report):
         parent = sources.get(source.parent_id)
         result = record.get('result')
         expected = []
-        if len(source.text_original) > config.max_source_chars or (parent and len(parent.text_original) > config.max_source_chars):
+        if len(source.text_original) > config.max_source_chars or (report['artifact_kind'] == LEGACY_VERSION
+                and parent and len(parent.text_original) > config.max_source_chars):
             expected_status = 'context_budget_exceeded'
             if result: raise ValueError('Oversize source unexpectedly processed')
         elif not segments(source.text_original) or len(segments(source.text_original)) > 80:
@@ -370,6 +382,8 @@ def build_bundle(snapshot_path, report):
             raise ValueError('Missing gate decision') from None
         if item['anchor_id'] != anchor['claim_id'] or item['member_id'] != member['claim_id']:
             raise ValueError('Gate edge changed')
+        if report['artifact_kind'] == VERSION and 'source_audit' not in item['result']:
+            raise ValueError('Missing isolated source audit')
         return item['result']
     groups, gates, unresolved, hit = group_claims(rebound, report['candidates'], sources, config, replay)
     if next(stream, None) is not None or groups != report['groups'] or unresolved != report['unresolved']:
