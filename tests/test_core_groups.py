@@ -61,7 +61,7 @@ class CoreGroupTests(unittest.TestCase):
         with self.assertRaises(ValueError):g.assemble(units,links,self.seed,self.attach)
 
     def test_source_bound_profile_connects_to_existing_agent_session(self):
-        raw=json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text())
+        raw=json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text(encoding='utf-8'))
         raw['usage']['expires_at']='2099-01-01T00:00:00Z'
         raw['comments']=raw['comments'][:3]
         with tempfile.TemporaryDirectory() as d:
