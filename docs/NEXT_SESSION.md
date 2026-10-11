@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 대표 초안/검사 실행 완료. 최신 작업은 자동화9개의 실패 단계 분리 진단: 원문 embedding도 예측/필요성을 섞고, 단일 원문 분류에도 오류가 남음. pipeline 교체/확장 없이 원문별 의미 확인에 집중하기로 기록. 승인된 PerspectiveSpec/agent는0. 사용자 수정 제안 화면은 `artifacts/perspective-feedback-20261011.html`, 최신 진단은 `artifacts/source-stage-20261011.json.html`.**
+**최신 작업: B(원문 대표 선택 + 직접 지원 배정)를 구현하고 자동화9개에 실행. 제안2묶음/배정7개/미배정2개지만 필요성→도입 예측 오연결 때문에 두 묶음 모두 수정 필요. 승인 PerspectiveSpec/agent는0. 결과 화면 `artifacts/extractive-keypoints-20261011.json.html`, 별도 assistant 검수 `artifacts/extractive-keypoints-20261011-assistant-review.json`. 다음 수정 대상은 관계 판정기 하나로 좁히고, 전체 corpus/agent 확장은 보류.**
 
 ## 사용자 결정과 작업 단위
 
@@ -20,6 +20,7 @@
 - 쌍별 근거 검사: `feat/pairwise-source-audit` (`feat/local-perspective-drafts` 기반). PR #9의 Ubuntu/Windows CI 성공 확인 후 분기. main 병합은 하지 않음.
 - 프롬프트 단독 비교: `feat/entailment-audit-prompt` (`feat/pairwise-source-audit` 기반). PR #10 Ubuntu/Windows CI 통과 상태에서 진행. 상위 브랜치 임의 병합 없음.
 - 실패 단계 진단: `feat/source-stage-diagnostic` (`feat/entailment-audit-prompt` 기반). PR #11 Ubuntu/Windows CI 통과 이후 진행. 상위 브랜치 임의 병합 없음.
+- 원문 선택형 B: `feat/extractive-keypoint-baseline` (`feat/source-stage-diagnostic` 기반). PR #12 CI 통과 이후 진행. 상위 브랜치/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -57,11 +58,10 @@
 
 ## 이어서 할 일
 
-1. 현재 PR과 작업 트리를 확인하고 필요한 검토를 마칩니다.
-2. 준비된 기본소득 표본을 사용합니다. 키 발급이나 영상 선정을 사용자에게 다시 요청하지 않습니다.
-3. eligibility/claim 검수 표본을 만들고, 공통 주장·개별 이유/조건·희소 주장과 parent 맥락이 보존되는지 확인합니다. 반대편 존재를 성공 조건으로 삼지 않습니다.
-4. downstream 사용 조건과 모델/예산을 정해 실제 표본을 claim 추출 → 후보 cluster → 근거 확인 화면으로 연결합니다.
-5. 기능 내부의 계약과 실패 테스트를 구현하되, 팀원이 볼 수 있는 cluster 결과를 다음 확인 지점으로 삼습니다.
+1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
+2. B의 결과와 아래 최신 검수 기록부터 확인합니다. 원문 대표를 복사해도 잘못 연결하면 왜곡이라는 점이 핵심입니다.
+3. 후보/대표/배정 알고리즘을 고정하고 관계 판정기만 교체·비교합니다. 먼저 긍정·부정·애매 사례를 포함해 assistant 평가 초안을 만들고 사용자 피드백을 받습니다. 부정 사례만의 통과율을 정확도로 보고하지 않습니다.
+4. 고정 개발 오류를 해결한 뒤 미사용 소표본에서 재확인합니다. 성공 전에는 1,000개 확장/agent 기능을 붙이지 않습니다. 다른 로컬 판정기 검토는 가능하지만 아직 구현/검증되지 않았고, 외부 API 비교에는 데이터 전송/비용 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
 
@@ -170,6 +170,17 @@
 - 보고서 `artifacts/source-stage-20261011.json` 및 `.json.html`. 사전 기대 `...-expectations.json`, 결과 검수 `...-assistant-review.json`. 전부 비공개 로컬, 만료 상속. 기존9개 사용, 추가 수집/유료 API/외부 댓글 전송/모델 다운로드0.
 - 전체 테스트135개 통과. 모델 서버 종료. agent0/승인0, 기존 생성/검사 기본값 유지. 새 label로 자동 분할하지 않았음.
 - 다음 변경은 관점 승격 전 원문별 주장·표현 강도·이유/조건 확인에 집중. 기존 검토안에 대한 사용자 피드백은 아직 없으므로 가정하지 않음. 고정 사례의 의미 오류가 남아 있는 동안 다른 agent 기능/전체1,000개 처리로 확장하지 않음. 수정 후 별도의 새 표본 검증 필요.
+
+## 원문 선택형 B 실행 (2026-10-11, 최신)
+
+- 구현: `factory/extractive_keypoints.py`. 전체 원문을 대표 후보로 고정, 모델은 관계 enum만 선택, 코드는 직접 지원/최소3개/중복 없는 배정. 이전 assistant의 5개/4개 분할 제안을 정답으로 입력하거나 강제하지 않음.
+- 기존 자동화9개, Qwen3-4B-Instruct-2507 Q4_K_M/revision a06e946bb6b655725eafa393f4a9745d460374c9, llama.cpp b11541/CUDA12.8/context8192. 72모델호출+9동일원문 record, 오류응답0, 호출시간 합16.77초(서버 로딩 제외).
+- 결과 `artifacts/extractive-keypoints-20261011.json` SHA256 `0f7c5ae9e72abd2de1d9db09ba5dd36aba60a17e6d031001dcfeb934145bf174`. `.json.html`에서 원문/대표/미배정/관계행렬 확인. 입력/출력/검수 모두 Git 제외, 만료2026-11-08T18:30:59.664629Z 상속.
+- EK001: 대표M04, 소속M01/M03/M04/M05. EK002: 대표M07, 소속M02/M06/M07. M08/M09 미배정. 배정7/9는 품질 점수가 아님.
+- assistant 검수: M01→M04, M02→M07, M06→M07은 필요성에서 도입 예측으로 넘어가는 오연결. M03/M05→M04도 조건/범위가 지워질 위험이 있어 보류. 두 그룹 모두 수정 필요, 승인0. 모델 결과는 수정하지 않고 별도 review JSON에 기록.
+- 실행 전 고정한 부정9사례 중8개에서 supports를 피했지만 M09→M01은 most-jobs 이유를 잘못 인정. 알려진 부정 회귀만의 수치이며 정확도/recall이나 독립 gold가 아님. 새 prompt/schema도 바뀌었으므로 B 단일요소 효과 주장 불가.
+- 전체 테스트147개 통과(코드 계약 검증, 의미 정확도 아님). 로컬 서버 종료. YouTube 추가호출/유료 API/외부 댓글 전송/새 모델 다운로드0. 기존 pipeline 기본값 유지.
+- 다음: `judge()`의 관계 판정만 교체·비교. 이 작은 실험은 일반 장문/다중 주장 clustering을 해결한 MVP가 아님. Jev 미사용; 지금 모델 변경이 반드시 해결한다는 근거도 없음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

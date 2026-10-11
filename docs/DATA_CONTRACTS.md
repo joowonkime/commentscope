@@ -68,6 +68,16 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 기존 embedding의 model/revision/claim 순서/입력 텍스트와 벡터 유효성을 재검증합니다. 같은 선택 subset의 원문 및 기존 claim 벡터를 0.25/0.35/0.45에서 비교하며 원래 전체 corpus의 군집을 대체하지 않습니다.
 - 최대12개, source당1개 claim, 원문2,000자 제한. multi-claim 추출·문맥 해소·전체 corpus 평가가 아닌 bounded diagnostic입니다. 기존 snapshot 만료를 상속합니다.
 
+## 원문 선택형 개발 artifact extractive-keypoints-0.1
+
+- `factory/extractive_keypoints.py`의 별도 실험 계약이며 승인된 PerspectiveSpec이 아닙니다. snapshot/extraction/candidate SHA256과 expires_at을 상속하고 입력 출처/후보 partition을 재검증합니다.
+- `anchors[member_id]`: source_member_id, source_comment_id, start=0, end, text. 호스트가 원문 전체에서 고정하며 모델이 변경하지 않습니다. 최대12개 source, source당1개 claim, 원문1..500자.
+- 모델 출력은 정확히 `{relation: supports|contradicts|not_established|unclear}`. 추가 필드/불완전 생성/호출 실패는 errors 및 relation=null로 보존. 모델 판단 입력은 SOURCE, REPRESENTATIVE 두 원문뿐입니다.
+- `pairs[source->anchor]`: source, anchor, relation, origin, raw, output, errors, seconds, human_approved=false. origin은 local_model 또는 identity_text_only이며 후자는 동일 원문 비교로 모델 호출하지 않습니다. 모든 N²쌍이 필요합니다.
+- `assembly.groups`: id, anchor_id, representative, member_ids, unique_source_count, evidence_pair_ids, status=needs_human_review. 모든 member는 대표에 직접 supports를 가져야 하며 최소3개 서로 다른 source. 그룹 간 중복 없이, 미배정은 assembly.unassigned에 이유/지원 후보/실패 pair와 함께 남깁니다.
+- accepted_perspectives=0, human_approved=false, independent_gold=false. 정확한 원문/출처와 관계 행렬을 저장해도 의미 정확도나 인간 승인을 뜻하지 않습니다. 실제 검수 의견은 결과 hash에 연결한 별도 비공개 artifact로 저장합니다.
+- prompt 본문/hash, generation_schema, operator-supplied 모델/revision/runtime/요청 설정 및 pair checkpoint를 보존합니다. 기존 파일 덮어쓰기/자동 resume는 지원하지 않습니다.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

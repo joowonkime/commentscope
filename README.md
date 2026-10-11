@@ -268,3 +268,24 @@ HF_HUB_OFFLINE=1 python -m experiments.source_frame_probe data/ubi-research-2026
 선택 subset만 비교하므로 기존 전체 후보 생성과 같지 않으며, 같은 개발 사례 반복 결과를 일반 정확도로 보고하지 않습니다.
 현재 자동화9개는 원문/추출 주장 모두 0.45에서 한 후보로 묶였고, 더 작은 임계값에서도 예측/필요성 혼합이 남았습니다.
 주제 후보를 만든 것과 agent가 대변할 공통 주장을 검증한 것은 다릅니다. 현재 집중할 부분은 원문별 의미 확인과 후보의 관점 승격 검토입니다.
+
+### 8. B: 원문 선택형 대표 + 직접 지원 관계 (개발용, 미승인)
+
+대표 문장을 생성하지 않고 후보 안의 짧은 원문 전체를 대표 후보로 사용합니다. 로컬 모델은 두 원문 사이의
+`supports / contradicts / not_established / unclear`만 선택합니다. 코드는 대표를 직접 지원하는 댓글을 최소3개씩
+중복 없이 묶고, 남는 댓글도 모두 표시합니다. 연결된 댓글을 따라가는 간접 추론으로 지지 수를 늘리지 않습니다.
+
+위 로컬 서버와 5단계 산출물이 필요합니다. 명령의 파일명은 로컬 데이터 예시이며 실제 댓글은 저장소에 포함되지 않습니다.
+
+```bash
+python -m commentscope.factory.extractive_keypoints data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json artifacts/claim-slice-20261011-candidates.json --cluster CC001 --output artifacts/YOUR-extractive-keypoints.json --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 CUDA12.8 context8192 no-context-shift parallel1"
+```
+
+결과는 지정 JSON과 `.json.html`, 쌍별 checkpoint입니다. 기존 파일은 덮어쓰지 않습니다. source당1개 claim,
+최대12개 source, 원문당500자 제한의 작은 기준선입니다. 모델 호출은 N×(N−1)회라 전체1,000개에 직접 적용하지 않습니다.
+기존 추출/후보는 입력 선택과 출처 검증에만 쓰며, 관계 판단 입력에는 원문 두 개만 전달합니다.
+
+실제9개 실행: 모델72회, 오류응답0, 호출시간 합16.77초(서버 로딩 제외), 제안2묶음/배정7개/미배정2개.
+하지만 필요성→도입 예측 오연결이 남아 **두 묶음 모두 의미 검수상 수정 필요, 승인/agent는0**입니다.
+대표 원문 복사는 보장하지만 배정의 의미 정확성은 보장하지 않습니다. 다음 교체 지점은 `judge()`의 관계 판정이며,
+현재 Qwen4B 결과를 자동 승인 gate로 쓰지 않습니다. Jev나 유료 API 호출/외부 댓글 전송은 하지 않았습니다.
