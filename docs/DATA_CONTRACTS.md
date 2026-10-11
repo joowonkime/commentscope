@@ -12,20 +12,30 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 hybrid는 embedding8+추가 lexical4, source 중복 제외, 유형 제한 없음이며 의미 승인 결과가 아닙니다.
 입력은 이 진단에서512claims 이하입니다. 실제 실행은 기존64개 댓글의123claims를 재사용합니다.
 
-`grounded-core-0.1`의 verify는 원문과 target의 digest, NLI 원시 점수, relational audit,
+`grounded-core-0.2`의 verify는 원문과 target의 digest, NLI 원시 점수, relational audit,
 차단 사유와 allowed를 반환합니다. NLI threshold0.8과 scope/time/modality/conditions/polarity/presuppositions
 전부 preserved 및 support=supported가 필요합니다. evidence_quote는 원문의 정확한 substring이어야 합니다.
 인용 검사는 구조 검증이며 모델의 의미 판정을 독립적으로 보증하지 않습니다.
+0.1 실패를 보존하고0.2에 `qualification-witnesses-0.1`을 추가했습니다. 영어 future/present-progressive/past
+명시 표지의 위치, 조건 operator/antecedent 원문을 저장합니다. 조건 operator 목록 변화나 제한된 단순 문장의
+명시 시점 변화는 모델 통과와 무관하게 차단합니다. 표지를 못 찾았다는 것은 의미 보존 승인이 아닙니다.
 
 discover는 원문→추출 claim 검사를 먼저 수행하고, 제안1개+입력 claim2개를 고정 비교합니다.
 각 core를 원문 및 claim에 별도로 검증하고 첫 통과 후보를 선택합니다. 제안 우선이지 최단 문자열 우선이 아닙니다.
 core_groups의 cross_mode=true는 `common-core-assembly-0.2`로 기록하며 기존 false 경로는0.1을 유지합니다.
 기본 Factory/artifact loader에는 이 진단을 연결하지 않습니다.
 
-`grounded-core-diagnostic-0.1`은 입력·fixture·코드·모델·프롬프트 hash, 실행 정책,
+`grounded-core-diagnostic-0.2`는 입력·fixture·코드·모델·프롬프트 hash, 실행 정책,
 quality_gate_passed=false를 저장합니다. probe는 exact target 평가와 관점 연결 평가를 분리하고,
 integration은 최소3source/결정64개 한도로만 조립합니다. verify는 cache miss에 RuntimeError를 내며
 모델 호출 없이 고정 입력과 결과를 재계산합니다. 완료 artifact를 덮어쓰지 않습니다.
+`--reuse-run`은 원시 request/result의 digest와 입력/모델/runtime/prompt/추론 코드의 일치를 검증하며
+host 판정 결과는 복사하지 않습니다. reuse origin manifest hash가 실행 설정에 포함됩니다.
+
+`grounded-core-new-sample-0.1`은 이전64개와 full1000 배정 source를 제외한 고정 hash-order12개에서
+source-only 추출과 원문 충실성 검사를 수행합니다. 평가 계획의 source ID는 selection과 대조하지만
+기대 판정은 inference payload에 포함하지 않습니다. 원문/추출/판정/코드 hash를 보존하고 readonly replay합니다.
+별도 표본이지 독립 gold나 완전히 미사용 corpus는 아닙니다. 이 artifact는 service 입력이나 profile이 아닙니다.
 
 ## 추출 실험 계약 claims-0.2 (2026-10-10)
 

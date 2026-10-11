@@ -4,6 +4,105 @@
 공통 주장에 대한 근거 검사를 통과한 묶음만 잠정 에이전트로 만듭니다. 개발·논문을 위한 사후 표본 평가는
 이 실행 경로와 별개입니다. 자동 판정은 독립 품질 검증이나 사실 검증을 뜻하지 않습니다.
 
+## 검색과 방향성 검사 2026-10-12
+
+**결론: 기본 채택하지 않았습니다.** 검색 대상 확대와 의미 검사 분리를 구현했지만 실제64개 조립의 새 agent는0개이며,
+별도 실제 댓글에서 새 의미 추가와 독립성 판정 실패가 남았습니다. 원문 기반 agent 생성 MVP 완료가 아닙니다.
+기본 Factory0.2와 main은 유지하고, ADR-022의 실험 경로만 비교했습니다.
+
+### 검색 비교
+
+동일 source-only123claims와 기존 embedding을 재사용했습니다. 검색 후보는 의미 승인이나 agent 가입이 아닙니다.
+
+| 검색 | 후보 있는 주장 | 최소3출처 후보 가능한 anchor | 방향 있는 후보 edge |
+| --- | ---: | ---: | ---: |
+| 유형 일치와 cosine0.55/top8 | 25 | 14 | 81 |
+| 유형 제한 제거와 동일 threshold/top8 | 45 | 27 | 155 |
+| 유형 제한 없는 semantic8+추가 lexical4 | 123 | 123 | 1470 |
+
+기존 정상 cross-source3개를139claims의 별도 대조 pool에서 검사했을 때 모든 정책이3/3을 찾았습니다.
+따라서 이 비교는 후보 누락 가능성을 보여주지만, 알려진 정답의 recall을 개선했다는 증거는 아닙니다.
+혼합 검색은 거의 모든 목록을12개로 채워, 기존 degree 우선 조립이 사실상 ID 순서에 가까워지는 한계도 있습니다.
+
+### 의미 검사 비교
+
+범주명 equality 대신 원문→target의 직접 NLI 지지와 범위·시점·강도·조건·부정·전제 보존을 함께 요구합니다.
+NLI threshold0.8은 고정했고 NLI 실패를 생성 모델로 구제하지 않습니다. 원문 인용 substring 검증은 의미 증명이 아닙니다.
+공통 후보는 한 번 제안한 문장과 두 입력 claim으로 제한하며, 검증된 제안 우선으로 선택합니다. 최단 문자열은 쓰지 않습니다.
+
+첫 버전(f5b7445)은 미래→현재와 조건 삭제를 직접 감사가 승인했습니다. 후속 버전(9f6741b)은
+명시적 영어 조건/시점 표지를 코드로 검사하며, **새 모델 호출0회**로 원시 응답을 재사용해 판정을 다시 계산했습니다.
+이 보완은 전체 문법이나 다국어 의미 검사기가 아니고, 오탈자 조건문에서는 정상 연결을 과잉 거절합니다.
+
+| 평가 단위 | 첫 정상 유지 | 첫 오류 차단 | 보완 정상 유지 | 보완 오류 차단 |
+| --- | ---: | ---: | ---: | ---: |
+| 합성 관점 연결 | 7/7 | 8/9 | 7/7 | 9/9 |
+| 실제 개발 관점 연결 | 6/7 | 11/11 | 5/7 | 11/11 |
+| 추가 주제 연결 | 6/6 | 6/6 | 6/6 | 6/6 |
+| 특정 대표 문장 충실성 | 4/6 | 5/6 | 4/6 | 6/6 |
+
+실제 정상에서 anchor-self4개를 빼면 보완 버전은1/3입니다. 알려진 정상 연결의 과잉 거절을 해결하지 못했습니다.
+관점 연결 라벨과 실제 생성 core의 충실성도 구분해야 합니다. 추가 주제의 교통요금 조건이 일반 가격 조건으로 넓어진
+core가 남아 있어, 연결 라벨 전부 통과를 대표 문장 품질 통과로 보고하지 않습니다. 모든 라벨은 assistant 개발 평가이며
+독립 gold가 아닙니다. 한국어 합성1개 통과를 다국어 품질 검증으로 확장하지 않습니다.
+
+### 실제 조립과 새로운 평가 표본
+
+보완 버전으로 기존64개 댓글/123claims를 조립했습니다. seed64회, 새 agent0개, 미배정123, **예산 소진**입니다.
+고유66claims 중 원문 충실성 검사31개가 통과했고, seed53개는 source 검사에서, 나머지11개는 공통 후보 검사에서 막혔습니다.
+가입과 실제 새 agent 응답 경로에는 도달하지 않았습니다. 이전28회 진단은 예산 미소진이었으므로 같은 조건의 성공률로 비교하지 않습니다.
+
+별도12개 댓글은 이전64개/이전 full1000 배정 source를 제외하고 새 hash-order로 고정한 뒤 원문 격리 추출을 수행했습니다(7d3a82b).
+20claims 중 모델 승인12개, claim이 없는 source4개입니다. private 평가 계획은 추출 전에 고정했고,
+기대 판정은 inference에 전달하지 않았습니다. 이 댓글들은 과거 full1000 실행에는 포함돼 있어 완전히 미사용 corpus는 아닙니다.
+
+20개 claim의 사후 검토에서 명백한 의미 추가 승인2개, 대상이 불명확한 짧은 권고의 독립 주장 승인1개,
+필요한 자기 댓글 문맥을 선택 span에서 누락한 문제가 확인됐습니다. 이 결과는 release 실패입니다.
+문자 그대로 같은 문장도 독립적인 실질 주장이라는 뜻은 아니며, parent-blind 원칙이 자기 댓글의 필요한 문맥을 버리라는 뜻도 아닙니다.
+
+다음 수정 순서는 독립적 주장 eligibility → 자기 댓글 내 근거 문맥 보완 → 추가된 술어/속성에 대한 추출·판정기 비교 →
+출처 다양성과 유사도를 고려한 seed 우선순위입니다. bounded 재추출/문맥 보완은 아직 미구현이며,
+새 어휘별 예외를 덧붙이거나 threshold를 낮춰 이번 결과를 통과시키지 않습니다. 전체1,000개 새 실행도 하지 않았습니다.
+
+### 결과 위치와 재현
+
+- 로컬 종합 화면: `artifacts/grounded-core-overview-20261012.html`.
+- 실제 원문과 모델 판정: `runs/grounded-core-20261012-v2/probe.html`, `integration.html`.
+- 별도12개: `runs/grounded-core-new-sample-20261012/report.json`.
+- 사후20claim 검토: `artifacts/grounded-core-evaluation-20261012.json`; 사전계획 `artifacts/grounded-core-new-sample-plan-20261012.json`.
+- 첫58개와 보완58개, seed64개, 새12개 추출/검사 모두 모델 재호출 없이 replay 일치했습니다.
+- 첫 probe SHA256 `bb7d02d3ed3d546c9f3718c66373669f5d67e6546c38ec0b88dd8941ee2cbc5d`.
+- 보완 probe SHA256 `15dee83ac4c7a5f363ca507e663e7459aa465eefc265ea92d730353dab32c811`.
+- 조립 SHA256 `a80ce37e7b9bc6d8a446758bb37e72c5bd7ac70c8912e926b60a8a01636ab620`.
+- 새 표본 SHA256 `0fd1d60aabaa78f00983625cd21dde6dd254cb6958dc51576f1f95008bbe76e3`.
+
+아래는 기존 private 입력과 checkpoint가 있는 환경의 명령입니다. 실제 데이터는 GitHub에 포함하지 않습니다.
+새 실행에서는 새 run directory를 사용하고 `--phase probe` 후 `--phase integrate` 순서로 실행합니다.
+`--reuse-run`은 이미 존재하는 동일 입력/모델/runtime/prompt의 원시 checkpoint를 재사용할 때만 넣습니다.
+과거 첫 버전의 재현은 f5b7445 코드로, 보완 버전은9f6741b 이후 해당 inference 파일 hash가 같은 코드로 수행합니다.
+
+```bash
+PYTHONPATH=src HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
+  /home/taeng/.venvs/commentscope-clustering/bin/python -m experiments.grounded_core_probe \
+  data/ubi-research-20261010.json \
+  runs/automatic-factory-20261011-sourceonly64/report.json \
+  runs/automatic-factory-20261011-full1000/report.json \
+  artifacts/automatic-factory-20261011-assistant-evaluation.json \
+  --run-dir runs/grounded-core-20261012-v2 --phase verify --diagnostic-only \
+  --reuse-run runs/grounded-core-20261012
+
+PYTHONPATH=src HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 \
+  /home/taeng/.venvs/commentscope-clustering/bin/python -m experiments.grounded_core_sample \
+  data/ubi-research-20261010.json \
+  runs/automatic-factory-20261011-sourceonly64/report.json \
+  runs/automatic-factory-20261011-full1000/report.json \
+  artifacts/grounded-core-new-sample-plan-20261012.json \
+  --run-dir runs/grounded-core-new-sample-20261012 --verify
+```
+
+verify는 모델 서버 없이 동작합니다. 새 추론은 기존 로컬 모델 설치/loopback8091 설정을 사용합니다.
+CI는 합성 코드 계약을 검사하며 모델 품질을 인증하지 않습니다. 실패 결과와 원문은 공개 저장소에 올리지 않습니다.
+
 ## 공통 주장 탐색과 시점 보존 2026-10-12
 
 이전의 '한 claim 전체를 공통 주장으로 고정'하는 방식과 별도로, 공통 주장 후보를 자동 제안하고 각 원문에 다시 검증하는
