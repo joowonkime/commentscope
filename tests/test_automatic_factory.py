@@ -90,7 +90,7 @@ class AutomaticPipelineTests(unittest.TestCase):
         self.tmp = tempfile.TemporaryDirectory()
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
-        value = json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text())
+        value = json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text(encoding='utf-8'))
         value['usage']['expires_at'] = '2099-01-01T00:00:00Z'
         value['comments'] = value['comments'][:3]
         for i, source in enumerate(value['comments']):
