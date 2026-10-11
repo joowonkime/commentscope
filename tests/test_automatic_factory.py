@@ -275,6 +275,8 @@ class AutomaticPipelineTests(unittest.TestCase):
         self.assertNotIn('ALLOWED_CLAIM', calls[1][1])
         self.assertIn('ALLOWED_CLAIM', calls[2][1])
         self.assertNotIn('ORIGINAL_COMMENT', calls[2][1])
+        from commentscope.agents.runtime import AUDIT_SYSTEM, AUTOMATIC_AUDIT_SYSTEM
+        self.assertFalse(AUTOMATIC_AUDIT_SYSTEM.startswith(AUDIT_SYSTEM))
         bad = deepcopy(profile); bad['evidence'][0]['support_spans'][0]['text'] = 'forged'
         with self.assertRaises(ValueError): AgentSession(bad, provider)
 

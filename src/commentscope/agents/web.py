@@ -12,7 +12,8 @@ from uuid import uuid4
 
 from commentscope.agents.demo import render
 from commentscope.agents.profiles import load_bundle, require_live
-from commentscope.agents.runtime import AgentSession, local_generate, prompt_metadata, schema, AUDIT_SCHEMA, AUDIT_SYSTEM
+from commentscope.agents.runtime import (AgentSession, local_generate, prompt_metadata, schema,
+                                       AUDIT_SCHEMA, AUDIT_SYSTEM, AUTOMATIC_AUDIT_SYSTEM)
 from commentscope.factory.claim_clusters import sha
 from commentscope.storage import write_json_exclusive
 
@@ -163,7 +164,7 @@ class ComparisonApp:
                     require_live(self.bundle['expires_at'])
                     with self.lock:
                         s['job'].update(agent_id=agent.profile['agent_id'],
-                                        stage='auditing' if system.startswith(AUDIT_SYSTEM) else 'generating')
+                                        stage='auditing' if system in [AUDIT_SYSTEM, AUTOMATIC_AUDIT_SYSTEM] else 'generating')
                         s['job']['model_calls'] += 1
                     return self.provider(system, data, response_schema)
 
