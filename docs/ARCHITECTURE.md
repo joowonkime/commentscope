@@ -308,6 +308,28 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 다음 교체 지점: HTTP/UI와 무관하게 auditor 교체 가능. 에이전트 간 반문/토론은 별도 메시지 계약으로 구현해야 하며
   동료 발언을 지지 evidence나 자기 검수 history로 승격하지 않을 것. Reflection/시스템 전체 사용자 평가도 별도 남음.
 
+### ADR-017 — 서비스 실행 중 수동 개입 없는 자동 Factory (2026-10-11)
+
+- 사용자 최신 결정: 서비스에서 사람이 분류·묶음 수정·승인하지 않음. ADR-014/015의 assistant 검수는
+  개발 비교 기준으로만 유지하며 새 자동 경로의 입력으로 사용하지 않음. 품질의 사후 표본 평가는 별개.
+- `automatic_contract.py`(원문 구간 선택·주장/검사 계약) → `automatic.py`(embedding top-k 후보·직접 지지 gate·
+  결정론적 disjoint support-star) → automatic bundle → 기존 AgentSession/UI로 연결.
+  주제 whitelist 없음. 의미 판정은 모델, 출처/개수/범위/배정/예산/재시도 경계는 코드가 담당.
+- 후보는 cosine/표현 유형으로 찾지만 후보 유사도만으로 agent를 만들지 않음. 각 member는 anchor의 공통 주장을
+  직접 지지해야 하며 self gate도 필수. 최소 서로 다른 canonical 댓글 3개, 중복 alias 제외.
+  형식만 한 번 수정, 의미 실패는 보류. source/claim 누락·예산 제한·0 agent를 결과에 명시.
+- 새 `auto_accepted_unvalidated`는 사람 승인을 기다리는 상태가 아니라 자동 정책 통과/독립 품질 평가 전 상태.
+  production PerspectiveSpec의 품질 검증 완료를 가장하지 않음. human_handling=false, accepted_perspectives=0을
+  별도로 기록. 서비스-time 사람 승인 플래그를 추가하지 않음.
+- 원문 전체를 agent에 주는 기존 개발 경로와 달리 자동 경로는 배정된 span과 claim scope만 전달하고 답변도
+  같은 범위에서 검사. 원문 전체/부모는 인용 문맥으로 보존. 공통 주장은 검사된 anchor statement를 사용하며
+  추가 자유 요약 단계에서 주장·이유를 다시 만들지 않음.
+- 모듈별 교체 가능 지점: 추출 provider/schema, embedding/retriever, 의미 gate, group policy, profile adapter.
+  기존 UI/답변 시스템 전체를 갈아엎지 않음. checkpoint는 입력/설정/코드/prompt hash에 연결하고 재시도/거절도 보존.
+- 한계: gate가 같은 모델이므로 의미 보장은 없음. greedy 순서/top-k/표현 유형 제한은 누락·분할·중복 관점을 만들 수 있음.
+  지지 수는 사람 수가 아님. 0 agent/낮은 coverage는 실행 완료일 수 있어도 품질 성공은 아님.
+  독립 평가와 품질·coverage의 사전 기준이 필요. 실행 명령과 제한은 AUTOMATIC_FACTORY.md 참조.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

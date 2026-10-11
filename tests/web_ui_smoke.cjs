@@ -75,3 +75,22 @@ test('abstention and reset remain distinct from a successful answer',async()=>{
   assert.equal(h.requests.at(-1).route,'/api/reset');
   assert.match(text(h.ids.rounds),/질문을 보내면/);
 });
+
+test('automatic profiles identify model origin and zero-agent state disables questions',async()=>{
+  const h=harness(); await settle();
+  h.state.bundle.human_handling=false;
+  h.state.bundle.dataset.processed_sources=64;
+  h.source.allowed_claim='A model claim';
+  h.source.support_spans=[{text:'Selected exact source span'}];
+  vm.runInContext('renderProfiles()',h.context);
+  assert.match(text(h.ids.scope),/자동 생성/);
+  assert.match(text(h.ids.profiles),/자동 추출 주장/);
+  assert.doesNotMatch(text(h.ids.profiles),/검수자 해석/);
+  assert.match(text(h.ids.metadata),/자동 처리 64/);
+  h.state.bundle.agents=[]; h.state.can_ask=false;
+  vm.runInContext('renderProfiles()',h.context);
+  await vm.runInContext('refresh()',h.context);
+  assert.equal(h.ids.ask.disabled,true);
+  assert.match(text(h.ids.profiles),/자동 보류/);
+  assert.match(text(h.ids.progress),/통과한 관점이 없습니다/);
+});

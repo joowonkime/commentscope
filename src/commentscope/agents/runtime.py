@@ -37,6 +37,10 @@ Give a specific reason in one short sentence (at most 20 words).
 Your judgment is advisory, not independent gold or human approval.'''
 AUDIT_SCHEMA = obj({'verdict':{'type':'string','enum':['supported','revise','unclear']},
                     'reason':{'type':'string','minLength':1,'maxLength':240}})
+AUTOMATIC_AUDIT_SYSTEM = AUDIT_SYSTEM + '''
+Also require POINT to stay within ALLOWED_CLAIM, a fallible scope label, never extra evidence.
+Other assertions even in the same excerpt are outside this agent. Reasons explicitly supporting
+that claim may be reported with source attribution.'''
 
 
 def schema(ids):
@@ -89,18 +93,36 @@ def local_generate(system, data, response_schema):
 class AgentSession:
     def __init__(self, profile, provider=local_generate):
         self.profile=deepcopy(profile); self.provider=provider; self.history=[]
-        if profile.get('status')!='development_only_not_approved': raise ValueError('Only explicit development profiles supported')
+        if profile.get('status') not in ['development_only_not_approved', 'auto_accepted_unvalidated']:
+            raise ValueError('Only explicit development or automatic provisional profiles supported')
         self.sources={c['evidence_id']:c for c in self.profile['evidence']}
         if len(self.sources)!=len(self.profile['evidence']) or len(self.sources)<3:
             raise ValueError('Invalid development evidence set')
+        if profile['status'] == 'auto_accepted_unvalidated':
+            if len({c['source_comment_id'] for c in self.sources.values()}) < 3:
+                raise ValueError('Automatic profile requires three distinct sources')
+            for card in self.sources.values():
+                spans = card.get('support_spans')
+                if not spans or not isinstance(card.get('allowed_claim'), str) or not card['allowed_claim'].strip():
+                    raise ValueError('Automatic profile missing assigned claim spans')
+                for span in spans:
+                    start, end = span.get('start'), span.get('end')
+                    if (type(start) is not int or type(end) is not int or not 0 <= start < end <= len(card['original_text'])
+                            or span.get('text') != card['original_text'][start:end]):
+                        raise ValueError('Automatic profile source span changed')
 
     def ask(self, question):
         if not isinstance(question,str) or not question.strip() or len(question)>1000:
             raise ValueError('Question must be 1..1000 characters')
         if len(self.history)>=6: raise ValueError('Development session limited to six questions')
+        evidence = deepcopy(self.profile['evidence'])
+        if self.profile['status'] == 'auto_accepted_unvalidated':
+            # Original full comments remain in citations, not as additional model evidence.
+            evidence = [{'evidence_id': c['evidence_id'], 'original_text': '\n'.join(p['text'] for p in c['support_spans']),
+                         'allowed_claim': c['allowed_claim']} for c in evidence]
         payload={'PROFILE':{'title':self.profile['title'],'assertion_family':self.profile['assertion_family'],
                             'constraints':self.profile['constraints']},
-                 'YOUR_EVIDENCE':deepcopy(self.profile['evidence']), 'QUESTION':question,
+                 'YOUR_EVIDENCE':evidence, 'QUESTION':question,
                  'OWN_HISTORY':deepcopy(self.history[-2:])}
         attempts=[]; published=[]; status='abstain'; final_reason='no_supported_answer'; limit=''; answerability='not_in_evidence'
         for attempt in range(2):
@@ -117,8 +139,13 @@ class AgentSession:
                 status='abstain'; final_reason='not_in_evidence'; break
             for point in output['points']:
                 source=self.sources[point['evidence_id']]
-                audit=request(AUDIT_SYSTEM,{'QUESTION':question,'POINT':point['text'],
-                                           'ORIGINAL_COMMENT':source['original_text']},AUDIT_SCHEMA,self.provider)
+                audit_data = {'QUESTION':question,'POINT':point['text'], 'ORIGINAL_COMMENT':source['original_text']}
+                audit_system = AUDIT_SYSTEM
+                if self.profile['status'] == 'auto_accepted_unvalidated':
+                    audit_data['ORIGINAL_COMMENT'] = '\n'.join(p['text'] for p in source['support_spans'])
+                    audit_data['ALLOWED_CLAIM'] = source['allowed_claim']
+                    audit_system = AUTOMATIC_AUDIT_SYSTEM
+                audit=request(audit_system,audit_data,AUDIT_SCHEMA,self.provider)
                 v=audit['output']
                 if not audit['errors'] and (not isinstance(v,dict) or set(v)!={'verdict','reason'} or
                         v['verdict'] not in ['supported','revise','unclear'] or not isinstance(v['reason'],str)
@@ -148,4 +175,4 @@ class AgentSession:
 
 def prompt_metadata():
     return {name:{'text':text,'sha256':hashlib.sha256(text.encode()).hexdigest()}
-            for name,text in [('agent',SYSTEM),('auditor',AUDIT_SYSTEM)]}
+            for name,text in [('agent',SYSTEM),('auditor',AUDIT_SYSTEM),('automatic_auditor',AUTOMATIC_AUDIT_SYSTEM)]}

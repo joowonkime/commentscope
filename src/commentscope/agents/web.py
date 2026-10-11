@@ -100,7 +100,7 @@ class ComparisonApp:
                 'rounds': [{'question': r['question'], 'answers': [public_turn(t) for t in r['answers']]}
                            for r in report['rounds']],
                 'job': deepcopy(s['job']), 'remaining_questions': 6 - len(report['rounds']),
-                'can_ask': not self.busy and len(report['rounds']) < 6,
+                'can_ask': bool(self.bundle['agents']) and not self.busy and len(report['rounds']) < 6,
                 'human_approved': False, 'accepted_perspectives': 0}
 
     def state(self, token):
@@ -127,6 +127,8 @@ class ComparisonApp:
             raise WebError(400, 'invalid_request_id')
         with self.lock:
             s = self._get(token)
+            if not self.bundle['agents']:
+                raise WebError(409, 'no_agents')
             if request_id in s['requests']:
                 if s['requests'][request_id] != question:
                     raise WebError(409, 'request_id_conflict')
@@ -161,7 +163,7 @@ class ComparisonApp:
                     require_live(self.bundle['expires_at'])
                     with self.lock:
                         s['job'].update(agent_id=agent.profile['agent_id'],
-                                        stage='auditing' if system == AUDIT_SYSTEM else 'generating')
+                                        stage='auditing' if system.startswith(AUDIT_SYSTEM) else 'generating')
                         s['job']['model_calls'] += 1
                     return self.provider(system, data, response_schema)
 
@@ -306,6 +308,7 @@ def main():
     for name in ('snapshot', 'reviewed', 'bundle'):
         parser.add_argument(name)
     parser.add_argument('--allow-unapproved', action='store_true')
+    parser.add_argument('--automatic', action='store_true', help='Second input is automatic factory report, not reviewed input')
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--session-dir', type=Path, default=Path('runs/agent-ui'))
     for name in ('model-label', 'model-revision', 'runtime'):
@@ -314,12 +317,18 @@ def main():
     if not 0 <= args.port <= 65535:
         parser.error('Invalid port')
 
+    def read_bundle():
+        if args.automatic:
+            from commentscope.factory.automatic import load_bundle as load_automatic
+            return load_automatic(args.snapshot, args.reviewed, args.bundle)
+        return load_bundle(args.snapshot, args.reviewed, args.bundle, allow_unapproved=args.allow_unapproved)
+
     def verified():
-        current = load_bundle(args.snapshot, args.reviewed, args.bundle, allow_unapproved=args.allow_unapproved)
+        current = read_bundle()
         if current != bundle or sha(args.bundle) != bundle_hash:
             raise ValueError('Input changed; restart with the new bundle')
 
-    bundle = load_bundle(args.snapshot, args.reviewed, args.bundle, allow_unapproved=args.allow_unapproved)
+    bundle = read_bundle()
     bundle_hash = sha(args.bundle)
     app = ComparisonApp(bundle, bundle_hash, args.session_dir,
                         {'model': args.model_label, 'model_revision': args.model_revision, 'runtime': args.runtime},

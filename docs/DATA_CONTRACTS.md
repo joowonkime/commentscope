@@ -351,6 +351,29 @@ PipelineError 필수 필드: `code`, `stage`, `entity_id: string|null`, `message
 Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final을 구분합니다.
 존재하는 citation ID라는 이유만으로 의미적 지지가 있다고 승인하지 않습니다.
 
+## Automatic Factory와 잠정 에이전트
+
+서비스 실행 시 수동 처리가 없는 별도 자동 경로입니다. 기존 assistant-reviewed artifact나 수동 승인을 입력으로 받지 않습니다.
+정식 PerspectiveSpec 품질 인증과 구분하기 위해 `automatic-factory-0.1` 및 `automatic-perspective-bundle-0.1`을 사용합니다.
+
+- 추출: `{status: claims|non_substantive|uncertain, claims: [{statement, mode, segment_ids}]}`.
+  최대4개; claims 상태와 비어 있지 않은 배열이 일치해야 함. 중복/외부 segment ID 거절.
+  코드가 정확한 `{start,end,text}` span과 source/claim ID를 부착. model은 offset/출처를 생성하지 않음.
+- 의미 검사: `{unit_faithful, core_supported, compatible, reason}`. 각 판정은 supported/unsupported/unclear.
+  모두 supported이고 형식/전송/완료 오류가 없어야 잠정 통과. 같은 모델의 판정은 독립 gold가 아님.
+- run: snapshot hash/expiry/config/code/prompt/model 선언, 전체 selected record, claim unit, top-k 후보,
+  실제 gate edge와 원시 응답/재시도, group, unresolved, 모든 원문의 disposition, coverage를 보존.
+  selection은 canonical source ID hash 정렬의 앞 limit개. 대표성 있는 무작위 표본이라고 주장하지 않음.
+- group: anchor/common_claim/member_ids/status. 모든 member의 직접 gate, anchor self gate,
+  서로 다른 canonical 원문 ≥3, claim당 최대1개 group. 간접 연결은 지지로 간주하지 않음.
+- profile: `status=auto_accepted_unvalidated`, 각 evidence에 `support_spans`, `allowed_claim`, full original/URL/parent.
+  의미 검증 완료/사람 승인을 뜻하지 않음. `human_handling=false`, `human_approved=false`, `accepted_perspectives=0`.
+  auto_agents와 정식 PerspectiveSpec 수를 구분. profile 생성은 저장된 group 전이와 source binding을 재계산해 검증.
+- AgentSession: 자동 profile의 배정 span·claim scope만 모델에 전달. full original/parent는 citation context이며
+  다른 주장의 지지 근거가 아님. 기존 검수 profile의 계약은 유지. 자동/검수 지원 origin을 UI와 export에서 구분.
+- 0 agent도 유효한 bundle이며 UI는 질문을 차단하고 자동 보류를 표시. 이웃 부족은 검증된 rare가 아니라
+  `insufficient_neighbors_unverified`. snapshot의 미선택/중복/비주장/실패/미배정 정보를 숨기지 않음.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.

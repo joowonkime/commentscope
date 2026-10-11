@@ -1,5 +1,21 @@
 # 다음 세션 시작점
 
+## 최신 작업과 서비스 자동화 요구
+
+- 사용자는 서비스 실행 중 사람이 clustering을 다루지 않는다고 명확히 했습니다. 요구사항 Section16.10,
+  ADR-017, `AUTOMATIC_FACTORY.md`를 우선 확인합니다. 아래 검수 지원 시연은 과거 기준선입니다.
+- `feat/automatic-perspective-factory`에서 검수 파일 없는 자동 경로를 구현 중입니다.
+  `factory.automatic_cli build` → 원문 span claim → embedding 후보 → 직접 근거 gate → automatic bundle.
+  `agents.web --automatic`으로 기존 UI를 사용합니다. 기존 `--allow-unapproved` 시연 경로와 혼동하지 않습니다.
+- Python229개(자동 경로19개 포함), Node DOM계약4개를 로컬에서 확인했습니다. 의미 품질 검증은 아닙니다.
+- 실제64개 hash-order 표본을 처리 중이며, 결과는 완료 후 아래 실행 기록에 확정합니다.
+  이미 검수한21개/기대 라벨은 입력에 쓰지 않습니다. 현시점에서 전체1000개 자동 성공/생성 MVP 품질 완료로 보고하지 않습니다.
+- 자동 실행용 embedding 환경은 `/home/taeng/.venvs/commentscope-clustering/bin/python`, `PYTHONPATH=src`입니다.
+  프로젝트 `.venv`에는 numpy/torch/sentence-transformers가 없어64개 추출 후 embedding import에서 첫 실행이 중단됐습니다.
+  동일 manifest의64개 추출 checkpoint를 재사용해 기존 clustering 환경에서 재개했습니다. 새 CLI는 모델 호출 전 의존성을 검사합니다.
+
+## 이전 main 통합 기준선
+
 **최신: PR #18 main 통합 및 누적 PR 정리 완료. 실제 데이터 재검증→새 개발 profile2개 생성→Chromium에서 실제 Qwen 질의3개/인용/다운로드/초기화/새 탭 분리까지 확인. 검수 지원형 agent 생성·실행은 동작하지만 정식 승인0이고 자동 factory는 미완료. 고정12개 자동 회귀는 계약10/12·사전 기준 전체 일치6/12. 한눈에 보는 로컬 결과 `artifacts/main-acceptance-20261011-overview.html`. 전체 프로젝트 목표는 댓글 기반 관점 에이전트 시스템이며 clustering 자체를 논문 목표로 되돌리지 말 것.**
 
 ## 사용자 결정과 작업 단위

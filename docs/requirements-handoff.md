@@ -738,3 +738,14 @@ Record cluster count, source-comment coverage, number of rare/uncertain items, w
 | Reflection | Keep as a product requirement, but phase its implementation after the perspective pipeline is stable. | Agreed direction |
 | What counts as a perspective | Only a meaningful, traceable, sufficiently supported interpretation becomes a full agent. Spam/non-substantive material is excluded; rare meaningful views remain visible without becoming a full agent. | Design rule adopted |
 | MAS contribution claim | Decide whether the offline Cluster Auditor is a research contribution only after V0/V1/V2 evidence. User-facing evidence-bounded agents and audit authority remain the core hypothesis. | Deferred intentionally |
+
+### 16.10 Service-time automation clarification on 2026-10-11
+
+The user clarified that the service must not require a person or the conversation assistant to classify,
+repair, or approve clusters. Earlier manual/developer inspection and fallback in Sections 16.4–16.5 refer
+only to development baselines and offline evaluation, not the target service path. Automatic failures
+must produce bounded retries, preserved unresolved items, or no agent, rather than a manual approval queue.
+Independent sampled evaluation remains necessary for research and release quality claims.
+
+Implementation and limitations are tracked in `AUTOMATIC_FACTORY.md` and ADR-017. This dated clarification
+extends the repository copy of the original handoff; the parent-directory historical original is unchanged.
