@@ -59,6 +59,15 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - `comparison_metadata_changes`는 이전/현재 mode, lint, model/revision, runtime, request settings, prompt hash의 차이를 기록합니다. 서버 설정의 독립 검증이나 정확도 보장이 아닙니다.
 - draft의 `--revision v3`는 생성 prompt-0.3이며 wire 형식은 여전히 perspective-assignment-0.2입니다. v2와 동일 입력·스키마·validator·binding 사용; prompt revision을 wire 계약 변경으로 해석하지 않습니다. 기본 생성 revision은 v2입니다.
 
+## 개발 전용 source-frame 진단 (0.1)
+
+- `experiments/source_frame_probe.py`는 source-frame-diagnostic-0.1 artifact를 생성합니다. claims-0.2나 PerspectiveSpec의 교체 계약이 아닙니다.
+- 모델 출력은 assertion_type(prediction/need/possible_benefit/description/question/mixed/unclear), certainty(asserted/hedged/unclear), reason_quote/condition_quote(null 또는 실제 TARGET 부분 문자열)뿐입니다. 원문/claim/source ID는 호스트가 연결합니다.
+- 새 요청에는 TARGET 하나만 제공하고 과거 claim·그룹·평가 기대값은 주지 않습니다. 자유로운 대표 문장 생성은 하지 않습니다.
+- 필드/enum/원문 인용/종료 상태 실패를 보존합니다. 성공도 semantic_review_status=pending, human_approved=false, accepted_perspectives=0. label이나 인용 일치로 자동 승인/분할하지 않습니다.
+- 기존 embedding의 model/revision/claim 순서/입력 텍스트와 벡터 유효성을 재검증합니다. 같은 선택 subset의 원문 및 기존 claim 벡터를 0.25/0.35/0.45에서 비교하며 원래 전체 corpus의 군집을 대체하지 않습니다.
+- 최대12개, source당1개 claim, 원문2,000자 제한. multi-claim 추출·문맥 해소·전체 corpus 평가가 아닌 bounded diagnostic입니다. 기존 snapshot 만료를 상속합니다.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

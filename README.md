@@ -251,3 +251,20 @@ pairwise는 쌍별 `.case-N.PXX.json`도 보존합니다. HTML에서 원문·제
 대표 초안 명령의 `--revision v3`는 v2의 입력·배정 스키마·원문 연결을 유지하고 생성 프롬프트만 바꿉니다. 기본값은 `v2`입니다.
 새 경로에 저장해야 하며 v3 결과도 같은 audit 명령으로 검사할 수 있습니다. `draft --revision`과 `audit --prompt-revision`은 별개 버전입니다.
 실제 후보3개 중 구조 통과2개였지만 예측/필요성 혼합과 다른 주장을 잘못 묶는 오류가 남았습니다. 프롬프트 수정만으로 해결됐다고 간주하지 않습니다.
+
+### 7. 실패 단계 분리 진단 (개발용, pipeline 변경 없음)
+
+`experiments/source_frame_probe.py`는 한 고정 후보 안에서 원문 embedding과 저장된 claim embedding을 같은 임계값으로 비교하고,
+댓글 하나씩 주장 성격·표현 강도·원문 이유/조건 구간만 분류합니다. 기존 추출 주장이나 그룹 설명은 분류 모델에 전달하지 않습니다.
+주장을 재작성하지 않으므로 paraphrase 품질 개선이나 전체 extractor 대체로 해석하지 않습니다. 분류 label로 자동 분할/승인하지 않습니다.
+저장소 루트의 ML 설치 환경과 위 로컬 서버가 필요합니다. 모델을 이미 내려받았다면 offline 모드로 실행할 수 있습니다.
+
+```bash
+HF_HUB_OFFLINE=1 python -m experiments.source_frame_probe data/ubi-research-20261010.json artifacts/claim-slice-20261011-extraction.json artifacts/claim-slice-20261011-candidates.json --cluster CC001 --output artifacts/YOUR-stage-diagnostic.json --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 CUDA12.8 context8192 no-context-shift parallel1"
+```
+
+최대12개 claim, source당1개, 원문당2,000자 이내의 작은 진단입니다. 원문/추출/후보·저장 embedding 출처를 재확인하고,
+벡터·임계값별 배정·원시 모델 결과·실패·댓글별 checkpoint·미승인 상태를 보존합니다. 결과 화면은 output + `.html`입니다.
+선택 subset만 비교하므로 기존 전체 후보 생성과 같지 않으며, 같은 개발 사례 반복 결과를 일반 정확도로 보고하지 않습니다.
+현재 자동화9개는 원문/추출 주장 모두 0.45에서 한 후보로 묶였고, 더 작은 임계값에서도 예측/필요성 혼합이 남았습니다.
+주제 후보를 만든 것과 agent가 대변할 공통 주장을 검증한 것은 다릅니다. 현재 집중할 부분은 원문별 의미 확인과 후보의 관점 승격 검토입니다.

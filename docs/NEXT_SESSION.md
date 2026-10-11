@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 대표 초안/쌍별 검사 실행 완료. 검사·생성 프롬프트 단독 변경도 시험했으나 회귀/의미 오류가 남아 기본값 승격 보류. 승인된 PerspectiveSpec/agent는 0입니다. 최신 사용자 검토 화면은 `artifacts/perspective-feedback-20261011.html`입니다.**
+**기본소득 댓글 1,000개 확보, 37개 claim→후보 및 대표 초안/검사 실행 완료. 최신 작업은 자동화9개의 실패 단계 분리 진단: 원문 embedding도 예측/필요성을 섞고, 단일 원문 분류에도 오류가 남음. pipeline 교체/확장 없이 원문별 의미 확인에 집중하기로 기록. 승인된 PerspectiveSpec/agent는0. 사용자 수정 제안 화면은 `artifacts/perspective-feedback-20261011.html`, 최신 진단은 `artifacts/source-stage-20261011.json.html`.**
 
 ## 사용자 결정과 작업 단위
 
@@ -19,6 +19,7 @@
 - 로컬 대표 초안/검사: `feat/local-perspective-drafts` (`feat/claim-cluster-slice` 기반). 이전 PR을 임의 병합하지 않음.
 - 쌍별 근거 검사: `feat/pairwise-source-audit` (`feat/local-perspective-drafts` 기반). PR #9의 Ubuntu/Windows CI 성공 확인 후 분기. main 병합은 하지 않음.
 - 프롬프트 단독 비교: `feat/entailment-audit-prompt` (`feat/pairwise-source-audit` 기반). PR #10 Ubuntu/Windows CI 통과 상태에서 진행. 상위 브랜치 임의 병합 없음.
+- 실패 단계 진단: `feat/source-stage-diagnostic` (`feat/entailment-audit-prompt` 기반). PR #11 Ubuntu/Windows CI 통과 이후 진행. 상위 브랜치 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -157,6 +158,18 @@
 - 사용자에게 A의 필요성과 가능성을 함께 묶고 강도 차이를 상세에 보존할지, 더 분리할지 피드백 요청. 답변이 오면 기록하되 아직 받지 않은 승인을 가정하지 말 것.
 - 원문/결과는 Git 제외. YouTube 추가 호출0, 유료 API/댓글 외부 전송/추가 모델 다운로드 없음. 실험 서버 종료. 오프라인 테스트125개 통과.
 - 다음: 사용자 피드백을 반영한 소표본 기준 고정 → 원문별 assertion type/modality/조건 확인과 그룹 공통 명제 생성을 분리하는 실험 설계/실행 → 새 표본 검증. 프롬프트만 계속 늘리거나 실패를 수동 수정해 로컬 모델 성공으로 보고하지 않음. 다른 로컬 모델 비교는 대안이며 아직 실행하지 않음.
+
+## 범위 동결 / 실패 단계 진단 (2026-10-11, 최신)
+
+- 사용자는 프로젝트가 clustering 문제로 산으로 가는 것을 우려. 새 기능/모델/서비스 없이 기존 CC001 원문9개에서만 진단. 기존 pipeline/후보 배정은 바꾸지 않음.
+- `experiments/source_frame_probe.py` 추가. 기존 prepare/load_candidates 검증과 local provider 재사용. 9개 원문을 다시 embedding하고, 기존 claim 벡터와 같은 subset에서 비교. 원문/벡터/분류 raw/조건 인용/실패와 source별 checkpoint 보존.
+- 실제 묶음: 원문은 임계값0.25/0.35/0.45에서5/3/1개, 기존 claim은3/1/1개. 모든 임계값에서 예측/필요성 혼합이 남음. 주제 후보 생성은 가능하지만 공통 주장 검증과 같지 않음. 이 수치를 정확도나 전체 corpus 결과로 보고하지 말 것.
+- 새 요청은 TARGET 하나만 받고 assertion_type/certainty/reason_quote/condition_quote만 출력. 기존 claim/그룹/기대 판단은 입력하지 않음. 새 paraphrase 생성 없이 구조9/9, 총7.79초. 사전 assistant 기대 대비 type8/9, certainty6/9. 인간 gold/일반 정확도 아님.
+- M06의 미래 필요성을 도입 예측으로 분류. M04/M07의 will과 M08의 could를 certainty=unclear로 처리. M06/M09의 시간 표현을 조건으로 뽑음. M02의 when-you-consider도 해석 주의. 문자열 일치만으로 의미 검증 완료가 아님.
+- 기존 M04는 추출 단계부터 필요성/일자리 대체 이유를 추가. 원문을 읽는 대표 생성도 독립적으로 오류를 만들었으므로 단일 원인으로 단정하지 않음.
+- 보고서 `artifacts/source-stage-20261011.json` 및 `.json.html`. 사전 기대 `...-expectations.json`, 결과 검수 `...-assistant-review.json`. 전부 비공개 로컬, 만료 상속. 기존9개 사용, 추가 수집/유료 API/외부 댓글 전송/모델 다운로드0.
+- 전체 테스트135개 통과. 모델 서버 종료. agent0/승인0, 기존 생성/검사 기본값 유지. 새 label로 자동 분할하지 않았음.
+- 다음 변경은 관점 승격 전 원문별 주장·표현 강도·이유/조건 확인에 집중. 기존 검토안에 대한 사용자 피드백은 아직 없으므로 가정하지 않음. 고정 사례의 의미 오류가 남아 있는 동안 다른 agent 기능/전체1,000개 처리로 확장하지 않음. 수정 후 별도의 새 표본 검증 필요.
 
 ## V0 실험 결과 (2026-10-10 KST)
 
