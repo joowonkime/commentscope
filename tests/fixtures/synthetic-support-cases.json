@@ -1,0 +1,27 @@
+{
+  "kind": "assistant_authored_synthetic_development_cases",
+  "human_approved": false,
+  "independent_gold": false,
+  "cases": [
+    {"id":"P01","category":"positive","source":"A basic income is necessary because machines will replace jobs.","representative":"Job replacement by machines makes a basic income necessary.","allowed":["supports"]},
+    {"id":"P02","category":"positive","source":"A basic income may help workers displaced by automation.","representative":"A basic income could help workers who lose jobs to automation.","allowed":["supports"]},
+    {"id":"P03","category":"positive","source":"If the trial succeeds, the city will adopt the policy.","representative":"The city will adopt the policy if the trial is successful.","allowed":["supports"]},
+    {"id":"P04","category":"positive","source":"I support the pilot, but not a national rollout.","representative":"I do not support a national rollout.","allowed":["supports"]},
+    {"id":"P05","category":"positive","source":"Most warehouse jobs will be automated.","representative":"Some warehouse jobs will be automated.","allowed":["supports"]},
+    {"id":"P06","category":"positive","source":"Automation increases the need for income support.","representative":"Income support becomes more necessary with automation.","allowed":["supports"]},
+    {"id":"P07","category":"positive","source":"The council will introduce the payment next year.","representative":"Next year, the payment will be introduced by the council.","allowed":["supports"]},
+    {"id":"P08","category":"positive","source":"The payment could reduce poverty, but it might raise prices.","representative":"The payment might raise prices.","allowed":["supports"]},
+    {"id":"N01","category":"negative","source":"The policy is necessary.","representative":"The policy will be adopted.","allowed":["not_established"]},
+    {"id":"N02","category":"negative","source":"The policy will be adopted.","representative":"The policy is necessary.","allowed":["not_established"]},
+    {"id":"N03","category":"negative","source":"If the trial succeeds, the city will adopt the policy.","representative":"The city will adopt the policy.","allowed":["not_established"]},
+    {"id":"N04","category":"negative","source":"The payment could reduce poverty.","representative":"The payment will reduce poverty.","allowed":["not_established"]},
+    {"id":"N05","category":"negative","source":"Most jobs will be automated.","representative":"All jobs will be automated.","allowed":["not_established"]},
+    {"id":"N06","category":"negative","source":"The policy is necessary.","representative":"The policy is necessary because automation will eliminate most jobs.","allowed":["not_established"]},
+    {"id":"N07","category":"negative","source":"This payment helped my family.","representative":"This payment helped every family.","allowed":["not_established"]},
+    {"id":"N08","category":"negative","source":"The council might eventually introduce the payment.","representative":"The council will introduce the payment next year.","allowed":["not_established"]},
+    {"id":"X01","category":"contradiction","source":"The payment will raise prices.","representative":"The payment will not raise prices.","allowed":["contradicts"]},
+    {"id":"X02","category":"contradiction","source":"I oppose the pilot.","representative":"I support the pilot.","allowed":["contradicts"]},
+    {"id":"U01","category":"ambiguous","source":"That would fix it.","representative":"A basic income would fix unemployment.","allowed":["unclear","not_established"]},
+    {"id":"U02","category":"ambiguous","source":"Sure, that will work perfectly...","representative":"The speaker endorses the policy.","allowed":["unclear","not_established"]}
+  ]
+}

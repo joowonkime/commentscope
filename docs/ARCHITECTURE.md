@@ -257,6 +257,15 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 다음 수정 한 곳: 원문–대표 관계 판정기. 후보/대표/배정 알고리즘은 고정해 비교하며 긍정·부정·애매 사례를 포함한 검수와 미사용 표본 확인이 필요. 프롬프트 반복만으로 해결됐다고 주장하거나 지금 전체 corpus/agent로 확대하지 않음. 다른 로컬 판정기 검토는 후속; Jev 비교는 외부 전송/비용 조건 결정 전 실행하지 않음.
 - 영향: 신규 모듈/합성 테스트/설명 문서만 공개. 실제 입력/출력/검수는 ignored artifacts에 보존, snapshot 만료 상속. 자동 resume/사람 승인 저장/프로덕션 agent 연결은 미구현.
 
+### ADR-013 — 고정 입력으로 로컬 NLI 비교, 기본값 승격 보류 (experiment, 2026-10-11)
+
+- ADR-012의 원문/대표/배정 코드를 유지하고 `providers/local_nli.py`만 판정 대안으로 추가. 기존 Qwen 경로는 수정하지 않음. `experiments.compare_local_nli`에서 동일72쌍과 합성20사례를 비교.
+- 영어용 DeBERTa-v3-base-mnli-fever-anli를 revision 고정/safetensors/remote code 금지/offline CPU로 사용. 전용 NLI의 entailment/neutral/contradiction을 공통 relation으로 매핑, 최고 softmax<0.8은 unclear. 임계값은 실행 전 고정했으나 보정된 confidence가 아님. 모델과 판정 정책이 함께 달라 단일요소 효과를 주장하지 않음.
+- 원문=전제, 대표=가설 순서를 테스트. 입력 길이 초과/오류 시 조용한 truncation/승인 대신 실패. 쌍/모델 raw logits와 scores, 환경, 평가표/사전 계획/기존 결과/배정 코드 hash를 기록. 동일 원문은 의미 평가 점수에서 제외.
+- 실제 부정12쌍 비지지8→12, 필요성→도입 오연결3건 제거. 그러나 합성 조건 삭제를 supports로 판정(0.987), 정상 연결은 양쪽7/8, 실제3개 이상 그룹은2→0. 부분 개선을 clustering 성공으로 보고할 수 없음.
+- 결정: baseline 기본값 유지, threshold 튜닝/추가 모델 반복/전체 corpus 확장하지 않음. 다음 판단에는 사용자 의미 기준 피드백 및 실제 긍정 pair 검수가 필요. 합성 표본은 실제 positive recall이 아니며, unknown 실제 표본/다국어 검증이 남음.
+- 한계: snapshot 만료/입력 출처는 재검증하나 Qwen 서버 identity는 운영자 선언. NLI threshold는 미보정이고 영문 범위만 확인. 성능은 CPU/GPU 단일 실행의 관찰. auto approval/agent는0. 자세한 실행은 LOCAL_NLI_COMPARISON.md 참조.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

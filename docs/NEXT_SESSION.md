@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**최신 작업: B(원문 대표 선택 + 직접 지원 배정)를 구현하고 자동화9개에 실행. 제안2묶음/배정7개/미배정2개지만 필요성→도입 예측 오연결 때문에 두 묶음 모두 수정 필요. 승인 PerspectiveSpec/agent는0. 결과 화면 `artifacts/extractive-keypoints-20261011.json.html`, 별도 assistant 검수 `artifacts/extractive-keypoints-20261011-assistant-review.json`. 다음 수정 대상은 관계 판정기 하나로 좁히고, 전체 corpus/agent 확장은 보류.**
+**최신: B의 입력/대표/배정 고정 후 로컬 DeBERTa NLI 비교 완료. 기존 필요성→도입 오연결3건은 막았지만 조건 삭제 오판/정상 연결 누락이 남고 실제3개 이상 그룹0개. 기본 Qwen 판정기 변경/승격하지 않음. 결과 `artifacts/local-nli-comparison-20261011.json.html`, 검수 `artifacts/local-nli-comparison-20261011-assistant-review.json`. 승인 PerspectiveSpec/agent는0. 다음은 사용자 의미 기준 피드백과 실제 긍정 pair 검수; 모델/프롬프트 반복이나 전체 corpus 확장부터 하지 말 것.**
 
 ## 사용자 결정과 작업 단위
 
@@ -21,6 +21,7 @@
 - 프롬프트 단독 비교: `feat/entailment-audit-prompt` (`feat/pairwise-source-audit` 기반). PR #10 Ubuntu/Windows CI 통과 상태에서 진행. 상위 브랜치 임의 병합 없음.
 - 실패 단계 진단: `feat/source-stage-diagnostic` (`feat/entailment-audit-prompt` 기반). PR #11 Ubuntu/Windows CI 통과 이후 진행. 상위 브랜치 임의 병합 없음.
 - 원문 선택형 B: `feat/extractive-keypoint-baseline` (`feat/source-stage-diagnostic` 기반). PR #12 CI 통과 이후 진행. 상위 브랜치/main 임의 병합 없음.
+- 로컬 NLI 비교: `feat/local-nli-comparison` (`feat/extractive-keypoint-baseline` 기반). PR #13 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -60,7 +61,7 @@
 
 1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
 2. B의 결과와 아래 최신 검수 기록부터 확인합니다. 원문 대표를 복사해도 잘못 연결하면 왜곡이라는 점이 핵심입니다.
-3. 후보/대표/배정 알고리즘을 고정하고 관계 판정기만 교체·비교합니다. 먼저 긍정·부정·애매 사례를 포함해 assistant 평가 초안을 만들고 사용자 피드백을 받습니다. 부정 사례만의 통과율을 정확도로 보고하지 않습니다.
+3. 관계 판정기 비교는 아래 최신 실행까지 완료했습니다. 결과/합성 평가표/assistant 검수에서 사용자 피드백을 받고 실제 긍정 pair를 추가 검수합니다. 부정 사례만의 통과율이나 합성 점수를 일반 정확도로 보고하지 않습니다. 다음 모델/threshold 튜닝을 자동으로 반복하지 않습니다.
 4. 고정 개발 오류를 해결한 뒤 미사용 소표본에서 재확인합니다. 성공 전에는 1,000개 확장/agent 기능을 붙이지 않습니다. 다른 로컬 판정기 검토는 가능하지만 아직 구현/검증되지 않았고, 외부 API 비교에는 데이터 전송/비용 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
@@ -181,6 +182,16 @@
 - 실행 전 고정한 부정9사례 중8개에서 supports를 피했지만 M09→M01은 most-jobs 이유를 잘못 인정. 알려진 부정 회귀만의 수치이며 정확도/recall이나 독립 gold가 아님. 새 prompt/schema도 바뀌었으므로 B 단일요소 효과 주장 불가.
 - 전체 테스트147개 통과(코드 계약 검증, 의미 정확도 아님). 로컬 서버 종료. YouTube 추가호출/유료 API/외부 댓글 전송/새 모델 다운로드0. 기존 pipeline 기본값 유지.
 - 다음: `judge()`의 관계 판정만 교체·비교. 이 작은 실험은 일반 장문/다중 주장 clustering을 해결한 MVP가 아님. Jev 미사용; 지금 모델 변경이 반드시 해결한다는 근거도 없음.
+
+## 로컬 NLI 비교 실행 (2026-10-11, 최신)
+
+- `providers/local_nli.py`, `experiments/compare_local_nli.py`, 공개 합성20사례/테스트 추가. 실행법과 모델 revision은 [LOCAL_NLI_COMPARISON.md](LOCAL_NLI_COMPARISON.md). 모델 파일만 신규 다운로드했고 댓글 외부 전송/추가 YouTube 호출/유료 API는0.
+- 실제9개 원문/대표/72쌍/배정 코드 고정. 사전 계획 `artifacts/local-nli-20261011-prerun.json`, 실행 전 hash manifest `.json.manifest.json`, 실제/합성 모든 출력과 checkpoint 보존. 비교 SHA256 `49fd8170792604b256f19b0e5478a8296afc2f38b6b0d2880a1a5155205bca94`.
+- Qwen 실제 출력은 B의 기존 실행 재사용; 합성20개만 동일 서버 설정에서 새로 실행. NLI는 CPU float32/6threads/torch2.14.1+cpu/transformers4.57.1, revision6f5cf0a2b59cabb106aca4c287eed12e357e90eb, threshold0.8 고정. 실제72쌍7.53초, loading0.91초 별도. 일반 성능 benchmark 아님.
+- 알려진 실제 부정12쌍 비지지: Qwen8, NLI12(3보류). 조건/범위2쌍은 Qwen0, NLI1. NLI M03→M04 supports 하나가 남아 의미 검수 필요. 실제그룹0, 배정0/미배정9. 원문을 잃은 것은 아니며 clustering 성공으로 보지 않음.
+- 합성: 정상 연결7/8씩, 부정 기대 relation 일치 Qwen7/8·NLI6/8, 모순2/2·애매2/2씩. NLI는 조건 삭제를 supports(0.987)로 오판. 양쪽 모두 Most→Some 누락, Most→All을 contradicts로 분류. 마지막 사례의 문자적/일상적 해석 차이는 사용자 피드백 대상으로 보존.
+- NLI 기본값 승격 안 함. 새로운 real holdout/인간 gold/실제 positive recall/다국어 검증 없음. 전체 원문 대표 방식이 coverage를 제한할 수 있다는 것은 미검증 가설이지 이번 비교로 확정된 원인 아님.
+- 테스트159개 통과. 실제 댓글/결과/사전 계획/검수는 Git 제외 및 기존 만료 상속. 실행 후 Qwen 서버 종료. agent0/승인0.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

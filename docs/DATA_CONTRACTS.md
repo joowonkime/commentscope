@@ -78,6 +78,14 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - accepted_perspectives=0, human_approved=false, independent_gold=false. 정확한 원문/출처와 관계 행렬을 저장해도 의미 정확도나 인간 승인을 뜻하지 않습니다. 실제 검수 의견은 결과 hash에 연결한 별도 비공개 artifact로 저장합니다.
 - prompt 본문/hash, generation_schema, operator-supplied 모델/revision/runtime/요청 설정 및 pair checkpoint를 보존합니다. 기존 파일 덮어쓰기/자동 resume는 지원하지 않습니다.
 
+## 로컬 관계 판정 비교 local-nli-comparison-0.1
+
+- 기존 B 산출물의 snapshot/extraction/candidate hash, 원문/대표, 전체 pair matrix 및 재계산 assembly를 검증. 기존 원문/대표/배정 알고리즘이 바뀌면 거절합니다. snapshot 만료도 다시 확인합니다.
+- 실행 전 manifest에 baseline/plan/synthetic suite/assembly code SHA256, expires_at, threshold=0.8을 저장. 공개 합성 suite와 비공개 실제 회귀 계획을 구분합니다. 기대 relation은 assistant 개발 기준이며 독립 gold가 아닙니다.
+- NLI pair는 기존 source/anchor/relation/errors/origin 계약을 유지하되 origin=local_nli, raw=logits, scores={entailment,neutral,contradiction}, argmax_relation, input_tokens를 추가합니다. relation은 threshold 적용 결과이며 scores는 보정된 신뢰도가 아닙니다. 오류 시 relation=null.
+- 평가 summary는 category별 total/matches/errors/supports/unclear/mismatch_ids를 따로 기록. 실패/보류를 정상 연결로 합산하지 않으며 동일 원문 pair는 의미 평가에서 제외. 실제 positive recall을 합성 사례 점수로 대체하지 않습니다.
+- 출력 비교 JSON/HTML, 별도 NLI 재배정 JSON, 쌍별 checkpoint는 모두 원문 유래의 private artifact입니다. accepted_perspectives=0, human_approved=false, independent_gold=false. 모델 판단/검수 결과를 원문 수정이나 승인으로 변환하지 않습니다.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.
