@@ -1,5 +1,23 @@
 # 다음 세션 시작점
 
+## 최신 호환성 필터 실험 — 기본 미채택
+
+- ADR-019 / AUTOMATIC_FACTORY의 호환성 필드 실험 / DATA_CONTRACTS0.3을 먼저 읽습니다.
+  새 `claim_frame.py`는 원문·claim 별도 분류→범위/시간/강도/조건 코드 비교→기존 source/common 검사 구조입니다.
+  입력 hash와 원시 component/조건 비교/차단 사유를 기록하고 loader가 replay합니다. 서비스 수동 입력은 추가하지 않았습니다.
+- 실제 모델 실험 두 번: 한 요청 방식은 합성 양성3/7유지·음성8/9차단, 실제 개발 양성5/7·음성11/11.
+  4작업 분해 방식은 합성 양성0/7·음성9/9, 실제 양성0/7·음성11/11로 전부 차단했습니다.
+  단순한 문장도 status가 unclear/mixed로 잘못 분류됩니다. 전부 거절은 성공이 아니며 모델/방법 승인하지 않았습니다.
+- 기본0.2를 유지하고 `--experimental-frame-guard`에만0.3을 연결했습니다. 실패한 필터로64개/전체 재실행은 안 했습니다.
+  기존0.1 전체8agent,0.2 64개0agent artifact의 현재 loader 재검증 완료. 새 agent가 추가 생성된 것이 아닙니다.
+- 결과 `runs/claim-frame-probe-20261011/report.json`, `runs/claim-frame-probe-20261011-v2/report.json`.
+  기존18member assistant 라벨은 offline 비교에만 사용했고 모델에는 전달하지 않았습니다. 독립 gold 아님.
+  합성16사례 fixture와 실행 코드는 공개, 실제 원문/출력은 Git 제외. PR21 draft/main 미병합 유지.
+- 로컬 Python247개/Node4개 테스트 통과. 기본 경로의 frame 요청0회, 명시적 opt-in/replay,
+  frame 거절 후 의미 검사 미호출, 빈 실행 policy 검사, JSON key 정렬 후 오류 replay를 확인했습니다.
+- 다음은 실패 필드 classifier의 대체 비교를 고정 입력에서 제한적으로 설계할 단계입니다.
+  정상 보존을 먼저 만족하지 못하면 full run으로 넘어가지 않습니다. 한국어 답변 왜곡/검색 recall도 여전히 남아 있습니다.
+
 ## 최신 원문 격리 보완
 
 - PR #21의 같은 브랜치에0.2 입력/감사 분리(`01cf6cf`)와 scope 독립 지침(`b46d09d`)을 추가했습니다.

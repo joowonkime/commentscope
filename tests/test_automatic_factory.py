@@ -11,6 +11,7 @@ from commentscope.factory.automatic import (Config, run, build_bundle, load_bund
 from commentscope.factory.automatic_contract import (EXTRACT, GATE, CHECKS, segments, extraction_schema,
     validate_extraction, validate_gate, passed, digest)
 from commentscope.factory.automatic_contract import SOURCE_AUDIT
+from commentscope.factory import claim_frame
 from commentscope.factory.automatic_cli import render
 from commentscope.ingestion import load_snapshot
 from commentscope.storage import write_json_exclusive
@@ -26,6 +27,11 @@ def supported():
 
 def extraction(statement='Safety reviews should be mandatory.', mode='normative', ids=None):
     return {'status': 'claims', 'claims': [{'statement': statement, 'mode': mode, 'segment_ids': ids or ['S000']}]}
+
+
+def synthetic_frame():
+    return {'status': 'atomic', 'scope': 'population', 'time': 'timeless', 'commitment': 'normative',
+            'condition': 'none', 'condition_quotes': []}
 
 
 class AutomaticContractTests(unittest.TestCase):
@@ -110,6 +116,8 @@ class AutomaticPipelineTests(unittest.TestCase):
             return response(supported())
         if system == SOURCE_AUDIT:
             return response({'verdict': 'supported', 'reason': 'Synthetic explicit assertion'})
+        if system in claim_frame.TASK_SYSTEMS.values():
+            return response({k:synthetic_frame()[k] for k in schema['properties']})
         raise AssertionError('Unexpected request')
 
     def factory(self, **kwargs):
@@ -125,6 +133,8 @@ class AutomaticPipelineTests(unittest.TestCase):
         self.assertEqual(report['summary']['coverage_of_selected'], 1)
         self.assertEqual(len(self.calls), 9)
         self.assertTrue(all(system in [EXTRACT, GATE, SOURCE_AUDIT] for system, _, _ in self.calls))
+        self.assertEqual(report['artifact_kind'], 'automatic-factory-0.2')
+        self.assertNotIn('frame_policy', report)
         before = len(self.calls)
         self.assertEqual(report, self.factory())
         self.assertEqual(len(self.calls), before)
@@ -140,6 +150,37 @@ class AutomaticPipelineTests(unittest.TestCase):
         self.assertEqual(report['summary']['coverage_of_selected'], 0)
         self.assertEqual(build_bundle(self.snapshot, report)['agents'], [])
         self.assertEqual(len(report['unresolved']), 3)
+
+    def test_experimental_frame_opt_in_and_replay(self):
+        report = self.factory(experimental_frames=True)
+        self.assertEqual(report['artifact_kind'], 'automatic-factory-0.3')
+        self.assertEqual(len(self.calls), 25)
+        self.assertEqual(len(build_bundle(self.snapshot, report)['agents']), 1)
+        for change in ['missing', 'decision', 'version']:
+            bad = deepcopy(report)
+            if change == 'missing': bad['gates'][0]['result'].pop('frame_guard')
+            elif change == 'decision': bad['gates'][0]['result']['frame_guard']['allowed'] = False
+            else: bad['frame_policy'] = 'unknown'
+            with self.assertRaises(ValueError): build_bundle(self.snapshot, bad)
+        with self.assertRaises(ValueError): self.factory()  # Cannot resume with a different policy.
+
+    def test_frame_rejection_never_calls_semantic_gates(self):
+        def provider(system, data, schema):
+            if system == EXTRACT: return response(extraction())
+            if system in claim_frame.TASK_SYSTEMS.values():
+                value = {**synthetic_frame(), 'status': 'unclear'}
+                return response({k:value[k] for k in schema['properties']})
+            raise AssertionError('Blocked frame must not reach source/common audit')
+        report = self.factory(provider=provider, experimental_frames=True)
+        self.assertEqual(build_bundle(self.snapshot, report)['agents'], [])
+        self.assertTrue(report['gates'])
+        self.assertTrue(all(g['result']['errors'] == ['frame_incompatible'] for g in report['gates']))
+
+    def test_empty_experimental_run_still_requires_policy(self):
+        report = self.factory(config=Config(limit=1), experimental_frames=True)
+        self.assertFalse(report['gates'])
+        report.pop('frame_policy')
+        with self.assertRaises(ValueError): build_bundle(self.snapshot, report)
 
     def test_no_substantive_and_transport_errors_preserved(self):
         for kind in ['empty', 'transport']:
@@ -298,6 +339,8 @@ class AutomaticPipelineTests(unittest.TestCase):
     def test_source_rejection_cannot_be_rescued_by_common_gate(self):
         def provider(system, data, schema):
             if system == EXTRACT: return response(extraction())
+            if system in claim_frame.TASK_SYSTEMS.values():
+                return response({k:synthetic_frame()[k] for k in schema['properties']})
             if system == SOURCE_AUDIT: return response({'verdict': 'unsupported', 'reason': 'Invented claim'})
             raise AssertionError('Rejected sources must not reach common gate')
         report = self.factory(provider=provider)

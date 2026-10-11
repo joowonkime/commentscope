@@ -4,6 +4,53 @@
 공통 주장에 대한 근거 검사를 통과한 묶음만 잠정 에이전트로 만듭니다. 개발·논문을 위한 사후 표본 평가는
 이 실행 경로와 별개입니다. 자동 판정은 독립 품질 검증이나 사실 검증을 뜻하지 않습니다.
 
+## 호환성 필드 실험 (2026-10-11, 기본 미채택)
+
+실제 원문 범위·시점·조건 혼합을 줄이기 위해 `claim_frame.py`와 offline
+`experiments/claim_frame_probe.py`를 추가했습니다. 비교 규칙은 코드에 있지만 분류값은 여전히 모델 예측입니다.
+기본 실행은0.2를 유지합니다. 실패한 새 필터는 `build`에 `--experimental-frame-guard`를 명시한 경우에만0.3으로 실행됩니다.
+
+고정 합성16사례는 공개 fixture `tests/fixtures/claim-frame-cases.json`이며,
+기존 실제 개발18member는 이전 assistant 평가와 비교했습니다. 양성은 원문 충실성과 공통 주장 지지가 모두 supported인7개입니다.
+합성 기대값은 첫 실행 전에 고정했고 두 번째 실행에서도 바꾸지 않았습니다. 기대값은 모델에 전달하지 않습니다.
+실제 표본은 이미 확인한 개발 자료이며 assistant 판단은 독립 사람 gold가 아닙니다.
+
+| 방식 | 합성 정상 유지 | 합성 오류 차단 | 실제 개발 정상 유지 | 실제 개발 오류 차단 |
+| --- | --- | --- | --- | --- |
+| 한 요청의 전체 필드 분류 | 3/7 | 8/9 | 5/7 | 11/11 |
+|4개 작업으로 분해한 현재 실험 모듈 | 0/7 | 9/9 | 0/7 | 11/11 |
+
+첫 방식은 should/will 혼합을 놓쳤고, 수동태 미래 예측·조건부 권고·가능성 재표현을 잘못 거절했습니다.
+분해 방식에서는 단순 문장도 status=unclear/mixed로 분류해 전부 차단했습니다. 정상 보존0인 음성 차단100%는
+의미 식별 성공이 아닙니다. 같은 anchor 거절이 여러 edge를 함께 막으므로 각 음성을 독립적으로 맞혔다고 해석하지 않습니다.
+필드별 표현을 나눠 요청하는 것만으로 해결된다는 가설도 이번 결과에서 지지되지 않았습니다.
+
+private 원시 결과(원본을 수정하지 않음):
+
+- `runs/claim-frame-probe-20261011/report.json`: SHA256 `2c765dabda9af06a25d4583d49c46787a7ec15ed6b42e45d9c56584deaacee91`
+- `runs/claim-frame-probe-20261011-v2/report.json`: SHA256 `510f8072b5c31e7cd2e275a7d7a2c88b3e2d77e5b10ad9e7de49910714fd9a65`
+
+모델은 기존 Qwen3-4B-Instruct-2507 Q4_K_M/llama.cpp b11541/loopback8091, ngl99/ctx8192/parallel1입니다.
+새 수집·유료 API·댓글 외부 전송 없이 기존 snapshot을 사용했습니다. 합성/실제34쌍은 필터 진단이며
+새 cluster/agent 생성 실험이 아닙니다.0.3의64개/1,000개 통합 실행은 진행하지 않았습니다.
+이후 기본 미채택/loader 보완은 진단의 모델 요청을 바꾸지 않으며 실제 실행 manifest의 code hash는 그대로 보존합니다.
+기존 전체0.1 bundle8개,0.2 소표본 bundle0개는 현재 loader로 다시 확인했습니다.
+
+재현 진단(README의 모델 서버 선행, 로컬 비공개 baseline/평가 파일 필요):
+
+```bash
+python experiments/claim_frame_probe.py data/ubi-research-20261010.json \
+  runs/automatic-factory-20261011-full1000/report.json \
+  artifacts/automatic-factory-20261011-assistant-evaluation.json \
+  --run-dir runs/claim-frame-probe-new
+```
+
+필터는 원문/claim 각각4요청을 사용하며 같은 입력은 cache 재사용합니다. 조건 비교와 형식 재시도는 추가입니다.
+edge 예산을 실제 모델 요청 수/비용으로 읽으면 안 됩니다. 기본 미채택으로 이 추가 호출은 기본 실행에 발생하지 않습니다.
+다음은 프롬프트를 계속 늘리기보다, 실패한 필드 분류를 작은 대체 classifier와 같은 입력으로 비교할지 결정하는 단계입니다.
+대체 모델 성능은 아직 측정하지 않았으며 어떤 모델도 해결책으로 승인하지 않았습니다. 정상 유지/오류 차단 둘 다 확인한 뒤
+새 미사용 표본, 그 다음 통합 실행으로 진행합니다. 기존 한국어 답변 의미 변화와 source reason300자 경계 문제도 미해결입니다.
+
 ## 구현 경계
 
 ```text

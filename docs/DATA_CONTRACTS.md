@@ -354,7 +354,7 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 ## Automatic Factory와 잠정 에이전트
 
 서비스 실행 시 수동 처리가 없는 별도 자동 경로입니다. 기존 assistant-reviewed artifact나 수동 승인을 입력으로 받지 않습니다.
-새 실행은 `automatic-factory-0.2`, bundle은 `automatic-perspective-bundle-0.1`을 사용합니다.
+기본 실행은 `automatic-factory-0.2`, bundle은 `automatic-perspective-bundle-0.1`을 사용합니다.
 과거 `automatic-factory-0.1`도 재검증해 읽되0.2 실행으로 재표기하지 않습니다.
 
 - 추출: `{status: claims|non_substantive|uncertain|context_dependent, claims: [{statement, mode, segment_ids}]}`.
@@ -381,6 +381,27 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
   기존 검수 profile의 계약은 유지. 자동/검수 지원 origin을 UI와 export에서 구분.
 - 0 agent도 유효한 bundle이며 UI는 질문을 차단하고 자동 보류를 표시. 이웃 부족은 검증된 rare가 아니라
   `insufficient_neighbors_unverified`. snapshot의 미선택/중복/비주장/실패/미배정 정보를 숨기지 않음.
+
+### 실험적 호환성 guard: automatic-factory-0.3
+
+- 명시적 `--experimental-frame-guard`에서만 사용. 실제 개발 회귀 실패로 기본 미채택입니다.
+  config/검색/agent bundle 형식은 유지하고 report의 `frame_policy=claim-frame-0.2`와 gate별 `frame_guard`를 추가합니다.
+- frame: `status=atomic|mixed|context_dependent|unclear`,
+  `scope=self|individual_other|population|unclear`, `time=past|present|future|timeless|unclear`,
+  `commitment=assertion|prediction|possibility|normative|wish|unclear`, `condition=none|explicit|unclear`,
+  `condition_quotes`(최대3개, 각1..179자, 입력 span의 정확한 부분 문자열).
+  explicit만 비어 있지 않은 인용을 허용합니다. schema 상한180자는 validator에서 경계 잘림 가능성으로 거절합니다.
+- guard: version/input_digest/frames/condition_checks/blocked_reasons/allowed.
+  frames는 anchor/member claim ID별 source/claim을 가지며 각 측은4개 components의 원시 요청 결과와
+  조합 output/errors를 보존합니다. 평가 expected 라벨은 여기에 포함하지 않습니다.
+- 조건 비교는 `verdict=equivalent|different|unclear`. 동일 공백 정규화 인용은 코드 비교, 그 외 별도 모델 요청.
+  거절 시 `errors=[frame_incompatible], output=null, attempts=[]`; source/common gate 미호출입니다.
+  통과 시0.2 source audit 및 common gate가 여전히 필수입니다.
+- loader는0.1/0.2/0.3을 구분하고0.3의 policy를 gate0개인 경우도 확인합니다.
+  입력 binding·component 조합·조건 판정·최종 allowed를 재계산하며 누락/변경 시 거절합니다.
+  replay는 보존된 모델 출력의 구조 검증이지 모델 해석이 참이라는 증명이 아닙니다.
+- `claim-frame-diagnostic-0.1`은 별도 offline 실험 artifact입니다. expected 라벨/합성 사례/기존 개발 member,
+  baseline·fixture·reference·code·prompt hash 및 결과를 기록합니다. 독립 gold나 서비스 입력이 아닙니다.
 
 ## 합성 예제의 읽는 순서
 

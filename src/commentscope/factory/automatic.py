@@ -10,13 +10,14 @@ from pathlib import Path
 from commentscope.agents.profiles import require_live
 from commentscope.agents.runtime import request
 from commentscope.cluster_baseline import MODEL, REVISION
-from commentscope.factory.automatic_contract import (VERSION, LEGACY_VERSION, EXTRACT, GATE, GATE_SCHEMA, digest,
+from commentscope.factory.automatic_contract import (VERSION, LEGACY_VERSION, SOURCE_ONLY_VERSION, EXTRACT, GATE, GATE_SCHEMA, digest,
     segments, extraction_schema, validate_extraction, validate_gate, passed,
     SOURCE_AUDIT, SOURCE_SCHEMA, validate_source, source_passed)
 from commentscope.factory.claim_clusters import embed, read_json, sha
 from commentscope.ingestion import load_snapshot, normalize_snapshot
 from commentscope.providers.local_llama import generate
 from commentscope.storage import write_json_exclusive
+from commentscope.factory import claim_frame
 
 BUNDLE_VERSION = 'automatic-perspective-bundle-0.1'
 PROFILE_STATUS = 'auto_accepted_unvalidated'
@@ -181,6 +182,13 @@ def isolated_judge(calls, anchor, member, sources):
     return {**result, 'source_audit': audit}
 
 
+def framed_judge(calls, anchor, member, sources):
+    frame = claim_frame.guard(calls, anchor, member, checked_call)
+    if not frame['allowed']:
+        return {'output': None, 'errors': ['frame_incompatible'], 'attempts': [], 'frame_guard': frame}
+    return {**isolated_judge(calls, anchor, member, sources), 'frame_guard': frame}
+
+
 def group_claims(units, candidates, sources, config, judge):
     """Greedy disjoint support stars; every member has a direct gate to the shared core."""
     by_id = {u['claim_id']: u for u in units}
@@ -253,7 +261,9 @@ def accounting(snapshot, selected, aliases, records, units, groups, gates, unres
 
 
 def run(snapshot_path, directory, config=Config(), *, provider=local_provider, embedder=embed,
-        metadata=None, progress=lambda value: None):
+        metadata=None, progress=lambda value: None, experimental_frames=False):
+    if type(experimental_frames) is not bool:
+        raise ValueError('experimental_frames must be bool')
     config.validate()
     loaded = load_snapshot(snapshot_path)
     snapshot = loaded.snapshot
@@ -262,18 +272,24 @@ def run(snapshot_path, directory, config=Config(), *, provider=local_provider, e
         raise ValueError('Snapshot limited to 1000 comments in this phase')
     selected, aliases = select_sources(snapshot, config)
     sources = {s.comment_id: s for s in snapshot.comments}
-    manifest = {'artifact_kind': VERSION, 'snapshot_sha256': loaded.sha256,
+    manifest = {'artifact_kind': VERSION if experimental_frames else SOURCE_ONLY_VERSION, 'snapshot_sha256': loaded.sha256,
                 'expires_at': snapshot.usage.expires_at, 'config': asdict(config),
                 'selection': 'canonical IDs sorted by SHA256, first limit; not a representative sample',
                 'selected_ids': [s.comment_id for s in selected], 'model': metadata or {},
                 'embedding': {'model': MODEL, 'revision': REVISION},
                 'code_sha256': {name: sha(Path(__file__).parent.parent / name) for name in
-                               ['factory/automatic.py', 'factory/automatic_contract.py', 'factory/claim_clusters.py',
+                               ['factory/automatic.py', 'factory/automatic_contract.py', 'factory/claim_frame.py', 'factory/claim_clusters.py',
                                 'cluster_baseline.py', 'agents/runtime.py', 'providers/local_llama.py']},
-                'prompt_sha256': {'extract': digest(EXTRACT), 'gate': digest(GATE), 'source': digest(SOURCE_AUDIT)},
+                'prompt_sha256': {'extract': digest(EXTRACT), 'gate': digest(GATE), 'source': digest(SOURCE_AUDIT),
+                                  'frame': digest(claim_frame.TASK_SYSTEMS), 'conditions': digest(claim_frame.CONDITION_SYSTEM)},
                 'isolation_policy': 'no_parent_text; source_audit_before_common_claim; context_relations_not_evidence',
                 'request_settings': {'temperature': 0, 'seed': 407, 'max_tokens': 900},
                 'human_handling': False, 'semantic_guarantee': False}
+    if experimental_frames:
+        manifest['frame_policy'] = claim_frame.VERSION
+    else:
+        for name in ['frame', 'conditions']:
+            manifest['prompt_sha256'].pop(name)
     calls = Calls(directory, manifest, provider)
     records, units = [], []
     for index, source in enumerate(selected):
@@ -307,7 +323,8 @@ def run(snapshot_path, directory, config=Config(), *, provider=local_provider, e
     checked = 0
     def judge(anchor, member):
         nonlocal checked
-        result = isolated_judge(calls, anchor, member, sources)
+        judge_impl = framed_judge if experimental_frames else isolated_judge
+        result = judge_impl(calls, anchor, member, sources)
         checked += 1
         progress({'stage': 'gate', 'checked': checked, 'budget': config.max_gate_calls})
         return result
@@ -327,9 +344,11 @@ def build_bundle(snapshot_path, report):
     loaded = load_snapshot(snapshot_path)
     snapshot = loaded.snapshot
     require_live(snapshot.usage.expires_at)
-    if (report.get('artifact_kind') not in [VERSION, LEGACY_VERSION] or report.get('snapshot_sha256') != loaded.sha256
+    if (report.get('artifact_kind') not in [VERSION, SOURCE_ONLY_VERSION, LEGACY_VERSION] or report.get('snapshot_sha256') != loaded.sha256
             or report.get('expires_at') != snapshot.usage.expires_at or report.get('human_handling') is not False):
         raise ValueError('Automatic report provenance mismatch')
+    if report['artifact_kind'] == VERSION and report.get('frame_policy') != claim_frame.VERSION:
+        raise ValueError('Missing typed frame policy')
     config = Config(**report['config']); config.validate()
     selected, aliases = select_sources(snapshot, config)
     if report['selected_ids'] != [s.comment_id for s in selected]:
@@ -382,7 +401,15 @@ def build_bundle(snapshot_path, report):
             raise ValueError('Missing gate decision') from None
         if item['anchor_id'] != anchor['claim_id'] or item['member_id'] != member['claim_id']:
             raise ValueError('Gate edge changed')
-        if report['artifact_kind'] == VERSION and 'source_audit' not in item['result']:
+        frame_allowed = True
+        if report['artifact_kind'] == VERSION:
+            if report.get('frame_policy') != claim_frame.VERSION or 'frame_guard' not in item['result']:
+                raise ValueError('Missing typed frame guard')
+            frame_allowed = claim_frame.replay(anchor, member, item['result']['frame_guard'])
+            if not frame_allowed and (item['result']['errors'] != ['frame_incompatible']
+                                      or item['result']['output'] is not None or item['result']['attempts']):
+                raise ValueError('Blocked frame reached semantic gate')
+        if report['artifact_kind'] in [VERSION, SOURCE_ONLY_VERSION] and frame_allowed and 'source_audit' not in item['result']:
             raise ValueError('Missing isolated source audit')
         return item['result']
     groups, gates, unresolved, hit = group_claims(rebound, report['candidates'], sources, config, replay)

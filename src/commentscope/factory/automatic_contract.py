@@ -5,7 +5,8 @@ import re
 
 from commentscope.contracts.perspective_draft import obj, array
 
-VERSION = 'automatic-factory-0.2'
+VERSION = 'automatic-factory-0.3'
+SOURCE_ONLY_VERSION = 'automatic-factory-0.2'
 LEGACY_VERSION = 'automatic-factory-0.1'
 STATUSES = ['claims', 'non_substantive', 'uncertain', 'context_dependent']
 MODES = ['normative', 'prediction', 'possibility', 'evaluation', 'description', 'wish', 'unclear']
@@ -139,6 +140,8 @@ def validate_gate(value):
 
 
 def passed(result):
+    if 'frame_guard' in result and result['frame_guard'].get('allowed') is not True:
+        return False
     if 'source_audit' in result and not source_passed(result['source_audit']):
         return False
     return not result['errors'] and not validate_gate(result['output']) and all(result['output'][k] == 'supported' for k in CHECKS)

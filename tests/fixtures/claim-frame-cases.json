@@ -1,0 +1,22 @@
+{
+  "version": "claim-frame-cases-0.1",
+  "purpose": "Synthetic development fixtures, not independent gold or topic accuracy.",
+  "cases": [
+    {"id":"positive_generic","left":"Automation is replacing routine work.","right":"Routine jobs are currently being replaced by automation.","expected":true},
+    {"id":"positive_future","left":"Automation will replace routine work.","right":"Routine jobs will be replaced by automation.","expected":true},
+    {"id":"positive_normative","left":"Safety inspections should be required.","right":"We ought to require safety inspections.","expected":true},
+    {"id":"positive_multilingual","left":"Safety inspections should be mandatory.","right":"안전 검사를 의무화해야 한다.","expected":true},
+    {"id":"positive_personal","left":"I would keep working with a basic income.","right":"I would continue working with a basic income.","expected":true},
+    {"id":"positive_condition_paraphrase","left":"If rent increases, housing support should increase.","right":"If housing rent goes up, housing support should increase.","expected":true},
+    {"id":"positive_possibility","left":"Automation might reduce routine jobs.","right":"Automation could reduce routine jobs.","expected":true},
+    {"id":"negative_self_population","left":"I would continue working with a basic income.","right":"People would continue working with a basic income.","expected":false},
+    {"id":"negative_present_future","left":"Automation is replacing routine work.","right":"Automation will replace routine work.","expected":false},
+    {"id":"negative_past_present","left":"The factory replaced workers last year.","right":"The factory is replacing workers now.","expected":false},
+    {"id":"negative_necessary_predicted","left":"Basic income should be introduced.","right":"Basic income will be introduced.","expected":false},
+    {"id":"negative_possible_certain","left":"Automation might reduce routine jobs.","right":"Automation will reduce routine jobs.","expected":false},
+    {"id":"negative_condition_removed","left":"If jobs disappear, basic income should be introduced.","right":"Basic income should be introduced.","expected":false},
+    {"id":"negative_conditions_differ","left":"If rent increases, housing support should increase.","right":"If unemployment increases, housing support should increase.","expected":false},
+    {"id":"negative_source_claim_scope","left":"I would continue working.","left_claim":"People would continue working.","right":"People would continue working.","expected":false},
+    {"id":"negative_context_only","left":"Totally agree.","left_claim":"Basic income should be introduced.","right":"Basic income should be introduced.","expected":false}
+  ]
+}

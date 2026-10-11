@@ -82,6 +82,8 @@ def main():
     build.add_argument('--neighbors', type=int, default=8)
     build.add_argument('--min-similarity', type=float, default=0.55)
     build.add_argument('--max-gate-calls', type=int, default=2000)
+    build.add_argument('--experimental-frame-guard', action='store_true',
+                       help='Opt into failed-development typed compatibility filter; not quality approved')
     ask = commands.add_parser('ask')
     ask.add_argument('snapshot'); ask.add_argument('report'); ask.add_argument('bundle')
     ask.add_argument('--question', required=True); ask.add_argument('--output', type=Path, required=True)
@@ -103,6 +105,7 @@ def main():
         config = Config(limit=args.limit, neighbors=args.neighbors, min_similarity=args.min_similarity,
                         max_gate_calls=args.max_gate_calls)
         report = run(args.snapshot, args.run_dir, config, metadata=metadata,
+                     experimental_frames=args.experimental_frame_guard,
                      progress=lambda p: print(json.dumps(p), flush=True))
         bundle = build_bundle(args.snapshot, report)
         require_live(bundle['expires_at'])
