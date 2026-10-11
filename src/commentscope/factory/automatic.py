@@ -226,12 +226,13 @@ def accounting(snapshot, selected, aliases, records, units, groups, gates, unres
     assigned = {uid for g in groups for uid in g['member_ids']}
     covered = {u['source_comment_id'] for u in units if u['claim_id'] in assigned}
     selected_ids = {s.comment_id for s in selected}
-    summary = {'source_count': len(snapshot.comments), 'canonical_sources': sum(not a for a in aliases.values()),
+    canonical_count = sum(not a for a in aliases.values())
+    summary = {'source_count': len(snapshot.comments), 'canonical_sources': canonical_count,
                'selected_sources': len(selected), 'duplicate_aliases': sum(bool(a) for a in aliases.values()),
                'source_statuses': dict(Counter(r['status'] for r in records)), 'claims': len(units),
                'auto_agents': len(groups), 'covered_unique_sources': len(covered),
                'coverage_of_selected': len(covered)/len(selected) if selected else 0,
-               'coverage_of_canonical': len(covered)/sum(not a for a in aliases.values()),
+               'coverage_of_canonical': len(covered)/canonical_count if canonical_count else 0,
                'unassigned_claims': len(unresolved), 'gate_decisions': len(gates), 'gate_budget_exhausted': budget_hit,
                'accepted_perspectives': 0, 'quality_status': 'not_independently_evaluated'}
     dispositions = [{'source_comment_id': s.comment_id,

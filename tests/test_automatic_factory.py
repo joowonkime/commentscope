@@ -149,6 +149,15 @@ class AutomaticPipelineTests(unittest.TestCase):
                 self.assertEqual(len(report['records']), 3)
                 self.assertEqual(build_bundle(self.snapshot, report)['agents'], [])
 
+    def test_empty_snapshot_produces_zero_agents_without_inference(self):
+        self.raw['comments'] = []
+        path = self.root/'empty.json'; write_json_exclusive(path, self.raw)
+        def forbidden(*args): raise AssertionError('Empty snapshot must not call model')
+        report = run(path, self.root/'empty-run', provider=forbidden, embedder=forbidden)
+        self.assertEqual(report['summary']['canonical_sources'], 0)
+        self.assertEqual(report['summary']['coverage_of_canonical'], 0)
+        self.assertEqual(build_bundle(path, report)['agents'], [])
+
     def test_gate_budget_never_auto_accepts_unchecked_member(self):
         report = self.factory(config=Config(max_gate_calls=2))
         self.assertEqual(report['summary']['gate_decisions'], 2)

@@ -15,6 +15,17 @@ const errors = {
   local_server_error: '로컬 서버 또는 기록 저장 오류입니다. 서버와 저장 경로를 확인해주세요.',
   round_failed_check_local_inputs_or_storage: '질문 처리를 완료하지 못했습니다. 원문 파일·사용 기한·저장 공간을 확인해주세요. 불완전한 답변은 표시하지 않았습니다.'
 };
+const factoryReasons = {
+  insufficient_neighbors_unverified: '유사 후보 부족 — 소수 관점인지 검색 누락인지는 미검증',
+  gate_budget_exhausted: '정해 둔 의미 검사 예산 소진',
+  no_accepted_group: '자동 기준을 통과한 묶음에 배정되지 않음',
+  unclear_mode: '주장 표현 유형이 불확실함',
+  extraction_failed: '주장 추출 또는 출력 형식 검사 실패',
+  context_budget_exceeded: '원문·부모 문맥 길이 상한 초과 — 자르지 않고 보존',
+  segmentation_limit: '원문 구간 수 상한 초과',
+  non_substantive: '모델이 실질적인 주장이 없는 댓글로 분류',
+  uncertain: '모델이 해석 불확실로 분류'
+};
 function el(tag, text, cls) { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; }
 function showError(message) { $('error').textContent = message; $('error').hidden = !message; }
 async function api(path, body) {
@@ -55,7 +66,7 @@ function renderProfiles() {
   const meta = $('metadata'); meta.replaceChildren();
   meta.append(el('p', `수집 표본 ${state.bundle.dataset.sample_size}개 중 ${automatic ? '자동 처리 ' + state.bundle.dataset.processed_sources : '검수 ' + state.bundle.dataset.reviewed_sources}개. 전체 댓글을 모두 가져온 결과나 대표성 있는 표본이 아닙니다.`));
   meta.append(el('p', `댓글 사용 기한: ${state.bundle.expires_at}`));
-  const list = el('ul'); for (const n of state.bundle.non_agents) list.append(el('li', `${n.title} · ${n.reason} · ${n.member_ids.join(', ')}`)); meta.append(list);
+  const list = el('ul'); for (const n of state.bundle.non_agents) list.append(el('li', `${n.title} · ${factoryReasons[n.reason] || n.reason} · ${n.member_ids.join(', ')}`)); meta.append(list);
   meta.append(el('pre', JSON.stringify({dataset:state.bundle.dataset, runtime:state.runtime}, null, 2)));
 }
 const reasonLabels = {not_in_evidence:'이 관점의 댓글에 필요한 정보가 없습니다.', generation_or_contract_error:'모델 연결·생성 또는 출력 형식 문제입니다. 로컬 모델 서버 상태를 확인하세요.', audit_rejected_or_failed:'원문 검사에서 거절되거나 검사에 실패했습니다. 검사기의 과도한 거절일 수도 있습니다.', no_supported_answer:'검사된 답변을 확보하지 못했습니다.'};

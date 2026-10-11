@@ -12,15 +12,34 @@ from commentscope.factory.automatic import Config, run, build_bundle, load_bundl
 from commentscope.factory.claim_clusters import sha
 from commentscope.storage import write_json_exclusive
 
+REASONS = {
+    'insufficient_neighbors_unverified': '유사 후보 부족 — 소수 관점인지 검색 누락인지는 미검증',
+    'gate_budget_exhausted': '의미 검사 예산 소진',
+    'no_accepted_group': '자동 기준을 통과한 묶음에 배정되지 않음',
+    'unclear_mode': '주장 표현 유형 불확실',
+    'extraction_failed': '추출 또는 출력 형식 검사 실패',
+    'context_budget_exceeded': '원문·문맥 길이 상한 초과',
+    'segmentation_limit': '원문 구간 수 상한 초과',
+    'non_substantive': '모델이 실질적인 주장 없음으로 분류',
+    'uncertain': '모델이 해석 불확실로 분류',
+}
+
 
 def render(report, bundle):
     esc = lambda value: html.escape(str(value), quote=True)
+    counts = report['summary']
     parts = ['<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
              '<title>CommentScope 자동 에이전트 생성 결과</title>',
              '<style>body{font:16px/1.6 system-ui;max-width:1050px;margin:30px auto;padding:16px}article{border:1px solid #bbb;padding:18px;margin:16px 0}pre,blockquote{white-space:pre-wrap;overflow-wrap:anywhere}small{color:#555}</style>',
              '<h1>댓글에서 자동 생성한 관점 에이전트</h1>',
              '<p>수동 검수 입력 없이 생성했습니다. 모델의 잠정 판정이며 독립 평가·의미 정확성 보장이 아닙니다. 에이전트 수는 고정하지 않습니다.</p>',
-             '<h2>처리 범위와 미배정</h2><pre>'+esc(json.dumps(report['summary'], ensure_ascii=False, indent=2))+'</pre>']
+             '<h2>처리 범위와 미배정</h2>',
+             '<p>입력 댓글 '+str(counts['source_count'])+'개 · 중복 제외 '+str(counts['canonical_sources'])+'개 중 '
+             +str(counts['selected_sources'])+'개 선택 · 주장 후보 '+str(counts['claims'])+'개</p>',
+             '<p><strong>잠정 에이전트 '+str(len(bundle['agents']))+'개</strong> · 반영된 원문 '+str(counts['covered_unique_sources'])
+             +'개 (선택 표본의 '+format(counts['coverage_of_selected']*100, '.1f')+'%) · 미배정 주장 '+str(counts['unassigned_claims'])+'개</p>',
+             '<p>의미 검사 '+str(counts['gate_decisions'])+'건 · 예산 소진 '+('있음' if counts['gate_budget_exhausted'] else '없음')+'</p>',
+             '<details><summary>전체 처리 집계와 실패 상태</summary><pre>'+esc(json.dumps(counts, ensure_ascii=False, indent=2))+'</pre></details>']
     if not bundle['agents']:
         parts.append('<p>현재 설정에서 충분히 지지되는 관점을 확보하지 못했습니다. 사람의 승인을 기다리는 상태가 아니라 자동 보류 결과입니다.</p>')
     for agent in bundle['agents']:
@@ -36,7 +55,7 @@ def render(report, bundle):
     units = {u['claim_id']: u for u in report['units']}
     for item in bundle['non_agents']:
         unit = units.get(item['title'])
-        parts.append('<details><summary>'+esc(item['title'])+' · '+esc(item['reason'])+'</summary>')
+        parts.append('<details><summary>'+esc(item['title'])+' · '+esc(REASONS.get(item['reason'], item['reason']))+'</summary>')
         if unit:
             parts.append('<p>'+esc(unit['statement'])+'</p>')
             parts.extend('<blockquote>'+esc(p['text'])+'</blockquote>' for p in unit['spans'])
