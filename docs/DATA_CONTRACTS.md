@@ -468,6 +468,26 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
   검증합니다. source 만료/입력 hash 변경을 거절합니다. 실제 최신 진단은 profiles=[]이므로 실제 새 agent 질의는 실행되지 않았습니다.
   기존 앱 자동 loader는 새 진단 report를 승인된 입력으로 취급하지 않습니다. corpus/원시 결과는 계속 Git 제외입니다.
 
+### 원문 선택 진단 계약
+
+- `evidence-units-0.1`: 모델은 `status`와 최대4개 `first/last` sentence-ID 범위만 반환합니다.
+  host가 원문에서 `statement`를 복사하고 `focus_spans`, 문맥용 `spans`, `topic_quote`,
+  `source_digest`, source ID와 offset으로 계산한 claim ID를 저장합니다. 재결합 검증에서 다르면 거절합니다.
+- eligibility는 전체 자기 댓글과 focus만 받습니다. `status=substantive` 및 원문에 있는 topic quote가 필요합니다.
+  구조적 substring 검증은 미해결 지시 대상이나 의미 품질을 보장하지 않습니다.
+- 짧은 댓글 전체 또는 긴 댓글의 focus/topic envelope와 인접 문장을 최대500자로 저장합니다.
+  넘으면 보류하며 부분 절단하지 않습니다. 현재 긴 댓글에서 필요한 앞 문장이 빠지는 실패가 발견됐습니다.
+  따라서 전체 댓글 eligibility와 최종 evidence의 의미 동등성을 완료 기능으로 취급하지 않습니다.
+- `evidence-core-0.1`: 공통 후보의 독립성, 각 source→core NLI와 qualification 감사를 요구합니다.
+  원문 표현 우선, 생성 제안은 최대1개이며 생성 문장은 근거가 아닙니다.
+- `common-core-assembly-0.3`: `seed_order=source_density`, 서로 다른 두 source의 유사도 우선.
+  기존 degree 순서와 최소3source·직접 가입·고정 core·예산 규칙은 동일합니다. 동적 순서도 replay합니다.
+- `evidence-units-probe-0.1`: 고정 source_plan·fixtures/input/code hash·runtime·만료·실패를 기록합니다.
+  `policy.schema_visible`와 대상 단계를 명시하며 schema 노출은 request cache 전에 수행합니다.
+  raw prompt가 다른 결과를 재사용하지 않습니다. 기존 기본 transport나 Factory loader를 변경하지 않습니다.
+- 진단 보고서는 정식 bundle이 아니며 `quality_gate_passed=false`, `independent_gold=false`입니다.
+  모델 호출 없는 exact replay는 재현성 검사이지 의미 정확성 증명이 아닙니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.

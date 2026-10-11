@@ -469,6 +469,19 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   새 source-only 추출을 수행합니다. 과거 claim이나 사람 labels는 새 모델 입력이 아니고, 이 표본은 대표성 평가가 아닙니다.
   전체1,000개 새 추출·수집은 하지 않습니다. 실제 profile이 나오면 모든 근거와 실제 답변을 별도로 평가합니다.
 
+- 실행 결과: 최초 선택형 추출은 정상1/8·제외8/8이었습니다. `response_format` schema가 prompt에 보이지 않는
+  실행 계약 누락을 확인하고 선택/eligibility 두 단계에만 opt-in `SchemaVisibleCalls`를 추가했습니다.
+  cache 전에 실제 prompt를 구성하며 기존 request와 분리합니다. 같은 표본/모델/threshold에서 정상7/8·제외7/8입니다.
+  기제는 [공식 llama.cpp 문서](https://github.com/ggml-org/llama.cpp/blob/master/grammars/README.md)와 일치하지만
+  모든 과거 오류의 원인이라고 일반화하지 않습니다. 기본 transport와 다른 검사 prompt는 그대로입니다.
+- 확인12개에서 생성12units 사후 검토: 실질 주장8, 미해결 지시어2, 최종 evidence 문맥 누락1, 수사 의문문 모호성1.
+  전체 댓글의 eligibility와 저장된 evidence의 문맥이 어긋날 수 있습니다. 조건부 의미 보존의 완료 기능이 아닙니다.
+- 실제64개59units/3source 가능anchor1개, 밀집32개22units/anchor2개. degree/density 각각2·4결정 후0agent이며
+  예산 미소진입니다. 순서 변경 성공은 입증되지 않았습니다. 자유 텍스트 topic quote의 원문 불일치24·3건도 남습니다.
+- 두 probe와 두 조립을 모델 호출 없이 replay했습니다. 문자 보존·재현성은 확인했으나 품질/기본 승격은 하지 않습니다.
+  후속은 topic quote의 위치 선택 계약, 최종 evidence 기준 eligibility, 알려진 실제 연결의 retrieval recall 측정입니다.
+  수치·실패·재현 경로는 [원문 선택 진단](EVIDENCE_SELECTION_DIAGNOSTIC.md)에 저장합니다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

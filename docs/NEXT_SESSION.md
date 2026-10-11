@@ -1,6 +1,35 @@
 # 다음 세션 시작점
 
-## 최신 검색과 방향성 검사 2026-10-12
+## 최신 원문 선택과 실행 계약 검증 2026-10-12
+
+- [원인·수정·증거](EVIDENCE_SELECTION_DIAGNOSTIC.md), ADR-023, DATA_CONTRACTS 원문 선택 진단 계약이 최신입니다.
+  기본 Factory0.2와 main은 그대로이며 `evidence_units`/`evidence_core`는 진단 경로입니다.
+- 모델은 원문 sentence-ID 범위만 선택하고 host가 statement를 복사합니다. source digest/offset/focus/context를
+  재결합해 검증합니다. 임의100개 원문의 변조 검사 통과는 문자 보존 검사이지 의미 정확도 보증이 아닙니다.
+- 최초 d081e0f: 고정 정상1/8·제외8/8, 실제12개→1unit, 확인12개→2units.
+  schema는 response_format에만 있어 모델에 보이지 않았습니다. 공식 llama.cpp 문서로 기제를 확인했습니다.
+- 1b1dfd9: 선택·eligibility 두 단계만 schema를 system에도 노출했습니다. cache 전에 구성해 raw request와 hash가
+  실제 prompt를 반영합니다. 모델/decoding/NLI/기대값/표본/기존 의미 감사는 변경하지 않았습니다.
+  고정 정상7/8·제외7/8, 실제12개→13units, 확인12개→12units. 인용 없는 지시어 오승인과 정상 경험 누락이 남습니다.
+- 확인12개에서 생성된12units를 전부 assistant가 검토했습니다. 실질 주장8개, 미해결 지시어2개,
+  최종 evidence 문맥 누락1개, 수사 의문문 모호성1개. 독립 gold/사실 확인/서비스 수동 승인이 아닙니다.
+- 기존20claims의 문맥 ablation은500자 이내16개에서 모델 승인9→13. 복지 문맥 복구와 함께 잘못된
+  otherwise 연결도 새로 승인했습니다. 품질 향상 점수로 쓰지 않습니다.
+- 실제64개 새 추출:59units/35sources, 이웃 보유10개/3source 가능anchor1개, 각 순서2결정→0agent.
+  자동 밀집32개:22units/16sources, 이웃 보유6개/3source 가능anchor2개, 각 순서4결정→0agent.
+  degree/source_density 모두 예산 미소진입니다. 순서 개선/새 agent 생성 효과가 입증되지 않았습니다.
+- 주제 인용의 자유 텍스트 복사가 원문과 달라64개에서24건,32개에서3건 거절됐습니다. 조건·NLI·공통 후보
+  실패도 남습니다. 실제 새 profile이 없으므로 새 agent 질문/토론은 실행하지 않았습니다.
+- private `artifacts/evidence-units-overview-20261012.html`이 한눈에 보는 결과입니다.
+  원시 `runs/evidence-units-20261012/`, `runs/evidence-units-20261012-visible/`,
+  사후 평가 `artifacts/evidence-units-evaluation-20261012.json`. 최초/보완 probe 및 두 조립을 모델 호출0으로 replay했습니다.
+- 다음 우선순위: 주제 인용도 자유 텍스트 대신 원문 위치 선택으로 계약 분리 → **최종 저장 evidence**의 지시 대상
+  완결성 검사 → 알려진 cross-source 공통 주장으로 원문 retrieval recall 측정. 이 세 가지는 아직 후속 미구현입니다.
+  표본에 맞춘 단어 차단/threshold 완화/전체1,000개 재실행으로 넘어가지 않습니다. 밀집 표본도 과거 생성 claim 기하의
+  영향을 받아 대표성이나 회수율 개선 증거로 쓰면 안 됩니다.
+- Python301개/Node4개 로컬 통과. 원문·실행 결과·모델은 Git 제외, PR21 draft/main 미병합 유지입니다.
+
+## 이전 검색과 방향성 검사 2026-10-12
 
 - ADR-022 / AUTOMATIC_FACTORY 최신 절 / DATA_CONTRACTS 방향성 검사 계약부터 읽습니다.
   `candidate_search`와 `grounded_core`는 진단 전용이며 기본 Factory0.2·main은 그대로입니다.
