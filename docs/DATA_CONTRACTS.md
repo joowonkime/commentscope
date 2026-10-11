@@ -403,6 +403,20 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - `claim-frame-diagnostic-0.1`은 별도 offline 실험 artifact입니다. expected 라벨/합성 사례/기존 개발 member,
   baseline·fixture·reference·code·prompt hash 및 결과를 기록합니다. 독립 gold나 서비스 입력이 아닙니다.
 
+### Offline NLI 비교 artifact
+
+- `claim-support-diagnostic-0.1`은 Factory report나 agent bundle이 아닙니다. 서비스 입력/수동 승인 자료로 쓰지 않습니다.
+  snapshot/baseline/reference/fixture/frame 보고서 hash, 원본에 재연결한 cases, 만료, 코드 hash,
+  고정 모델 revision/threshold/runtime, 두 정책 및 다음 단계 조건을 inference 전에 manifest로 저장합니다.
+- 각 case의 checks는 premise/hypothesis와 LocalNLI 원시 logits/scores/relation/errors/시간을 보존합니다.
+  정책은 directional의3검사와 mutual_claims의5검사를 모두 통과해야 allowed이며 원문 실패를 다른 검사로 구제하지 않습니다.
+  `expected`는 별도 offline 라벨이고 모델은 두 문자열만 받습니다. 결과에 따라 기준을 수정하지 않습니다.
+- checkpoint는 입력 hash 파일명과 request/result/result_sha256을 가지며 exact-input cache만 재사용합니다.
+  manifest/입력/결과 hash 변경 시 거절합니다. relation은 scores와 고정 threshold로 다시 계산하며 불일치 시 거절합니다.
+  영어500자/512token 상한은 기존 provider를 따르고 길이 초과를 조용히 자르지 않습니다. 만료 후 추론/캐시 사용 금지.
+- summary는 양성 유지/음성 차단/오류/각 실패 ID를 별도로 기록합니다. `next_stage_eligible`도 품질 승인을 뜻하지 않으며
+  이번 실제 실행에서는 양 정책 모두 false입니다. 개인 댓글 포함 report/overview/checkpoint는 Git 제외입니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.

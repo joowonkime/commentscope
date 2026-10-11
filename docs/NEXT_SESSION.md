@@ -1,5 +1,22 @@
 # 다음 세션 시작점
 
+## 최신 NLI 직접 지지 판정 비교
+
+- ADR-020과 LOCAL_NLI_COMPARISON의 최신 원문 span/claim 절이 최신입니다. 기본 Factory0.2와
+  opt-in frame0.3은 변경하지 않았습니다. `experiments/claim_support_probe.py`로 동일34개 사례만 비교했습니다.
+- 기존 로컬 DeBERTa NLI/CPU/threshold0.8 고정. 원문→claim/공통 claim을 보는 directional과 claim간 양방향까지
+  요구하는 mutual_claims를 사전 고정했습니다. 평가 라벨은 모델에 전달하지 않고 수동 service 입력도 추가하지 않았습니다.
+- 양 정책 모두 합성 정상7/7·오류8/9, 실제 정상5/7. 실제 오류는 단방향10/11, 양방향11/11.
+  실제 정상 중 anchor self4개를 제외하면1/3유지입니다. 현재/미래 혼합과 물가 원문2개의 과잉거절이 남습니다.
+  높은 NLI 점수도 시점 오류를 놓칩니다. 임계값/기대 라벨을 결과에 맞춰 바꾸지 않았습니다.
+- 사전 다음 단계 조건은 양성/음성 모두 일치/오류0이며 두 정책 모두 실패했습니다.64/1,000개 실행이나 새 agent 생성 안 함.
+  영어용 모델의 한국어 합성1개 통과는 다국어 검증이 아닙니다. 기존 개발18개 assistant 평가이지 독립 gold도 아닙니다.
+- private `runs/claim-support-nli-20261011/report.json`, `overview.html`, manifest와113개 checkpoint.
+  고유 추론10.86초/로딩1.04초, IO/import 제외.34사례 전부 cached replay 일치. 원문/출력은 Git 제외입니다.
+- Python255개/Node4개 로컬 테스트 통과. PR21 draft/main 미병합 유지. 새 다운로드/수집/유료 API/서버 실행 없음.
+- 다음은 시간 보존 검사와 최소 공통 명제 자동 탐색을 분리 설계할 단계입니다. 이 둘은 아직 미구현입니다.
+  모델 교체·양방향 강화만으로 자동 관점 생성이 해결됐다고 주장하거나 전체 재실행으로 넘어가지 않습니다.
+
 ## 최신 호환성 필터 실험 — 기본 미채택
 
 - ADR-019 / AUTOMATIC_FACTORY의 호환성 필드 실험 / DATA_CONTRACTS0.3을 먼저 읽습니다.

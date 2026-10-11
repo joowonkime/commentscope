@@ -13,18 +13,13 @@ def unit(uid, source, claim):
     return {'claim_id': uid, 'statement': claim, 'spans': [{'text': source}]}
 
 
-def main():
-    parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('snapshot'); parser.add_argument('baseline_report'); parser.add_argument('reference_evaluation')
-    parser.add_argument('--run-dir', type=Path, required=True)
-    parser.add_argument('--fixtures', default='tests/fixtures/claim-frame-cases.json')
-    args=parser.parse_args()
-    if (args.run_dir/'report.json').exists(): parser.error('Completed output exists')
-    baseline=read_json(args.baseline_report)
-    build_bundle(args.snapshot, baseline)
-    refs=read_json(args.reference_evaluation)
-    if refs['report_sha256'] != sha(args.baseline_report): parser.error('Reference baseline hash mismatch')
-    fixtures=read_json(args.fixtures)
+def prepare_cases(snapshot, baseline_report, reference_evaluation, fixtures_path):
+    """Rebind offline labels to unchanged source units; no labels enter inference payloads."""
+    baseline=read_json(baseline_report)
+    build_bundle(snapshot, baseline)
+    refs=read_json(reference_evaluation)
+    if refs['report_sha256'] != sha(baseline_report): raise ValueError('Reference baseline hash mismatch')
+    fixtures=read_json(fixtures_path)
     by_id={u['claim_id']:u for u in baseline['units']}
     groups={g['cluster_id']:g for g in baseline['groups']}
     cases=[]
@@ -35,10 +30,21 @@ def main():
     for ref in refs['groups']:
         g=groups[ref['cluster_id']]
         for m in ref['members']:
-            if m['claim_id'] not in g['member_ids']: parser.error('Reference membership mismatch')
+            if m['claim_id'] not in g['member_ids']: raise ValueError('Reference membership mismatch')
             cases.append({'id':g['cluster_id']+':'+m['claim_id'], 'kind':'real_development',
                           'expected':m['unit_faithful']==m['common_core']=='supported',
                           'anchor':by_id[g['anchor_id']], 'member':by_id[m['claim_id']]})
+    return baseline, cases
+
+
+def main():
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('snapshot'); parser.add_argument('baseline_report'); parser.add_argument('reference_evaluation')
+    parser.add_argument('--run-dir', type=Path, required=True)
+    parser.add_argument('--fixtures', default='tests/fixtures/claim-frame-cases.json')
+    args=parser.parse_args()
+    if (args.run_dir/'report.json').exists(): parser.error('Completed output exists')
+    baseline, cases=prepare_cases(args.snapshot,args.baseline_report,args.reference_evaluation,args.fixtures)
     manifest={'artifact_kind':'claim-frame-diagnostic-0.1', 'expires_at':baseline['expires_at'],
               'snapshot_sha256':sha(args.snapshot), 'baseline_sha256':sha(args.baseline_report),
               'reference_sha256':sha(args.reference_evaluation), 'fixture_sha256':sha(args.fixtures),
