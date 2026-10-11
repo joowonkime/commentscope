@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**최신: B의 입력/대표/배정 고정 후 로컬 DeBERTa NLI 비교 완료. 기존 필요성→도입 오연결3건은 막았지만 조건 삭제 오판/정상 연결 누락이 남고 실제3개 이상 그룹0개. 기본 Qwen 판정기 변경/승격하지 않음. 결과 `artifacts/local-nli-comparison-20261011.json.html`, 검수 `artifacts/local-nli-comparison-20261011-assistant-review.json`. 승인 PerspectiveSpec/agent는0. 다음은 사용자 의미 기준 피드백과 실제 긍정 pair 검수; 모델/프롬프트 반복이나 전체 corpus 확장부터 하지 말 것.**
+**최신: 사용자가 assistant 평가→수정 루프를 요청. 원문 보존형 주장 계열 실험 두 revision은 개발8/9로 자동 성공 실패, 추가12개도 사전 기준5/12. 실패를 보존한 뒤 assistant가 총21개 전수 검수하여13개 확인/8개 수정. 결과 필요성7·도입 예측4·가능한 이점2·보류8. 최신 한글 화면 `artifacts/source-facet-loop-20261011-reviewed.json.html`. 이는 검수 지원형 계열 제안이지 자동 clustering 성공/독립 gold/승인 agent가 아님. accepted_perspectives=0.**
 
 ## 사용자 결정과 작업 단위
 
@@ -22,6 +22,7 @@
 - 실패 단계 진단: `feat/source-stage-diagnostic` (`feat/entailment-audit-prompt` 기반). PR #11 Ubuntu/Windows CI 통과 이후 진행. 상위 브랜치 임의 병합 없음.
 - 원문 선택형 B: `feat/extractive-keypoint-baseline` (`feat/source-stage-diagnostic` 기반). PR #12 CI 통과 이후 진행. 상위 브랜치/main 임의 병합 없음.
 - 로컬 NLI 비교: `feat/local-nli-comparison` (`feat/extractive-keypoint-baseline` 기반). PR #13 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
+- 원문 계열/검수 루프: `feat/source-facet-review-loop` (`feat/local-nli-comparison` 기반). PR #14 Ubuntu/Windows CI 통과 이후 작업. 상위/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -60,8 +61,8 @@
 ## 이어서 할 일
 
 1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
-2. B의 결과와 아래 최신 검수 기록부터 확인합니다. 원문 대표를 복사해도 잘못 연결하면 왜곡이라는 점이 핵심입니다.
-3. 관계 판정기 비교는 아래 최신 실행까지 완료했습니다. 결과/합성 평가표/assistant 검수에서 사용자 피드백을 받고 실제 긍정 pair를 추가 검수합니다. 부정 사례만의 통과율이나 합성 점수를 일반 정확도로 보고하지 않습니다. 다음 모델/threshold 튜닝을 자동으로 반복하지 않습니다.
+2. 최신 한글 검수21개 결과와 SOURCE_FACET_REVIEW_LOOP.md부터 확인합니다. 모델 판단과 assistant 수정이 모두 남아 있습니다. 사용자가 원문을 전수 검수해야 한다고 다시 요구하지 않습니다.
+3. 자동 분류 성공 기준은 실패한 채로 보존했습니다. 검수된 계열을 유용한 시작점으로 사용할 수 있지만, 계열명을 모든 댓글이 공유하는 완전한 명제로 쓰면 안 됩니다. 다음은 논문 평가 기준/독립 검수 표본과 복합 주장 분해·agent 입력 명세 중 우선순위를 정합니다. 동일 표본에서 모델/threshold 튜닝을 반복해 성공으로 꾸미지 않습니다.
 4. 고정 개발 오류를 해결한 뒤 미사용 소표본에서 재확인합니다. 성공 전에는 1,000개 확장/agent 기능을 붙이지 않습니다. 다른 로컬 판정기 검토는 가능하지만 아직 구현/검증되지 않았고, 외부 API 비교에는 데이터 전송/비용 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
@@ -192,6 +193,18 @@
 - 합성: 정상 연결7/8씩, 부정 기대 relation 일치 Qwen7/8·NLI6/8, 모순2/2·애매2/2씩. NLI는 조건 삭제를 supports(0.987)로 오판. 양쪽 모두 Most→Some 누락, Most→All을 contradicts로 분류. 마지막 사례의 문자적/일상적 해석 차이는 사용자 피드백 대상으로 보존.
 - NLI 기본값 승격 안 함. 새로운 real holdout/인간 gold/실제 positive recall/다국어 검증 없음. 전체 원문 대표 방식이 coverage를 제한할 수 있다는 것은 미검증 가설이지 이번 비교로 확정된 원인 아님.
 - 테스트159개 통과. 실제 댓글/결과/사전 계획/검수는 Git 제외 및 기존 만료 상속. 실행 후 Qwen 서버 종료. agent0/승인0.
+
+## 원문 계열 + assistant 검수 루프 (2026-10-11, 최신)
+
+- 사용자 요청: assistant가 먼저 판정하고 평가→수정 루프로 결과를 만들 것. 모델 내부 설명을 정확성 증명으로 취급하지 않고 원문/판정/코드 배정/검수 수정 경계를 나눔.
+- 이전9개 한글 검수 제안 `artifacts/assistant-cluster-review-20261011.html`과 JSON. 필요성4/도입 예측4/가능한 해결책1. 원문 hash/정확한 source text/전체 partition 확인. 모델 산출물이나 사용자 승인으로 표시하지 않음.
+- 새로운 `source_facets`는 topic/type/polarity/원문 구절을 선택하고 전체 원문 카드를 유지. 기존 전체 문장 entailment와 다른 계열 분류 문제임을 명시. 한 자동화–UBI 주제/영어 짧은 댓글/최대24개로 제한.
+- `source-facet-loop-20261011-plan.json`에서 개발9개·확인12개 기대값과 자동 성공 기준 고정. 확인12개는 기존 probe/extraction58개 source 제외, 관련 regex/top-level/500자 이하18개에서 Random411로 선택. reviewer가 구현 전에 읽어 blind holdout 아님.
+- v1/v2 개발 결과 모두8/9. M06 미래 필요성을 도입 예측으로 분류하는 오류가 남아 성공 기준9/9 실패. 두 프롬프트 후 반복 중단. `...-review-stage-plan.json`에 프로토콜 변경을 별도 기록한 뒤 v2 고정 확인12개를 진단 목적으로 한 번 실행. 계약10/12, 사전 기준5/12. 실패 기록을 변경하거나 테스트를 재튜닝하지 않음.
+- `...-assistant-decisions.json`에서 assistant가21개 전수 검수. 모델 출력13개 확인/8개 수정: 의미 라벨6, 의미+인용1, 인용1. 수정 전 결과를 model_result로 보존하고 새 판단은 origin=assistant_review. 독립 평가가 아니므로 수정 후 정확도100%라는 보고 금지.
+- 최신 결과 `artifacts/source-facet-loop-20261011-reviewed.json` SHA256 `8b737d3216c3470c0151e7c6b0290afb001ab40e58051d4e539a208417416cdc`, 화면 `.json.html`. 필요성7(M01/M02/M06/M09/H01/H05/H12), 예측4(M03/M04/M05/M07), 가능한 이점2(M08/H08), 나머지8 보류. 21개 모두 원문/출처/기존 모델 출력 일치와 중복·누락 없는 partition 검사 완료.
+- 테스트175개 통과. 로컬 Qwen 서버 종료. 추가 YouTube/유료 API/외부 댓글 전송/모델 다운로드0. 실제 계획/출력/검수는 Git 제외, 기존 만료 상속. 코드/설계/실행법만 공개.
+- 자동 clustering/논문용 독립 성능/MVP/agent가 완료된 것이 아님. 검수 지원 prototype의 작은 결과가 생긴 상태. 독립 평가/미사용 실제 표본/다국어/복합 주장 분해/agent 발화 검증은 남음.
 
 ## V0 실험 결과 (2026-10-10 KST)
 

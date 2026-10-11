@@ -86,6 +86,15 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 평가 summary는 category별 total/matches/errors/supports/unclear/mismatch_ids를 따로 기록. 실패/보류를 정상 연결로 합산하지 않으며 동일 원문 pair는 의미 평가에서 제외. 실제 positive recall을 합성 사례 점수로 대체하지 않습니다.
 - 출력 비교 JSON/HTML, 별도 NLI 재배정 JSON, 쌍별 checkpoint는 모두 원문 유래의 private artifact입니다. accepted_perspectives=0, human_approved=false, independent_gold=false. 모델 판단/검수 결과를 원문 수정이나 승인으로 변환하지 않습니다.
 
+## 원문 계열 분류 source-facet-loop-0.1 / assistant-reviewed-source-facets-0.1
+
+- 개발 한정 모델 출력: topic_match(boolean), assertion_type(need/prediction/possible_benefit/description/question/mixed/unclear), polarity(affirmed/negated/mixed/unclear), assertion_quote(exact substring|null). unclear 외에는 null 인용 금지. extra field/인용 변형/불완전 생성은 실패.
+- polarity는 술어의 부정 여부이지 확신의 정도/정책 찬성이 아님. topic/type/polarity를 코드가 배정에 쓰지만 의미 정확성은 별도 검수가 필요. 모든 source는 원문 전체 source_cards 또는 명시적 unassigned로 보존하고 source/member 중복을 거절.
+- group semantics=assertion_family_not_full_sentence_entailment. 계열별 공통 제목은 코드 label이고 생성된 완전한 공통 명제가 아님. 3개 이상은 proposal_needs_semantic_review, 미만은 rare_preserved. 주장별 이유·조건을 다른 source에 전파하지 않음.
+- 검수 입력은 모델 출력 파일의 순서 있는 SHA256 배열에 연결. 모든 source에 정확히 한 entry(id/decision/reason_ko/reading_ko/cautions_ko)를 요구. confirm은 원래 계약 실패/숨은 수정을 허용하지 않음. correct는 topic/type/polarity만 명시적으로 바꾸고 호스트가 전체 원문 인용을 연결. abstain은 unclear로 보류.
+- 검수 결과는 원래 model_result와 새 result(origin=assistant_review)를 같이 보존. raw model 평가 수치는 변경하지 않음. human_approved=false/independent_gold=false/accepted_perspectives=0. assistant 수정 후 자체 기대값 일치를 독립 정확도로 계산하지 않음.
+- snapshot/hash/expiry/source 일치/중복 검증과 새 출력 경로를 사용. 실제 계획/판정/원문/HTML은 비공개 로컬 파일이며 원본 보관 만료 상속. 사람 승인된 PerspectiveSpec 계약을 대체하지 않음.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

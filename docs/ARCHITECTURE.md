@@ -266,6 +266,16 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 결정: baseline 기본값 유지, threshold 튜닝/추가 모델 반복/전체 corpus 확장하지 않음. 다음 판단에는 사용자 의미 기준 피드백 및 실제 긍정 pair 검수가 필요. 합성 표본은 실제 positive recall이 아니며, unknown 실제 표본/다국어 검증이 남음.
 - 한계: snapshot 만료/입력 출처는 재검증하나 Qwen 서버 identity는 운영자 선언. NLI threshold는 미보정이고 영문 범위만 확인. 성능은 CPU/GPU 단일 실행의 관찰. auto approval/agent는0. 자세한 실행은 LOCAL_NLI_COMPARISON.md 참조.
 
+### ADR-014 — 원문 보존형 계열 제안과 명시적 assistant 수정 (assisted experiment, 2026-10-11)
+
+- 사용자 요청: assistant가 평가→수정 루프를 맡고 논문에 사용할 기록을 남김. 자유 요약 대신 topic/type/polarity/원문 구절을 분류하고, 이유·조건·표현 강도는 전체 원문 카드로 보존하는 별도 실험 추가. 이전 문장 전체 entailment와 다른 과제이며 성능 수치를 직접 비교하지 않음.
+- `factory/source_facets.py`: 한정된 자동화–UBI 주제의 계열명은 코드로 생성. type/polarity에 따라 제안하되 mixed/unclear/기타/범위 밖/계약 실패는 보류, 3개 미만은 희소 상태. 같은 계열이 모든 member의 조건·이유까지 공유한다는 뜻은 아님. 일반 clustering/동적 agent 전체 구현이 아님.
+- `experiments.source_facet_loop`: source-bound 기대값을 모델에 전달하지 않고 개별 원문만 분류. snapshot/plan/code/prompt hash, 원시 출력/checkpoint, 입력 겹침/원문/만료 검사와 전체 원문 보존. 두 revision 모두 개발8/9로 사전 자동 성공 기준9/9 실패.
+- 실패 후 프로토콜 변경을 명시적으로 저장하고 v2 고정 확인12개를 진단. 계약10/12·사전 기준 일치5/12로 실패. 확인 표본은 reviewer가 구현 전에 읽어 blind holdout이 아니며 재튜닝하지 않더라도 논문 독립 검증 아님.
+- `experiments.review_source_facets`: assistant가21개 전수 검수해 확인13/수정8. confirm/correct/abstain과 한국어 근거·해석·보존할 차이를 저장. 수정은 입력 hash에 묶고 model_result를 보존, origin=assistant_review로 분리. 기대값 자동 복사나 실패 출력 덮어쓰기 없이 새 결과를 만듦.
+- 검수 결과 필요성7/도입 예측4/가능한 이점2/보류8. 지지수3개 이상 계열2개는 검수 제안일 뿐 accepted_perspectives=0. 원문 보존이 agent 발화의 충실성을 보장하지 않음. 기존 pipeline 기본값/모델 변경 없음.
+- 한계/후속: assistant 자기 검수는 독립 gold가 아니므로 정확도100%로 보고 금지. 독립 평가·미사용 표본·다국어·복합 주장 분해·실제 agent 검증이 남음. 자세한 기록/실행/프로토콜은 SOURCE_FACET_REVIEW_LOOP.md.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
