@@ -91,5 +91,14 @@ class SharedCoreTests(unittest.TestCase):
         self.assertEqual(calls,[('rent rises','rents increase'),('rents increase','rent rises')])
         self.assertFalse(c.condition_compatibility('Unless rent rises, help.','If rent rises, help.',scorer)['allowed'])
 
+    def test_personal_scope_cannot_be_generalized_even_if_nli_passes(self):
+        a=unit('a','I would keep working.','I would keep working.')
+        b=unit('b','People would keep working.','People would keep working.')
+        trace=c.discover(a,b,self.calls,score)
+        self.assertIsNone(trace['selected_core'])
+        self.assertIn('pair:personal_conduct_scope',trace['blocked_reasons'])
+        self.assertFalse(c.personal_conduct('I think policy should change.'))
+        self.assertTrue(c.personal_conduct("I don't think I'd stop working."))
+
 
 if __name__=='__main__': unittest.main()
