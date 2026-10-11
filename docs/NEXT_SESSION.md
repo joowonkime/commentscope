@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**최신: 로컬 비교/질의 UI 구현. README12단계 `python -m commentscope.agents.web ...`로 실행하면 브라우저에서 질문→독립 답변→원문 확인→후속 질문→HTML/JSON 저장 가능. 검수된11개를 사용한 개발agent2개/정식 승인0은 유지. 같은 모델의 감사는 정확성 보장이 아님. 전체 프로젝트 목표는 댓글 기반 관점 에이전트 시스템이며, 다음은 브라우저 사용성 확인과 evidence-bounded 상호작용/Reflection/시스템 평가다. clustering 자체를 논문 목표로 되돌리지 말 것.**
+**최신: PR #18 main 통합 및 누적 PR 정리 완료. 실제 데이터 재검증→새 개발 profile2개 생성→Chromium에서 실제 Qwen 질의3개/인용/다운로드/초기화/새 탭 분리까지 확인. 검수 지원형 agent 생성·실행은 동작하지만 정식 승인0이고 자동 factory는 미완료. 고정12개 자동 회귀는 계약10/12·사전 기준 전체 일치6/12. 한눈에 보는 로컬 결과 `artifacts/main-acceptance-20261011-overview.html`. 전체 프로젝트 목표는 댓글 기반 관점 에이전트 시스템이며 clustering 자체를 논문 목표로 되돌리지 말 것.**
 
 ## 사용자 결정과 작업 단위
 
@@ -14,9 +14,11 @@
 ## 현재 Git 운영 기준
 
 - 통합 작업: [PR #18](https://github.com/joowonkime/commentscope/pull/18), base=`main`, branch=`chore/main-prototype-baseline`.
-  준비 시점에는 사용자 병합 선택을 기다리는 Draft입니다. 현재 병합 여부는 PR 상태를 확인하며, 병합 전 main을 최신 구현으로 오인하지 않습니다.
-- 다음 시스템 작업은 [Roadmap #19](https://github.com/joowonkime/commentscope/issues/19)로 추적합니다. 수집 Issue #5와 누적 PR은 실제 main 통합 뒤 정리합니다.
-- `main`을 최신 연구 프로토타입의 공통 시작점으로 통합합니다. 코드 통합과 모델 품질 승인은 별개입니다.
+  사용자 진행 요청 후 merge commit `a3ead01`로 main 통합 완료. main push CI도 Ubuntu/Windows 통과했습니다.
+- PR #6은 포함 커밋으로 merged 처리됐고, #7~#17은 각각 main에 포함된 것을 확인한 뒤 #18을 연결해 closed 처리했습니다.
+  수집 Issue #5도 closed이며 기존 브랜치/커밋/실험/로컬 데이터를 삭제하지 않았습니다.
+- 다음 시스템 작업은 [Roadmap #19](https://github.com/joowonkime/commentscope/issues/19)로 추적합니다.
+- `main`은 최신 연구 프로토타입의 공통 시작점입니다. 코드 통합과 모델 품질 승인은 별개입니다.
 - 통합 범위: 기존 PR #6~#17의 14개 커밋(공식 수집→실험/검수→개발 agent→로컬 UI)과 현재 상태 문서 정리.
 - 통합 전 main은 snapshot ingestion까지만 포함했습니다. 최신 구현이 없었던 것이 아니라 Draft PR에만 누적된 상태였습니다.
 - 이번에는 기존 커밋·브랜치·실패 실험을 삭제하지 않습니다. 원문·모델 파일·대화 기록도 계속 Git 제외입니다.
@@ -80,12 +82,26 @@
 
 1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
 2. AGENT_VERTICAL_SLICE.md와 README12부터 확인합니다. 필요성7/예측4의 개발 agent가 HTTP 질의 경로로 실제 응답했습니다. 검수 입력과 자동 모델 성능, 개발 agent와 정식 승인 PerspectiveSpec을 구분합니다. 서버는 자동 상주하지 않으며 모델과UI를 각각 시작해야 합니다.
-3. 다음은 실제 브라우저/WSL 사용성 확인, 근거 경계를 지키는 대화/반문, Reflection 최소 기능과 시스템 전체 평가입니다. 현재 UI는 독립 비교 질의이며 에이전트 간 토론은 미구현. 자동 형성 완성까지 전체 시스템 구현을 다시 막지 않습니다. 미승인 입력을 자동 승인으로 가장하지 않고 독립 평가/정식 승격은 별도로 남깁니다.
+3. Chromium 기본 동작/화면은 확인했습니다. 다음은 비개발자 팀원의 실제 Windows/WSL 사용성, 근거 경계를 지키는 대화/반문, Reflection과 시스템 평가입니다. 현재 UI는 독립 비교 질의이며 토론은 미구현. 자동 형성 완성까지 전체 시스템 구현을 다시 막지 않습니다. 미승인 입력을 자동 승인으로 가장하지 않고 독립 평가/정식 승격은 별도로 남깁니다.
 4. Auditor는 질문의 전제를 원문 지원 검사에 섞어 과도하게 거절하는 문제가 있습니다. 이 부분은 runtime 검사 경계의 후속 개선 대상이며 clustering 재실험으로 돌아갈 이유가 아닙니다. 전체1,000개 자동 확장/유료 외부 API는 여전히 별도 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.
 
-### 로컬 UI 실제 검증과 환경
+### main 통합 후 실제 생성·브라우저 검증
+
+- 통합 시연 기준 commit `a3ead01`. 기존 snapshot1,000개 validation/normalization 재실행(중복 정규화999개),
+  기존 검수21개에서 새 `artifacts/main-acceptance-20261011-agents.json` 생성. 원시 자동 분류를 승인한 것이 아님.
+- 실제 Chromium153.0.8010.12/Playwright1.63.0으로3질문×2agent, 키보드 제출·인용 펼치기·HTML/JSON 다운로드·모바일390px
+  가로 넘침 없음·새 탭 세션 분리·초기화 통과. 코드 hash와 인용 binding, HTML 재생성 일치 확인. assistant가 desktop/mobile screenshot 확인.
+- 최신 `artifacts/main-acceptance-20261011-browser-v2.comparison.html`, `.checks.json`, `.first-answer.png`, `.mobile.png`.
+  초기 browser 실행은 마지막 검사식의 문자열 eval이 CSP에 막혔고 실패 기록을 보존. 검사식을 함수로 수정했으며 앱 CSP/모델/프롬프트는 변경하지 않음.
+- 자동 분류는 기존12개 회귀에 v2를 다시 실행, `artifacts/main-acceptance-20261011-auto-regression.json`: 계약10/12,
+  사전 assistant 기준 전체 일치6/12. 재사용한 개발 사례이며 독립 gold/holdout/일반 정확도 아님. 이 결과를 agent 입력으로 바꾸지 않음.
+- 판단: 검수 지원형 profile 생성·runtime은 개발 기능으로 확인, 범용/전체 corpus 자동 관점 형성·정식 승격은 미완료.
+  현재 연결된 source_facets 경로는 AI·자동화/UBI와 최대24개 소표본 한정. 새 모델 학습이 아니라 같은 모델의 독립 evidence/state.
+- 모델/UI 서버는 검사 후 종료. 최신 완료판정은 AGENT_VERTICAL_SLICE의 main 통합 후 재검증을 우선. 이전 실행 파일은 보존.
+
+### 이전 로컬 UI 실행과 모델 환경
 
 - 최신 결과 `artifacts/local-agent-ui-20261011-smoke-v3.json.html` (JSON 동일 basename). 코드 hash/원문 binding/HTML 재생성 확인.
 - 3질문×2agent: 첫 질문 둘 다 원문 인용, 조건 후속 질문은 필요성 보류/예측 답변, 한국 수치 질문 둘 다 근거 부재로 보류.

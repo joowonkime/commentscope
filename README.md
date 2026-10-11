@@ -11,7 +11,7 @@
 
 `main`은 **검수 지원 입력을 사용하는 로컬 연구 프로토타입**의 통합 기준선으로 관리합니다.
 main 반영은 코드 통합이지 모델 품질 승인·실험 성공·제품 완성을 뜻하지 않습니다.
-[통합 PR #18](https://github.com/joowonkime/commentscope/pull/18)에서 실제 병합 상태를 확인하고,
+[통합 PR #18](https://github.com/joowonkime/commentscope/pull/18)은 merge commit `a3ead01`로 반영됐고,
 [남은 시스템 작업 #19](https://github.com/joowonkime/commentscope/issues/19)에서 다음 작업을 확인할 수 있습니다.
 
 | 구간 | 현재 상태 | 남은 경계 |
@@ -20,7 +20,7 @@ main 반영은 코드 통합이지 모델 품질 승인·실험 성공·제품 �
 | 댓글 → 주장/cluster | 후보 생성·검수 도구 및 여러 비교 실험 구현 | 자동 의미 품질 미해결, 전체 1,000개 자동 성공 아님 |
 | 검수 묶음 → agent | 검수된 21개 중 필요성7/예측4로 개발 agent 2개 생성·실행 | assistant 검수에 의존; 정식 승인 PerspectiveSpec 0개 |
 | agent → 근거 답변 | 독립 evidence/history, 검사·1회 수정·보류, 인용 연결 구현 | 동일 모델 감사의 오승인/과잉거절·설명 오류 위험 |
-| 사용자 화면 | 로컬 질문·비교·원문 확인·후속 질문·저장 구현 | 실제 브라우저 사용성/키보드 QA 미완료 |
+| 사용자 화면 | 로컬 질의 UI 및 Chromium 키보드 제출·인용·다운로드·초기화 확인 | 팀원 사용자 검증·전체 접근성 검증은 남음 |
 | 에이전트 간 상호작용·Reflection | 아직 미구현 | 기능 범위·메시지 계약·사용자 task 확인 필요 |
 | 논문 검증 | 재현 코드·실패 기록·설계 이력 확보 | 독립 사람 평가, 미사용 데이터, baseline·사용자 연구 미완료 |
 
@@ -393,3 +393,15 @@ node --test tests/web_ui_smoke.cjs
 
 실제 서버/모델 연결을 반복 검증하려면 `experiments/agent_web_smoke.py --question "..." --output artifacts/NEW-ui-check.json`을
 Python으로 실행합니다. 이는 HTTP 연동 검사이며 실제 브라우저의 레이아웃 검증은 아닙니다.
+
+실제 Chromium에서 질문 입력·키보드 제출·인용 펼치기·HTML/JSON 다운로드·새 탭·대화 초기화를 확인하는 선택적 개발 검사도 있습니다.
+앱의 필수 의존성이 아니며, 별도 개발 환경에 Playwright와 Chromium을 설치한 후 모델/UI 서버를 먼저 실행합니다.
+
+```bash
+python -m pip install playwright==1.63.0
+python -m playwright install chromium
+python experiments/browser_agent_smoke.py --output-prefix artifacts/NEW-browser-check --question "AI와 UBI에 대해 어떤 주장이 있나요?" --question "한국에서 지급액은 정확히 얼마인가요?"
+```
+
+스크린샷과 다운로드에는 실제 댓글이 들어갑니다. `artifacts/` 밖의 공개 위치에 저장하지 마세요.
+이 검사는 브라우저를 직접 조작하지만 비개발자 사용자 연구나 독립적인 의미 평가를 대신하지 않습니다.
