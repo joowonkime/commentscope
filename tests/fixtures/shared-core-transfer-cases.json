@@ -1,0 +1,18 @@
+{
+  "version": "shared-core-transfer-cases-0.1",
+  "purpose": "Additional assistant-authored development cases frozen before the first shared-core model run; not blind or independent gold.",
+  "cases": [
+    {"id":"transfer_library","left":"The campus library should stay open longer so students can study at night.","right":"The campus library ought to extend its opening hours to give students a quiet place.","expected":true},
+    {"id":"transfer_air","left":"Electric buses reduce local air pollution.","right":"Electric buses reduce local air pollution and street noise.","expected":true},
+    {"id":"transfer_remote","left":"Remote work could reduce commuting time.","right":"Working from home may reduce time spent commuting.","expected":true},
+    {"id":"transfer_future","left":"Train ridership will increase next year.","right":"More passengers will use trains next year.","expected":true},
+    {"id":"transfer_personal","left":"If fares fall, I would travel more often.","right":"If ticket prices decrease, I would make more trips.","expected":true},
+    {"id":"transfer_requirement","left":"Factory equipment should undergo safety inspections.","right":"Safety inspections of factory equipment ought to be mandatory.","expected":true},
+    {"id":"transfer_time","left":"The station is being renovated now.","right":"The station will be renovated next year.","expected":false},
+    {"id":"transfer_modal","left":"Remote work might improve productivity.","right":"Remote work will improve productivity.","expected":false},
+    {"id":"transfer_condition","left":"If rents rise, housing support should increase.","right":"If unemployment rises, housing support should increase.","expected":false},
+    {"id":"transfer_negation","left":"Safety inspections should be mandatory.","right":"Safety inspections should not be mandatory.","expected":false},
+    {"id":"transfer_scope","left":"I would work fewer hours with a basic income.","right":"Everyone would work fewer hours with a basic income.","expected":false},
+    {"id":"transfer_context","left":"Exactly what I meant.","left_claim":"The campus library should stay open longer.","right":"The campus library should stay open longer.","expected":false}
+  ]
+}
