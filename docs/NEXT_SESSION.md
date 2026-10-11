@@ -1,6 +1,6 @@
 # 다음 세션 시작점
 
-**최신: 프로젝트 목표를 clustering 연구가 아니라 전체 관점 에이전트 시스템으로 다시 명확화. 기존 검수 묶음→개발용 프로필2개→독립 질문/근거 검사/수정·보류→비교 HTML까지 연결. 최신 화면 `artifacts/development-agents-20261011-comparison-v2.json.html`. 첫 질문에는 두 관점의 인용 답변, 과장 전제 질문에는 보류(감사 과잉거절 문제 포함), 근거 없는 국가별 수치에는 보류. 실제 개발agent2개가 실행됐지만 승인 PerspectiveSpec은0. 다음은 UI/시스템 연결이며 clustering 실험을 다시 최종 목표로 삼지 말 것.**
+**최신: 로컬 비교/질의 UI 구현. README12단계 `python -m commentscope.agents.web ...`로 실행하면 브라우저에서 질문→독립 답변→원문 확인→후속 질문→HTML/JSON 저장 가능. 검수된11개를 사용한 개발agent2개/정식 승인0은 유지. 같은 모델의 감사는 정확성 보장이 아님. 전체 프로젝트 목표는 댓글 기반 관점 에이전트 시스템이며, 다음은 브라우저 사용성 확인과 evidence-bounded 상호작용/Reflection/시스템 평가다. clustering 자체를 논문 목표로 되돌리지 말 것.**
 
 ## 사용자 결정과 작업 단위
 
@@ -24,6 +24,7 @@
 - 로컬 NLI 비교: `feat/local-nli-comparison` (`feat/extractive-keypoint-baseline` 기반). PR #13 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
 - 원문 계열/검수 루프: `feat/source-facet-review-loop` (`feat/local-nli-comparison` 기반). PR #14 Ubuntu/Windows CI 통과 이후 작업. 상위/main 임의 병합 없음.
 - 에이전트 연결: `feat/evidence-agent-vertical-slice` (`feat/source-facet-review-loop` 기반). PR #15 CI 통과 이후 진행. 초기 runtime commit67e226a, 보완 문법/실행 문서가 후속 commit. 상위/main 임의 병합 없음.
+- 로컬 질의 UI: `feat/local-agent-comparison-ui` (`feat/evidence-agent-vertical-slice` 기반). PR #16 Ubuntu/Windows CI 통과 확인 후 진행. 상위/main 임의 병합 없음.
 - Issue: https://github.com/joowonkime/commentscope/issues/5
 - 설계 PR #2와 ingestion PR #4는 main에 반영했습니다.
 - 수집 PR의 CI·검토·병합 상태는 다음 작업 전에 확인합니다.
@@ -62,8 +63,8 @@
 ## 이어서 할 일
 
 1. 현재 PR과 작업 트리를 확인합니다. 기존 기본소득 표본을 재사용하며 키/영상 선택을 다시 요청하지 않습니다.
-2. AGENT_VERTICAL_SLICE.md와 최신 비교 HTML부터 확인합니다. 필요성7/예측4의 개발 agent가 실제 응답했습니다. 검수 입력과 자동 모델 성능, 개발 agent와 정식 승인 PerspectiveSpec을 구분합니다.
-3. 다음은 비교/질의 UI·source inspect 동선, 근거 경계를 지키는 대화/반문, Reflection 최소 기능과 시스템 전체 평가로 연결합니다. 자동 형성 완성까지 전체 시스템 구현을 다시 막지 않습니다. 다만 미승인 입력을 자동 승인으로 가장하지 않고 독립 평가/정식 승격은 별도로 남깁니다.
+2. AGENT_VERTICAL_SLICE.md와 README12부터 확인합니다. 필요성7/예측4의 개발 agent가 HTTP 질의 경로로 실제 응답했습니다. 검수 입력과 자동 모델 성능, 개발 agent와 정식 승인 PerspectiveSpec을 구분합니다. 서버는 자동 상주하지 않으며 모델과UI를 각각 시작해야 합니다.
+3. 다음은 실제 브라우저/WSL 사용성 확인, 근거 경계를 지키는 대화/반문, Reflection 최소 기능과 시스템 전체 평가입니다. 현재 UI는 독립 비교 질의이며 에이전트 간 토론은 미구현. 자동 형성 완성까지 전체 시스템 구현을 다시 막지 않습니다. 미승인 입력을 자동 승인으로 가장하지 않고 독립 평가/정식 승격은 별도로 남깁니다.
 4. Auditor는 질문의 전제를 원문 지원 검사에 섞어 과도하게 거절하는 문제가 있습니다. 이 부분은 runtime 검사 경계의 후속 개선 대상이며 clustering 재실험으로 돌아갈 이유가 아닙니다. 전체1,000개 자동 확장/유료 외부 API는 여전히 별도 조건 결정이 필요합니다.
 
 [구조](ARCHITECTURE.md), [데이터 계약](DATA_CONTRACTS.md), [검증 목록](ACCEPTANCE_TESTS.md)을 기준으로 진행합니다.

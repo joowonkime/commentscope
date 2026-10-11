@@ -105,6 +105,25 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 - 표시된 point에 호스트가 citation 전체를 연결. 실패 초안은 HTML 답변/후속 history에서 제외. 미검사 missing_information도 JSON에만 보관하고 UI에는 호스트의 일반적 부분 답변 표시만 사용. citation URL은 YouTube HTTPS allowlist, 모든 HTML 내용 escape.
 - 모든 실행은 새 출력 경로/checkpoint로 저장. 실제 댓글 유래 artifact는 Git 제외/expiry 상속. 승인 관점0과 실행 개발 agent 수를 구분. 모델 ID는 운영자 선언이며 서버 실행 모델 자동 인증은 없음.
 
+## 로컬 비교 UI HTTP 계약 (development, 0.1)
+
+- `POST /api/session {}` → token + state. `POST /api/reset {}` → 기존 세션 폐기/새 token + state.
+  token은 메모리에만 유지하고 URL/로그/연구 export에는 저장하지 않음. 진행 중인 세션 reset은409.
+- `POST /api/ask {question, request_id}` →202 + state. 그 외 알 수 없는 필드는 거절.
+  question 1..1000자, request_id 1..80 ASCII 영숫자/하이픈. 같은 ID·질문 재전송은 기존 상태, 다른 질문은409.
+  동시 실행409, 질문/재시도 한도409, 변경된 원문409, 만료410. 무승인 진입은 CLI의 명시적 opt-in 필요.
+- `GET /api/state` → bundle/runtime/rounds/job/remaining_questions/can_ask/human_approved=false/accepted_perspectives=0.
+  job.status=idle|running|done|error. 실행 중 agent_id/stage=starting|generating|auditing/model_calls 표시.
+  공개 turn에는 agent_id/status/reason/answerability/points(호스트 고정 citation)/human_approved/semantic_guarantee,
+  generation_attempts/audit_requests만 제공. 원시 초안/감사 자유문/미검사 limit 제외.
+- `GET /api/export.json|html`은 session token 필수이며 작업 완료 상태에서 내려받는 private 연구 파일.
+  JSON은 기존 comparison-0.1 + web_code_sha256 확장 프로파일로 prompts/schema/runtime/모든 attempts 보존.
+  HTML은 검사를 통과한 points 및 원문만 표시하며 거절 초안을 최종 답변으로 표시하지 않음.
+- 모든 변경 요청은 정확한 same-origin 및 application/json, 최대8192bytes. 모든 경로 Host는 loopback hostname+실제port,
+  상태/질문/reset/export의 token은 `X-Session-Token`. CORS 허용 없음, no-store, 외부 asset·inline script 차단.
+- 서버 로그는 access body/token을 기록하지 않음. 연구 artifact는 manifest + request + agent checkpoint + round이며
+  source 만료를 상속. 파일은 Git 제외, UI reset으로 삭제되지 않으며 자동 복원/만료 파일 자동 삭제는 없음.
+
 ## 공통 규칙
 
 - JSON은 UTF-8이며 `NaN`/`Infinity`를 허용하지 않습니다. 정수 필드에 bool을 허용하지 않습니다.

@@ -2,8 +2,9 @@
 
 한 영상의 sampled comments에서 서로 다른 관점과 근거를 탐색하는 연구용 프로젝트입니다.
 
-현재는 **공식 API 표본 1,000개 확보, 원문 V0 clustering 및 소표본 주장 추출→후보→검수 화면 연결 단계**입니다.
-주장 기반 전체 파이프라인·검증된 대표 agent·웹 앱은 아직 없습니다. 실제 corpus는 공개 저장소에 포함하지 않습니다.
+현재는 **공식 API 표본 1,000개 확보 → 소표본 검수 → 개발용 에이전트 → 로컬 비교/질의 UI**까지 연결했습니다.
+실제 입력에서는 검수된 댓글 11개로 개발용 에이전트 2개가 실행됩니다. 전체 1,000개 자동 관점 형성이나
+정식 승인 agent·에이전트 간 토론이 완성된 것은 아닙니다. 실제 corpus는 공개 저장소에 포함하지 않습니다.
 이어서 작업할 때는 [다음 세션 시작점](docs/NEXT_SESSION.md)을 먼저 확인합니다.
 
 ## 읽는 순서
@@ -319,5 +320,46 @@ python -m commentscope.agents.demo ask data/ubi-research-20261010.json artifacts
 
 ask에는 위에서 설명한 로컬 모델 서버가 필요합니다. 실제 데이터/검수 파일은 Git에 없고 위 경로는 로컬 실행 예시입니다.
 결과 화면은 output + `.html`입니다. 최대6개 질문을 순서대로 보내며 이전2개 자기 대화만 참조합니다.
-웹에서 새 질문을 입력하는 서버, 에이전트 간 토론, Reflection은 아직 아닙니다.
+위 명령은 저장형 비교입니다. 직접 질문하는 로컬 UI는 아래 12단계를 사용합니다. 에이전트 간 토론과 Reflection은 아직 아닙니다.
 자세한 동작·경계·검증은 [에이전트 연결 단계](docs/AGENT_VERTICAL_SLICE.md)에 있습니다.
+
+### 12. 브라우저에서 직접 질문하기 (로컬 전용)
+
+Python 설치 후, **터미널 1에서 로컬 모델**, **터미널 2에서 UI 서버**를 실행하고 브라우저를 엽니다.
+기존 검수 snapshot/bundle이 필요합니다. 실제 댓글은 GitHub에 없으므로 새 clone만으로 동일 연구 자료가 생기지는 않습니다.
+모델 실행 경로와 CUDA 라이브러리 설정은 본인 환경에 맞춰야 합니다. 기존 8,192 context 설정을 유지합니다.
+GPU 메모리가 부족하면 다음처럼 GPU layer/배치를 줄일 수 있습니다(속도는 달라지며 모델 품질 개선을 뜻하지 않음).
+
+```bash
+# 터미널 1 — 실제 설치 경로 사용
+llama-server -m /absolute/path/Qwen3-4B-Instruct-2507-Q4_K_M.gguf --host 127.0.0.1 --port 8091 -c 8192 --no-context-shift -ngl 24 -b 128 -ub 128 -t 6 --parallel 1
+
+# 터미널 2 — 저장소 루트, 가상환경 활성화 후
+python -m commentscope.agents.web data/ubi-research-20261010.json artifacts/source-facet-loop-20261011-reviewed.json artifacts/development-agents-20261011.json --allow-unapproved --model-label Qwen3-4B-Instruct-2507-Q4_K_M --model-revision a06e946bb6b655725eafa393f4a9745d460374c9 --runtime "llama.cpp b11541 CUDA12.8 context8192 no-context-shift parallel1 ngl24 batch128 ubatch128 threads6"
+```
+
+브라우저에서 **http://127.0.0.1:8765**를 엽니다. WSL에서 Windows 브라우저를 쓸 때는 localhost 전달이 필요합니다.
+연결되지 않으면 WSL localhost forwarding 설정을 확인하세요. 서버를 `0.0.0.0`에 공개하는 것으로 해결하지 않습니다.
+
+1. 관점 카드의 전체 근거를 펼쳐 봅니다.
+2. 질문 입력 → 진행 상태 확인 → 두 관점의 답변과 인용 원문을 비교합니다.
+3. 후속 질문을 하거나 비교 HTML/연구 JSON을 저장합니다. 대화당 최대 6개 질문입니다.
+4. 새 대화로 시작하면 이전 대화 상태는 모델에 전달되지 않습니다. 종료는 두 터미널에서 각각 Ctrl+C입니다.
+
+서버는 loopback만 사용하며 외부 서비스에 댓글을 전송하지 않습니다. 모델 서버가 꺼져 있거나 생성에 실패하면
+답변 보류 사유에 연결/생성 오류를 표시합니다. 의미적으로 근거가 없다는 판정과 구분하세요.
+원시 초안/검사 결과는 화면에 최종 답변으로 노출하지 않지만, `runs/agent-ui/<실행ID>/`에 자동 저장하며 JSON으로 내려받을 수 있습니다.
+원문이 포함된 민감한 연구 기록이므로 공개 업로드하지 마세요. 새 대화/서버 종료는 이 파일을 삭제하지 않습니다.
+만료 후 신규 질의/서버 열람은 차단하지만, 저장·다운로드한 파일의 자동 삭제나 재개 기능은 없습니다.
+새로고침은 새 세션이며 이전 세션의 자동 복원이 아닙니다. 메모리 세션은 최대 8개, 비활성 1시간 후 정리됩니다.
+
+검증 명령 (JS 검사는 Node 18+ 필요, 앱 실행 자체에는 Node 불필요):
+
+```bash
+python -m unittest discover -s tests -v
+node --check src/commentscope/agents/comparison.js
+node --test tests/web_ui_smoke.cjs
+```
+
+실제 서버/모델 연결을 반복 검증하려면 `experiments/agent_web_smoke.py --question "..." --output artifacts/NEW-ui-check.json`을
+Python으로 실행합니다. 이는 HTTP 연동 검사이며 실제 브라우저의 레이아웃 검증은 아닙니다.

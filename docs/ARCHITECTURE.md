@@ -287,6 +287,27 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 실제3질문×2agent 보완 실행: 관점 설명2답변은 원문 지원 확인, 과장 전제 질문2건은 보류(감사 오류 포함), 근거 없는 국가별 수치2건은 보류. 4개 표시 문장을 assistant가 원문 대조했지만 독립 평가 아님. 전체 프로젝트/논문 검증 완료로 보고하지 않음.
 - 다음 시스템 단계: 비교/질의 웹UI와 원문 inspect 동선, 정식 PerspectiveSpec 승격과 evidence-bounded 대화/토론, Reflection/전체시스템 독립평가. Auditor의 질문 관련성/원문 지원 혼동은 별도 수정 지점으로 기록하고 clustering 실험으로 되돌리지 않음.
 
+### ADR-016 — 로컬 비교/질의 UI와 세션·증거 경계 (2026-10-11)
+
+- ADR-015의 저장형 HTML에 직접 질문 경로를 추가. 모델/생성·감사 프롬프트/승인 조건/cluster 배정은 변경하지 않음.
+  `agents/web.py`(HTTP·세션·작업·private checkpoints) → 기존 `AgentSession`(생성·검사) → `demo.render`(저장형 export).
+  `comparison.html/js/css`는 프레임워크/외부 asset 없는 브라우저 클라이언트이며 모델 호출을 직접 하지 않음.
+- 기존 Python 표준 라이브러리로 loopback 전용 구현. 사용자 승인 없는 외부 호스팅/업로드를 하지 않으며 공개 서비스용 서버가 아님.
+  Host allowlist, same-origin POST, 별도 메모리 session token, no-store/CSP, 요청 크기 제한, 임의 파일 경로 미제공.
+  이는 로컬 브라우저 경계이며 같은 OS 사용자의 악성 프로세스로부터 데이터를 보호하는 로그인 체계는 아님.
+- 브라우저 세션마다 모든 AgentSession을 새로 생성. 에이전트별 evidence/history 격리 유지. 로컬 모델은 한 번에 한 질문만 처리,
+  질문 내 agent는 순차 실행. 다른 질문은 409로 거절해 무제한 큐를 만들지 않음. request_id 재전송은 중복 추론하지 않음.
+- 요청은 비동기 작업 + polling. 생성/검사 단계 및 요청 수만 공개, 거절 초안/감사 이유/미검사 한계 설명은 live API에서 제외.
+  모든 agent 완료·출처 재검증·저장 후에만 비교 round 공개. 중간 실패 시 해당 질문의 agent histories 모두 원복.
+- 세션당 6질문(실패 포함 제출 12회 상한), 메모리 세션 최대8개/비활성1시간. 시작/질문 전/게시 전 출처 검증,
+  모델 호출 전/게시·조회·내보내기 시 보관 만료 검사. 기존 다운로드 파일의 만료 접근 차단·자동 삭제는 불가능하므로 별도 보관 책임.
+- `runs/agent-ui/<uuid>/`에 세션 manifest, 질문 request, agent별 전체 turn, 완료 round를 덮어쓰기 없이 저장.
+  새 대화는 history 초기화이지 로그 삭제가 아님. 서버 재시작/브라우저 새로고침 자동 복원은 미지원.
+- 모델 서버 identity는 여전히 운영자 선언. UI는 정식 승인0/동일 모델 감사/표본 한계를 표시.
+  실제 브라우저 시각 QA는 이번 환경에서 미수행. HTTP 회귀 + Node의 최소 DOM 계약 검사는 레이아웃 검증을 대체하지 않음.
+- 다음 교체 지점: HTTP/UI와 무관하게 auditor 교체 가능. 에이전트 간 반문/토론은 별도 메시지 계약으로 구현해야 하며
+  동료 발언을 지지 evidence나 자기 검수 history로 승격하지 않을 것. Reflection/시스템 전체 사용자 평가도 별도 남음.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
