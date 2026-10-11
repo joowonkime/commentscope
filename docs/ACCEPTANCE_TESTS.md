@@ -1,7 +1,8 @@
 # 단계별 검증 목록
 
 2단계의 S01–S12는 [tests/test_ingestion.py](../tests/test_ingestion.py)에 구현했습니다.
-테스트는 총 29개 메서드이며 타입/참조/오류 사례 일부는 subTest로 나눕니다. C/R/E/A 항목은 아직 구현 예정입니다.
+ingestion은 29개 메서드이며 타입/참조/오류 사례 일부는 subTest로 나눕니다. C/R/E/A 항목은 아직 구현 예정입니다.
+공식 API 수집 검사는 [tests/test_youtube.py](../tests/test_youtube.py)에 24개 메서드로 추가했습니다. 실제 HTTP 호출 없이 응답을 모사합니다.
 정상 실행 결과와 모델 품질 평가는 별도로 보고합니다.
 
 | ID | 단계 | 입력 / 상황 | 기대 결과 |
@@ -49,3 +50,16 @@
 
 검토 시 구조 검사는 참조·상태 전이를 확인하고, 인간/모델 의미 검토는 coherence·조건 보존·인용의 지원 여부를 확인합니다.
 구조 검사를 통과한 합성 예제는 실제 clustering 또는 다국어 성능을 증명하지 않습니다.
+
+## 공식 API 수집 추가 검사
+
+- 지원 URL/ID와 잘못된 host·중복 video ID 파라미터.
+- relevance/time pagination, 순위 provenance, 같은 comment ID의 중복 관측.
+- thread ID와 top-level comment ID 구분, parent별 reply pagination, round-robin 순서.
+- total/per-thread/request 상한, partial 상태, 관측 reply count와 실제 확보량 차이.
+- 키 header, redirect 차단, 오류 본문 비노출, 댓글 비활성화·quota·인증·일시적 오류.
+- 일시적 오류 재시도 횟수와 호출 예산, 반복 page token 차단.
+- 기존 output 확인 시 network 이전 종료, 오류 중간 결과를 최종 파일로 저장하지 않음.
+- 수집 snapshot → 기존 validator → normalizer 연결.
+
+첫 실제 API 키·영상으로 하는 소량 smoke test는 아직 수행하지 않았습니다.

@@ -1,8 +1,128 @@
 # 데이터 계약 v0.1
 
 이 문서는 wire format과 검증 규칙의 구현 명세입니다. 2단계에서 DatasetSnapshot/Comment 검증과 normalization을 구현했습니다.
-Eligibility 이후의 계약과 전체 RunManifest는 후속 구현 명세이며, JSON Schema 파일은 아직 제공하지 않습니다.
+Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명세입니다.
+2026-10-10부터 추출 실험 전용 `claims-0.2` JSON Schema/validator는 `src/commentscope/contracts/claims.py`에 제공합니다.
+기존 snapshot-0.1이나 아래 전체 Factory 명세를 자동으로 0.2로 바꾸는 것은 아닙니다.
 합성 예시는 [snapshot](examples/synthetic-snapshot.json)과 [Factory trace](examples/synthetic-factory-trace.json)에 있습니다.
+
+## 추출 실험 계약 claims-0.2 (2026-10-10)
+
+로컬 모델의 출력은 `{eligibility, claims}`입니다. 각 claim의 필수 키:
+
+| 필드 | 의미 |
+| --- | --- |
+| `issue`, `claim` | 구체적인 쟁점과 원문에 충실한 주장. 개인/가능성/조건을 문장에도 보존 |
+| `quote` | 해당 주장을 지지하는 target 댓글의 정확한 substring |
+| `stance_target`, `stance` | 평가 대상과 그에 대한 입장. 대안 정책 지지를 UBI 지지로 자동 해석하지 않음 |
+| `reason`, `reason_quote` | 별도로 명시된 이유와 원문 근거; 없으면 둘 다 null |
+| `condition`, `condition_quote` | 명시된 if/when/only-if 조건과 근거; 없으면 둘 다 null |
+| `scope` | personal / general / unclear |
+| `modality` | asserted / possible / conditional / unclear |
+
+- `argument_or_experience`만 비어 있지 않은 claims를 허용. 나머지는 빈 배열. v0.2 실험은 최대6개; 장문/과다 주장 처리는 전체 파이프라인에서 별도 설계 필요.
+- support/oppose/conditional/mixed에는 stance_target 필수. 명시적 정책 선호가 없는 기술적 주장/경험은 neutral과 null target을 기본으로 함.
+- 모델은 source ID를 출력하지 않음. 호스트의 `bind_source()`가 실제 target ID와 schema/source/claim 기반 deterministic claim ID를 부여.
+- claim ID는 실험용 내용 기반 ID이며 전체 Factory의 run-scoped ID 구현을 대체하지 않음. 동일 claim 표현이 달라지면 ID도 달라짐.
+- 구조·enum·target substring·reason/condition 쌍·eligibility 불변조건 실패는 오류 목록으로 반환. 원시 모델 결과를 조용히 고치거나 실패를 0 claims로 대체하지 않음.
+- 검증 성공은 `semantic_review_status=pending`. quote가 존재해도 claim/이유/조건을 실제로 함의하는지, 누락된 주장이 없는지는 별도 검수.
+- 초기 probe-0.1 결과는 그대로 보관. 0.2로 재사용하려면 원본을 새 prompt/schema로 재추출하며 무표시 변환하지 않음.
+- 전체 Factory envelope, eligibility 사유/언어/confidence, 재시도·문맥 해석은 아직 완성된 계약 구현이 아님.
+
+## 소표본 후보/검수 artifact claim-candidates-0.1 (2026-10-11)
+
+- `factory/claim_clusters.py`가 claims-0.2 추출 JSON과 snapshot의 hash·target·parent 문맥·종료 상태를 재검증합니다. 기존 `bound_claims`/계약 성공 표시는 신뢰하지 않습니다.
+- 이 형식은 전체 Factory run 계약을 대체하지 않는 개발 진단용입니다. 최대 60개 선택 원문/300개 claim이며 source별 blocked/duplicate_alias/included를 모두 기록합니다.
+- embedding input text/claim ID 순서/모델 revision/벡터, threshold, 후보 소속을 저장합니다. 후보마다 서로 다른 canonical source 수를 세고, 모든 입력 claim을 정확히 한 후보에 배정합니다.
+- 같은 원문의 여러 claim이 다른 후보에 속할 수 있습니다. 지지 원문 수를 후보 사이에서 합산해 전체 사람 수처럼 해석하지 않습니다.
+- `candidate_needs_review`는 unique sources >=3일 때의 후보 표시일 뿐 승인 아님. 작은 묶음은 `rare_unreviewed`로 보존합니다. 모든 결과의 accepted_perspectives는 0입니다.
+- AI 검수 JSON은 `candidate_report_sha256`, `reviewer=assistant`, `human_approved=false`, `findings`를 요구합니다. 원문/모델 결과가 승인 권한을 갖지 않습니다.
+- finding은 cluster_id, status, evidence_claim_ids를 가집니다. 상태는 propose_for_user_review/split_needed/reject/uncertain/rare. 전체 묶음 제안은 모든 member와 3개 이상 unique sources, common_claim을 요구합니다.
+- 선택적 proposed_groups는 split_needed에서만 허용. 자식 ID·공통 주장·증거·상태를 기록하고 부모 claim 전체를 중복/누락 없이 나누어야 합니다. 자식 제안도 승인 아님. 이는 split의 검증 가능한 **제안**이며 실행된 lineage 변경은 아닙니다.
+- 인용이 실제로 주장을 뒷받침하는지는 사람의 의미 검토 대상입니다. AI 검수 제안만으로 PerspectiveSpec이나 agent를 생성하지 않습니다.
+
+## 대표 주장 실험: 미승인 draft (2026-10-11)
+
+- `perspective-draft-0.1`의 groups는 members, common(text/evidence), details(kind/text/evidence)를 갖고, excluded는 member_id/reason을 갖습니다. 원문 내 인용·그룹 내 근거·전체 member의 정확히 한 번 배정을 검사합니다.
+- `perspective-assignment-0.2` wire 형식은 assignments의 필수 member key마다 group_id/exclusion_reason을 요구합니다. groups는 group_id/common/details를 가지며 details는 kind/text/member_ids를 가집니다.
+- v2에서 모델은 인용을 재작성하지 않습니다. `canonicalize`가 실제 target 전체를 연결하여 0.1 공통 형식으로 명시적으로 변환합니다. 사용하지 않는 group, group 누락, 그룹 밖 detail 인용, 제외 사유 누락은 오류입니다. raw와 canonical output을 따로 보존합니다.
+- host의 bind가 실제 claim/source ID를 붙입니다. unique sources>=3이라도 needs_semantic_review이며 나머지는 rare_needs_review입니다. 두 경우 모두 accepted_perspectives=0.
+- reasons/conditions/variations의 근거는 일부 source에만 해당할 수 있습니다. 공통 문장은 모든 배정 source의 지원이 필요하지만, 이 의미 요건은 문자열 validator로 보장되지 않습니다.
+- `source-statement-audit-0.1`은 각 문장과 각 인용 source의 pair마다 verdict/reason을 요구합니다. 검사 누락·잘림·잘못된 응답은 audit_failed. 모두 supported여도 needs_human_review, 나머지는 revise_before_human_approval입니다. 이는 모델의 진단 추천이지 실제 사람의 승인 상태가 아닙니다.
+- `source-statement-audit-pairwise-0.2`는 같은 verdict 계약을 사용하되 요청마다 정확히 한 pair와 해당 TARGET만 전달합니다. 다른 원문/문장·이전 판단·assistant 검수는 요청에 포함하지 않습니다.
+- pairwise의 `statement-placeholder-0.1`은 `M`+숫자 ID만 나열한 문장(공백/일부 구두점 포함)을 `id_only_placeholder`로 차단합니다. 일반적인 의미 없음 판별기는 아니며 draft 생성 계약이나 batch에는 적용되지 않습니다.
+- `pair_results`는 쌍별 raw/output/errors/seconds와 `verdict_origin=local_model|deterministic_lint`, `lint_errors`를 보존합니다. 규칙 차단은 unsupported/raw=null/모델 호출0이며, 모델이 판정했다고 표시하지 않습니다.
+- 한 pair 실패 시 다른 pair 검사는 계속하되 전체 추천은 audit_failed입니다. 실패 pair를 성공 output에 채우지 않습니다. `model_calls`는 실패한 시도도 포함하며 `lint_blocked_pairs`와 구분합니다.
+- 비교 결과는 동일 draft hash와 pair 집합 및 이전 verdict 누락 여부를 확인한 뒤 `previous_output`으로 따로 붙입니다. 비교 판단은 모델 입력이 아니며 변화 자체를 정확도 개선으로 해석하지 않습니다.
+- 한 쌍씩 검사해도 의미 오판이 남으므로 후속 semantic review를 생략하지 않습니다. `human_approved=false`와 accepted_perspectives=0을 유지합니다.
+- audit의 `--prompt-revision v1|v2`는 지시문만 선택합니다. `prompt_version`/`system_prompt`/`prompt_sha256`를 저장하고 pair payload, verdict schema, lint, 승인 권한은 유지합니다. 기본값은 v1입니다.
+- `comparison_metadata_changes`는 이전/현재 mode, lint, model/revision, runtime, request settings, prompt hash의 차이를 기록합니다. 서버 설정의 독립 검증이나 정확도 보장이 아닙니다.
+- draft의 `--revision v3`는 생성 prompt-0.3이며 wire 형식은 여전히 perspective-assignment-0.2입니다. v2와 동일 입력·스키마·validator·binding 사용; prompt revision을 wire 계약 변경으로 해석하지 않습니다. 기본 생성 revision은 v2입니다.
+
+## 개발 전용 source-frame 진단 (0.1)
+
+- `experiments/source_frame_probe.py`는 source-frame-diagnostic-0.1 artifact를 생성합니다. claims-0.2나 PerspectiveSpec의 교체 계약이 아닙니다.
+- 모델 출력은 assertion_type(prediction/need/possible_benefit/description/question/mixed/unclear), certainty(asserted/hedged/unclear), reason_quote/condition_quote(null 또는 실제 TARGET 부분 문자열)뿐입니다. 원문/claim/source ID는 호스트가 연결합니다.
+- 새 요청에는 TARGET 하나만 제공하고 과거 claim·그룹·평가 기대값은 주지 않습니다. 자유로운 대표 문장 생성은 하지 않습니다.
+- 필드/enum/원문 인용/종료 상태 실패를 보존합니다. 성공도 semantic_review_status=pending, human_approved=false, accepted_perspectives=0. label이나 인용 일치로 자동 승인/분할하지 않습니다.
+- 기존 embedding의 model/revision/claim 순서/입력 텍스트와 벡터 유효성을 재검증합니다. 같은 선택 subset의 원문 및 기존 claim 벡터를 0.25/0.35/0.45에서 비교하며 원래 전체 corpus의 군집을 대체하지 않습니다.
+- 최대12개, source당1개 claim, 원문2,000자 제한. multi-claim 추출·문맥 해소·전체 corpus 평가가 아닌 bounded diagnostic입니다. 기존 snapshot 만료를 상속합니다.
+
+## 원문 선택형 개발 artifact extractive-keypoints-0.1
+
+- `factory/extractive_keypoints.py`의 별도 실험 계약이며 승인된 PerspectiveSpec이 아닙니다. snapshot/extraction/candidate SHA256과 expires_at을 상속하고 입력 출처/후보 partition을 재검증합니다.
+- `anchors[member_id]`: source_member_id, source_comment_id, start=0, end, text. 호스트가 원문 전체에서 고정하며 모델이 변경하지 않습니다. 최대12개 source, source당1개 claim, 원문1..500자.
+- 모델 출력은 정확히 `{relation: supports|contradicts|not_established|unclear}`. 추가 필드/불완전 생성/호출 실패는 errors 및 relation=null로 보존. 모델 판단 입력은 SOURCE, REPRESENTATIVE 두 원문뿐입니다.
+- `pairs[source->anchor]`: source, anchor, relation, origin, raw, output, errors, seconds, human_approved=false. origin은 local_model 또는 identity_text_only이며 후자는 동일 원문 비교로 모델 호출하지 않습니다. 모든 N²쌍이 필요합니다.
+- `assembly.groups`: id, anchor_id, representative, member_ids, unique_source_count, evidence_pair_ids, status=needs_human_review. 모든 member는 대표에 직접 supports를 가져야 하며 최소3개 서로 다른 source. 그룹 간 중복 없이, 미배정은 assembly.unassigned에 이유/지원 후보/실패 pair와 함께 남깁니다.
+- accepted_perspectives=0, human_approved=false, independent_gold=false. 정확한 원문/출처와 관계 행렬을 저장해도 의미 정확도나 인간 승인을 뜻하지 않습니다. 실제 검수 의견은 결과 hash에 연결한 별도 비공개 artifact로 저장합니다.
+- prompt 본문/hash, generation_schema, operator-supplied 모델/revision/runtime/요청 설정 및 pair checkpoint를 보존합니다. 기존 파일 덮어쓰기/자동 resume는 지원하지 않습니다.
+
+## 로컬 관계 판정 비교 local-nli-comparison-0.1
+
+- 기존 B 산출물의 snapshot/extraction/candidate hash, 원문/대표, 전체 pair matrix 및 재계산 assembly를 검증. 기존 원문/대표/배정 알고리즘이 바뀌면 거절합니다. snapshot 만료도 다시 확인합니다.
+- 실행 전 manifest에 baseline/plan/synthetic suite/assembly code SHA256, expires_at, threshold=0.8을 저장. 공개 합성 suite와 비공개 실제 회귀 계획을 구분합니다. 기대 relation은 assistant 개발 기준이며 독립 gold가 아닙니다.
+- NLI pair는 기존 source/anchor/relation/errors/origin 계약을 유지하되 origin=local_nli, raw=logits, scores={entailment,neutral,contradiction}, argmax_relation, input_tokens를 추가합니다. relation은 threshold 적용 결과이며 scores는 보정된 신뢰도가 아닙니다. 오류 시 relation=null.
+- 평가 summary는 category별 total/matches/errors/supports/unclear/mismatch_ids를 따로 기록. 실패/보류를 정상 연결로 합산하지 않으며 동일 원문 pair는 의미 평가에서 제외. 실제 positive recall을 합성 사례 점수로 대체하지 않습니다.
+- 출력 비교 JSON/HTML, 별도 NLI 재배정 JSON, 쌍별 checkpoint는 모두 원문 유래의 private artifact입니다. accepted_perspectives=0, human_approved=false, independent_gold=false. 모델 판단/검수 결과를 원문 수정이나 승인으로 변환하지 않습니다.
+
+## 원문 계열 분류 source-facet-loop-0.1 / assistant-reviewed-source-facets-0.1
+
+- 개발 한정 모델 출력: topic_match(boolean), assertion_type(need/prediction/possible_benefit/description/question/mixed/unclear), polarity(affirmed/negated/mixed/unclear), assertion_quote(exact substring|null). unclear 외에는 null 인용 금지. extra field/인용 변형/불완전 생성은 실패.
+- polarity는 술어의 부정 여부이지 확신의 정도/정책 찬성이 아님. topic/type/polarity를 코드가 배정에 쓰지만 의미 정확성은 별도 검수가 필요. 모든 source는 원문 전체 source_cards 또는 명시적 unassigned로 보존하고 source/member 중복을 거절.
+- group semantics=assertion_family_not_full_sentence_entailment. 계열별 공통 제목은 코드 label이고 생성된 완전한 공통 명제가 아님. 3개 이상은 proposal_needs_semantic_review, 미만은 rare_preserved. 주장별 이유·조건을 다른 source에 전파하지 않음.
+- 검수 입력은 모델 출력 파일의 순서 있는 SHA256 배열에 연결. 모든 source에 정확히 한 entry(id/decision/reason_ko/reading_ko/cautions_ko)를 요구. confirm은 원래 계약 실패/숨은 수정을 허용하지 않음. correct는 topic/type/polarity만 명시적으로 바꾸고 호스트가 전체 원문 인용을 연결. abstain은 unclear로 보류.
+- 검수 결과는 원래 model_result와 새 result(origin=assistant_review)를 같이 보존. raw model 평가 수치는 변경하지 않음. human_approved=false/independent_gold=false/accepted_perspectives=0. assistant 수정 후 자체 기대값 일치를 독립 정확도로 계산하지 않음.
+- snapshot/hash/expiry/source 일치/중복 검증과 새 출력 경로를 사용. 실제 계획/판정/원문/HTML은 비공개 로컬 파일이며 원본 보관 만료 상속. 사람 승인된 PerspectiveSpec 계약을 대체하지 않음.
+
+## 개발용 관점 에이전트 bundle / comparison (0.1)
+
+- `development-perspective-bundle-0.1`은 정식 PerspectiveSpec이 아님. snapshot_sha256/reviewed_sha256/expires_at/dataset/agents/non_agents/limitations를 보존. source 원문·canonical source·검수 origin·assembly를 재검증하고 ask 때 bundle을 다시 계산해 전체 비교. build/ask 모두 명시적 --allow-unapproved 필요.
+- profile은 agent_id/title/assertion_family/polarity/status=development_only_not_approved/evidence/constraints/human_approved=false. evidence는 evidence_id/source_comment_id/original_text/source_url/reviewer_reading_ko/cautions_ko/interpretation_origin/parent_context. 검수 해석은 원문 번역이나 새 증거가 아님. parent는 문맥만 제공하고 may_cite_as_support=false.
+- `development-agent-comparison-0.1`: bundle/만료/hash/runtime/prompt/schema/code hash와 질문별rounds를 보존. 같은 질문을 각 AgentSession에 독립 전달하고 자기 state만 유지. 외부 source/다른 agent/희소·보류 source ID는 생성 스키마 및 validator에서 차단.
+- 답변 grammar0.2: answerability grounded/partial은1..2개의{text,evidence_id} points, not_in_evidence는0개. text<=400자, missing_information<=240자(partial은비어있지않음). 질문은1..1000자, session<=6질문, 이전2회 자기대화만 전달. raw 답변/오류/시도/시간/usage는 보존.
+- Auditor는 각 point와 해당 original 하나만 지지 근거로 검사하고 질문 관련성도 판단. supported/revise/unclear 및 짧은 reason을 반환. 모델 지지 판정은 독립 검증 아님. 구조 실패·모호·거절 시 최대1회 재생성, 최종 실패는 abstain 및 points=[]. 통과 상태는 model_audit_passed_development_only이며 human_approved/semantic_guarantee=false.
+- 표시된 point에 호스트가 citation 전체를 연결. 실패 초안은 HTML 답변/후속 history에서 제외. 미검사 missing_information도 JSON에만 보관하고 UI에는 호스트의 일반적 부분 답변 표시만 사용. citation URL은 YouTube HTTPS allowlist, 모든 HTML 내용 escape.
+- 모든 실행은 새 출력 경로/checkpoint로 저장. 실제 댓글 유래 artifact는 Git 제외/expiry 상속. 승인 관점0과 실행 개발 agent 수를 구분. 모델 ID는 운영자 선언이며 서버 실행 모델 자동 인증은 없음.
+
+## 로컬 비교 UI HTTP 계약 (development, 0.1)
+
+- `POST /api/session {}` → token + state. `POST /api/reset {}` → 기존 세션 폐기/새 token + state.
+  token은 메모리에만 유지하고 URL/로그/연구 export에는 저장하지 않음. 진행 중인 세션 reset은409.
+- `POST /api/ask {question, request_id}` →202 + state. 그 외 알 수 없는 필드는 거절.
+  question 1..1000자, request_id 1..80 ASCII 영숫자/하이픈. 같은 ID·질문 재전송은 기존 상태, 다른 질문은409.
+  동시 실행409, 질문/재시도 한도409, 변경된 원문409, 만료410. 무승인 진입은 CLI의 명시적 opt-in 필요.
+- `GET /api/state` → bundle/runtime/rounds/job/remaining_questions/can_ask/human_approved=false/accepted_perspectives=0.
+  job.status=idle|running|done|error. 실행 중 agent_id/stage=starting|generating|auditing/model_calls 표시.
+  공개 turn에는 agent_id/status/reason/answerability/points(호스트 고정 citation)/human_approved/semantic_guarantee,
+  generation_attempts/audit_requests만 제공. 원시 초안/감사 자유문/미검사 limit 제외.
+- `GET /api/export.json|html`은 session token 필수이며 작업 완료 상태에서 내려받는 private 연구 파일.
+  JSON은 기존 comparison-0.1 + web_code_sha256 확장 프로파일로 prompts/schema/runtime/모든 attempts 보존.
+  HTML은 검사를 통과한 points 및 원문만 표시하며 거절 초안을 최종 답변으로 표시하지 않음.
+- 모든 변경 요청은 정확한 same-origin 및 application/json, 최대8192bytes. 모든 경로 Host는 loopback hostname+실제port,
+  상태/질문/reset/export의 token은 `X-Session-Token`. CORS 허용 없음, no-store, 외부 asset·inline script 차단.
+- 서버 로그는 access body/token을 기록하지 않음. 연구 artifact는 manifest + request + agent checkpoint + round이며
+  source 만료를 상속. 파일은 Git 제외, UI reset으로 삭제되지 않으며 자동 복원/만료 파일 자동 삭제는 없음.
 
 ## 공통 규칙
 
@@ -57,6 +177,10 @@ source 수, top-level 수, reply 수는 별도 집계합니다.
 language tag는 `ko`, `en` 등 언어 태그를 사용하며 불명은 `und`입니다. 전체 원문이 여러 언어를 섞으면 `mul`을 허용합니다.
 self-parent와 snapshot 내부 parent cycle은 오류입니다. missing parent는 빈 댓글로 생성하지 않습니다.
 사용자명·계정 프로필은 초기 계약에 넣지 않습니다.
+
+공식 YouTube 수집에서 `text_original`은 API가 plainText로 반환한 `snippet.textDisplay`입니다.
+작성자의 raw `textOriginal`과 동일함을 보장하지 않습니다. 수집 경로의 `sampling.description`에 이 provenance를 명시합니다.
+댓글 언어는 자동 추정하지 않고 `und/unknown`으로 기록합니다. [수집 계약](YOUTUBE_COLLECTION.md)을 참고합니다.
 
 ## NormalizedComment / EligibilityRecord
 
