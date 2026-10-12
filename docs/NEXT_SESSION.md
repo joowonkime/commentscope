@@ -1,6 +1,27 @@
 # 다음 세션 시작점
 
-## 최신 위치 기반 근거·host 판정 진단: 기본 미채택 2026-10-12
+## 최신 논점 생성과 판정 분리 진단 2026-10-12
+
+- 코드 `446adaa`, [설계·실측·해석](COMPONENT_ISOLATION.md), ADR-029. prompt/schema/모델/threshold는 바꾸지 않았다.
+  합성 정상6쌍+실제3쌍에서 전체 원문/기존 자동 구간/assistant 사전 구간으로 제안 입력만 바꾸고,
+  생성 결과는 각각의 전체 원문으로 검사했다. 별도로 고정 기준 주장을 전체 원문/사전 구간에 검사했다.
+- 실제3쌍 모델 양쪽 통과: 전체1/3·자동구간0/3·사전구간1/3. 같은 물가1쌍이며 assistant 원문 대조도 충실하다.
+  자동 선택기가 명시적 공통 주장인 첫 문장을 놓쳤다. 수동 reference는 진단 개입이며 자동 selector 성공이 아니다.
+- 합성 생성은2/6양쪽 통과지만 그중 요금→일반 가격으로 조건 범위를 넓힌1개가 사후 수정 필요다.
+  기준 주장을 직접 넣어도2/6쌍, 원문별7/12통과·5uncertain. 조건 없음→unclear 등 관계 감사의 별도 과잉거절이다.
+- 취업/긴 물가 기준은 사전부터 candidate_requires_review로 표시했다. compatible pair가 특정 core 정답은 아니다.
+  기존 라벨은 바꾸지 않았으며 사후 평가도 독립 gold가 아니다. 임계값/guard 완화나 모델 재시도는 하지 않았다.
+- 기존37개 NLI-only 저장 trace 대조: 정상20/20이나 오승인8/17. 전체검사는 정상10/20·오승인2/17.
+  NLI만 쓰거나 unknown을 통과시키는 방법은 채택하지 않는다. representative11개는 별도 task로 집계한다.
+- private `runs/component-isolation-20261012/review.html`이 읽기 쉬운 결과, `overview.html`은 전체 trace,
+  `assistant-review.json`은27조건 결과 전수 검토다. 동일 조건은 cache를 공유하므로27독립표본이 아니다.
+  111.13초/신규LLM53/NLI51, 수리0/transport오류0. 서비스 latency 아님. evidence71회 위치 결합 검사 일치.
+  replay 새 모델0으로 일치, Python386개/Node4개 통과. 자체 모델 서버 종료, 원문/출력 Git 제외·만료 상속.
+- **다음**: 원문 위치에 결합된 문장 후보를 검색하는 추출형 baseline을 비교한다. 생성된 합의문을 먼저 만드는 부담을 줄이되
+  유사도만으로 지지/agent를 승인하지 않는다. 검사기는 별도 고정 source-target 정상/왜곡 평가로 교체 근거를 만든다.
+  아직 다음 baseline은 미구현이다. 기본경로/PR21 draft/main 유지, 새 agent0·ledger0·전체64/1000확장0.
+
+## 이전 위치 기반 근거·host 판정 진단: 기본 미채택 2026-10-12
 
 - 추론 전 코드 `80776fb`, [설계·결과·실패 분석](POSITIONAL_SUPPORT.md), ADR-028.
   검색된 pair 안에서 L/R 원문 구간 선택→공통 주장 제안→각 전체 원문 독립 감사→host 판정→저장 근거 NLI를 구현했다.
