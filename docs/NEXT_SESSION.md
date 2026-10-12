@@ -1,6 +1,30 @@
 # 다음 세션 시작점
 
-## 최신 원문 선택과 실행 계약 검증 2026-10-12
+## 최신 OpenJev 로컬 비교 2026-10-12
+
+- [OpenJev 결과·설치·재현](OPENJEV_COMPARISON.md)와 ADR-024가 최신입니다. TypeSafe 상용 Jev가 아니라
+  공개 OpenJev2B v5입니다. API 댓글 전송/전체1,000개 재실행/새 agent 생성/기본 모델 교체는 하지 않았습니다.
+- eab12f8에서 첫53개 비교를 고정했고 GPU 의존성 다운로드만 중단했습니다. OpenJev 추론 전270fea0에서
+  별도 CPU 계획과 typed routing 계획을 고정했습니다. 입력/라벨/threshold0.8은 변경하지 않았습니다.
+- CPU 직접53개: 합성 정상 DeBERTa12/12→OpenJev11/12, 왜곡 비승인6/12→12/12.
+  실제13개 정상8/8·왜곡3/5는 두 모델 동일합니다. 의미 추가2개를 OpenJev도 높은 점수로 승인했습니다.
+  직접 eligibility 정상0/8→5/8, 제외8/8→6/8. 미해결 지시어2개 오승인이 새로 생겼습니다.
+- 별도 typed16개/모델당48요청: routing 정상2/8→8/8이나 제외6/8→3/8.
+  상대/절대 점수0.8 strict는 OpenJev 정상2/8·제외8/8로 과잉거절입니다. 기본 도입 조건 실패입니다.
+- 두 비교 오류0이며 raw score/logits/입력 hash에서 모델 재호출0회 replay 일치. 작은 assistant 개발 평가이며
+  독립 gold/미사용 실제 자료/다국어·찬반 경향 분류 검증이 아닙니다. 실패를 고치기 위한 추가 prompt 튜닝은 하지 않았습니다.
+- 직접53요청 추론 합 DeBERTa10.24초/OpenJev68.45초, peak RSS1.53/10.33GiB.
+  CPU6threads/float32, OpenJev reference 커널 및 swap 관측입니다. GPU/최적화 환경·전체 pipeline wall time 점수가 아닙니다.
+- 기존 clustering venv는 그대로입니다. `/home/taeng/.venvs/commentscope-openjev`는 기존 CPU torch를 .pth로
+  읽기 전용 참조하고 transformers5.19/hub2.2/httpx2를 별도 설치했습니다. embedding은 이 새 환경에서 실행하지 마세요.
+  README optional `.[openjev]`는 독립 venv 전용입니다. 기본 CI에는 모델/의존성을 다운로드하지 않습니다.
+- private 화면: `runs/openjev-comparison-20261012-cpu/overview.html`, `runs/openjev-routing-20261012/overview.html`.
+  해당 report/plan/원시 checkpoint와 실패한 최초 GPU 계획을 보존했습니다. 실제 원문/출력/가중치는 Git 제외입니다.
+- Python317개/Node4개 로컬 통과. PR21 draft/main 미병합 유지. 이번 모델 프로세스는 실행 완료 후 종료됐습니다.
+- 다음: topic quote를 원문 위치 선택으로 제한 → 최종 evidence 기준 지시 대상/문맥 검사 → 알려진 실제 연결의
+  retrieval recall 검증. OpenJev는 후보 부품으로만 남기며, 정상 과잉거절/실제 의미 추가를 모델 크기만으로 해결됐다고 주장하지 않습니다.
+
+## 이전 원문 선택과 실행 계약 검증 2026-10-12
 
 - [원인·수정·증거](EVIDENCE_SELECTION_DIAGNOSTIC.md), ADR-023, DATA_CONTRACTS 원문 선택 진단 계약이 최신입니다.
   기본 Factory0.2와 main은 그대로이며 `evidence_units`/`evidence_core`는 진단 경로입니다.

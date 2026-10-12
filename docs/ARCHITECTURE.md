@@ -508,6 +508,11 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   정상 보존·오승인·unclear·latency·GPU memory를 함께 기록합니다. 모든 원시 scores/logits/request hash를 보존합니다.
 - 판정기만 비교하므로 새 cluster/agent 생성이나 default 승격은 수행하지 않습니다. 정식 도입은 명백한 왜곡 차단,
   정상 보존, 새 실제 평가와 원문 충실한 agent 실행이 추가로 필요합니다. 독립성 사전 분류는 라우팅 후보이지 강제 삭제 기준이 아닙니다.
+- 실제 결과: 합성 왜곡 비승인6/12→12/12이나 정상12/12→11/12. 실제 정상8/8·왜곡3/5는 동일하고
+  기존 의미 추가2개가 그대로 오승인됩니다. 직접 eligibility는 정상5/8·제외6/8입니다.
+  typed routing은 정상8/8·제외3/8, 상대/절대 strict는 정상2/8·제외8/8입니다. 양쪽 모두 기본 채택하지 않습니다.
+  오류0/두 비교 replay 일치/317tests는 실행 재현성이지 의미 품질 보장이 아닙니다.
+  CPU 메모리·성능·남은 실패와 새 환경 사용법은 [OpenJev 비교](OPENJEV_COMPARISON.md)에 보존합니다.
 
 ## 변경 시 필수 체크리스트
 
