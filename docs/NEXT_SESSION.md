@@ -1,5 +1,56 @@
 # 다음 세션 시작점
 
+## 최신 실제 데이터 비교 준비 2026-10-13
+
+- 사용자 요청으로 실험 선택 자체를 재검토했고, 직전 설명에 대한 `ㄱㄱ`에 따라 실제 데이터 평가 준비를 구현했다.
+  [현재 구조·채택 상태](CURRENT_ARCHITECTURE.md), [비교 프로토콜](FACTORY_EVALUATION_PROTOCOL.md), ADR-035가 다음 단계의 기준이다.
+  하단 witness 문서의 다음 단어/문장 prompt 변형보다 이 비교 준비가 우선한다. 새 감사 계층·모델 추론을 실행하지 않았다.
+- `experiments/factory_evaluation_kit.py`는 snapshot/기존raw plan/벡터를 검증하고 분할·정책 보정·cached V0를 만든다.
+  기존 개발64개를 보존하고 parent/동일 정규화문장 component가 겹치지 않는 예약64개를 선택했다.
+  component 인구는 개발444/예약90/기타465canonical이며 선택된 입력은64+64다.444개 fresh 실행이나 새 중복 제거가 아니다.
+  전체영상이 과거 실행에 사용되어 reserved_for_next_round일 뿐 unseen holdout은 아니다. 예약 텍스트/출력을 튜닝에 사용하지 않는다.
+- 길이3구간×reply2구간 round-robin으로 개발 원문12개를 추출하고 assistant가 full own-comment를 먼저 검토했다.
+  private `assistant-calibration.json/html`에 판정·원문 구절·일반화 금지 경계를 기록했다. source 원문 인용과 hash 결합 검증 완료.
+  사용자 우선 피드백3개는 K02 사실성과 주장 존재 분리, K05 동의+조건부 주장 보존, K11 상대 인용과 작성자 입장 분리다.
+  사용자 피드백은 아직 없고 독립 gold/서비스 입력이 아니다. 나머지9개를 포함해12개 전체가 검토되어 있다.
+- V0는 cached raw64 벡터+결정적 average linkage distance0.45.58후보(3member1/2member4/단일53),3개 이상 후보 source3/64다.
+  similarity/size는 지지 수가 아니므로 common_claim/support_count/semantic_precision/valid_perspective_coverage는 null, agent0이다.
+  다인 후보5개 사후 검토에서 물가 후보3개에 좁은 공통 주장 가능성이 있지만 assistant 해석이다. 자동 생성/가입 검증 성공 아님.
+- 준비 plan SHA `c2ecf136fcad514c82988c6245c788bc35cb48c73627c62f54a3be14a9622212`,
+  baseline SHA `569508a18e62c4704c2c0a4c0c628dfeab2b6dae63e53b5352b7810b9011646a`,
+  calibration SHA `6ebb049ef03f6dff2bb311ece0aa79afea1501d2d9386640257c01bfa9549c36`.
+  private `runs/factory-evaluation-reset-20261013/overview.html` 종합, `assistant-calibration.html` 피드백,
+  `baseline-review.json` 후보5개 검토. 재생 일치·새 LLM/embedding0, Python469/Node4 통과.
+- **다음**: 정책 피드백을 소량 반영하고 공통 후보/카드/가입 평가 출력과 V1/V2 adapter·model/hash·호출/시간 예산·수치 기준을 먼저 동결한다.
+  기존 V0와 자동 Factory 결과는 조건이 달라 비교 순위로 쓰지 않는다. V2는 같은 V1 artifact를 재사용해야 한다.
+  현재 `comparison_ready=false`: 평가 준비는 완료지만 matched 비교·블라인드 평가 출력·agent 품질 승격은 미완료다.
+  수치 기준은 아직 미정이며 사후 통과를 위해 완화하지 않는다. 부모 문맥 사용은 별도 variant로 분리한다.
+
+## 최신 원문 위치 근거 비교 2026-10-13
+
+- 사전 코드 `b2338ce`, [계약·실패 분석](ELIGIBILITY_WITNESS.md), ADR-034.
+  source-only 단일 enum과 단어 위치 candidate/작성자 입장/지시 대상 근거를 제출하는 witness를48회씩 총96회 비교했다.
+  기존32+새 대비16, 군별 정상8/제외8의 assistant 개발 기대다. 독립 gold/실제 새 댓글 평가가 아니다.
+- 기존4B·context4096/GPU26layers/CPU6threads/cache-off/비추론/temperature0/seed407/max_tokens900 고정.
+  정상 source 통과23/24→5/24, 제외 오승인15/24→1/24지만 정상 손실이 커 **witness0.1 채택 거부**다.
+  기존/이전 대비/새 대비 정상은8→2,7→0,8→3이며 부정 오승인은5→0,4→1,6→0이다.
+  필수 구간을 보존한 eligible0/7, 사전 기준은 오류0 외 모두 실패했다. 실제 표본 진입·기본 연결·agent0.
+- 정상5개도 candidate가 `late. It`/`get $820`/`would work more hours.`/`should stay open until`/`I could finish my`로 불완전했다.
+  한국어 단순 동의는 `말에 동의합니다.`→`그`의 의미적으로 잘못된 연결로 통과했다. 올바른 위치가 의미 증명은 아니다.
+- context는 resolved29/missing19, independent/unclear0. host가23개 보류(해결 근거 부재19/범위 밖 참조1/자기 참조3)했으나
+  그중 정상16개도 잃었다. 빈 references의 resolved를 사후 통과시키지 않는다. 보류를 올바른 의미 제외로 세지 않는다.
+  혼합 발화 손실이 남고 endorsed 출력0이다. 기존32 baseline 요청/parsed 출력은 직전 실험과 같았다.
+- 추론 합40.47초→222.59초, 출력 tokens490→3502. 전체 clustering 속도 측정이 아니다.
+  max prompt391/954·max completion11/122, 전부 stop, 오류/repair/재시도0이라 잘림/JSON 오류로 설명하지 않는다.
+- private `runs/eligibility-witness-20261013/review.html` 요약, `overview.html`48원문/96출력,
+  `assistant-review.json` 전수 검토. plan SHA `4d8a9ebe0d710a28de15d5a5094a0ddbe5ad06a3df060941ede1d2315363a6d0`,
+  report SHA `b0031b0b7a419518e39d35a65f2752395e1b9a751f1c0c19735fc60238ca019f`.
+  replay96/새모델0, 범위55개 원문 결합, cache0/비추론/모델·library 일치, 소유 서버2개 종료 확인.
+  Python455/Node4·Linux/Windows CI 통과. 추가 수집/다운로드/외부 추론0. 기본 생성/검색/충실성은 불변이다.
+- **다음**: 새 감사층 대신 기존 추출형 문장 후보 baseline을 재사용하는 단순화 비교를 설계한다.
+  코드가 완전한 문장 ID를 제공하고 모델은 선택/문맥 존재만 판단하는 경계다. 단어 인덱스 계산/참조 그래프 생성을 맡기지 않는다.
+  기존 문장 baseline도 실패했으므로 재사용 자체가 해결은 아니다. 이 단순화는 미구현이며, 원문 삭제/unknown 승인/서비스 필터 연결 금지.
+
 ## 최신 원문 자격 분리 대조 2026-10-13
 
 - 사전 코드 `aefc313`, [계약·결과·남은 오류](SOURCE_ELIGIBILITY.md), ADR-033.

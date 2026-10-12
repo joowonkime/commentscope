@@ -588,6 +588,17 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - [고정 비교](ELIGIBILITY_WITNESS.md)는 기존 단일 enum과48원문씩 비교한다. required_text는 평가 전용이며 추론 입력이 아니다.
   quality_gate_passed=false/agents=[]를 유지한다.
 
+## Factory evaluation kit 0.1 준비 전용
+
+- plan은 입력·코드 hash, component별 partition, 개발/예약 선택 ID,12개 calibration ID,embedding 식별정보를 보존한다.
+  parent·동일 정규화 텍스트로 이어진 원문은 같은 partition이다. 원문 ID와 기존 canonical vote 정책을 바꾸지 않는다.
+- baseline은 immutable 기존 벡터에서 만든 candidate partition과 exact medoid quote다. common_claim/support_count 및
+  의미 precision/유효 관점 coverage는 null이며 후보 size를 승인 지표로 대입하지 않는다.
+- calibration은 full source·digest·parent ID를 제공하지만 assessment/user_feedback는 null이다.
+  assistant 검토는 별도 hash-bound 파일이며 런타임 입력이 아니다. 예약 표본은 unseen/독립 gold로 표시하지 않는다.
+- [준비 프로토콜](FACTORY_EVALUATION_PROTOCOL.md). comparison_ready=false/quality_gate_passed=false/agents=[]다.
+  이 계약은 모델 비교 결과나 실제 자동 필터가 아니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
