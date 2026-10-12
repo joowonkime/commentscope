@@ -1,5 +1,30 @@
 # 다음 세션 시작점
 
+## 최신 로컬 판정기 모델 비교 2026-10-13 KST
+
+- 사전 코드 `d8530ad`, [설계·실측·실패·다음 경계](AUDIT_MODEL_COMPARISON.md), ADR-032.
+  기존12+충실성12+자격16=40평가 행/39고유 요청, 4B와 공식 Qwen3-8B Q4_K_M 비추론을39회씩 새로 실행했다.
+  system/data/schema/host 동일, 양쪽 context4096/GPU26layers/CPU6threads/cache-off/temperature0/seed407/max_tokens900.
+  새8B 파일5.03GB를 로컬에 추가했고 revision/hash는 plan·문서에 고정했다. 다른 앱/서버는 종료하지 않았다.
+- 반복성군 정상7/10→10/10, 실제 의미 추가 오승인2/2→1/2. 충실성군 정상2/6→3/6, 부정 오승인0/6 유지.
+  자격군 정상8/8 유지지만 제외8/8 오승인도 그대로다. 사전 오승인0 기준 실패, 기본 교체·통합시험 승격0.
+- state6/39·JSON14/39 변화, 오류/repair/재시도0. 4B222.35초/8B429.63초는 추론 합이며 부분offload/공유GPU 조건이다.
+  전체 서비스 시간이나 일반 모델 성능으로 주장하지 않는다. NLI/guard 없는 provisional 감사만 비교했다.
+- 39고유 입력/78출력 assistant 대조, 근거72구간 문자 결합 확인. 생산성 추가 사례는 거절됐지만 modality만 changed,
+  개인→일반화도 scope=preserved/modality=changed였다. 올바른 최종 거절을 올바른 이유/속성 검증으로 읽지 않는다.
+  eligibility는 source=target일 때 질문/단순 반응까지 모두 substantive로 분류했다. 개발 라벨이며 독립 gold 아님.
+- 과거4B 전체GPU/8192와 이번 부분GPU/4096에서 안전검사 원문1개가 uncertain→support로 바뀌었다.
+  여러 설정 차이가 있어 원인은 미확정. 이번 비교는 같은 설정으로 새로 실행한4B를 baseline으로 썼다.
+- private `runs/audit-model-comparison-20261012/review.html` 요약, `overview.html` 전수 비교,
+  `assistant-review.json` 사후 검토. 시작은10월12일23:51 KST, 완료는13일이라 run 경로의12를 유지했다.
+  plan SHA `edf1325d10d2df62d87357c8d1b6447745be00c5736ccb91e7038c42908b8db0`,
+  report SHA `7989d82b95671a78aa0c6abde1037c60df13e7e88123af81abab7da376980995`.
+  replay78개 일치/새모델0, Python419/Node4·Linux/Windows CI 통과. 소유 모델 서버 종료, 기본/agent0 유지.
+- **다음**: 더 큰 모델 추가 대신 SOURCE-only 자격 검사와 SOURCE→TARGET 충실성 감사의 분리 대조를 먼저 설계한다.
+  합동 감사의 target 의존성은 가설이다. 성공 때만 source digest/모델/정책별 자격 캐시로 연결해 반복 비용을 줄인다.
+  기존 OpenJev typed routing 실패도 보존하고 분리 자체를 성공으로 가정하지 말 것. 원문 삭제/unknown 승인 금지.
+  다음 모듈·full pipeline·자동 MVP는 아직 미완료다. 후보 baseline/생성기/선택기는 그대로 유지한다.
+
 ## 최신 판정기 fresh 반복성 진단 2026-10-12
 
 - 추론 전 코드 `2f3d6af`, [설계·실측·해석](AUDIT_REPEATABILITY.md), ADR-031.
