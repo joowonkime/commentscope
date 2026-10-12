@@ -21,8 +21,10 @@
   기존4B source-auditor prompt 반복 중단은 유지한다. NLI의 문서 사실 판정 통과를 댓글 지지 판정 통과로 옮기지 않는다.
 - 기존 Draft PR21 브랜치에서 계속한다. main 병합·공개 배포·새 모델 다운로드·유료 API는 미허가다.
 - 새 사이클 ledger는 `runs/mvp-agreed-20261013/inference.sqlite`: 이번 체크포인트에서921.02초/28,800초,
-  미완료 예약0.136개 LLM 요청과110개 NLI pair를 담은1개 bounded batch를 기록했다.
+  미완료 예약은0건이다.136개 LLM 요청과110개 NLI pair를 담은1개 bounded batch를 기록했다.
   과거 실험 비용을 포함하거나 예산이 소진됐다고 해석하지 않는다.
+- 코드 체크포인트 `de3520b`: Python584개·Node UI4개, Linux/Windows CI run38312676882 통과.
+  기존 PR21 브랜치에 push했고 main은 병합하지 않았다. 소유 모델 서버는 모두 정상 종료됐다.
 
 ## 공개 문서 기반 사실 판정 첫 실행 2026-10-13
 
