@@ -1,6 +1,31 @@
 # 다음 세션 시작점
 
-## 최신 OpenJev 로컬 비교 2026-10-12
+## 최신 위치 선택과 추출 전 검색 병목 2026-10-12
+
+- [실행 결과·재현](EVIDENCE_POSITIONS_DIAGNOSTIC.md), ADR-025, DATA_CONTRACTS 위치 진단 계약이 최신입니다.
+  코드 `ed9b98e`. 기본 Factory0.2와 이전 실험은 유지합니다. `evidence_positions`는 진단 전용입니다.
+- topic 첫/끝 token ID→host 원문 복사/offset 재결합, position_units→FINAL_EVIDENCE만 읽는 검사→units를 구현했습니다.
+  기존 합성16+실제24개는 이전 선택 범위를 고정했습니다. 알려진 정상3쌍의 endpoint5개만 새 선택하여 총45입력입니다.
+- GPU Qwen133요청. 첫 CPU fallback partial run은 보존하고 중단했습니다. CUDA 경로만 수정한 새 gpu run에서
+  코드/라벨/선택/상한 변경 및 CPU cache 재사용 없이 실행했습니다. runtime 관측/model hash도 private 저장했습니다.
+- 고정 정상7/8·제외7/8로 기존과 동일합니다. 정상1개는 이미 selector에서 소실됐고 지시 대상 없는 확언1개가 계속 통과합니다.
+  topic 오류9개/5sources는 모두120자 초과입니다. 위치 선택이 문자 추가를 막아도 필수 짧은 topic 계약으로 정상 후보가 사라집니다.
+- 실제 개발12개: 위치12→final11units. 기존 확인12개:12→8units. 추가5개:7→6units.
+  확인 최종8개 전수 검토는 정상 주장5·미해결 지시어2·저장 근거 문맥 누락1. final 검사는 알려진 실패를 해결하지 못했습니다.
+  같은 position12개에서 final이 제거한4개 중3개는 원문 주장,1개는 수사 의문문입니다. 과잉거절을 개선으로 보고하지 않습니다.
+- 이전 확인12units의 원래 evidence에 final만 적용해도 정상7/8유지·알려진 실패0/3차단입니다. 추가 LLM 감사의 효용 입증 실패입니다.
+- 동일 실제29source의 raw/position31/final25units 검색: 기존 정상3쌍 raw3/3노출(순위1,2,1), 추출 후 양쪽source 잔존0/3.
+  cross-mode/hybrid 동일합니다. 한 member는 명시적 주장이 있어도 selector가 비실질로 제외했고, 다른 anchor의 짧은 첫 주장은
+  선택에서 빠졌으며 나머지3개 후보도topic길이에서 거절됐습니다. 후자의anchor가2쌍에 공통입니다. 전체 corpus recall/의미 가입 성공 아님.
+- 품질 기준 실패로 assembly/새 agent 생성/전체1,000개 재실행은 하지 않았습니다. 모델·프롬프트·threshold 튜닝도 추가하지 않았습니다.
+- private 종합 `artifacts/evidence-positions-overview-20261012.html`, 평가 `artifacts/evidence-positions-review-20261012.json`,
+  raw/HTML `runs/evidence-positions-20261012-gpu/`. 새 LLM/embedding 호출0으로 replay 일치. Python331개/Node4개 통과.
+  모델 서버 종료. PR21 draft/main 미병합 유지. 실제 원문·출력·가중치는 Git 제외입니다.
+- 다음 우선순위는 **원문 검색 후보 보존 → 후보별 원문 기반 공통 주장 검사**인 retrieval-first 비교입니다.
+  selector/top4/필수topic으로 검색 전 원문을 영구 제거하지 말고 topic을 선택적 검색 보조로 분리해야 합니다.
+  이 새 경로는 아직 미구현이며 이번 판정 실패를 승인하거나 의미 가입 기준을 완화하는 뜻이 아닙니다.
+
+## 이전 OpenJev 로컬 비교 2026-10-12
 
 - [OpenJev 결과·설치·재현](OPENJEV_COMPARISON.md)와 ADR-024가 최신입니다. TypeSafe 상용 Jev가 아니라
   공개 OpenJev2B v5입니다. API 댓글 전송/전체1,000개 재실행/새 agent 생성/기본 모델 교체는 하지 않았습니다.
