@@ -482,6 +482,26 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   후속은 topic quote의 위치 선택 계약, 최종 evidence 기준 eligibility, 알려진 실제 연결의 retrieval recall 측정입니다.
   수치·실패·재현 경로는 [원문 선택 진단](EVIDENCE_SELECTION_DIAGNOSTIC.md)에 저장합니다.
 
+## ADR 024 판정 전용 로컬 OpenJev 비교
+
+- 상태: 기본 Factory 변경 없는 진단. TypeSafe 상용 Jev와 별도 공개 모델인 OpenJev를 구분합니다.
+  대상은 `AlexWortega/openjev`, revision `a20448012c213128955ca0c693e7c943865cab77`, `qwen3.5-2b-nli-v5`입니다.
+  8GB GPU를 고려해2B를 고정했습니다. README에 있는0.8B v5 경로는 이 revision의 실제 배포 목록에 없어 쓰지 않습니다.
+- 기존 Qwen 추출/문장 제안은 변경하지 않습니다. DeBERTa와 OpenJev에 같은 premise/target만 주어 원문 지지 판정을
+  비교하고, 별도 고정 meta-hypothesis로 실질 주장 eligibility 가능성을 측정합니다. 두 과제의 수치를 합치지 않습니다.
+- 입력53개를 첫 실행 전에 고정합니다. 기존 exact12개, 새 합성 전이12개, 이전 실제 검토의 명확한 fidelity13개,
+  기존 eligibility16개입니다. 실제20개 중 뉘앙스2·선택 문맥 부족4·독립성만의 문제1은 fidelity 점수에서 사전 제외합니다.
+  모델 결과를 보고 라벨을 고치거나 표본을 선택하지 않습니다. assistant 개발 라벨이지 독립 gold가 아닙니다.
+- `local_openjev`는 fixed NLI template, label ID, pad/pooling 계약을 확인합니다. pinned safetensors와 tokenizer만
+  local_files_only/trust_remote_code=false로 읽고 원문500자/입력512token을 넘으면 자르지 않고 오류 처리합니다.
+- API로 실제 댓글을 보내지 않습니다. 모델 파일만 내려받으며 추론은 offline입니다. 새 GPU 라이브러리 환경을 기존
+  CPU NLI/embedding 환경과 분리합니다. DeBERTa CPU float32와 OpenJev GPU bfloat16의 시간은 운영 관측치이며
+  같은 하드웨어에서의 속도 우열로 주장하지 않습니다. OpenJev 점수는 이 데이터에서 보정된 확률이 아닙니다.
+- threshold0.8은 기존 보수적 정책 그대로이고 새 모델에 맞춰 최적화하지 않습니다. 오류는 정답 음성으로 세지 않으며,
+  정상 보존·오승인·unclear·latency·GPU memory를 함께 기록합니다. 모든 원시 scores/logits/request hash를 보존합니다.
+- 판정기만 비교하므로 새 cluster/agent 생성이나 default 승격은 수행하지 않습니다. 정식 도입은 명백한 왜곡 차단,
+  정상 보존, 새 실제 평가와 원문 충실한 agent 실행이 추가로 필요합니다. 독립성 사전 분류는 라우팅 후보이지 강제 삭제 기준이 아닙니다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
