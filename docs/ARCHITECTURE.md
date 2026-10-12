@@ -514,6 +514,23 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   오류0/두 비교 replay 일치/317tests는 실행 재현성이지 의미 품질 보장이 아닙니다.
   CPU 메모리·성능·남은 실패와 새 환경 사용법은 [OpenJev 비교](OPENJEV_COMPARISON.md)에 보존합니다.
 
+## ADR 025 주제 위치 선택과 최종 근거 검사
+
+- 상태: 별도 진단. 기존 Factory0.2와 evidence-units0.1/OpenJev 실험을 보존합니다.
+  `evidence_positions`는 주제의 첫/끝 token ID만 허용하고 원문 위치에서 topic quote를 복사합니다.
+  같은 표현이 여러 번 나오면 선택된 occurrence를 유지하며 가까운 문자열로 바꾸지 않습니다.
+- focus와 topic이 있는 연속 문맥 및 이웃 문장을500자 안에서 저장합니다. 부분 절단/부모 내용 추가는 하지 않습니다.
+  위치 전용 결과를 먼저 보존하고, 최종 저장 evidence/focus/topic만 보는 별도 eligibility 결과로 후속 units를 만듭니다.
+  전체 댓글을 읽은 첫 판정이 최종 검사 입력에 들어가지 않습니다. 구조적 보존과 의미 완결성은 구분합니다.
+- 고정 합성16개·기존 실제 개발12개·이전 확인12개의 선택 범위를 그대로 재사용합니다. topic prompt/schema/표현 변경을
+  한 개입으로 측정하고 final 검사 추가 효과는 같은 position units에서 분리합니다. 이전 확인 표본은 이제 회귀 표본입니다.
+  과거 독립성/문맥 실패12units도 원래 evidence 그대로 final 검사합니다. 정상/제외 기대값을 결과 후 수정하지 않습니다.
+- 기존 실제 정상 cross-source3쌍의 추가 endpoint5개를 포함해 총45입력을 고정합니다. 실제29source의 같은 pool에서
+  원문/position units/final units와 기존 cross-mode·hybrid 검색을 비교합니다. source 노출 및 추출 잔존율을 보고하며,
+  원문이 검색됐다는 것을 올바른 claim 연결/cluster 가입/전체 corpus recall로 보고하지 않습니다.
+- 코드/자료/라벨/모델 revision을 추론 전에 고정합니다. 결과를 본 뒤 threshold/예외 어휘를 바꾸지 않고 오류를 정답 제외로 세지 않습니다.
+  고정 정상8/8·제외8/8 및 확인 출력 검토를 통과하기 전 assembly로 확장하지 않습니다. 전체1,000개 재실행·새 수집은 없습니다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

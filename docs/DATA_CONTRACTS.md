@@ -488,6 +488,20 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - 진단 보고서는 정식 bundle이 아니며 `quality_gate_passed=false`, `independent_gold=false`입니다.
   모델 호출 없는 exact replay는 재현성 검사이지 의미 정확성 증명이 아닙니다.
 
+### 주제 위치와 최종 근거 진단 계약
+
+- `evidence-positions-0.1`는 기존 sentence-ID focus와 별도로 `topic`에 최대1개의 첫/끝 token ID를 받습니다.
+  token은 Unicode 비공백 원문 구간이며 언어 분석 결과가 아닙니다. substring/offset/선택 occurrence를 host가 결정합니다.
+  topic120자·statement450자·evidence500자 상한을 넘으면 보류합니다. 모델이 topic/statement 문자열을 작성할 수 없습니다.
+- unit의 `topic_span`에는 first/last ID와 원문 start/end/text를 저장합니다. source digest, focus/context,
+  topic occurrence를 재결합해 검증하며 변경 시 거절합니다. 구조적 정확성은 의미적 주제 타당성 보장이 아닙니다.
+- `position_units`는 주제 위치 단계 산출물이고 `units`는 최종 근거 eligibility까지 통과한 부분집합입니다.
+  final 요청은 FINAL_EVIDENCE/FOCUS/TOPIC만 받습니다. 이전 판정·전체 원문·다른 댓글은 입력에 포함하지 않습니다.
+  최종 allowed는 모델의 fallible 판정이며 raw 결과/입력 digest/오류를 보존합니다. 진단 결과를 정식 agent bundle로 승인하지 않습니다.
+- `evidence-positions-probe-0.1`는 기존 선택 범위 고정 개입, 만료/input/code hash, 모델/embedding revision,
+  원문과 두 단계 units에 대한 source-level 검색 노출을 기록합니다. 미추출 source를 분모에서 빼지 않습니다.
+  원시 cache를 통한 exact replay는 새 모델/embedding 호출 없이 수행합니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
