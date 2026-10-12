@@ -560,6 +560,15 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - report의 support는 NLI·guard를 제외한 provisional projection이다. ledger/agent 입력이 아니며 agents=[]/quality_gate_passed=false다.
   [반복성 평가 계약](AUDIT_REPEATABILITY.md)을 따른다. 일관성과 정확도는 별도 측정한다.
 
+## Audit model comparison 0.1 (진단 전용)
+
+- 40평가 행은 cohort/expected/request_id를 담고39고유 요청은 system/data/schema만 담는다. 라벨은 추론에 전달하지 않는다.
+- 모델별 attempt는 model/sequence/request_sha256/result/result_sha256/원본 HTTP response/host decision과 전체 hash를 저장한다.
+  양쪽 요청 순서와 payload를 고정하고 모델별 fresh39회씩 실행한다.
+- report는 군별 정상 보존/부정 오승인·거절·보류/오류와 사전 진입 기준을 출력한다.
+  candidate_eligible_for_full_pipeline_trial은 다음 시험 자격일 뿐 quality_gate_passed=false/agents=[]를 바꾸지 않는다.
+  [모델 비교 계약](AUDIT_MODEL_COMPARISON.md)을 따른다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
