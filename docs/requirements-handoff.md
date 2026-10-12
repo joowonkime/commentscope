@@ -749,3 +749,29 @@ Independent sampled evaluation remains necessary for research and release qualit
 
 Implementation and limitations are tracked in `AUTOMATIC_FACTORY.md` and ADR-017. This dated clarification
 extends the repository copy of the original handoff; the parent-directory historical original is unchanged.
+
+### 16.11 Local MVP and major factual premises on 2026-10-13
+
+The current MVP uses local model inference and retains perspective discovery, same-question comparison,
+follow-up questions, and original-source inspection as its initial product tasks. Perspective formation,
+factual-premise checking, and agent-input construction are separate replaceable stages.
+
+Do not fact-check every comment. Select the major factual premises used by candidate agents and check them
+against frozen external source documents. Only evidence-supported factual claims may enter agent input;
+unsupported, refuted, conflicting, unassessed, or errored claims may not supply factual grounds. A model
+support judgment is provisional and bounded to the supplied evidence, not certified truth.
+
+Values and predictions remain attributed positions rather than verified facts. Never add an external
+argument that the comments did not support, rewrite a failed premise to rescue a viewpoint, or let a
+candidate whose major factual grounds all failed pass merely by dropping its reasons. Dependencies on
+failed required premises also block the candidate. Preserve exclusions and their impact on representation.
+
+Count support for the common position separately from support for each reason. At least three canonical
+comment sources remain a necessary, not sufficient, condition for an agent candidate. Service-time human
+classification, repair, or approval remains excluded; offline research evaluation is separate.
+
+Implemented status and remaining experiments are in `FACT_GROUNDED_AGENTS.md` and ADR-038. The new input
+compiler is not connected to the existing answer runtime or UI. Automatic source retrieval, semantic
+quality, claim/dependency extraction, and final treatment of purely value-based candidates remain open.
+This clarification supersedes any earlier assumption that comment-faithfulness alone is sufficient for
+factual agent grounds. It extends the repository handoff; the parent-directory historical original is unchanged.

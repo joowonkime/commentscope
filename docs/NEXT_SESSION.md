@@ -1,5 +1,29 @@
 # 다음 세션 시작점
 
+## 최신 주요 사실 근거 분리 구현 2026-10-13
+
+- 사용자와 로컬 전용 MVP, 관점 형성·주요 사실 검사·에이전트 입력의 분리를 합의했다.
+  [현재 구조와 실행 예제](FACT_GROUNDED_AGENTS.md), handoff 16.11, ADR-038이 아래 과거의 다음 작업보다 우선한다.
+- `factory/fact_checks.py`: 동결 주장·문서·인용을 입력으로 로컬 1회 판정, 지원/반박/충돌/불충분 구분.
+  자료 없음·30,000 bytes 초과는 호출 없이 미검사, 출력 500 tokens·repair0. 저장 판정 재생은 모델 호출을 하지 않는다.
+- `agents/grounded_inputs.py`: 원문 지지와 잠정 사실 지원의 교집합만 입력에 포함한다.
+  공통 입장 최소3 canonical 댓글, 이유별 지지 수 분리, 외부 댓글 이유 혼입 금지, 필수 전제·전체 주요 사실 탈락 시 보류.
+  raw 댓글/탈락 사실은 인용 기록에만 보관하며 prompt export는 원래 bundle 재조립 일치를 확인한다.
+- 새 profile 상태는 `fact_screened_input_not_runtime_approved`다. `quality_gate_passed=false`, `agents=[]`.
+  기존 AgentSession/UI는 새 상태를 받지 않는다. 실제 Factory adapter·claim 유형/전제 추출·검색·새 답변 경로는 미구현이다.
+  기존 원문 의미 판정 실패도 여전히 미해결이다. 순수 가치 관점은 사실 인증 없는 입력 후보이며 최종 수용 정책은 남아 있다.
+- 합성 runner: `python -m experiments.grounding_contract_demo --output-dir runs/fact-grounding-demo`.
+  실제 로컬 출력은 `runs/fact-grounding-contract-20261013/overview.html`, `summary.json`, 5개 scenario JSON이다.
+  전부 직접 작성한 댓글·문서·판정, 모델0·네트워크0. 후보 수는 지원/반박 혼합1, 미검사0, 전체 반박0, 필수 전제 반박0, 2-source0.
+  공통 지지3/개별 이유1 구분을 확인했다. 실제 팩트체크 성능/새 agent 생성/자동 MVP 완료가 아니다.
+- 새 테스트34개 포함 전체 Python545개·Node UI4개, 기존 합성 snapshot validate 통과.
+  branch는 `feat/automatic-perspective-factory`, 기존 Draft PR #21에 기록하며 main 승격은 하지 않는다.
+  Git/CI 최신 상태는 해당 PR에서 확인한다. 실제 corpus·model 결과는 계속 Git 제외다.
+- **다음 순서:** 소수 실제 주장+고정 외부 문서의 통제 판정 실험을 사전 동결→같은 주장의 자동 검색 조건 비교→Factory adapter→답변/UI.
+  검색 실패와 판정 실패를 따로 측정한다. 아직 실험 표본·자료·채택 수치·총 예산은 동결하지 않았다.
+  같은4B source-auditor prompt 반복 중단을 유지하며, 합성 결과를 근거로 원문/사실 의미 품질을 승인하지 않는다.
+  자동 모델 결과를 assistant가 고쳐 runtime에 넣거나 0-agent를 품질 성공으로 세지 않는다.
+
 ## 최신 고정 주장·독립 가입 비교 완료: 반복 중단 2026-10-13
 
 - 사용자와 합의한 초기 제품은 관점 발견→같은 질문 비교→후속 질문→원문 확인이다.

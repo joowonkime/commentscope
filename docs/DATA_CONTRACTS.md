@@ -640,3 +640,33 @@ state는 `model_supported/not_supported/uncertain/error`다. partial/unsupported
 모든 V0/V1 카드의 common/detail 인용별 판정과 설명이 있어야 한다. 같은 문장 안의 동일 source 판정이 상충하면 거부한다.
 통계는 card/statement/distinct source 기준으로 중복 제거한다. 비어 있는 분모의 비율은 null이다.
 V2 평가에는 같은 V1 판정을 재사용하며 runtime 승인·원문·카드 내용을 수정하지 않는다. metadata는 `blinded=false`, `independent_gold=false`, `runtime_input=false`다.
+
+## 주요 사실 근거 판정과 입력 조립 계약 0.1
+
+[정책·예제·실험 경계](FACT_GROUNDED_AGENTS.md). `factory/fact_checks.py`와 `agents/grounded_inputs.py`가 host validator다.
+기존 automatic Factory/AgentSession 계약을 자동으로 대체하지 않는다.
+
+| 입력 | 필드와 불변조건 |
+|---|---|
+| Claim | `id,text,kind,scope,requires`; kind는 fact/value/prediction, scope는 entity/time/conditions; 의존성은 기존 fact ID, cycle 금지 |
+| Source | `id,text,canonical_id`; alias는 지지에 투표하지 않음; canonical chain 금지 |
+| Relation | claim/source ID·hash, 정확한 span, verdict, trace_id, origin; 동일 claim/source 중복 금지, supported만 집계 |
+| Document | ID·전체 text·HTTPS URL·title·publisher·published_at·retrieved_at·expires_at·source_kind; 선택 구간과 전체 문서 hash 결합 |
+| Selection | `id,document_id,span`; span은 정수 start/end와 정확한 text, 중복 evidence ID 금지 |
+| Model | name·revision·weights_sha256·runtime_sha256; artifact의 선언된 identity이며 실행기 attestation은 아님 |
+| Candidate | `id,core_claim_id,reason_claim_ids,major_fact_ids`; 이유와 reachable 사실 집합에 결합 |
+| Bundle | `expires_at,sources,claims,relations,documents,checks,candidates,model`; check는 claim_id·selections·record |
+
+`evidence-bound-fact-check-0.1`은 packet/request hash, model identity, expiry, raw/parsed 결과·오류·시간·usage,
+판정 state를 저장한다. 지원/반박 인용은 packet 내부 ID이며 각 방향에 필요한 인용이 있어야 한다.
+판정은 supplied passages에 한정된다. `supported/refuted/conflicting/insufficient/unassessed/error` 외의 승격 상태는 없다.
+model origin·human_approved=false·quality_gate_passed=false를 유지하고 기록 재사용 시 원래 자료로 packet/request를 재구성한다.
+코드 hash에 대한 runner manifest, 자동 source retrieval provenance, publisher/date 의미 검증은 후속 통합 범위다.
+
+`fact-screened-agent-inputs-0.1`은 input hash·최단 expiry·profiles·deferred·claim_decisions를 저장한다.
+profile은 core 지지 수, 각 prompt entry의 개별 지지 수·범위·종류·전제, 댓글 인용/사실 검증 인용, omitted 이유를 분리한다.
+기존 runtime에서 허용하지 않는 상태를 사용하며 `quality_gate_passed=false`, `agents=[]`다.
+`prompt_input`은 원래 bundle로 재조립해 일치를 확인한 후 허용 entries만 반환한다. 원문 전체·탈락 사실은 생성 입력에서 제외한다.
+
+원문 관계와 claim typing/major/dependency 선언은 아직 upstream 의미 판단이다. `local_model` origin이나 hash만으로 정확성·진위를
+입증하지 않는다. 합성 입력도 허용하는 개발 계약이므로 이 output을 자동으로 서비스 품질 승인으로 읽어서는 안 된다.
