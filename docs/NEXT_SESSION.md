@@ -1,5 +1,24 @@
 # 다음 세션 시작점
 
+## 최신 판정기 fresh 반복성 진단 2026-10-12
+
+- 추론 전 코드 `2f3d6af`, [설계·실측·해석](AUDIT_REPEATABILITY.md), ADR-031.
+  이전 겹친 감사10요청+의미 추가 부정2요청, cache on/off × 연속/교차 ×3회=144 fresh HTTP 호출했다.
+  선택기/프롬프트/모델 불변, 매 arm 별도 GPU 서버이며 response cache/repair/재시도0이다.
+- 모든 설정에서 요청별 raw/JSON/host 판정이 같았다. 정상6/10만 잠정 지지·4/10 항상 보류, 부정2/2 항상 오승인.
+  캐시 off72회 cached_tokens0 확인. 이전 안전검사 source-self 출력 변동은 재현하지 못했다.
+  캐시 원인/해결 주장이나 일반 결정성 증명이 아니다. 반복되는 의미 오류가 별도로 남는다.
+- 시간은 on연속66.68/on교차67.13/off연속73.93/off교차73.84초, 추론 합281.58초다.
+  startup/hash/파일 기록 제외, full pipeline 성능 측정이 아니다. NLI/guard 없는 provisional projection만 비교했다.
+- private `runs/audit-repeatability-20261012/review.html`은 요약, `overview.html`은 전체12요청·설정별 결과다.
+  plan SHA `7fa33e772e9da2ee4084967c76025f870960758af69079839085c8de8888a825`,
+  report SHA `b5d358cb0819dfd47c33c55ed0d376c99601a7feee8a9dc87498d0e721e330ae`.
+  각 attempt/HTTP응답/서버명령/라이브러리 hash/종료기록 보존. 재생144개 일치·추가 모델 호출0.
+- Python408/Node4 및 Linux·Windows CI 통과. 소유 서버4개 모두 종료. 추가 수집/다운로드/외부추론0, agent0/기본승격0.
+- 다음은 후보 baseline을 그대로 두고 **감사 모듈만 교체 비교**한다. 정상 재표현·의미 추가·자격 실패를 함께 검사한다.
+  먼저 비교 모델/자원/예산을 고정할 것. 캐시 해제나 반복 다수결을 해결책으로 넣지 않는다.
+  이번 진단은 완료지만 대체 모델 비교·실제 cluster/agent 자동 MVP는 아직 미완료다.
+
 ## 최신 원문 문장 후보 baseline 2026-10-12
 
 - 추론 전 코드 `0b7c026`, [계약·실측·사후 검토](EXTRACTIVE_CANDIDATES.md), ADR-030.

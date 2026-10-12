@@ -603,6 +603,8 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - [고정 설계](AUDIT_REPEATABILITY.md): 후보/프롬프트/모델을 고정하고 cache on/off × blocked/interleaved 144회 비교한다.
 - 매 arm 새 소유 서버, 실제 HTTP 호출별 보존, 중단 후 문맥 이력 재개 금지. response cache 재생과 fresh 추론을 분리한다.
 - provisional 속성 판정만 측정하며 NLI 포함 지지 승인과 구분한다. 안정적 오판도 공개하고 기본 승격/agent 생성은 하지 않는다.
+- 결과: 144회에서 요청별 출력 변화0, 정상6/10 잠정 지지·부정2/2 오승인이 모든 설정에 동일했다.
+  캐시 원인/해결 근거는 없으며 과거 변동은 미재현이다. 캐시 기본값을 바꾸지 않고 다음은 감사 모듈만 교체 비교한다.
 
 ## 변경 시 필수 체크리스트
 
