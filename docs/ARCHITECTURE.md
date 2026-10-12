@@ -547,6 +547,17 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - [정확한 계약·재현·범위](RAW_RETRIEVAL_MVP.md). 원문·cache·대기 목록을 보존하고
   후속 모듈에 두 원문을 정확히 전달한다. agent 승인/지지 집계는 다음 구현이다.
 
+## ADR-027: Raw pair 공통 주장과 독립 지지 ledger (2026-10-12)
+
+- [구현·사전 평가 계약](RAW_SUPPORT_MVP.md). 원문 쌍당 제안 하나를 고정한 뒤 각각의 전체 원문→주장을 검사한다.
+  추출 문장 자체의 승인이나 peer 정보를 membership 근거로 쓰지 않는다. 원문은 검색 registry에 계속 남는다.
+- 같은 NLI 가중치의 별도 raw adapter는500자 대신 실제512token 한도를 검사한다. truncation 없이 초과를 미검사로 보존한다.
+  전체 원문 NLI와 관계 감사 후 supporting quote에 보조 lexical guard를 적용한다. schema도 system에 노출한다.
+- 지지 ledger는 canonical source 중복 제거, core/source digest 결합,5상태 분모를 검증한다.
+  exact-string core만 병합하고 유사도 연결의 전이적 합집합은 금지한다. 주요/희소 등급은 잠정 표시일 뿐 승인 아니다.
+- 기존37직접 판정+12쌍 회귀와 실제64쌍을 고정한다. 회귀 오승인/오류/미검사가 없을 때만 첫2core를64source에 확장한다.
+  이 모듈에서 agent를 생성하지 않는다. 진단 결과와 사후 의미 검토를 분리하고 기존 경로는 유지한다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

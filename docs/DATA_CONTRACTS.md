@@ -518,6 +518,20 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - [지지도 상태/분모/잠정 표시 등급/시간 목표 계약](RAW_RETRIEVAL_MVP.md)은 다음 집계 모듈의 설계이며
   현재 runtime 지지 판정 구현으로 읽지 않는다.
 
+## Raw support 0.1 (진단 전용)
+
+- pair trace: source-bound pair_id/input_digest, 단일 proposal, 독립 source checks, selected_core/status.
+  두 source 모두 support일 때만 pair_supported_unvalidated. 없음/오류/미검사와 의미 거절을 구분한다.
+- source decision: source_id/source_digest/core_digest,5상태 state/reason, NLI, audit, qualification_guard, evidence.
+  인용의 모든 exact occurrence offset을 보존하며 동일 문자열 반복에서 모델이 특정 위치를 골랐다고 가정하지 않는다.
+- ledger: 고정 core/registry digest, canonical source별 한 행, counts/support_count/completed_count,
+  canonical_denominator, 잠정 tier/major_threshold. 미예약은 unchecked이며5상태 합은 N이다.
+  중복/alias/foreign source/변경된 core/hash/support trace 누락은 거부한다.
+- 모든 ledger는 quality_gate_passed=false/agents=[]/model_counts_unvalidated다.
+  단위 테스트 통과와 모델 의미 정확도는 별개이며 지지 수를 사실·독립 사용자 수로 표시하지 않는다.
+- raw-support-probe0.1은 별도 고정 회귀/실제64쌍, source-bound cache/replay, 제한된 확장 여부와 시간을 기록한다.
+  자세한 입력 길이와 평가 계약은 [공통 주장·지지도 MVP](RAW_SUPPORT_MVP.md)를 따른다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
