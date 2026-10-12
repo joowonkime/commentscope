@@ -494,9 +494,16 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   모델 결과를 보고 라벨을 고치거나 표본을 선택하지 않습니다. assistant 개발 라벨이지 독립 gold가 아닙니다.
 - `local_openjev`는 fixed NLI template, label ID, pad/pooling 계약을 확인합니다. pinned safetensors와 tokenizer만
   local_files_only/trust_remote_code=false로 읽고 원문500자/입력512token을 넘으면 자르지 않고 오류 처리합니다.
-- API로 실제 댓글을 보내지 않습니다. 모델 파일만 내려받으며 추론은 offline입니다. 새 GPU 라이브러리 환경을 기존
-  CPU NLI/embedding 환경과 분리합니다. DeBERTa CPU float32와 OpenJev GPU bfloat16의 시간은 운영 관측치이며
-  같은 하드웨어에서의 속도 우열로 주장하지 않습니다. OpenJev 점수는 이 데이터에서 보정된 확률이 아닙니다.
+- API로 실제 댓글을 보내지 않습니다. 모델 파일만 내려받으며 추론은 offline입니다. 최초 GPU 계획은 라이브러리
+  다운로드 비용 때문에 OpenJev 추론 전에 중단했습니다. 원본 계획/DeBERTa 결과를 보존하고 별도 CPU 계획을 고정합니다.
+  같은 CPU/6threads/float32를 쓰되 tokenizer와 transformers 버전이 다르므로 시간은 이 환경의 운영 관측치입니다.
+  OpenJev 전용 환경에서만 새 transformers를 설치하고 기존 CPU torch를 읽기 전용으로 재사용합니다.
+  기존 NLI/embedding 환경은 변경하지 않습니다. OpenJev 점수는 이 데이터에서 보정된 확률이 아닙니다.
+- 직접 NLI eligibility와 공식 OpenJev wrapper 형식의 typed routing을 별도 실험으로 구분합니다. 후자는 같은16개에
+  substantive/non_substantive/context_dependent의3개 고정 가설을 검사하고 entailment 점수를 상대 정규화합니다.
+  이는 DeBERTa 직접 eligibility 실패를 본 뒤, OpenJev 결과를 보기 전에 추가한 실험임을 명시합니다.
+  상대 점수가 높아도 절대 entailment가 낮으면 strict 승인하지 않습니다. 동점/오류는 의미 판정 성공이 아니며,
+  routing 결과는 댓글 삭제나 서비스 승인을 결정하지 않습니다. 모델별48개 요청의 원시 점수를 보존합니다.
 - threshold0.8은 기존 보수적 정책 그대로이고 새 모델에 맞춰 최적화하지 않습니다. 오류는 정답 음성으로 세지 않으며,
   정상 보존·오승인·unclear·latency·GPU memory를 함께 기록합니다. 모든 원시 scores/logits/request hash를 보존합니다.
 - 판정기만 비교하므로 새 cluster/agent 생성이나 default 승격은 수행하지 않습니다. 정식 도입은 명백한 왜곡 차단,

@@ -69,7 +69,7 @@ def make_plan():
             'cases': cases, 'excluded': excluded,
             'models': {'deberta': {'model': local_nli.MODEL, 'revision': local_nli.REVISION, 'device': 'cpu'},
                        'openjev': {'model': local_openjev.MODEL, 'revision': local_openjev.REVISION,
-                                   'subfolder': local_openjev.SUBFOLDER, 'device': 'cuda'}},
+                                   'subfolder': local_openjev.SUBFOLDER, 'device': 'cpu'}},
             'policy': {'threshold': .8, 'threshold_tuning': False, 'max_chars': 500, 'max_tokens': 512,
                        'batch_size': 1, 'parent_context': False, 'generation': False},
             'quality_gate_passed': False, 'independent_gold': False, 'service_time_input': False,
@@ -78,7 +78,7 @@ def make_plan():
                             'Real nuance/context-missing/eligibility-only labels excluded BEFORE inference',
                             'NLI support and substantive eligibility are separate tasks',
                             'Equal threshold does not imply calibrated or equally conservative models',
-                            'Different tokenizers, devices, dtypes and libraries: operational latency, not hardware-controlled speedup',
+                            'Same CPU/threads/float32, different tokenizers and transformers versions: operational latency, not a universal speed claim',
                             'OpenJev2B is not commercial Jev or OpenJev4B; English only',
                             'No claim extraction, cluster assembly, new agents or full1000 rerun']}
 
@@ -120,7 +120,7 @@ def render(report):
     p = ['<!doctype html><html lang="ko"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">',
          '<title>OpenJev 로컬 판정 비교</title><style>body{font:16px/1.7 system-ui;max-width:1100px;margin:auto;padding:20px}pre,blockquote{white-space:pre-wrap;overflow-wrap:anywhere}td,th{border:1px solid #aaa;padding:8px}table{border-collapse:collapse}article{border-top:1px solid #aaa;margin-top:20px}</style>',
          '<h1>OpenJev 로컬 판정 비교</h1><p>진단 전용. TypeSafe Jev의 시험이 아니며 독립 gold/품질 승인/새 agent 생성이 아닙니다.</p>',
-         '<p>원문 지지와 독립 주장 여부를 따로 평가합니다. 실행 오류는 올바른 거절로 세지 않습니다. CPU/GPU가 달라 속도 우열의 통제 실험은 아닙니다.</p>',
+         '<p>원문 지지와 독립 주장 여부를 따로 평가합니다. 실행 오류는 올바른 거절로 세지 않습니다. 같은 CPU이지만 tokenizer와 라이브러리가 달라 보편적 속도 우열로 일반화하지 않습니다.</p>',
          '<table><tr><th>표본</th><th>DeBERTa 정상/제외</th><th>OpenJev 정상/제외</th></tr>']
     for split in report['summaries']['deberta']:
         p.append('<tr><td>'+esc(split)+'</td>')
@@ -157,12 +157,12 @@ def main():
         if (directory/'report.json').exists(): p.error('Completed model output exists')
         manifest = {'expires_at': plan['expires_at'], 'plan_sha256': sha(path), 'model': plan['models'][name],
                     'runtime': {'torch': version('torch'), 'transformers': version('transformers'),
-                                'dtype': 'float32' if name == 'deberta' else 'bfloat16', 'threads': 6}}
+                                'dtype': 'float32', 'threads': 6}}
         model = None
         def score(a, b):
             nonlocal model
             if model is None:
-                model = local_nli.LocalNLI() if name == 'deberta' else local_openjev.LocalOpenJev()
+                model = local_nli.LocalNLI() if name == 'deberta' else local_openjev.LocalOpenJev(device='cpu')
                 if not (directory/'runtime.json').exists(): write_json_exclusive(directory/'runtime.json', model.metadata)
             return model.score(a, b)
         cached = CachedScores(directory, manifest, score)
@@ -179,7 +179,12 @@ def main():
                        'p95_request_seconds': times[min(len(times)-1, int(.95*len(times)))],
                        'peak_allocated_bytes': max((r.get('peak_allocated_bytes', 0) for r in records.values()), default=0),
                        'runtime': read_json(directory/'runtime.json'),
-                       'note': 'Includes cold first scoring call; model loading is reported separately. Cached results retain original timings. Different hardware/runtime, no controlled speedup claim.'}
+                       'note': 'Includes cold first scoring call; model loading is separate. Same CPU/threads/float32, different libraries/tokenizers. Cached timings retained; no universal speed claim.'}
+        try:
+            import resource
+            performance['process_peak_rss_kib'] = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        except ImportError:
+            performance['process_peak_rss_kib'] = None
         write_json_exclusive(directory/'report.json', {'manifest': manifest, 'records': records,
                              'summary': summarize(plan['cases'], records), 'performance': performance})
     else:
