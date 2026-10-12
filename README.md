@@ -8,10 +8,12 @@
 실제 corpus와 실행 출력은 공개 저장소에 포함하지 않습니다.
 이어서 작업할 때는 [다음 세션 시작점](docs/NEXT_SESSION.md)을 먼저 확인합니다.
 
-**현재 방향 — 실제 데이터 비교 준비:** 새 검사 추가를 멈추고 개발64개·스레드/동일문장이 겹치지 않는 예약64개를 고정했습니다.
-기존 벡터로 V0 후보58개를 재생성했고 실제 원문12개에 assistant 평가 초안을 작성했습니다. 새 모델 호출0, V1/V2는 아직 미실행입니다.
-[현재 구조·채택 상태](docs/CURRENT_ARCHITECTURE.md) · [비교 프로토콜·남은 준비](docs/FACTORY_EVALUATION_PROTOCOL.md).
-private 화면은 `runs/factory-evaluation-reset-20261013/assistant-calibration.html`입니다. 예약군은 과거 노출 없는 holdout이 아닙니다.
+**최신 실제64개 비교:** 원문 기반(V0), 주장 기반(V1), 같은 V1에 감사 추가(V2)를135회 fresh 로컬 호출로 비교했습니다.
+카드6/15/10개를 만들었지만 assistant 원문 검토상 충실한3-source 이상 카드는 모두0개로 **기본 채택을 보류합니다.**
+반대 입장 오가입, 공통 주장 과분할, 상세 이유의 출처 이동을 분리해 확인했습니다. 형식 테스트 통과와 의미 품질은 다릅니다.
+[현재 구조·채택 상태](docs/CURRENT_ARCHITECTURE.md) · [실측·실패·다음 변경 경계](docs/MATCHED_FACTORY_COMPARISON.md).
+private 화면은 `runs/matched-factory-20261013/assistant-review.html`입니다. 평가가 독립 gold이거나 자동 MVP가 완성됐다는 뜻은 아닙니다.
+예약64개·전체1,000개 재실행·새 agent 승격은 하지 않았습니다.
 
 **이전 원문 위치 근거 비교:** 같은4B로48원문×2조건=96회 실행했습니다.
 정상 source 통과23/24→5/24, 제외 오승인15/24→1/24로 정상 손실이 커져 **이번 구조는 채택하지 않습니다.**

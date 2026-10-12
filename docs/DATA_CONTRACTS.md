@@ -622,3 +622,8 @@ V0/V1은 같은 assignment0.2를 canonical draft로 변환한다. `candidate_sou
 의미 검증된 `support_count`는 null이다. V2는 V1 카드 digest를 저장하고 검사 통과 카드의 내용을 수정하지 않는다.
 `completed.json`은 실행 artifact hash를 결합한다. verify는 hash와 정확한 V1 부분집합을 검사하고 추가 추론을 하지 않는다.
 assistant 평가와 사용자 피드백은 별도 offline 파일이며 runner 입력에 허용되지 않는다. 모든 결과는 `quality_gate_passed=false`, `agents=[]`다.
+
+`matched_factory_review.py`는 실행 완료 후 별도 renderer다. `assistant-ratings.json`은 plan/report hash에 결합되며
+모든 V0/V1 카드의 common/detail 인용별 판정과 설명이 있어야 한다. 같은 문장 안의 동일 source 판정이 상충하면 거부한다.
+통계는 card/statement/distinct source 기준으로 중복 제거한다. 비어 있는 분모의 비율은 null이다.
+V2 평가에는 같은 V1 판정을 재사용하며 runtime 승인·원문·카드 내용을 수정하지 않는다. metadata는 `blinded=false`, `independent_gold=false`, `runtime_input=false`다.

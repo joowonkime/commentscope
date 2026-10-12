@@ -1,5 +1,32 @@
 # 다음 세션 시작점
 
+## 최신 실제64개 matched 비교 완료 2026-10-13
+
+- 사용자 `ㄱㄱ`에 따라 ADR-035의 adapter를 구현하고 같은64개 V0/V1/V2를 실제 실행했다. 아래 준비 단계보다 이 결과가 최신이다.
+  [실측·판정·다음 경계](MATCHED_FACTORY_COMPARISON.md), [현재 구조](CURRENT_ARCHITECTURE.md), ADR-036을 먼저 읽는다.
+- frozen 코드 `e09a691`, `experiments/matched_factory_probe.py`. 원문 후보/claim 후보에 같은 assignment0.2/v3 카드 생성기를 연결한다.
+  V2는 동일 V1 artifact를 source-statement0.2로 검사한 부분집합이다. 중복 claim을 distinct source 지지로 세지 않는다.
+- 64개 fresh 추출:45개에서113claim,19개 non_substantive. V0/V1 후보58/77개 중 다인5/9개를 생성했다.
+  카드6/15/10개,3-source 이상0/1/0개. assistant 비블라인드 평가상 충실한3-source 이상 카드는 모두0개다.
+  V1의 유일3-source 카드는 'UBI가 있으면 일하지 않는다'에 계속 일하겠다는 반대 입장을 넣었고 V2가 제거했다.
+- 물가3원문은 두 후보 검색 모두 도달했으나 V0에서2+1, V1에서1+1+1로 나뉘어 공통 핵심을 잃었다.
+  이 실패를 검색 문제만으로 취급하지 않는다. 공통 주장/가입/상세 이유를 한 번에 생성하는 경계에서 과분할·이유 이동·조건 손실이 관측됐다.
+- V2는 assistant-supported 관계25개 중23개를 유지했지만 나머지32개 중20개도 supported로 판정했다.
+  전체 인용이 충실한 작은 카드5/5는 보존했으나 남은10개 중5개에는 문제 인용이 있다. 독립 gold/통계적 우월성/서비스 승인 아님.
+- 호출135회: V0draft5, extract64, V1draft9, audit57. 생성828.79초, CPUembedding13.96초.
+  기존 cached V0 벡터 비용과 서버 시작은 별도. 전체서비스/1,000개 속도를 측정한 것이 아니다.
+  transport/계약 오류0·예산 보류0·전부stop. 소유 서버PID34024 종료 및 부재 확인.
+- private `runs/matched-factory-20261013/assistant-review.html`에서21개 카드 원문/판정과12개 추출 경계를 확인한다.
+  assistant-ratings.json은 runtime_input=false이며 runner에 넣지 않는다. `matched_factory_review.py`는 offline 검토의 중복/누락 검증·수치/HTML 도구다.
+  생성 코드는 변경하지 않고 실행 후 별도 추가했다. 추론 산출물/수동 평가는 공개 Git에 올리지 않았다.
+- plan SHA `33895cfd3bdb7ee2a225e681f55afe00f183b292fba59f58d7b3c79f7e0ea54a`,
+  report SHA `51722fb576a7b162085e7ee425320bcc170b17d360eb2df5baa4577cc8f4b07c`.
+  verify는 모델0회로 완료 manifest와 V2의 V1 부분집합을 확인했다. 추론17+검토6개 회귀를 추가했고 Python492/Node4가 통과했다.
+- **다음**: 검색 artifact를 유지하고 공통 주장 고정→원문별 가입→지지 집계→별도 상세 근거의 경계를 제한 비교한다.
+  원문별 관계 확인 중 target을 바꾸거나 다른 댓글의 이유를 전달하지 않는다. 이 변경은 아직 구현·검증된 해법이 아니다.
+  기존 extractive/NLI 정상 손실을 무시하지 말고 물가3-source 보존과 반대 입장 오가입 차단을 동시에 회귀 조건으로 둔다.
+  세 구성 모두 사전 채택 기준 미달이므로 현재 기본 Factory/agent 경로를 바꾸지 않고 예약64개·1,000개 확대도 보류했다.
+
 ## 최신 실제 데이터 비교 준비 2026-10-13
 
 - 사용자 요청으로 실험 선택 자체를 재검토했고, 직전 설명에 대한 `ㄱㄱ`에 따라 실제 데이터 평가 준비를 구현했다.
