@@ -796,3 +796,13 @@ This resolves the value-perspective admission direction left open in 16.11, not 
 The other proposed numerical quality gates and iteration-count limits have not yet been explicitly
 confirmed. See `FACT_GROUNDED_AGENTS.md` for agreed conditions, proposed thresholds, and measurement scope.
 This dated clarification extends only the repository handoff; the historical parent copy remains unchanged.
+
+### 16.13 Acceptance gates confirmed on 2026-10-13
+
+The user subsequently approved the proposed minimum quality table and requested autonomous goal work.
+The numerical criteria under `FACT_GROUNDED_AGENTS.md` are now acceptance gates, not measured results.
+Freeze evaluation samples and denominators before inference, retain failures, and do not weaken thresholds
+or use offline reference labels as service inputs. Source-faithfulness, factual evidence, useful answers,
+abstentions, runtime, and actual agent output must all pass; passing code tests alone is insufficient.
+The prior stream interruption did not complete or evaluate the MVP. The eight-hour inference allowance
+starts with the new cycle, not with historical experiments or time spent editing code.

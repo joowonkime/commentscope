@@ -1,5 +1,43 @@
 # 다음 세션 시작점
 
+## 공개 문서 기반 사실 판정 첫 실행 2026-10-13
+
+- 사용자 요청으로 기존 목표 작업을 재개했다. 플랫폼 goal 상태는 여전히 blocked이며 자동 재개와 직접 작업을 구분한다.
+- `runs/fact-evidence-development-20261013`의 4B 개발 시험8건 실행·재생 검증 완료.
+  기대 일치5/8, 지원 보존2/3, 비지원 오승인0/5, 계약 오류1건, 호출 경과58.42초다. 사전 기준 실패이며 MVP 통과가 아니다.
+- 첫해 고용 효과와 전체 효과의 시점을 혼동했고, 자료 부족을 반박으로 분류했다. 금액·연령·wellbeing 범위 사례는 기대와 일치했다.
+  원시 결과를 수동으로 고치거나 기준을 완화하지 않았다. 기존 556개 Python 테스트는 통과했다.
+- 다음은 이미 캐시된8B에 동일8건·문서·프롬프트·예산·판정 기준을 주는 배포 비교다.
+  `experiments.fact_deployment_probe`의 prepare/run/verify를 사용한다. 새 다운로드나 웹 검색은 필요 없다.
+  모델·native template 차이는 있으므로 파라미터 수만의 효과로 해석하지 않는다.
+- 아래 복구 지점의 모델0회/미실행 문장은 이전 상태다. 현재 새 사이클 누적 호출8회이며 SQLite ledger가 비용의 기준이다.
+
+## 스트림 반복 중단 후 복구 지점 2026-10-13
+
+- 사용자에게 Codex 응답 스트림 오류가 반복됐다. 이것을 CommentScope 모델/코드 실패나 사용량 초과로 단정하지 않는다.
+  플랫폼 goal은 조회 시 blocked였으며 코드 작업은 별도 요청에서 진행했다. 자동 목표가 정상 실행 중이라고 보고하지 않는다.
+- 새 코드: `providers/budget.py` SQLite 예산 기록과 호출별 별도 프로세스 deadline, `factory/evidence_fetch.py` 공개 문서 확보,
+  `experiments/fact_evidence_probe.py`의 사전 동결된 개발 점검 8건. budget8개+fetch3개 신규 테스트와 기존 사실/조립34개 통과.
+- Kela 일반 HTML에는 본문이 없어 첫 prepare가 안전하게 실패했다. 사이트가 사용하는 공개 JSON article endpoint로 본문을 확보하는
+  제한된 adapter를 추가했고, 원문 응답·URL·article ID·발행/수정일·hash를 private capture에 저장했다. 인증·차단 우회는 하지 않았다.
+- `runs/fact-evidence-development-20261013/plan.json` 준비 완료. plan SHA
+  `0e2532c1687a967078ed46ff863f08e67b6e7dda49820ba2bb30f7555d41b826`.
+  실제 공개 문서 기반의 assistant 사전 작성 주장8개(지원3/반박3/자료부족2)이며 실제 댓글 추출이나 최종40건 평가가 아니다.
+- **새 실제 모델 호출0, 아직 started/report/completed 없음.** 당시 실행 중인 llama/python 프로세스도 없었다.
+  예산 ledger 기본값은 `runs/mvp-agreed-20261013/inference.sqlite`, 한도28,800초다. 누락 완료 호출은 예약량을 계속 차감하며
+  실패·timeout도 기록한다. 이 장치는 새 runner에만 연결돼 있고 기존 실험 전체를 전역 차단하는 장치는 아니다.
+- 재개할 다음 명령은 `.venv/bin/python -m experiments.fact_evidence_probe --run-dir runs/fact-evidence-development-20261013 --phase run`.
+  먼저 plan/code hash와 다른 작업의 GPU 사용·8091 점유를 확인한다. prepare를 덮어쓰거나 이미 실행된 호출을 무조건 재시도하지 않는다.
+  run 완료 후 같은 명령의 `--phase verify`로 모델 호출 없이 재생 검증한다. 그 후 실제40건·관계100건·통합 agent/UI로 이어간다.
+- 브랜치 기존 Draft PR21, main 미승격. 원문 문서 capture·실행 출력·예산 DB는 Git 제외다. 아직 MVP 완료가 아니다.
+
+## 최신 최소 품질 합의와 실행 재개 2026-10-13
+
+- 사용자가 품질표를 승인하고 goal 진행을 요청했다. handoff16.13과 FACT_GROUNDED_AGENTS의 확정 수치를 따른다.
+  아래 과거의 미합의 표시는 당시 기록이다. 샘플·분모·구체적 요청은 모델 실행 전에 고정해야 한다.
+- 스트림 중단 전 새 모델 추론은 없었다. 새 사이클 비용은 중단 복구 가능한 호출 기록에서 집계한다.
+  제품 완성·품질 통과를 선언한 상태가 아니다. 플랫폼 goal의 blocked 표시와 프로젝트 의미 평가의 실패는 별개다.
+
 ## 최신 시연 범위와 자율 개발 조건 합의 2026-10-13
 
 - handoff 16.12, ADR-039, [합의와 미확정 수치](FACT_GROUNDED_AGENTS.md)를 먼저 읽는다.
