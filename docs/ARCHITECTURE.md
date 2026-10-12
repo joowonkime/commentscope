@@ -617,6 +617,15 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   8B 기본 교체/통합시험 진입 기준 실패다. 올바른 거절에서도 scope 등의 속성 오류가 있어 설명으로 신뢰하지 않는다.
   다음은 SOURCE-only 자격 대조이며 성공 시 source별 재사용을 검토한다. 아직 구현/성공한 모듈이 아니다.
 
+## ADR-033: 자격 단일 작업과 TARGET 입력 분리 대조 (2026-10-13)
+
+- [계약](SOURCE_ELIGIBILITY.md): 기존 joint/자격 전용 with-target/source-only의3조건, 동일4B·32원문·96회다.
+  전용 두 조건은 TARGET 필드만 다르며 joint와 전용은 prompt/schema/정책 명료화가 함께 바뀌는 패키지 비교다.
+- source-only 요청은 기대 라벨/target을 받지 않고 단일 자격 enum을 반환한다. 불확실/문맥 의존/오류는 승인하지 않는다.
+  자격 통과가 모든 문장이나 target의 충실성을 보장하지 않으며 원문 삭제/agent 생성/기본 경로 연결은 없다.
+- 기존 정상8/8·새 대비7/8 이상·양쪽 제외 오승인0·오류0일 때만 실제 표본 시험 후보가 된다.
+  source별 재사용 키는 정의하지만 실제 cache/생산 필터는 검증 후 별도 결정한다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

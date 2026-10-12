@@ -569,6 +569,15 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
   candidate_eligible_for_full_pipeline_trial은 다음 시험 자격일 뿐 quality_gate_passed=false/agents=[]를 바꾸지 않는다.
   [모델 비교 계약](AUDIT_MODEL_COMPARISON.md)을 따른다.
 
+## Source eligibility 0.1 (opt-in 비교 전용)
+
+- request_for는 원문 전체의 위치 결합 SOURCE만 전달한다. target/평가 라벨/peer/parent는 입력하지 않는다.
+- 단일 eligibility enum을 host가 eligible/excluded/context_dependent/uncertain/error로 해석한다.
+  eligibility는 support_count나 source-target 충실성/agent 승인이 아니다. 미확정은 eligible이 아니다.
+- identity는 exact 요청과 모델 식별정보/version을 결합한 재사용 키다. corpus 필터/실제 cache/ledger 연결은 없다.
+- 3조건 probe는 각32개 source별 새 호출을 저장하고 원문별 label 변화와 군별 정상 보존/오승인/보류/오류를 보고한다.
+  [평가·실행 계약](SOURCE_ELIGIBILITY.md)을 따른다. quality_gate_passed=false/agents=[]를 유지한다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
