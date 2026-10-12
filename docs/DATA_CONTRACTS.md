@@ -552,6 +552,14 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
   assess는 두 전체 원문 각각을 positional-support로 검사하며 출처 원문의 자동 지지도 금지한다.
 - [추출형 평가·예산 계약](EXTRACTIVE_CANDIDATES.md). 모델 통과와 실제 원문 충실성은 별도 평가한다.
 
+## Audit repeatability 0.1 (진단 전용)
+
+- plan은 기존 exact 감사 request와 개발 기대/과거 출력, 입력·코드·모델·런타임 hash, 4arm/3반복/144회 예산을 고정한다.
+- attempt는 arm/sequence/case/repeat/request_sha256/result/result_sha256/원본 response/host decision을 담고 전체 hash도 결합한다.
+  동일 request도 별도 sequence로 저장하며 추론 응답 cache는 사용하지 않는다. 중단 실행 재개는 금지한다.
+- report의 support는 NLI·guard를 제외한 provisional projection이다. ledger/agent 입력이 아니며 agents=[]/quality_gate_passed=false다.
+  [반복성 평가 계약](AUDIT_REPEATABILITY.md)을 따른다. 일관성과 정확도는 별도 측정한다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.

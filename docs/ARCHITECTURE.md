@@ -598,6 +598,12 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   literal 후보로 재작성 오류는 피했지만 구간 단위와 판정기 한계가 남았다. 동일 감사 요청의 실행 간 변화도 관측했다.
   후보 baseline을 고정하고 새 추론 반복성→독립 판정기 비교 순서로 진행한다. 현재 기본 승격/agent0 유지다.
 
+## ADR-031: 판정기 fresh 반복성 분리 (2026-10-12)
+
+- [고정 설계](AUDIT_REPEATABILITY.md): 후보/프롬프트/모델을 고정하고 cache on/off × blocked/interleaved 144회 비교한다.
+- 매 arm 새 소유 서버, 실제 HTTP 호출별 보존, 중단 후 문맥 이력 재개 금지. response cache 재생과 fresh 추론을 분리한다.
+- provisional 속성 판정만 측정하며 NLI 포함 지지 승인과 구분한다. 안정적 오판도 공개하고 기본 승격/agent 생성은 하지 않는다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
