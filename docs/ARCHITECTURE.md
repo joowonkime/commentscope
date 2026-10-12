@@ -669,6 +669,18 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 다음은 frozen 공통 주장·원문별 관계·상세 이유 출력을 분리하는 경계이며 아직 구현/채택하지 않았다.
   예약 표본·1,000개 확대·새 agent0. offline assistant 평가는 독립 gold나 서비스 입력이 아니다.
 
+## ADR-037: 고정 주장과 독립 가입을 분리하고 실험 중단 경계 적용 (2026-10-13)
+
+- [사전 계약·실측](FIXED_CORE_COMPARISON.md). 원문/claim 추출/검색은 재사용하고 joint draft/assignment만 제거한다.
+  기존 claim에서 후보당 중심1개+diverse2개를 결정적으로 선택하며 내용/threshold를 사후 변경하지 않는다.
+- 원문별 독립 감사는 고정 주장 하나와 해당 full own-comment만 본다. anchor도 검사, 다중 가입 허용, source당1표다.
+  모델 지지와 검증된 지지 수를 분리하고 상세는 원문 인용만 보존한다. public 기본/agent 경로와 미연결이다.
+- 고정 target 개념은 이전 raw_support/grounded_core에도 있었다. 최신 matched 경계의 단순화 비교이며 새로운 의미 보장이나 단일 인과 효과가 아니다.
+- 결과:24target/72관계,195.09초·오류0. 모델상 물가3댓글이 모였지만 부연의 출처 이동이 남아 충실한3-source 카드0이다.
+  반대 노동 입장 오가입은 거절했다. assistant 전체 대조에서 모델 지지23중8개가 partial이며 독립 gold가 아니다.
+- 사전 한 번의 개선 비교가 실패했으므로 같은4B prompt/auditor 변형은 중단한다. 예약64개·전체 확대·새 agent0.
+  다음은 의미 모듈의 모델/학습 방식 또는 명시적 MVP 범위 결정이다. 원문 충실성/수동 runtime 없음/초기 제품 목표를 완화하지 않는다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

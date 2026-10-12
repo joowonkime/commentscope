@@ -623,6 +623,19 @@ V0/V1은 같은 assignment0.2를 canonical draft로 변환한다. `candidate_sou
 `completed.json`은 실행 artifact hash를 결합한다. verify는 hash와 정확한 V1 부분집합을 검사하고 추가 추론을 하지 않는다.
 assistant 평가와 사용자 피드백은 별도 offline 파일이며 runner 입력에 허용되지 않는다. 모든 결과는 `quality_gate_passed=false`, `agents=[]`다.
 
+## Fixed-core membership 개발 계약 0.1
+
+`factory/fixed_core.py`는 기존 claim/vector/candidate/source registry에서 불변 target을 선택한다.
+core ID/digest는 candidate ID·anchor unit ID·exact text를 결합한다. anchor spans는 원문 위치로 검사한다.
+`relations`는 모든 검사 source를 보존하며 source text digest·core digest·판정 trace를 포함한다.
+state는 `model_supported/not_supported/uncertain/error`다. partial/unsupported는 비지지, unclear는 보류이며 반대 입장으로 세지 않는다.
+`model_support_count`는 해당 target에 supported인 canonical source 수다. 검증된 `support_count`는 null이며 `agents=[]`다.
+`evidence`는 전체 own-comment 인용이고 `quotation_scope=whole_own_comment_not_shared_detail`, `generated_details=[]`다.
+희소/미결정 target과 단일 source 검색 후보도 artifact에 보존한다. 모든 원문의 모든 claim을 검사했다는 뜻이 아니다.
+`fixed_core_probe`는 입력·코드·모델 hash/예산을 동결하고 기존 audit v2의 개별 요청을 저장한다.
+별도 `fixed_core_review`는 plan/report hash에 결합한 전체 source별 offline 판정만 집계하며 runtime 입력이 아니다.
+비교 계약과 중단 조건은 [FIXED_CORE_COMPARISON](FIXED_CORE_COMPARISON.md)에 있다.
+
 `matched_factory_review.py`는 실행 완료 후 별도 renderer다. `assistant-ratings.json`은 plan/report hash에 결합되며
 모든 V0/V1 카드의 common/detail 인용별 판정과 설명이 있어야 한다. 같은 문장 안의 동일 source 판정이 상충하면 거부한다.
 통계는 card/statement/distinct source 기준으로 중복 제거한다. 비어 있는 분모의 비율은 null이다.

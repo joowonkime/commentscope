@@ -1,5 +1,29 @@
 # 다음 세션 시작점
 
+## 최신 고정 주장·독립 가입 비교 완료: 반복 중단 2026-10-13
+
+- 사용자와 합의한 초기 제품은 관점 발견→같은 질문 비교→후속 질문→원문 확인이다.
+  약속한 개선 비교1회를 `b12a24f` 코드로 실행했다. [설계·결과·다음 의사결정](FIXED_CORE_COMPARISON.md), ADR-037이 아래 과거의 다음 실험 제안보다 우선한다.
+- 기존64개/113claim/77후보를 재사용했다. 다인9후보에서24target을 선택하고72개 source-target 관계를 새로 검사했다.
+  full own-comment, 기존audit v2,4B/context8192/GPU26/CPU6/cache-off/temperature0/seed407, repair0.
+- 모델 지지23/72,3-source 카드1. 물가3댓글이 모였지만 supply-side 분류를 말하지 않은2원문까지 전체 문장을 지지한다고 승인했다.
+  공동 생성의 과분할은 이 사례에서 줄었지만 좁은 공통 명제 선택/가입 충실성은 해결되지 않았다.
+  반대 노동 입장은 거절했고 generated details0이다. 기존 추출 claim의 조건/범위 손실은 그대로 남는다.
+- assistant 비블라인드 전수 평가: supported15/partial28/unsupported29, 정상15/15 모델 유지·partial8개 오승인.
+  전체 인용이 충실한 작은 카드14개, 충실한3-source 이상0개. 독립 gold/정확도 인증/이전 비율과 직접 비교 아님.
+- fresh72, 생성195.09초, 오류0·예산 보류0·전부stop. cached 추출/검색/서버 시작 제외로 전체영상3분 주장은 금지한다.
+- private `runs/fixed-core-20261013/assistant-review.html`에24target/72관계 전체 원문·판정·이유가 있다.
+  `overview.html` 모델 원시 판정, `assistant-ratings.json` offline만 사용. 평가를 model 입력/수정 카드로 넣지 않았다.
+- plan SHA `53b0dbc705a7c27f0b0f366d520131fb920e17a7aaa011f984886cd72fc66e40`,
+  report SHA `026d70a336f70c76dbf729406176165be0925c2f19ff6d60c406d3bed3737691`.
+  verify 새 모델0회로72관계의 요청 source/target와 집계를 재생했다. 사후 review 모듈은 추론 완료 후 별도 추가했다.
+- 로컬 Python511/Node4 통과. 소유 서버PID44692 returncode0 종료 및 부재 확인. 원문/모델 출력은 public Git 제외다.
+- **STOP:** 사전 기준 실패다. 예약64개·1,000개 확대·새 agent·UI 기본 연결을 하지 않았다.
+  같은4B prompt/auditor 다음 변형을 자동으로 시작하지 않는다. 새로운 guard나 target 문구 수동 수정으로 사후 합격시키지 않는다.
+- **다음 결정:** 좁은 공통 명제 선택/원문 관계 판정의 모델·학습 방식 또는 MVP 범위 변경을 명시적으로 결정한다.
+  이전8B 단독 교체 실패도 유지한다. 유료 API·추가 다운로드·학습·수동 runtime 검수는 새로 허가받은 작업이 아니다.
+  원문 충실성과 무인 서비스 원칙/초기 탐색 제품 목표는 유지한다. 기존 review-assisted2-agent UI 데모는 유지되지만 자동 MVP 완성은 아니다.
+
 ## 최신 실제64개 matched 비교 완료 2026-10-13
 
 - 사용자 `ㄱㄱ`에 따라 ADR-035의 adapter를 구현하고 같은64개 V0/V1/V2를 실제 실행했다. 아래 준비 단계보다 이 결과가 최신이다.
