@@ -75,3 +75,29 @@ verify는 저장 벡터로 결과를 다시 만들며 모델을 호출하지 않
 
 다음 순서: 원문 쌍에서 공통 주장 제안+직접 지지 검사 → 고정 주장별 support 집계 → latency profiling/최적화
 → 자동 agent/UI 연결 → 미사용 표본과 end-to-end 검증. 검색 성공만으로 clustering/MVP 완료를 선언하지 않는다.
+
+## 실제 실행 결과 — 2026-10-12
+
+사전 고정 코드 `a77f566`. 기존29개에35개를 추가한64개를 모두 보존했다.
+방향 있는 후보764개, 무방향 후보533쌍 중64쌍 대기/469쌍 보류다.
+알려진 개발 정상3쌍은 모두 검색되었고(anchor→member 순위1,2,1),64쌍 대기 목록에도 모두 들어갔다.
+과거 추출 후 해당 source 쌍 잔존0/3인 병목을 이 검색 경로에서 피했다.
+단, pool29→64와 경로가 함께 바뀌었으므로 같은 pool의 통제 실험 효과량으로 해석하지 않는다.
+검색 정확도/전체 recall/공통 주장 지지 판정/agent 품질을 입증한 결과는 아니다.
+
+CPU4threads, 기존 cached model weights, embedding vector cache miss였다.
+embedding 라이브러리·모델 로딩/추론/벡터 저장20.43초, 검색+queue0.085초, 보고서 직전까지21.06초.
+peak RSS 약958MiB. torch2.14.1+cpu/transformers4.57.1/sentence-transformers5.1.1/numpy2.5.3.
+원문 token134>128 경고는 chunk 준비 전 tokenizer에서 발생했으며 기존 token_chunks의 길이 재검사/분할 경로로
+전체 token을 처리했다. 원문을 삭제하거나 잘라 저장하지 않았다.
+
+새 생성형 호출0/embedding invocation1/agent0/support 미산정. 새 수집/외부 댓글 전송/모델 다운로드0.
+저장 벡터 재생은 새 embedding/생성형 호출 없이 결과와 일치했다. Python349개/Node4개 통과.
+합성1000source 시험도 포함되지만 실제1000개 성능 시험은 아니다.
+
+원문 포함 결과는 Git 제외 `runs/raw-candidates-20261012/overview.html`, `report.json`, `vectors.json`, `plan.json`.
+원본 snapshot 만료2026-11-08T18:30:59.664629Z를 상속한다.
+
+- plan SHA256: `4b6d642194e2f8f755fc6645266ce387221942dc8354041e947e1bae849d4499`
+- report SHA256: `f7d4f06d9b2c40c5598d4933f5da8e5c3637005cad02cbfad87afa2f987a4d5c`
+- vectors SHA256: `d304a754d477decffa2f15aa239d9fce47da4275207a4490e8be129ca97d28a8`

@@ -1,6 +1,27 @@
 # 다음 세션 시작점
 
-## 최신 위치 선택과 추출 전 검색 병목 2026-10-12
+## 최신 원문 검색 우선과 지지도 계약 2026-10-12
+
+- 사용자 합의: 전체 댓글을 완벽하게 복원하는 비용을 피하되, 의미 왜곡 없이 지지 댓글 수를 제시하고 서비스 대기 시간을 줄인다.
+  [최신 계약·구현·재현](RAW_RETRIEVAL_MVP.md), ADR-026, DATA_CONTRACTS raw-candidates0.1을 먼저 읽는다.
+- 코드 사전 고정 `a77f566`. 원문 registry→MiniLM→semantic8+lexical4→hash round-robin64쌍을 구현했다.
+  selector/topic/eligibility 실패가 검색 전 source를 삭제하지 않는다. source packet은 exact 원문과 ID/digest를 전달한다.
+- 기존29개+hash 선택35개=실제64개 보존. 후보764 directed edges, 무방향533쌍 중64대기/469보류.
+  기존 개발 정상3쌍 모두 검색(순위1,2,1)·대기 목록에 포함. 평가 pair 정보는 검색/queue에 들어가지 않는다.
+  공유 anchor가 있고 표본 구성에 과거 개발군을 포함했으므로 전체 corpus 품질/독립 gold/새 의미 판정 통과가 아니다.
+- CPU embedding load/inference/cache write20.43초, 검색+queue0.085초, 보고서 직전까지21.06초. cache miss/LLM0회.
+  공통 주장·지지 판정·agent 생성은 미실행. 1,000댓글60초/300초 목표 달성으로 읽지 않는다.
+- plan/report/vectors/HTML: private `runs/raw-candidates-20261012/`. 원문 만료 상속2026-11-08T18:30:59.664629Z.
+  저장 벡터 replay 새 모델 호출0으로 일치. Python349개/Node4개 통과. 공개 Git에 원문·출력·가중치 없음.
+- support는 고정 주장에 대한 canonical 댓글별 통과 수이며 유사도/좋아요/별도 claim 수가 아니다.
+  미검사는 비지지가 아니다. 주요 `max(10,ceil(5%*N))`/제한적3개 이상/희소1~2개는 잠정 표시안이며 미구현·미검증이다.
+  현재 support_count=null, agent0, quality_gate_passed=false. 수치 기준만으로 agent 승인하지 않는다.
+- **다음 구현**: 저장64쌍의 두 원문에서 공통 주장 제안 → 원문 각각의 직접 지지·조건/시점 보존 검사.
+  기존 실패 회귀와 별도 실제 표본을 함께 평가한 뒤 고정 주장별 댓글 집계로 진행한다.
+  그다음 latency profiling/최적화→자동 agent/UI→end-to-end 평가. 사람의 승인 파일을 runtime 필수 입력으로 넣지 않는다.
+  기존 Factory0.2/main/과거 실행은 유지하고 PR21 draft 미병합이다. 아직 전체 자동 MVP 완료가 아니다.
+
+## 이전 위치 선택과 추출 전 검색 병목 2026-10-12
 
 - [실행 결과·재현](EVIDENCE_POSITIONS_DIAGNOSTIC.md), ADR-025, DATA_CONTRACTS 위치 진단 계약이 최신입니다.
   코드 `ed9b98e`. 기본 Factory0.2와 이전 실험은 유지합니다. `evidence_positions`는 진단 전용입니다.
