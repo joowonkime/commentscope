@@ -578,6 +578,16 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - 3조건 probe는 각32개 source별 새 호출을 저장하고 원문별 label 변화와 군별 정상 보존/오승인/보류/오류를 보고한다.
   [평가·실행 계약](SOURCE_ELIGIBILITY.md)을 따른다. quality_gate_passed=false/agents=[]를 유지한다.
 
+## Eligibility witness 0.1 비교 전용
+
+- SOURCE 전체와 WORDS 배열을 주고 반열린 단어 범위로 candidate/endorsement/mention/antecedent를 받는다.
+  공백 단위 분할은 원문 시작·끝 위치를 유지하며 host가 source digest·문자 위치·원문 slice를 결합한다.
+- 구조 오류는 error, 위치상 유효하지만 관계 모순은 uncertain, 미해결 문맥은 context_dependent다.
+  eligible은 해당 source의 한 주장 자격만 의미하며 support_count/agent 승인으로 사용하지 않는다.
+- 입력4,000자/128tokens·candidate1·references4 한도이며 초과 시 자르지 않고 보류한다. 서비스 필터/cache 미연결이다.
+- [고정 비교](ELIGIBILITY_WITNESS.md)는 기존 단일 enum과48원문씩 비교한다. required_text는 평가 전용이며 추론 입력이 아니다.
+  quality_gate_passed=false/agents=[]를 유지한다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
