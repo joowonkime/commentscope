@@ -1,6 +1,29 @@
 # 다음 세션 시작점
 
-## 최신 논점 생성과 판정 분리 진단 2026-10-12
+## 최신 원문 문장 후보 baseline 2026-10-12
+
+- 추론 전 코드 `0b7c026`, [계약·실측·사후 검토](EXTRACTIVE_CANDIDATES.md), ADR-030.
+  생성 제안 없이 원문 문장 위치를 고정하고 MiniLM으로 반대댓글과의 최대 유사도를 계산해 source별2개 선택했다.
+  평가 reference/라벨은 순위 입력이 아니다. 후보 출처도 포함해 두 전체 원문을 기존 positional-support로 검사한다.
+- 합성12쌍+실제3쌍, 고유29source/48segments,249자 초과3구간은 원문 보존 후 보류했다.45구간에서36target/72source판정.
+  실제 핵심 구간3/3쌍 양쪽1순위 노출이나 실제 양쪽 통과0/3이다. 합성 정상2/6·부정 오통과0/6.
+  source판정 support34/uncertain19/not_supported19, 오류·미검사0. 미선택 구간까지 검사했다는 의미는 아니다.
+- 36target 전수 assistant 대조. 양쪽 통과3target은 대기오염1개·같은 여행 의사의 표현2개로 충실했다.
+  독립3개cluster가 아니며 실제 성공target은 없다. 원문 복사로 이번 요금→가격 범위 추가는 재발하지 않았다.
+- 재택근무/열차 정상 재표현 거절, 단일 문장에 들어 있는 서로 다른 이유, 동의 대상 생략 문장의 자격 오승인이 남았다.
+  물가 literal target의 Rising은 이전 축약target과 달라 모든 실패를 판정기 과잉거절로 몰지 않는다.
+- 같은 감사 요청 system/data/schema 비교: component-isolation과 겹친10개 중1개 조건 속성이 preserved→unclear.
+  출처 자체가 support→uncertain으로 바뀌었다. model/server hash·명시 설정은 동일하나 원인은 미확정이다.
+  positional과 겹친7개는 변화0. cache replay 성공은 새 추론 결정성 증명이 아니다.
+- private `runs/extractive-candidates-20261012/review.html`은 전수 검토, `overview.html`은 전체 후보·보류·trace,
+  `assistant-review.json`은 report hash 결합 검토다. 원문/출력 Git 제외·snapshot 만료 상속.
+  총123.54초/embedding11.90초/ranking0.006초. 생성 제안0, 감사LLM45/NLI79. 서비스 전체 시간이나 동일비용 비교 아님.
+  literal target36/evidence44회 결합 일치, replay 새모델0. Python400/Node4통과. 자체 서버 종료.
+- **다음**: 후보 baseline을 고정하고 동일 감사 요청의 새 추론 반복성을 제한된 표본에서 검증한다.
+  이후 고정 정상/왜곡 source-target에서 판정기 교체 후보를 비교한다. unknown 승인/guard 제거/사례별 수정은 금지한다.
+  단일 문장보다 좁은 공통 이유 분리도 별도 미해결이다. 기본Factory/main/PR21 draft 유지, agent0·ledger0·전체확장0.
+
+## 이전 논점 생성과 판정 분리 진단 2026-10-12
 
 - 코드 `446adaa`, [설계·실측·해석](COMPONENT_ISOLATION.md), ADR-029. prompt/schema/모델/threshold는 바꾸지 않았다.
   합성 정상6쌍+실제3쌍에서 전체 원문/기존 자동 구간/assistant 사전 구간으로 제안 입력만 바꾸고,

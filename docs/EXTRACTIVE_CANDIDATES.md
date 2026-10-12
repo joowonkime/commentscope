@@ -46,3 +46,62 @@ HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 python -m experiments.extractive_candida
 
 plan/원문/vector/모델 요청·출력/report/measurements/HTML은 Git 제외하며 원래 snapshot 만료를 상속한다.
 verify는 저장 vector와 checkpoint로만 재현하고 신규 모델 호출이 필요하면 실패한다.
+
+## 실행 결과 2026 10 12
+
+코드 `0b7c026`과 plan을 추론 전에 고정했다. 선택 기준/모델/prompt/threshold를 실행 중 바꾸지 않았다.
+**후보 노출은 성공했지만 실제 공통 지지·agent 생성은 성공하지 못했다.**
+
+| 항목 | 결과 |
+| --- | --- |
+| 고유 source / 원문 구간 | 29 / 48 |
+| 길이 한도 내 구간 / 원문 유지 후 보류 | 45 / 3 |
+| 평가한 exact target / source–target 판정 | 36 / 72 |
+| 실제 reference 양쪽 노출 | 3/3, 각 핵심 문장은 양쪽 모두1순위 |
+| 실제 양쪽 모델 통과 | 0/3쌍 |
+| 합성 정상 양쪽 통과 | 2/6쌍,3target |
+| 합성 부정 양쪽 통과 | 0/6쌍 |
+| source–target 상태 | support34 / uncertain19 / not_supported19 / error0 / unchecked0 |
+
+선택기는 reference를 받지 않았고 proposal 호출0이었다. 노출3/3은 알려진 작은 개발군의 검색 결과이지 일반 recall이나 의미 승인율이 아니다.
+36target을 사후 assistant 검토했다. 통과3target은 대기오염 감소1개와 같은 여행 의사 쌍의 표현2개다.
+모두 해당 두 원문에 충실했지만 독립3개관점이 아니며, 실제 데이터에서는 통과target이 없다.
+
+### 해결한 부분과 남은 실패
+
+- 원문을 다시 쓰지 않아 이번 여행 의사 후보에는 요금 조건이 그대로 남았다. 이전 생성기의 일반 가격으로 확장하는 오류가 재발하지 않았다.
+  모든36target의 문자·출처 결합이 일치한다. 그렇다고 다른 댓글의 지지나 독립 대표 주장 자격까지 보장되지는 않는다.
+- 실제3쌍의 핵심 문장이 선택 단계에서 소실되지 않았다. 다만 취업 의사 쌍은 take a job/stop working 차이가 남아
+  단일 원문 문장이 바로 최소 공통 주장이라고 볼 수 없다. 긴 물가 쌍도 표현 범위와 불필요한 조건절을 포함한 근거 선택 문제가 남는다.
+- 짧은 물가 쌍의 literal target은 Rising을 포함한다. 양쪽 full NLI는 통과했지만 peer 감사가 time=unclear로 보류했다.
+  이전 성공한 축약 target과 동일하지 않으므로 이를 무조건 동일 입력의 과잉거절로 해석하지 않는다.
+- 재택근무·내년 열차 이용 증가의 정상 재표현은 여전히 host 감사에서 거절된다.
+  도서관 문장은 각각 서로 다른 이유를 포함하므로 **단일 문장 복사만으로 최소 공통 권고를 표현할 수 없는 한계**도 확인했다.
+- 모호한 동의 표현도 출처 자체에서는 substantive/support로 승인됐다. 다른 댓글에서 막혀 pair 통과는 없지만,
+  원문 복사만으로 대표 주장 자격 문제가 해결됐다고 볼 수 없다. 임계값 완화/unknown 승인/조건 guard 제거는 하지 않았다.
+
+### 새 추론 반복성에 관한 추가 관측
+
+이전 component-isolation 실행과 **system/data/schema가 동일한 요청10개 중1개**의 출력이 달랐다.
+안전검사 합성 사례에서 conditions가 preserved→unclear로 바뀌어 출처 자체 판정이 support→uncertain이 됐다.
+Qwen 파일/server 실행 파일 hash와 명시 설정은 같았다. 다른 positional 실행과 겹친7개 요청에서는 차이가 없었다.
+원인은 아직 확정하지 않았으며 요청 순서·런타임 상태 등을 통제한 반복 시험이 필요하다.
+저장 checkpoint를 읽는 replay 일치는 **새 모델 추론의 결정성 증명과 다르다**.
+
+### 시간과 재현
+
+- 총123.54초: embedding 로딩·추론·cache11.90초, 순위 계산0.006초. 신규 embedding1/LLM45/NLI79 checkpoint.
+  선택·제안용 생성형 호출은0이지만 의미 감사 호출45회는 남는다. 15쌍 진단이므로 전체 서비스 latency/동일 비용 개선 수치가 아니다.
+- 형식 수리0/transport 오류0. source에 대한 target36회·저장 evidence44회 위치 재결합 일치.
+  replay 새 embedding/LLM/NLI0으로 전체 report 일치. Python400개·Node4개 통과. 자체 모델 서버 종료.
+- private `runs/extractive-candidates-20261012/review.html`은36target 검토, `overview.html`은 후보·보류·전체 trace다.
+  `assistant-review.json`은 report hash 결합 의미 평가와 동일 요청 변화 관측이다. 독립 gold나 서비스 수동 승인 파일이 아니다.
+- plan SHA256 `b9aead8e4e5ae3a9dc3119ab864216d542341ee20ff61bddbc9efb84c1200417`,
+  report SHA256 `abdd62c6c71798fe80fccf194c42e8e55738ee818da6d20d0bc083749fb03bb4`.
+- 기본 경로/main은 변경하지 않았다. 전체64/1000확장0, ledger0, 새 agent0. 자동 MVP 품질 미완료다.
+
+## 다음 우선순위
+
+이 후보 선택기를 비교 기준으로 고정하고, **동일한 감사 요청의 새 추론 반복성**을 먼저 좁은 표본에서 검증한다.
+그다음 고정 원문→target 정상/왜곡 대조군으로 판정기 교체 후보를 비교한다. 생성기와 동시에 바꿔 원인을 섞지 않는다.
+공통 이유를 분리하는 문장보다 작은 단위의 후보는 별도 과제다. 현재 단일 문장 baseline으로 모든 생성 문제가 해결됐다고 간주하지 않는다.
