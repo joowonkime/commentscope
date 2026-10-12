@@ -1,5 +1,31 @@
 # 다음 세션 시작점
 
+## 최신 원문 자격 분리 대조 2026-10-13
+
+- 사전 코드 `aefc313`, [계약·결과·남은 오류](SOURCE_ELIGIBILITY.md), ADR-033.
+  기존16+새 대비16=32고유 원문, joint/자격 전용 with-target/source-only 3조건×32=96 fresh 호출.
+  기존4B·context4096/GPU26layers/CPU6threads/cache-off/비추론/temperature0/seed407/max_tokens900 고정.
+  새16개는 추론 전 assistant가 작성한 개발 대비이며 독립 holdout/실제 새 댓글은 아니다. 추가 수집/다운로드0.
+- 정상 보존은 joint16/16→전용15/16→source-only15/16. 제외 오승인16/16→12/16→9/16.
+  source-only 기존 정상8/8·새 정상7/8로 양쪽 정상 기준은 통과했지만 **오승인0 실패, 실제 표본 시험·기본 필터 승격0**.
+- joint→전용은 prompt/schema/역할 명료화 패키지 변화5개(올바른 제외4·정상 손실1).
+  같은 전용 system/schema에서 TARGET만 제거해 label3개 추가 변화(농담1·질문2 제외)다. 내부 원인/일반 효과 증명은 아니다.
+- 남은 오승인9개: 미해결 지시 대상8개(한국어1 포함), 독립 인용1개. 질문+명시적 경험 혼합 정상1개를 통째로 제외했다.
+  문맥 내 지시어가 해결되는 정상2개와 농담+실제 경험 정상은 살렸다. 대명사/물음표/농담을 일괄 차단하지 않는다.
+  전용 두 조건 모두 context_dependent/unclear 출력0. enum 존재가 의미 보류 능력의 보장이 아니다.
+- 시간 joint180.91초/전용22.37초/source-only22.75초, 출력 tokens3392/325/328. 자격만 물어 범위가 작아진 효과다.
+  전체 감사나 clustering 속도 향상 수치가 아니며 server startup/hash/저장은 제외다. 오류/repair/재시도0.
+- private `runs/source-eligibility-20261013/review.html` 요약, `overview.html`32원문/96출력, `assistant-review.json` 전수 검토 기록.
+  plan SHA `85912421d23263603cf3077eafc05577cefcfcc63b0a75d847270f37fcd73ca3`,
+  report SHA `8410b20422bcb1c9507158e2e8bd2671e4288b8447e997d10a296895d3fbd658`.
+  요청 원문 일치/모델 경로/library hash/cache0/비추론 확인. replay96개·추가모델0, 소유 서버3개 종료.
+- `factory/source_eligibility.py`는 source-only 요청/validator/host 매핑/향후 재사용 키만 제공한다. 실제 cache/필터/ledger/agent 연결0.
+  재사용 식별정보에는 모델 파일/revision/양자화뿐 아니라 runtime 프로파일도 포함해야 한다. 기본 생성·선택·충실성은 불변.
+  Python433/Node4 및 Linux·Windows CI 통과. 자동 MVP 품질 완료는 아니다.
+- **다음**: 단일 enum 반복 튜닝 대신 발화 구간과 필요한 지시 대상·저자 동의 근거를 원문 위치에 결합하는 최소 구조를 설계한다.
+  혼합 댓글의 유효 구간을 보존하면서 지시 대상 미해결을 명시하는 계약이 필요하다. 효과는 아직 가설이며 미구현이다.
+  원문 위치·미결정 상태·예산·대비 사례를 먼저 고정한다. 광범위 단어 차단/사례별 예외/unknown 승인/서비스 필터 연결 금지.
+
 ## 최신 로컬 판정기 모델 비교 2026-10-13 KST
 
 - 사전 코드 `d8530ad`, [설계·실측·실패·다음 경계](AUDIT_MODEL_COMPARISON.md), ADR-032.
