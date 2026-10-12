@@ -612,3 +612,13 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 예제의 모든 추출·검토·카드는 사람이 작성한 합성 설계 자료입니다. 모델 출력이나 평가 결과가 아닙니다.
 trace 파일의 `initial_clusters`, `review_created_clusters`, `expected`는 전이를 설명하는 설계 전용 컨테이너입니다.
 실제 실행 artifact의 파일 형식이나 RunManifest를 대신하지 않습니다. replay 시 초기 후보에서 시작해 review 순서에 따라 출력 후보를 추가합니다.
+# Matched Factory 개발 비교 계약 0.1
+
+`experiments/matched_factory_probe.py`는 기존 평가 kit를 재검증한 뒤 별도 불변 plan을 만든다.
+원문·입력·코드 hash, 모델/서버 hash, 정책, source 분모64, 단계별 예산과 판정 기준을 포함한다.
+`calls/R*.json`은 정확한 system/data/schema/max_tokens, 요청 digest, 서버 원시 응답, 파싱 결과·시간·보류 사유를 보존한다.
+추출 claim은 기존 source-bound segment 계약을 사용하고 모든 source의 결과(실패/빈 주장 포함)를 보존한다.
+V0/V1은 같은 assignment0.2를 canonical draft로 변환한다. `candidate_source_count`는 distinct canonical source 수이며
+의미 검증된 `support_count`는 null이다. V2는 V1 카드 digest를 저장하고 검사 통과 카드의 내용을 수정하지 않는다.
+`completed.json`은 실행 artifact hash를 결합한다. verify는 hash와 정확한 V1 부분집합을 검사하고 추가 추론을 하지 않는다.
+assistant 평가와 사용자 피드백은 별도 offline 파일이며 runner 입력에 허용되지 않는다. 모든 결과는 `quality_gate_passed=false`, `agents=[]`다.

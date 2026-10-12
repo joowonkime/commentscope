@@ -1,7 +1,8 @@
 # 실제 관점 생성 평가를 위한 비교 프로토콜
 
 최근 실패마다 새로운 검사를 추가하는 방식에서 벗어나, 같은 실제 입력으로 소수의 구조를 비교한다.
-현재 단계는 **평가 준비 완료, 비교 실행 미완료**다. 데이터와 V0 후보 baseline은 고정했지만 V1/V2 구현·공통 출력·호출 예산은 아직 동결하지 않았다.
+현재 matched adapter·공통 출력·호출 예산을 동결하고 [첫 실제 비교](MATCHED_FACTORY_COMPARISON.md)를 실행 중이다.
+아래의 준비 단계 설명은 그 실험의 배경이며, 최신 실행 조건·성과·채택 여부는 연결 문서에서 확인한다.
 이 문서를 이미 사전등록을 완료한 연구 실험이나 자동 MVP 품질 승인으로 취급하지 않는다.
 
 ## 비교할 질문
@@ -16,7 +17,7 @@
 V0 준비 baseline은 기존 raw64 벡터와 `claim_clusters.average_linkage`의 결정적 구현을 사용한다.
 distance0.45는 기존 baseline 설정을 결과 확인 전에 고정한 것으로, 이번 표본에서 최적화한 수치가 아니다.
 원문 인용 medoid는 공통 주장으로 간주하지 않는다. 관점 카드와 agent-level 비교를 하려면 **동일한 카드 생성·지지 평가 경계**를 모든 변형에 연결해야 한다.
-그 adapter는 아직 미구현이다. V0의 후보 수와 V2의 승인 agent 수를 같은 지표처럼 비교하지 않는다.
+그 adapter는 `experiments/matched_factory_probe.py`로 구현했다. V0의 후보 수와 V2의 승인 agent 수를 같은 지표처럼 비교하지 않는다.
 
 ## 표본과 노출 이력
 
@@ -77,7 +78,7 @@ assistant가 먼저 원문을 검토하고, 사용자에게 정책을 좌우하�
 - 코드 불변조건 실패는 즉시 중단한다. 잘못된 인용·중복 집계·원문 유실을 의미 점수로 상쇄하지 않는다.
 - 의미 검사는 부정 차단뿐 아니라 정상 손실을 함께 비교한다. 모든 항목을 거절하는 방식은 승자가 아니다.
 - 감사 추가가 오류를 충분히 줄이지 못하거나 유효 관점 손실·비용만 늘리면 폐기한다. 검사층을 자동으로 하나 더 추가하지 않는다.
-- 수치형 품질·비용 허용선은 첫 fresh V1/V2 실행 전에 고정한다. 결과를 본 후 완화하지 않는다. 현재 값은 아직 미정이다.
+- 수치형 품질·비용 허용선은 첫 fresh V1/V2 실행 전에 고정한다. 결과를 본 후 완화하지 않는다. 첫 실행 값은 [matched 비교](MATCHED_FACTORY_COMPARISON.md)에 기록했다.
 - 같은 가설의 한 비교 라운드에서 한 번만 후보를 실행한다. 결과 후 수정은 새 버전·다음 라운드로 기록한다.
 - 개발 비교를 이긴 구성이 없으면 모델의 학습/표현/문제 분해 가설을 재검토한다. 전체1,000개 재실행으로 해결하려 하지 않는다.
 
@@ -99,4 +100,4 @@ assistant가 다인 후보5개를 읽었으며 물가 후보1개에는 좁은 �
 
 private `runs/factory-evaluation-reset-20261013/overview.html`과 `assistant-calibration.html`에서 확인한다.
 plan SHA `c2ecf136fcad514c82988c6245c788bc35cb48c73627c62f54a3be14a9622212`.
-실제 비교 준비 상태는 `comparison_ready=false`, `quality_gate_passed=false`, `agents=[]`다.
+이 준비 artifact의 상태는 `comparison_ready=false`, `quality_gate_passed=false`, `agents=[]`다. 과거 artifact를 수정하지 않고 별도 matched plan을 동결했다.

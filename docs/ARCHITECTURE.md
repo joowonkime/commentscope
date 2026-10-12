@@ -654,6 +654,16 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - V0 후보58개/3개 이상1개는 의미 품질 성과가 아니다. V1/V2의 adapter·공통 출력·수치 기준·예산은 아직 미동결이다.
   이번은 model 호출0의 평가 준비이며 비교 완료/새 agent/기본 교체가 아니다.
 
+## ADR-036 동일 실제64개에서 원문/주장/감사 패키지 비교 2026-10-13
+
+- [동결 조건](MATCHED_FACTORY_COMPARISON.md): ADR-035의 미구현 adapter를 별도 opt-in runner로 연결한다.
+  V0 cached raw vectors, V1 fresh 주장 벡터에 같은 clustering/draft contract를 적용하고 V2는 정확한 V1 카드를 감사한다.
+- canonical source 분모64·중복 없는 후보 수·common/detail 출처 계약을 공유한다. scope는 V0 전체 원문/V1 선택 span이다.
+  이 차이를 추출 단일 요소의 인과 효과로 부르지 않는다. 감사는 같은4B 모델의 판단이며 독립 gold가 아니다.
+- 최대320생성 요청/완료된 생성 시간1,800초, repair0, 임계값0.45를 동결했다. 결과를 보고 완화하지 않는다.
+  >=3 출처의 유효 카드와 정상 보존·왜곡·실제 비용을 함께 평가한다.0-agent를 품질 성공으로 간주하지 않는다.
+- 서비스 기본 Factory·agent 승격 경로는 불변이다. 비교 완료 후 채택/폐기 근거를 기록한다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
