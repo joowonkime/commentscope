@@ -532,6 +532,16 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - raw-support-probe0.1은 별도 고정 회귀/실제64쌍, source-bound cache/replay, 제한된 확장 여부와 시간을 기록한다.
   자세한 입력 길이와 평가 계약은 [공통 주장·지지도 MVP](RAW_SUPPORT_MVP.md)를 따른다.
 
+## Positional support 0.1 (진단 전용)
+
+- pair alignment는 left/right 각각 최대1개 first/last ID 범위이며 L/R prefix가 다른 원문 ID 혼입을 막는다.
+  bound span은 source_digest/start/end/first/last/text다. 값은 원문에서 매번 재구성한다.
+- audit에는 assertion/eligibility/6속성/evidence 범위만 있고 supported나 자유 quote 필드는 없다.
+  enum·ID 오류와 semantic disagreement를 구분한다. host가 5상태 결정을 만들고 original/evidence NLI와 guard를 보존한다.
+- evidence가 없거나 독립성이 불명확한 판정은 support로 승격하지 않는다. 실제 의미 오판을 코드 검증으로 증명했다고 읽지 않는다.
+- 기존 raw-support ledger와 호환된다고 간주하지 않는다. 이 버전은 pair/직접 판정 probe만 제공하며 agent/가입 확대0이다.
+  [계약·사전 기준](POSITIONAL_SUPPORT.md)을 따른다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.

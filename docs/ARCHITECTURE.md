@@ -561,6 +561,16 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   개별 support12건에도 범위 추가/독립 주장 자격 문제가 남았다. source 검색 이후의 제안/감사/인용 계약 실패다.
   모델 응답 모순에 대한 중복 수리와 자유 인용 복사를 다음 설계 대상으로 기록하되 현재 gate를 완화하지 않는다.
 
+## ADR-028: 검색 이후 근거 위치 선택과 host 판정 (2026-10-12)
+
+- 기존 raw-support0.1 및 실패 결과는 보존한다. 이미 검색된 pair 내부에서만 원문 구간을 대응시키고 공통 주장을 제안한다.
+- 모델의 중복 supported verdict를 없애고 assertion/eligibility/속성값을 host가 보수적으로 조합한다.
+  의미 불일치를 형식 오류로 재요청하지 않는다. 전체 source와 정확히 저장된 evidence의 NLI를 모두 요구한다.
+- 근거는 원문 S-ID→offset→code copy로 저장한다. topic120/quote400자 상한 대신 실제 source/token 예산을 검사한다.
+  구간 선택 실패가 원문 registry를 지우지 않는다. 기존0.1 ledger와 agent에는 자동 연결하지 않는다.
+- [사전 계약·48직접 판정/12합성쌍/3실제쌍 평가](POSITIONAL_SUPPORT.md). 독립성/의미는 여전히 모델 판단이며
+  개발 사례 통과만으로 agent 품질 승인이나 일반 정확도 개선을 주장하지 않는다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
