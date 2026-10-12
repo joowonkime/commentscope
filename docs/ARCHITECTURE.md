@@ -536,6 +536,17 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
   기본 채택·assembly로 확장하지 않습니다. 후속은 필수topic/상위4선택 전에 원문 검색 후보를 보존하는 경로 비교입니다.
   수치·runtime fallback·전수 사후 검토·재현은 [위치 선택 진단](EVIDENCE_POSITIONS_DIAGNOSTIC.md)에 보존합니다.
 
+## ADR-026: 원문 검색 우선과 지지도/시간 경계 (2026-10-12)
+
+- 이전 selector/topic/final 실패로 검색 전에 원문이 사라진다. 생성형 복원·검사를 전 댓글에 반복하는 대신
+  canonical 원문을 먼저 embedding하고 후보와 후속 비교 예산을 분리한다. Factory0.2 기본값은 변경하지 않는다.
+- 구현: `raw_candidates-0.1`, 최대1,000 source, semantic8+lexical4, round-robin 무방향64쌍.
+  모델/threshold 교체가 아니라 단계 순서와 실패 격리의 변경이다. dense O(N²) 비용은 남는다.
+- 지지도는 검색 수가 아니라 고정 공통 주장에 대한 canonical 댓글별 통과 수다.
+  주요/제한적/희소 구분과60초/300초 목표는 잠정 제안이며 아직 의미 집계/latency 검증을 통과하지 않았다.
+- [정확한 계약·재현·범위](RAW_RETRIEVAL_MVP.md). 원문·cache·대기 목록을 보존하고
+  후속 모듈에 두 원문을 정확히 전달한다. agent 승인/지지 집계는 다음 구현이다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

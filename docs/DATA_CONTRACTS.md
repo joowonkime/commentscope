@@ -502,6 +502,22 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
   원문과 두 단계 units에 대한 source-level 검색 노출을 기록합니다. 미추출 source를 분모에서 빼지 않습니다.
   원시 cache를 통한 exact replay는 새 모델/embedding 호출 없이 수행합니다.
 
+## Raw candidates 0.1 (진단 전용)
+
+- registry: `sources[{source_id,text,source_digest,parent_id,indexable}]`, `aliases`, `selected_input_ids`.
+  normalize_snapshot으로 재구성한 값과 일치해야 한다. 공백 원문도 보존, alias는 추가 표가 아니다.
+- embedding cache: model/revision, 순서가 고정된 source IDs와 exact texts, vectors와 digest/runtime.
+  길이·차원·유한값·0이 아닌 norm을 검사한다. 오류 source를 조용히 누락하지 않는다.
+- candidates: 모든 canonical ID가 key, 최대12개 이웃과 cosine/lexical/route. 검색은 지지 판정이 아니다.
+- queue: 원문 digest에 결합한 pair_id/source_ids, first_discovered_from/candidate_rank,
+  available_unique_pairs/deferred_pairs/budget_exhausted. 양방향 동일 pair는 한 번만 검사 대기한다.
+  `support_count=null`, `quality_gate_passed=false`, `agents=[]`. 미검사는 비지지가 아니다.
+- source_packet: 두 댓글의 ID/digest/text만 전달. parent 본문을 답글에 덧붙이지 않는다.
+- probe: snapshot 만료 및 input/code/model pin, evaluation-only reference pairs, 별도 단계 시간.
+  plan/run/verify, 저장 vectors만 사용한 replay 일치. 원문 포함 산출물은 Git 제외와 만료 상속.
+- [지지도 상태/분모/잠정 표시 등급/시간 목표 계약](RAW_RETRIEVAL_MVP.md)은 다음 집계 모듈의 설계이며
+  현재 runtime 지지 판정 구현으로 읽지 않는다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
