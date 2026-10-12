@@ -775,3 +775,24 @@ compiler is not connected to the existing answer runtime or UI. Automatic source
 quality, claim/dependency extraction, and final treatment of purely value-based candidates remain open.
 This clarification supersedes any earlier assumption that comment-faithfulness alone is sufficient for
 factual agent grounds. It extends the repository handoff; the parent-directory historical original is unchanged.
+
+### 16.12 Demonstration scope and value perspectives on 2026-10-13
+
+The user accepted one demonstration video, with configurable video/snapshot inputs so that additional
+videos can be prepared later. First analysis of the collected up-to-1,000-comment snapshot may take up
+to one hour. This replaces the proposed 30-minute limit; interactive answer latency remains separate.
+The new development cycle has a cumulative eight-hour local model inference budget, not an eight-hour
+delivery promise. Count failed/retried model calls, preserve results, and report unmet criteria when
+the budget is exhausted rather than weakening them. Budget enforcement is not yet implemented.
+
+Value perspectives may become agents when their source support and fidelity qualify. They are not
+restricted to passive cards merely because a value cannot be fact-checked. Agents represent the
+cluster position and its actually expressed reasons; they do not invent new rationales, personal
+experiences, factual effects, or borrowed reasons from other agents. Values/predictions must remain
+distinguishable from evidence-supported factual claims. Required false/unsupported premises must not
+be stripped out to relabel a dependent position as a pure value perspective.
+
+This resolves the value-perspective admission direction left open in 16.11, not its runtime implementation.
+The other proposed numerical quality gates and iteration-count limits have not yet been explicitly
+confirmed. See `FACT_GROUNDED_AGENTS.md` for agreed conditions, proposed thresholds, and measurement scope.
+This dated clarification extends only the repository handoff; the historical parent copy remains unchanged.
