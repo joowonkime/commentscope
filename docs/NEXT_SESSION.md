@@ -1,5 +1,29 @@
 # 다음 세션 시작점
 
+## 사실 판정과 선택형 답변 부품 검증 완료 2026-10-13
+
+이 절과 [MVP 상태표](MVP_ACCEPTANCE_STATUS.md)가 아래 과거 실행 전 안내보다 우선한다. 자동 MVP 전체는 미완료다.
+
+- 사용자 요청으로 직접 목표 작업을 이어갔다. 플랫폼 goal은 여전히 blocked라 백그라운드 자동 재개됐다고 보고하지 않는다.
+- 사실8건:4B 기대 일치5/8,8B7/8. 이어 고정40건(실제 Kela 문서30/합성 충돌10)에서8B 지원10/10·오승인1/30으로 미달.
+- 같은40건 로컬 NLI: 지원9/10, 오승인0/30, 충돌10/10, 총38/40 일치.110forward·CPU모델 로딩 포함25.29초.
+  고정 threshold0.8 유지. 다음 통합 후보로 선택하되 실제 댓글·자료 검색의 품질 승인은 아니다.
+- 선택형 답변0.1은 모순된 schema 출력과 이유 역할 누락으로 실패했다.0.2는 역할 입력과 조건부 schema를 추가했고
+  같은20질문×합성2관점에서 답변20/20·보류20/20·P95 10.27초·오류0. 문장과 인용은 host의 원래 entry를 사용한다.
+- private 실행: `runs/fact-gate-40-20261013`, `runs/fact-nli-40-20261013`,
+  `runs/grounded-answer-selection-20261013`, `runs/grounded-answer-selection-v2-20261013`.
+  통합 결과 화면: `runs/mvp-agreed-20261013/overview.html`. 원문/출력/참조/예산 DB는 public Git 제외다.
+- NLI와 답변0.1은 코드 체크포인트 `67062df`에서 실행·재생 검증했다. 현재0.2에서는 과거 plan의 code hash 검사가
+  의도적으로 실패할 수 있다. 과거 plan을 덮어써 복구하지 말고 당시 코드를 사용한다.
+  답변0.2는 현재 코드에서 `python -m experiments.grounded_answer_probe --run-dir runs/grounded-answer-selection-v2-20261013 --phase verify`로 재생 가능하다.
+- **다음 구현:** NLI 실제 판정 기록 adapter → 자동 Factory의 유형·주요 사실·필수 전제 연결과 고정100 원문 관계 평가 →
+  실제2-agent 핵심/근거 전수검토 → 새 runtime/UI → 실제20회 지연과 첫 분석1시간 측정.
+  기존4B source-auditor prompt 반복 중단은 유지한다. NLI의 문서 사실 판정 통과를 댓글 지지 판정 통과로 옮기지 않는다.
+- 기존 Draft PR21 브랜치에서 계속한다. main 병합·공개 배포·새 모델 다운로드·유료 API는 미허가다.
+- 새 사이클 ledger는 `runs/mvp-agreed-20261013/inference.sqlite`: 이번 체크포인트에서921.02초/28,800초,
+  미완료 예약0.136개 LLM 요청과110개 NLI pair를 담은1개 bounded batch를 기록했다.
+  과거 실험 비용을 포함하거나 예산이 소진됐다고 해석하지 않는다.
+
 ## 공개 문서 기반 사실 판정 첫 실행 2026-10-13
 
 - 사용자 요청으로 기존 목표 작업을 재개했다. 플랫폼 goal 상태는 여전히 blocked이며 자동 재개와 직접 작업을 구분한다.

@@ -37,6 +37,19 @@ class GroundedRuntimeTests(unittest.TestCase):
         self.assertNotIn('original_text', encoded)
         self.assertEqual(request['max_tokens'], 180)
 
+    def test_roles_explicit_and_schema_cannot_mix_abstention_with_no_limit(self):
+        request = self.session().invocation('What reason is provided?')
+        roles = {entry['claim_id']: entry['declared_role'] for entry in request['data']['PERSPECTIVE']['allowed_entries']}
+        self.assertEqual(roles, {'observed': 'reason', 'position': 'core'})
+        for branch in request['schema']['anyOf']:
+            properties = branch['properties']
+            if properties['answerability']['const'] == 'not_in_evidence':
+                self.assertEqual(properties['claim_ids']['maxItems'], 0)
+                self.assertEqual(properties['limitation']['const'], 'missing_evidence')
+            else:
+                self.assertEqual(properties['claim_ids']['minItems'], 1)
+        self.assertIn('Required JSON schema:', request['system'])
+
     def test_cannot_add_new_claim_or_citation_text(self):
         session = self.session({**selection(), 'answer': 'Invented fact'})
         result = session.ask('What is the position?')

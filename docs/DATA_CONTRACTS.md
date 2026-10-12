@@ -673,7 +673,7 @@ profile은 core 지지 수, 각 prompt entry의 개별 지지 수·범위·종�
 
 ## 선택형 답변과 추론 예산 계약
 
-`fact-screened-extractive-answer-0.1`은 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
+`fact-screened-extractive-answer-0.2`는 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
 answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한다. 모델은 허용 claim ID만 선택한다.
 문장·scope·개별 지지 수·인용은 원래 compiled profile에서 복사하며 외부/탈락 ID는 거부한다.
 호출 전후 재조립·만료 검사를 수행하고, 오류를 정상적인 보류나 유효 답변으로 세지 않는다.
@@ -682,3 +682,7 @@ answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한�
 `local-inference-budget-0.1`은 SQLite의 cycle policy와 호출별 request/plan hash, 원문 요청, 예약·실측·차감 시간,
 상태·응답을 저장한다. cycle/한도 교체와 두 번 완료를 금지하며 미완료 예약은 보수적으로 유지한다.
 이 저장소는 비공개 실행 artifact다. 기록 결합은 재현을 위한 것이며 외부 변조 방지 서명이나 GPU 사용률 계측은 아니다.
+
+답변0.2에서는 prompt entry에 upstream의 core/reason/prerequisite 역할을 명시한다. 역할은 새로운 사실 근거나 인간 승인이 아니다.
+JSON schema는 grounded/partial/not_in_evidence별로 claim 수와 limitation을 고정해 모순된 조합을 허용하지 않는다.
+0.1의 실패 결과는 수정하지 않고 이전 코드 revision에서 재생한다.
