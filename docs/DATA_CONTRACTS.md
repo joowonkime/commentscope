@@ -542,6 +542,16 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 - 기존 raw-support ledger와 호환된다고 간주하지 않는다. 이 버전은 pair/직접 판정 probe만 제공하며 agent/가입 확대0이다.
   [계약·사전 기준](POSITIONAL_SUPPORT.md)을 따른다.
 
+## Extractive candidates 0.1 (비교 전용)
+
+- inventory는 source ID/digest/segment ID/start/end/text와 candidate ID를 결합한다. 항상 원문 slice와 일치해야 한다.
+  eligible=false와 deferred_reason은 길이/예산 상태이며 의미 비지지 판정이 아니다. 원문 registry는 변경하지 않는다.
+- 선택은 source별 최대2개, 후보의 반대 source 최대 cosine 순서이며 동점은 candidate ID다.
+  selected의 core는 원문 문자열 그대로이고 core_digest와 origins가 재결합돼야 한다. 문자열 중복만 병합한다.
+- support_count=null/agents=[]/quality_gate_passed=false다. origins 개수와 cosine은 지지 수가 아니다.
+  assess는 두 전체 원문 각각을 positional-support로 검사하며 출처 원문의 자동 지지도 금지한다.
+- [추출형 평가·예산 계약](EXTRACTIVE_CANDIDATES.md). 모델 통과와 실제 원문 충실성은 별도 평가한다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
