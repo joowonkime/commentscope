@@ -670,3 +670,15 @@ profile은 core 지지 수, 각 prompt entry의 개별 지지 수·범위·종�
 
 원문 관계와 claim typing/major/dependency 선언은 아직 upstream 의미 판단이다. `local_model` origin이나 hash만으로 정확성·진위를
 입증하지 않는다. 합성 입력도 허용하는 개발 계약이므로 이 output을 자동으로 서비스 품질 승인으로 읽어서는 안 된다.
+
+## 선택형 답변과 추론 예산 계약
+
+`fact-screened-extractive-answer-0.1`은 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
+answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한다. 모델은 허용 claim ID만 선택한다.
+문장·scope·개별 지지 수·인용은 원래 compiled profile에서 복사하며 외부/탈락 ID는 거부한다.
+호출 전후 재조립·만료 검사를 수행하고, 오류를 정상적인 보류나 유효 답변으로 세지 않는다.
+`quality_gate_passed=false`, `semantic_guarantee=false`이며 공개 서비스 승격 상태가 아니다.
+
+`local-inference-budget-0.1`은 SQLite의 cycle policy와 호출별 request/plan hash, 원문 요청, 예약·실측·차감 시간,
+상태·응답을 저장한다. cycle/한도 교체와 두 번 완료를 금지하며 미완료 예약은 보수적으로 유지한다.
+이 저장소는 비공개 실행 artifact다. 기록 결합은 재현을 위한 것이며 외부 변조 방지 서명이나 GPU 사용률 계측은 아니다.

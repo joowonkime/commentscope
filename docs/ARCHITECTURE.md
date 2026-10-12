@@ -707,6 +707,19 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 이번 변경은 정책 기록이다. 코드·model 호출·평가 라벨·기본 경로는 변경하지 않는다.
   95%/80%/90% 등의 사전 제안 수치와 구조별 반복 횟수는 별도 확정이 필요하다.
 
+## ADR 040 사실 판정 예산과 선택형 답변 경로 2026-10-13
+
+- 사용자 승인 최소 기준은 handoff16.13과 [MVP 상태표](MVP_ACCEPTANCE_STATUS.md)를 따른다. ADR-039의 수치 미확정 상태를 대체한다.
+- `providers/budget.py`는 새 runner들의 공유 SQLite 예산을 관리한다. 호출 전 예약, 별도 프로세스 deadline,
+  실패·중단 비용 보존으로8시간을 제한한다. 기존 실험 전체를 자동으로 제어하지 않으므로 새 추론은 반드시 이 경로를 사용한다.
+- `factory/evidence_fetch.py`는 허용된 공개 자료의 원문과 조회 URL·hash를 보존한다. Kela의 공개 본문 endpoint adapter이며
+  검색 엔진·주장별 자동 검색·publisher 정확성 인증을 대신하지 않는다.
+- 사실 모델 비교와 답변 runtime을 분리한다. 실제 문서40건 진단에서8B 단독은 비지원 오승인1건으로 미달했다.
+  로컬 NLI의 개별 passage 판정과 일치 조합을 비교하되, threshold/표본을 사후 조절하거나 정상 보존 기준을 완화하지 않는다.
+- `agents/grounded_runtime.py`는 claim ID 선택만 허용하고 host가 원래 entry·출처·필수 전제를 렌더링한다.
+  자유 생성 후 모델 감사만으로 공개하는 경로와 독립된 opt-in 구현이다. 새로운 논거·인용 생성은 막지만 관련성 선택 오류는 남는다.
+- 기존 Factory·AgentSession·UI를 기본 승격하지 않는다. 입력 계약 테스트와 실제 자동 에이전트의 원문·사실 품질을 별도로 검증한다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.
