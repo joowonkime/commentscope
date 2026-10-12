@@ -686,3 +686,25 @@ answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한�
 답변0.2에서는 prompt entry에 upstream의 core/reason/prerequisite 역할을 명시한다. 역할은 새로운 사실 근거나 인간 승인이 아니다.
 JSON schema는 grounded/partial/not_in_evidence별로 claim 수와 limitation을 고정해 모순된 조합을 허용하지 않는다.
 0.1의 실패 결과는 수정하지 않고 이전 코드 revision에서 재생한다.
+
+## NLI 사실 기록과 자동 입력 adapter
+
+`evidence-nli-fact-record-0.1`은 생성형 판정의 `raw` 문자열을 흉내 내지 않는다. packet hash, classifier model identity,
+case의 주장/문서 구간, batch request hash, label mapping, logits/softmax 점수, 고정 threshold, pair 판정과 aggregate를 보존한다.
+재생은 logits→확률→판정→집계를 다시 계산하며 자료 목록·만료·주장/문서 결합을 검사한다.
+`batch_request_sha256`은 상위 runner의 batch 원본과 함께 검증해야 하며 변조 방지 서명은 아니다.
+기존40건의 기록 adapter 재생은 새 모델 호출 없이 수행할 수 있다. compiler에서 이 버전을 받는 연결은 별도 구현 단계다.
+
+`factory/grounded_factory.py`는 원문별 모델 판정을 grounded bundle로 변환한다. 후보 C/R1/R2/F1/F2를 candidate ID로
+이름 공간화하고 모든 사실 의존성을 보존한다. 핵심 지지가3개 미만이면 상세 추론을 예약하지 않으며,
+상세는 핵심을 지지한 source에서만 검사한다. offline reference label을 입력 인자로 받지 않는다.
+canonical 원문 수와 각 주장 지지 수를 구분하고, 입력 조립에 성공해도 `quality_gate_passed`를 자동 승격하지 않는다.
+
+## 근거 기반 로컬 비교 화면
+
+`agents/grounded_web.py`는 별도의 개발 전용 HTTP 계약이다. `/api/session`에서 비교할 관점을 최대2개 선택하고,
+`/api/ask`의 question/request_id로 공통 질문과 후속 질문을 보낸다. 동일 request_id 재전송은 중복 추론을 만들지 않는다.
+`/api/state`는 host가 렌더링한 points/required_premises와 상태만 반환하며 모델 원시 응답은 private checkpoint에만 남긴다.
+`/api/source`는 세션과 source ID를 확인한 뒤 원문을 반환한다. 개발 화면의 원문 수는 모델 지지 판정 수이지 독립 검증 수가 아니다.
+loopback 주소·Host/Origin·세션 토큰·단일 추론 lane·질문6회·지속 예산을 적용한다. 데이터가 바뀌거나 만료되면 답변을 차단한다.
+UI의 `--experimental` 옵션은 개발 경로 선택이며 사용자에게 runtime 의미 검수를 요구하는 단계가 아니다.
