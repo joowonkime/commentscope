@@ -50,5 +50,7 @@ test('source inspection uses bounded API and rejected raw text is never rendered
   assert.equal(all(h.ids.rounds).filter(n=>n.tagName==='a').length,0);
   assert.doesNotMatch(text(h.ids.rounds),/SECRET/);
   await all(h.ids.rounds).find(n=>n.tagName==='button').onclick();
-  assert.equal(h.ids.source.textContent,'<img onerror=evil> source');
+  assert.equal(h.ids.source.textContent,'id\n<img onerror=evil> source');
+  assert.match(text(h.ids.rounds),/댓글의 가치 판단/);
+  assert.doesNotMatch(text(h.ids.rounds),/attributed_value_not_verified_fact/);
 });

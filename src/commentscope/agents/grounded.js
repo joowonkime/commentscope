@@ -1,6 +1,12 @@
 'use strict';
 let token = '', polling = false;
 const $ = id => document.getElementById(id);
+const kindLabel = {fact:'사실 주장',value:'가치·선호',prediction:'예측·가정'};
+const evidenceLabel = {evidence_supported_provisional:'자료에서 지지됨 (잠정 판정)',
+  attributed_value_not_verified_fact:'댓글의 가치 판단 · 사실 인증 아님',
+  attributed_prediction_not_verified_fact:'댓글의 예측 · 사실 인증 아님'};
+const jobLabel = {idle:'준비됨',running:'응답 생성 중',done:'완료',error:'실행 오류'};
+const answerLabel = {answered:'답변',abstain:'근거 부족으로 보류',error:'실행 오류'};
 function node(tag, text) { const n = document.createElement(tag); n.textContent = String(text); return n; }
 async function api(path, body) {
   const response = await fetch(path, {method: body === undefined ? 'GET' : 'POST',
@@ -10,7 +16,7 @@ async function api(path, body) {
 }
 function fail(error) { $('status').textContent = '작업 실패: ' + error.message; }
 function render(state, inventory = false) {
-  $('status').textContent = `상태: ${state.job} · 남은 질문 ${state.remaining_questions} · 근거가 없으면 답변 보류`;
+  $('status').textContent = `상태: ${jobLabel[state.job] || '확인 필요'} · 남은 질문 ${state.remaining_questions} · 근거가 없으면 답변 보류`;
   $('submit').disabled = !state.can_ask;
   if (inventory) {
     $('profiles').replaceChildren();
@@ -18,9 +24,10 @@ function render(state, inventory = false) {
       const article = node('article', ''), check = document.createElement('input');
       article.className = 'profile';
       check.type = 'checkbox'; check.value = p.candidate_id; check.checked = state.selected.includes(p.candidate_id);
-      const label = node('label', p.candidate_id + ' · 검사한 원문 중 지지 ' + p.model_core_support_count + '개 (모델 판정)');
+      const label = node('label', p.candidate_id + ' · 검사한 원문 중 핵심 지지 ' + p.model_core_support_count + '개 (모델 판정)');
       label.prepend(check); article.append(label);
-      for (const entry of p.prompt_entries) article.append(node('p', entry.text + ' [' + entry.kind + ']'));
+      const entries = p.prompt_entries.slice().sort((a,b) => Number(b.claim_id===p.core_claim_id)-Number(a.claim_id===p.core_claim_id));
+      for (const entry of entries) article.append(node('p', (entry.claim_id===p.core_claim_id?'핵심: ':'관련 근거: ')+entry.text+' ['+(kindLabel[entry.kind] || '유형 확인 필요')+']'));
       $('profiles').append(article);
     }
     $('deferred').replaceChildren(...state.deferred.map(p => node('p', p.candidate_id + ': ' + p.reason)));
@@ -30,15 +37,15 @@ function render(state, inventory = false) {
     const section = node('section', ''); section.className = 'round'; section.append(node('h3', r.question));
     const answers = node('div', ''); answers.className = 'grid'; section.append(answers);
     for (const answer of r.answers) {
-      const card = node('article', ''); card.append(node('h4', answer.candidate_id + ' · ' + answer.status));
+      const card = node('article', ''); card.append(node('h4', answer.candidate_id + ' · ' + (answerLabel[answer.status] || '상태 확인 필요')));
       card.className = 'answer';
       if (!answer.points.length) card.append(node('p', '허용된 근거에 답이 없어 보류합니다.'));
       for (const entry of [...answer.points, ...answer.required_premises]) {
-        card.append(node('p', entry.text), node('small', `${entry.epistemic_status} · 이 주장 지지 ${entry.member_source_count}개`));
-        for (const cite of entry.citations.comment_evidence) {
-          const b = node('button', '원문 ' + cite.source_id);
+        card.append(node('p', entry.text), node('small', `${evidenceLabel[entry.epistemic_status] || '근거 상태 확인 필요'} · 이 주장 지지 ${entry.member_source_count}개`));
+        for (const [index,cite] of entry.citations.comment_evidence.entries()) {
+          const b = node('button', '원문 ' + (index+1)); b.title = cite.source_id;
           b.type = 'button'; b.onclick = () => api('/api/source', {source_id: cite.source_id})
-            .then(s => { $('source').textContent = s.text; }).catch(fail); card.append(b);
+            .then(s => { $('source').textContent = (s.id || cite.source_id)+'\n'+s.text; }).catch(fail); card.append(b);
         }
         for (const cite of entry.citations.verification_evidence) {
           const link = node('a', cite.title); const u = new URL(cite.url);
