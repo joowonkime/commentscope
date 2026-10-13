@@ -3,7 +3,7 @@
 ## 자율 통합 작업 진행 중 2026-10-13
 
 사용자가 수면 중에도 중간 피드백 없이 MVP까지 진행하도록 요청했다. 아래 부품 완료 이후 연결 작업을 진행한다.
-플랫폼 goal의 blocked 상태는 그대로지만 현재 요청에서 직접 구현·실행 중이며, 자동 MVP 완료로 보고하지 않는다.
+플랫폼 goal은 재개 후 **active**로 확인됐다. 자동 MVP 완료로 보고하지 않는다.
 
 - `experiments.scoped_discovery_probe`에서 전체 corpus의 기존 raw 유사도 묶음 중 크기·ID 순서 상위20개를 자동 선택했다.
   private `runs/scoped-discovery-20261013/plan.json`을 동결하고 캐시된8B로 각 묶음의 핵심·이유·필수 전제를 제안한다.
@@ -16,6 +16,26 @@
   비교/후속 질문/원문 확인 경로는 합성 HTTP 테스트로 검사했고 실제 댓글 bundle 연결과 브라우저 시각 검사는 남아 있다.
 - 실험 코드가 동결됐으므로 완료 전 기존 source 파일을 수정하지 않는다. 신규 파일은 과거 manifest에 추가하지 않는다.
   기존 plan/실패 출력은 덮어쓰지 않으며 실제 호출 비용은 공유8시간 ledger에 누적한다.
+
+### 고정 원문 관계 평가에서 확인한 차단 원인
+
+- joint proposal20개를 같은 요청으로8B/4B에 실행했다. 형식·인용 계약 통과14/8개이며 품질 합격 수가 아니다.
+  주장 유형·부연·전제를 한 번에 생성하면서 생긴 오류를 보존했다. private `runs/scoped-discovery-20261013`, `runs/scoped-discovery-4b-20261013`.
+- 최종 구조 개선은 core-only proposal과 후속 유형/전제 추출의 분리다. 같은20묶음에서 후보13, no-claim2, 인용 결합 실패5.
+  private `runs/atomic-discovery-20261013`. 후보 생성은 호출당 약3~13초였지만 소수 의견 선택·지시 대상 문제도 남았다.
+- `runs/atomic-membership-20261013`에서137관계 중 결정적 순서의 첫100을 평가 대상으로 고정했다.
+  assistant 사전 참조는 supported21/partial20/unsupported59다. 원문 전체를 읽은 비블라인드 개발 참조이며 runtime에 전달하지 않는다.
+- 실행 환경 중단으로 J010의 응답이 유실됐다. 완료9건은 재사용했고 J010은 오류로 보존했다.93초 예약 비용을 환급하거나 재시도하지 않았다.
+  `experiments.recover_interrupted_membership`는 ledger의 원시 응답이 있으면 그대로 복구하고, 없으면 판정을 발명하지 않는다.
+- 68건 관측 시8B 오승인3건(J005/J015/J062). 남은 정상21건을 전부 보존해도 정밀도 상한21/24=87.5%다.
+  같은137개 full-source NLI는 고정100에서 정상13/21·오승인5건이므로 교집합 보존율 상한61.9%다.
+  **두 사전 채택 후보 모두 합격 불가능하여 남은 동일 호출을 조기 중단했다.** 분모100/참조/threshold는 바꾸지 않았다.
+  `early-stopped.json`에 관측·미실행·오류·상한식을 남겼다.100건 LLM 완료나 실패를 제외한 합격으로 보고하지 않는다.
+- 다음 진단은 이미 설치된 OpenJev2B의 같은137개 full-source 입력 비교다. 기존500문자 wrapper만 제거하고512token/threshold0.8은 유지한다.
+  source가512tokens를 넘으면 잘라서 판정하지 않고 오류로 남긴다. CPU 환경과 고정600초 batch deadline을 사용한다.
+  private `runs/atomic-openjev-20261013`; OpenJev는 상용 Jev가 아니다. 새 다운로드·외부 전송·임계값 조정은 없다.
+- 코드 `f891200`: Python609/Node7 통과, Linux/Windows CI run38316386632 성공. 원문 평가 참조·모델 출력은 public Git 제외다.
+  NLI compiler dispatch와 실제 agent/첫 분석1시간 검증은 아직 남아 있다. 현재 active goal을 임의로 완료/중단 처리하지 않는다.
 
 ## 사실 판정과 선택형 답변 부품 검증 완료 2026-10-13
 
