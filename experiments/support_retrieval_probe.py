@@ -22,6 +22,45 @@ from experiments.scoped_discovery_probe import code_hashes
 VERSION = 'whole-corpus-support-component-0.1'
 
 
+def union(directory, source):
+    """Deterministic nomination replay; no new inference or quality approval."""
+    if directory.exists(): raise ValueError('Never overwrite a replay')
+    prior = read_json(source/'plan.json'); live(prior['expires_at'])
+    completed = read_json(source/'completed.json'); baseline = Path(prior['source'])
+    if (prior['artifact_kind'] != VERSION or completed['plan_sha256'] != sha(source/'plan.json')
+            or completed['retrieval_sha256'] != sha(source/'retrieval.json')):
+        raise ValueError('Completed retrieval binding changed')
+    if any(sha(p) != h for p, h in prior['inputs'].items()): raise ValueError('Baseline inputs changed')
+    files = [source/n for n in ('plan.json', 'retrieval.json', 'completed.json')]
+    plan = {'artifact_kind': support_retrieval.UNION_VERSION, 'source': str(source),
+            'inputs': {str(p): sha(p) for p in files}, 'code_sha256': code_hashes(),
+            'new_inference_calls': 0, 'fresh_analysis': False, 'quality_gate_passed': False}
+    write(directory/'plan.json', plan)
+    populations = read_json(baseline/'core-populations.json')
+    proposals = [p for values in populations['proposals'].values() for p in values]
+    merged = support_retrieval.union_nominations(proposals, read_json(source/'retrieval.json'))
+    write(directory/'nominations.json', merged)
+    lookup = {p['id']: p for p in merged['proposals']}
+    # Every original is retained, regardless of positive/negative/unknown labels.
+    assert all(p['sources'].items() <= lookup[p['id']]['sources'].items() for p in proposals)
+    historical = read_json(baseline/'core-verdicts.json'); positive = retained = 0
+    for family, rows in populations['rows'].items():
+        for row in rows:
+            if historical[family][row['id']] == 'supported':
+                positive += 1
+                retained += row['source_id'] in lookup[row['candidate_id']]['sources']
+    from commentscope.factory.automatic_contract import digest
+    unique = {(digest(p['claims']['C']), sid) for p in merged['proposals'] for sid in p['sources']}
+    report = {'artifact_kind': support_retrieval.UNION_VERSION, 'plan_sha256': sha(directory/'plan.json'),
+              'candidates': len(proposals), 'prior_nominations': sum(len(p['sources']) for p in proposals),
+              'union_nominations': sum(len(p['sources']) for p in merged['proposals']),
+              'unique_core_source_pairs': len(unique), 'max_sources_per_candidate': max(len(p['sources']) for p in merged['proposals']),
+              'historical_model_supported': positive, 'historical_supported_retained': retained,
+              'nominations_sha256': sha(directory/'nominations.json'), 'new_inference_calls': 0,
+              'fresh_analysis': False, 'quality_gate_passed': False, 'semantic_membership_executed': False}
+    write(directory/'completed.json', report); print(report, flush=True)
+
+
 def prepare(directory, source):
     if directory.exists(): raise ValueError('Never overwrite a component attempt')
     old = read_json(source/'plan.json'); live(old['expires_at'])
@@ -114,6 +153,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__); sub = parser.add_subparsers(dest='action', required=True)
     p = sub.add_parser('prepare'); p.add_argument('directory', type=Path); p.add_argument('--source', type=Path, required=True)
     p = sub.add_parser('run'); p.add_argument('directory', type=Path)
+    p = sub.add_parser('union'); p.add_argument('directory', type=Path); p.add_argument('--source', type=Path, required=True)
     args = parser.parse_args()
     if args.action == 'prepare': prepare(args.directory, args.source)
+    elif args.action == 'union': union(args.directory, args.source)
     else: run(args.directory)

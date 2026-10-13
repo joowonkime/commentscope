@@ -14,6 +14,7 @@ from commentscope.factory.target_ranking import target, text
 from commentscope.providers.local_nli import decide
 
 VERSION = 'whole-corpus-support-retrieval-0.1'
+UNION_VERSION = 'parallel-source-nominations-0.1'
 LIMITS = {'candidates': 32, 'recall_sources': 24, 'nli_sources': 5,
           'cosine_reserve': 2, 'pairs': 1000, 'window_chars': 500, 'overlap_chars': 50}
 
@@ -117,3 +118,33 @@ def assemble(proposals, units, cache, index, sources, scheduled, result):
     return {'artifact_kind': VERSION, 'proposals': output, 'rankings': rankings, 'pair_errors': errors,
             'canonical_search_count': len(index['source_ids']), 'membership_approval': False,
             'quality_gate_passed': False, 'runtime_reference_labels': False}
+
+
+def union_nominations(discovery, retrieved):
+    """Combine retrieval channels, never replace evidence by one ranking view.
+
+    No verdicts enter this operation. Every previously nominated original stays
+    nominated, whether correct, opposite, or unknown. This preserves recall only;
+    all unique core/source pairs still need membership and budget allocation.
+    """
+    if (retrieved['artifact_kind'] != VERSION or retrieved['membership_approval'] is not False
+            or retrieved['quality_gate_passed'] is not False):
+        raise ValueError('Unapproved retrieval nominations required')
+    left = {p['id']: p for p in discovery}; right = {p['id']: p for p in retrieved['proposals']}
+    if (len(left) != len(discovery) or len(right) != len(retrieved['proposals'])
+            or left.keys() != right.keys()):
+        raise ValueError('Same complete unique target population required')
+    output = []; rows = []
+    for pid in sorted(left):
+        a, b = left[pid], right[pid]
+        if any(a[k] != b[k] for k in ('claims', 'anchor_unit_id', 'candidate_unit_ids')):
+            raise ValueError('Retrieval cannot change target contract')
+        if any(a['sources'][sid] != b['sources'][sid] for sid in a['sources'].keys() & b['sources'].keys()):
+            raise ValueError('Original source changed across retrieval channels')
+        sources = {**a['sources'], **b['sources']}
+        p = deepcopy(b); p['sources'] = dict(sorted(sources.items())); p['retrieval_kind'] = UNION_VERSION
+        output.append(p)
+        rows.append({'candidate_id': pid, 'discovery_source_ids': sorted(a['sources']),
+                     'broad_source_ids': sorted(b['sources']), 'union_source_ids': sorted(sources)})
+    return {'artifact_kind': UNION_VERSION, 'proposals': output, 'nominations': rows,
+            'membership_approval': False, 'quality_gate_passed': False, 'runtime_reference_labels': False}

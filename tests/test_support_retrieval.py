@@ -139,5 +139,27 @@ class SupportRetrievalTests(unittest.TestCase):
         self.assertIn('s11', assembled['rankings'][0]['selected_source_ids'])
         self.assertFalse(assembled['quality_gate_passed'])
 
+    def test_union_preserves_all_prior_nominations_without_reading_verdicts(self):
+        *args, rows = self.population()
+        args[0][0]['sources']['s11'] = args[4]['s11']
+        scheduled = retrieval.schedule(*args)
+        assembled = retrieval.assemble(*args, scheduled, self.result(scheduled))
+        self.assertNotIn('s11', assembled['proposals'][0]['sources'])
+        union = retrieval.union_nominations(args[0], assembled)
+        self.assertEqual(set(union['proposals'][0]['sources']),
+                         set(args[0][0]['sources']) | set(assembled['proposals'][0]['sources']))
+        self.assertIn('s11', union['proposals'][0]['sources'])
+        self.assertFalse(union['membership_approval']); self.assertFalse(union['quality_gate_passed'])
+
+    def test_union_rejects_omitted_candidates_changed_sources_and_targets(self):
+        *args, rows = self.population(); scheduled = retrieval.schedule(*args)
+        assembled = retrieval.assemble(*args, scheduled, self.result(scheduled))
+        for mutate in (lambda r: r['proposals'].clear(),
+                       lambda r: r['proposals'][0]['sources'].__setitem__('s00', 'changed'),
+                       lambda r: r['proposals'][0]['claims']['C'].__setitem__('text', 'changed'),
+                       lambda r: r.__setitem__('membership_approval', True)):
+            changed = deepcopy(assembled); mutate(changed)
+            with self.assertRaises(ValueError): retrieval.union_nominations(args[0], changed)
+
 
 if __name__ == '__main__': unittest.main()
