@@ -77,6 +77,7 @@ class CandidateCompletionPipelineTests(unittest.TestCase):
         plan = {'artifact_kind': p.VERSION, 'snapshot': str(directory/'snapshot.json'), 'expires_at': f['expires_at'],
                 'inputs': {}, 'code_sha256': {}, 'model_files': {}, 'limits': deepcopy(p.LIMITS),
                 'retrieval_limits': deepcopy(p.support_retrieval.LIMITS), 'candidate_contract': p.completion.VERSION,
+                'ground_selection_contract': p.argument_paths.VERSION,
                 'profile_extra_tokens': 768, 'evaluation': p.product_evaluation.execution_state(measurement, 'product_diagnostic'),
                 'membership_policy': fresh_tests.FreshGroundedPipelineTests().policy(),
                 'deployments': {k: deepcopy(d) for k in ('extraction', 'membership', 'profile')},
@@ -97,8 +98,11 @@ class CandidateCompletionPipelineTests(unittest.TestCase):
             self.assertEqual(report['screened_inputs'], 2); self.assertEqual(report['qualified_agents'], 0)
             self.assertFalse(report['quality_gate_passed']); self.assertTrue(report['fresh_analysis'])
             self.assertEqual(len(report['attempts']), 2)
+            self.assertEqual(len(report['completion_attempts']), 2)
             self.assertLessEqual(report['attempts'][0]['ended_elapsed'], report['attempts'][1]['started_elapsed'])
             self.assertTrue(all(r['state'] == 'screened_input' for r in report['outcomes']))
+            for path in (directory/'candidates').glob('*/typed.json'):
+                self.assertEqual(p.read_json(path)['ground_selection_contract'], p.argument_paths.VERSION)
 
     def test_failed_argument_audit_defers_whole_candidates_without_repair(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -121,6 +125,23 @@ class CandidateCompletionPipelineTests(unittest.TestCase):
             self.assertEqual(report['coverage']['source_records'], 2)
             self.assertEqual(report['analyzed_unique_sources'], 6)
             self.assertEqual(len(list((directory/'member-source-results').glob('*.json'))), 4)
+            self.assertEqual(report['screened_inputs'], 2)
+
+    def test_pipeline_reaches_viable_candidates_after_seven_early_rejections(self):
+        original_queue = p.completion.queue; original_complete = p.complete_candidate
+        def queue(*args):
+            tasks = original_queue(*args); early = []
+            for i in range(7):
+                task = deepcopy(tasks[0]); task['proposal']['id'] = f'early{i}'; early.append(task)
+            return early+tasks
+        def complete(proposal, *args):
+            if proposal['id'].startswith('early'): return None, 'insufficient_core_support'
+            return original_complete(proposal, *args)
+        with tempfile.TemporaryDirectory() as tmp, patch.object(p.completion, 'queue', side_effect=queue), \
+             patch.object(p, 'complete_candidate', side_effect=complete):
+            report = self.run_synthetic(Path(tmp), False)
+            self.assertEqual(len(report['attempts']), 9)
+            self.assertEqual(len(report['completion_attempts']), 2)
             self.assertEqual(report['screened_inputs'], 2)
 
 

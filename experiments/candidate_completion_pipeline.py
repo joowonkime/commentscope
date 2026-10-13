@@ -12,7 +12,7 @@ import time
 
 from commentscope.agents.grounded_inputs import compile_inputs
 from commentscope.factory import candidate_completion as completion
-from commentscope.factory import grounded_factory, argument_graph, membership_policy, source_first
+from commentscope.factory import grounded_factory, argument_graph, argument_paths, membership_policy, source_first
 from commentscope.factory import source_index, support_retrieval, nli_fact_records, product_evaluation
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -28,12 +28,13 @@ from experiments.fresh_grounded_pipeline import Runner, proposals_from_sources, 
 from experiments.argument_graph_probe import profile, members, allocate
 from experiments.audit_model_compare import owned_server, file_hash
 
-VERSION = 'candidate-atomic-fresh-pipeline-0.1'
+VERSION = 'candidate-atomic-fresh-pipeline-0.2'
 LIMITS = {'analysis_seconds': 3600, 'source_analysis_seconds': 600, 'groups': 20,
           'call_seconds': 90, 'embedding_seconds': 300, 'ranking_seconds': 300, 'fact_seconds': 240,
           'source_request_bytes': 27000, 'candidate_threshold': .45, 'discovery_targets': 24,
           'core_relations': 200, 'candidate_slot_seconds': completion.SLOT_SECONDS,
           'candidate_work_seconds': completion.WORK_SECONDS, 'max_attempts': completion.MAX_ATTEMPTS,
+          'max_completions': completion.MAX_COMPLETIONS,
           'finalize_seconds': completion.FINALIZE_SECONDS}
 
 
@@ -62,6 +63,7 @@ def prepare(directory, snapshot, source_config, graph_config, *, gpu_layers, aud
     plan.update(artifact_kind=VERSION, limits=deepcopy(LIMITS),
                 retrieval_limits=deepcopy(support_retrieval.LIMITS),
                 candidate_contract=completion.VERSION, discovery_min_sources=1, admission_min_sources=3,
+                ground_selection_contract=argument_paths.VERSION,
                 detail_scope='selected_ground_original_author_only',
                 source_argument_audit=True, quality_gate_passed=False,
                 argument_control_measurement={k: deepcopy(control_report[k]) for k in
@@ -81,6 +83,7 @@ def complete_candidate(p, directory, plan, runner, relations, records):
     write(cd/'membership.json', {**selection, 'admission_bound': bound.report()})
     if sum(v == 'supported' for v in actual.values()) < 3:
         return None, 'insufficient_core_support'
+    runner.allocation.begin_completion()
     supported = members(p, selection, plan['membership_policy'])
     missing = [sid for sid in sorted(supported) if sid not in records]
     if missing:
@@ -102,7 +105,7 @@ def complete_candidate(p, directory, plan, runner, relations, records):
     units = [u for r in selected_records for u in r['units']]
     with owned_server(plan['deployments']['profile'], 'baseline', cd/'profile-server'):
         typed, reason = profile(p, selection, units, plan['membership_policy'], runner,
-                                extra_tokens=plan['profile_extra_tokens'])
+                                extra_tokens=plan['profile_extra_tokens'], ground_selector=argument_paths)
         if typed is None: return None, reason
         write(cd/'typed.json', typed)
         req = allocate(completion.audit_request(typed, supported, units), plan['profile_extra_tokens'])
@@ -155,7 +158,8 @@ def merge_bundles(bundles, plan):
 def execute(directory):
     started = time.monotonic(); plan = read_json(directory/'plan.json'); live(plan['expires_at'])
     if (plan['artifact_kind'] != VERSION or plan['limits'] != LIMITS
-            or plan['retrieval_limits'] != support_retrieval.LIMITS or plan['candidate_contract'] != completion.VERSION):
+            or plan['retrieval_limits'] != support_retrieval.LIMITS or plan['candidate_contract'] != completion.VERSION
+            or plan['ground_selection_contract'] != argument_paths.VERSION):
         raise ValueError('Unknown frozen completion configuration')
     if product_evaluation.execution_state(plan['evaluation']['source_measurement'], 'product_diagnostic') != plan['evaluation']:
         raise ValueError('Product diagnostic evaluation required')
@@ -201,7 +205,7 @@ def execute(directory):
             if reserved_relations+len(p['sources']) > plan['limits']['core_relations']:
                 outcomes.append({'id': p['id'], 'state': 'unprocessed_core_capacity'}); continue
             if not runner.allocation.begin(p['id']):
-                outcomes.append({'id': p['id'], 'state': 'unprocessed_completion_budget'}); continue
+                outcomes.append({'id': p['id'], 'state': runner.allocation.refusal}); continue
             reserved_relations += len(p['sources'])
             try:
                 bundle, state = complete_candidate(p, directory, plan, runner, relations, records)
@@ -221,6 +225,7 @@ def execute(directory):
         report = {'artifact_kind': VERSION, 'fresh_analysis': True, 'fresh_analysis_seconds': elapsed,
             'within_one_hour': elapsed <= 3600, 'coverage': coverage, 'analyzed_unique_sources': len(records),
             'queue_candidates': len(queue), 'attempts': runner.allocation.attempts, 'outcomes': outcomes,
+            'completion_attempts': runner.allocation.completions,
             'reserved_core_relations': reserved_relations, 'screened_inputs': len(compiled['profiles']),
             'qualified_agents': 0, 'quality_gate_passed': False, 'runtime_reference_labels': False,
             'bundle_sha256': sha(directory/'bundle.json'), 'compiled_sha256': sha(directory/'compiled.json'),

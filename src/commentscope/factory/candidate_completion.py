@@ -3,34 +3,48 @@ from copy import deepcopy
 import math
 
 from commentscope.contracts.perspective_draft import obj, array
-from commentscope.factory import argument_graph, grounded_factory, membership_policy
+from commentscope.factory import argument_graph, argument_paths, grounded_factory, membership_policy
 from commentscope.factory.automatic_contract import digest
 from commentscope.providers.local_nli import THRESHOLD
 
-VERSION = 'candidate-completion-contract-0.1'
+VERSION = 'candidate-completion-contract-0.2'
 SLOT_SECONDS = 600
 WORK_SECONDS = 540
 FINALIZE_SECONDS = 60
-MAX_ATTEMPTS = 6
+MAX_ATTEMPTS = 24
+MAX_COMPLETIONS = 6
 
 
 class Allocation:
     """Reserve a whole candidate slot; failures consume time, never restart it."""
     def __init__(self, runner):
         self.runner = runner; self.attempts = []; self.deadline = None
+        self.completions = []; self.refusal = None
 
     def begin(self, candidate_id):
         if self.deadline is not None: raise ValueError('Previous candidate is still open')
         if candidate_id in [a['candidate_id'] for a in self.attempts]: raise ValueError('Never retry a candidate')
         now = self.runner.clock()
         available = self.runner.plan['limits']['analysis_seconds'] - (now-self.runner.started)
-        if (len(self.attempts) >= MAX_ATTEMPTS or available < SLOT_SECONDS + FINALIZE_SECONDS
-                or self.runner.budget.summary()['remaining_seconds'] < SLOT_SECONDS):
+        self.refusal = ('unprocessed_search_capacity' if len(self.attempts) >= MAX_ATTEMPTS else
+                        'unprocessed_completion_capacity' if len(self.completions) >= MAX_COMPLETIONS else
+                        'unprocessed_completion_budget' if available < SLOT_SECONDS + FINALIZE_SECONDS
+                        or self.runner.budget.summary()['remaining_seconds'] < SLOT_SECONDS else None)
+        if self.refusal is not None:
             return False
         self.deadline = now + WORK_SECONDS
         self.attempts.append({'candidate_id': candidate_id, 'started_elapsed': now-self.runner.started,
                               'work_seconds': WORK_SECONDS, 'reserved_slot_seconds': SLOT_SECONDS})
         return True
+
+    def begin_completion(self):
+        """Charge the scarce downstream slot before any extraction/type outcome."""
+        if self.deadline is None: raise ValueError('No active candidate')
+        cid = self.attempts[-1]['candidate_id']
+        if cid in self.completions: raise ValueError('Never retry candidate completion')
+        if len(self.completions) >= MAX_COMPLETIONS: raise ValueError('Completion capacity exhausted')
+        self.completions.append(cid)
+        self.attempts[-1]['completion_started_elapsed'] = self.runner.clock()-self.runner.started
 
     def timeout(self, maximum):
         if self.deadline is None: return maximum
@@ -82,6 +96,9 @@ def selected_graph(typed, members, units):
     graph = argument_graph.inventory(units, members)
     if digest(graph) != typed['source_graph_sha256']: raise ValueError('Source argument graph changed')
     argument_graph.selection({'errors': [], 'output': typed['selected_nodes']}, graph)
+    if 'ground_selection_contract' in typed:
+        if typed['ground_selection_contract'] != argument_paths.VERSION: raise ValueError('Unknown ground selection contract')
+        argument_paths.selection({'errors': [], 'output': typed['selected_nodes']}, graph)
     if typed['selected_nodes']['status'] != 'selected': raise ValueError('Deferred argument')
     expected = {'C'} | {f'R{i}' for i in range(1, len(typed['selected_nodes']['node_ids'])+1)}
     if set(typed['claims']) != expected: raise ValueError('Incomplete selected-ground claims')

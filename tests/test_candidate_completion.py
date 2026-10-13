@@ -50,6 +50,23 @@ class CandidateCompletionTests(unittest.TestCase):
         for i in range(cc.MAX_ATTEMPTS):
             self.assertTrue(allocation.begin(str(i))); allocation.finish('failed')
         self.assertFalse(allocation.begin('next'))
+        self.assertEqual(allocation.refusal, 'unprocessed_search_capacity')
+
+    def test_core_failures_do_not_consume_completion_slots_but_downstream_failures_do(self):
+        runner = SimpleNamespace(clock=lambda: 0., started=0., plan={'limits': {'analysis_seconds': 3600}}, budget=Mock())
+        runner.budget.summary.return_value = {'remaining_seconds': 9000}
+        allocation = cc.Allocation(runner)
+        for i in range(7):
+            self.assertTrue(allocation.begin(f'core{i}')); allocation.finish('insufficient_core_support')
+        self.assertEqual(allocation.completions, [])
+        for i in range(cc.MAX_COMPLETIONS):
+            self.assertTrue(allocation.begin(f'complete{i}')); allocation.begin_completion()
+            with self.assertRaises(ValueError): allocation.begin_completion()
+            allocation.finish('ground_type_unresolved')
+        self.assertFalse(allocation.begin('next'))
+        self.assertEqual(allocation.refusal, 'unprocessed_completion_capacity')
+        self.assertEqual(len(allocation.attempts), 13)
+        with self.assertRaises(ValueError): allocation.begin_completion()
 
     def test_reason_membership_is_original_author_only_with_full_source(self):
         typed, sources, units = argument(); policy = fresh_tests.FreshGroundedPipelineTests().policy()

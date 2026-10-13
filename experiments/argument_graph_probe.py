@@ -141,13 +141,13 @@ def prepare(directory, ranked_source, neighborhood_source, *, capacity='baseline
            'max_detail_relations': maximum, 'type_controls': len(controls), 'profile_capacity': capacity}, flush=True)
 
 
-def profile(proposal, selection, units, policy, runner, *, extra_tokens=0):
+def profile(proposal, selection, units, policy, runner, *, extra_tokens=0, ground_selector=graph):
     supported = members(proposal, selection, policy); evidence = graph.inventory(units, supported)
     core_req = allocate(graph.type_request(proposal['claims']['C']['text'], supported), extra_tokens)
     core_kind = graph.kind(runner.call('core-kind', core_req))
     if core_kind not in {'fact', 'value', 'prediction'}: return None, 'core_'+core_kind
-    select_req = allocate(graph.select_request(proposal['claims']['C'], supported, evidence), extra_tokens)
-    chosen = graph.selection(runner.call('argument-selection', select_req), evidence)
+    select_req = allocate(ground_selector.select_request(proposal['claims']['C'], supported, evidence), extra_tokens)
+    chosen = ground_selector.selection(runner.call('argument-selection', select_req), evidence)
     if chosen['status'] == 'defer': return None, chosen['reason']
     kinds = {}; traces = {'core_type': digest(core_req), 'argument_selection': digest(select_req)}
     for nid in chosen['node_ids']:
@@ -156,6 +156,7 @@ def profile(proposal, selection, units, policy, runner, *, extra_tokens=0):
         kinds[nid] = graph.kind(runner.call('ground-kind', req)); traces[nid] = digest(req)
     if any(k not in {'fact', 'value', 'prediction'} for k in kinds.values()): return None, 'ground_type_unresolved'
     typed = graph.assemble(proposal, supported, units, core_kind, chosen, kinds)
+    if ground_selector is not graph: typed['ground_selection_contract'] = ground_selector.VERSION
     typed['decision_request_hashes'] = traces
     return typed, None
 
