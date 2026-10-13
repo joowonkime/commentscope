@@ -162,8 +162,15 @@ def proposals_from_sources(raw,runner):
             record=source_first.bind(sid,text,runner.call('source-extraction',req))
         write(runner.directory/'source-results'/(digest(sid)+'.json'),record)
         results.append(record);units.extend(record['units'])
-    excluded=sorted(set(raw['sources'])-set(selected))
-    coverage={'canonical_available':len(raw['sources']),'scheduled':len(selected),
+    # The registry also retains duplicate/empty originals for provenance.
+    # Clusters partition the canonical nonempty embedding population.
+    canonical={sid for group in raw['clusters'] for sid in group['members']}
+    if not canonical <= raw['sources'].keys():
+        raise ValueError('Canonical population contains unknown source')
+    excluded=sorted(canonical-set(selected))
+    coverage={'version':'source-coverage-0.2','registry_source_count':len(raw['sources']),
+              'canonical_available':len(canonical),'scheduled':len(selected),
+              'noncanonical_or_empty':sorted(set(raw['sources'])-canonical),
               'source_records':len(results),'model_calls':sum(r['status']!='unprocessed_size_budget' for r in results),
               'valid_units':len(units),'unprocessed_budget':skipped,'not_scheduled':excluded,
               'unprocessed_size_budget':[r['source_id'] for r in results if r['status']=='unprocessed_size_budget'],
@@ -286,7 +293,9 @@ def execute(directory):
                 'bundle_sha256':sha(directory/'bundle.json'),'compiled_sha256':sha(directory/'compiled.json'),
                 'budget_after':budget.summary(),'runtime_reference_labels':False}
         write(directory/'completed.json',report)
-        print({k:v for k,v in report.items() if k!='budget_after'},flush=True)
+        brief={k:v for k,v in report.items() if k not in {'budget_after','coverage'}}
+        brief['coverage']={k:len(v) if isinstance(v,list) else v for k,v in coverage.items()}
+        print(brief,flush=True)
     except BaseException as exc:
         write(directory/'failed.json',{'exception_type':type(exc).__name__,'elapsed_seconds':runner.clock()-runner.started,
               'quality_gate_passed':False,'budget_after':budget.summary()})

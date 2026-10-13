@@ -1,35 +1,42 @@
 # 다음 세션 시작점
 
-## Goal 지속 작업과 정책 알고리즘 분리
+## Source first 실제 실행 완료와 다음 교체 경계
 
 사용자가 goal을 계속 진행하도록 요청하고 policy와 algorithm을 정리하며 프롬프트 반복을 최소화하라고 했다.
 플랫폼 goal 상태는 active로 확인했다. 목표를 완료·중단으로 바꾸지 않는다. 최신 사용자 합의가 과거 goal 본문의 관계 지표 단독 차단 해석보다 우선한다.
 플랫폼 objective 문자열 자체는 수정하지 않았으며, 관계95%/80% 목표도 유지한다.
 
 - 정책: [MVP_PRODUCT_POLICY](MVP_PRODUCT_POLICY.md). 알고리즘과 구현 순서: [MVP_ALGORITHM](MVP_ALGORITHM.md).
-- fresh runner0.3에 평가 상태 분리, 원문 분석 adapter, 단위 medoid 후보와 기존 membership/typing/fact 조립을 연결했다.
-  합성6원문에서2개 입력을 만들되 승인 Agent0·MVP 미검증으로 남기는 통합 테스트가 통과했다. 실제 의미 품질 증거는 아니다.
-  다음은 고정 설정의 실제 통합 실행 → 자동 산출물 전체 검토 → 실제 질문/UI/시간 검사다.
+- private `runs/source-first-fresh-20261013`은2360.60초에 정상 종료했다. 소유 서버2개도 종료됐고 실행 중인 분석은 없다.
+  199개 대상 중190개 처리·9개 예산 미처리, 주장215개, 후보9개, 관계40건 중 모델 지지15건이다.
+  지지3개 이상 후보2개 중1개는 typing 인용 계약으로,1개는 fact_insufficient로 보류됐다. 실제 입력/승인 Agent0, MVP 미완료다.
+  관계 목표 미달 때문에 중간에 전체를 차단한 결과가 아니다. 실제 산출물의 다음 단계에서 실패했다.
 - 기존 ClaimUnit 계약·임베딩·집계·사실 입력·ID 선택형 응답을 재사용한다. 새 source-first 기준선도 과거 실패가 있는 가설이며 성공한 알고리즘으로 보고하지 않는다.
 - 프롬프트는 기준선 동안 동결하고, 원문/문맥·model·schema·설정 hash를 함께 남긴다. 모호한 의미를 정규식이나 confidence로 완벽히 해결했다고 가정하지 않는다.
-- 제품 정책은 `e3be50a`로 기존 개발 branch에 저장·push했다. 미채택 condition-veto의 로컬 사전 진단 변경은 별도로 보존하며 새 경로에 자동 연결하지 않는다.
+- 코드`cee025b`로 실제 실행했고 Python694/Node7 및 Linux/Windows CI38397534147이 통과했다.
+  미채택 condition-veto의 사전 진단은`d28bc2a`로 별도 보존하며 새 경로에 연결하지 않았다.
 - fresh 준비 CLI는 `--purpose`와 `--algorithm`을 명시해야 한다. 새 경로는 `product_diagnostic`과
   `source-first-medoid-candidates-0.1`을 사용한다. 관계 실패 기록을 유지하고 별도 제품 평가를 허용하며,
   기존 staged runner와 미채택 조건 veto는 새 실행 경로로 바꾸지 않았다. 프롬프트는 수정하지 않았다.
-- 전체 Python694개·Node7개 테스트와 설치된 ML 환경의 단위 clustering smoke 검사가 통과했다.
-  새 경로의 실제 모델 호출·다운로드는 아직 없다. 기존 추론 예산과 실제 승인 Agent0 상태를 유지한다.
-- private `runs/source-first-fresh-20261013/plan.json`을 실제 파일·코드·모델 hash와 결합해 준비했다. 아직 시작하지 않았다.
-  원문 추출은 기존8B/off, 관계 검사는 기존8B/thinking256의 실패·부분 관측 구성을 진단용으로 사용한다.
-  전체3600초, 원문 분석1800초, raw 후보20묶음, threshold0.45를 고정했다. 실행 중 코드·프롬프트·표본을 바꾸지 않는다.
+- 원문 추출은 기존8B/off, 관계 검사는 기존8B/thinking256의 실패·부분 관측 구성을 진단용으로 사용했다.
+  전체3600초, 원문 분석1800초, raw 후보20묶음, threshold0.45를 유지했고 실행 중 코드·프롬프트·표본은 바꾸지 않았다.
+- 누적 추론7867.09/28800초, 잔여20932.91초(약5시간49분), 과거 미완료 예약2건 유지. 새 다운로드·외부 전송·기준 완화는 없다.
+- 완료 후 frozen 입력/코드 hash,241개 요청 결합과 결과 존재, bundle/compiled hash와 재조립 일치를 확인했다.
+  private `execution-review.json`, `candidate-relation-review.json`, `early-review-notes.json`에 근거를 남겼다.
+  새40관계 검토는 assistant 탐색 평가이며 이전100건과 비교 가능한 정확도 향상이나 독립 gold가 아니다.
+- coverage의 canonical_available1000은 전체 registry를 센 표시 오류다. 실제 canonical999·미선정 canonical800·중복/빈 원문1이다.
+  실행 종료 후 coverage0.2로 코드·테스트를 수정했다. 원래 출력은 보존했고 과거 plan을 현재 코드로 재실행하지 않는다.
+  수정 후 전체 Python695개·Node7개 테스트가 통과했다. 추론이나 프롬프트 변경 없이 집계 표시만 고쳤다.
 
-다음 실행은 저장소 루트에서 기존 ML 환경을 사용한다. 먼저 같은 디렉터리의 `started.json`과 소유 프로세스를 확인하여 중복 실행을 피한다.
+다음 작업은 [실제 통합 결과](MVP_ACCEPTANCE_STATUS.md#source-first-실제-통합-결과)의 실패 경계를 따른다.
 
-```bash
-/home/taeng/.venvs/commentscope-clustering/bin/python -m experiments.fresh_grounded_pipeline run runs/source-first-fresh-20261013
-```
+1. 단일 medoid가 공통 주장을 보장하지 않는 문제를 제한된 기존 target 탐색으로 바꾼다. 기존 NLI는 순위 계산에만 사용하고,
+   실제 승인·canonical 지지 수는 원문 membership으로 결정한다. 모든 후보에 같은 규칙을 쓰고 평가 라벨을 사용하지 않는다.
+2. typing 단계에서 이유 인용을 생성하지 않고 원문 구간 ID를 선택하게 한다. 유형·전제의 오류는 별도 의미 검토 대상으로 남긴다.
+3. 원문 분석190건을 다시 돌리지 말고 저장된 결과를 재사용한 제한된 진단을 먼저 동결한다. 변경 효과를 분리하고 비용을 기록한다.
+   cache 진단을 fresh1시간 성공으로 보고하지 않는다. 수정한 자동 산출물이 나온 뒤 모든 Agent·실제 질문·UI·시간을 평가한다.
 
-완료 후 `source-analysis.json`의 처리·미처리·오류 수, `unit-candidates.json`의 분할/보류,
-`typed.json`과 `compiled.json`의 지지·사실 보류 이유를 검사한다. 입력2개가 만들어져도 실제 내용·답변·UI 검증 전에는 MVP 완료가 아니다.
+단어 veto/프롬프트 반복이나 사실 허용 범위 완화로 우회하지 않는다. 이번 실행에서 낸0개를 성공으로 바꾸지 않는다.
 
 ## 최신 합의 MVP 중심 평가와 구조 재정리
 

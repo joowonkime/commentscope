@@ -104,3 +104,21 @@ class SourceFirstTests(unittest.TestCase):
             self.assertEqual(len(units), 1); self.assertEqual(len(coverage['unprocessed_budget']), 2)
             self.assertEqual(coverage['model_calls'], 1); self.assertEqual(coverage['failed_sources'], [])
             self.assertTrue((root/'source-analysis.json').exists())
+
+    def test_coverage_separates_canonical_population_from_original_registry(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp); sources=self.sources()
+            raw={'sources':{sid:{'text':text} for sid,text in sources.items()},
+                 'clusters':[{'id':'C','members':list(sources)}, {'id':'rare','members':['rare']} ]}
+            raw['sources']['rare']={'text':'A distinct rare position.'}
+            raw['sources']['duplicate']={'text':next(iter(sources.values()))}
+            write(root/'fresh-groups.json',raw)
+            runner=Mock(); runner.directory=root; runner.started=0; runner.clock.return_value=0
+            runner.plan={'limits':{'groups':20,'source_analysis_seconds':10,'source_request_bytes':27000}}
+            runner.call.return_value={'errors':[],'output':output(next(iter(sources.values())))}
+            _,_,coverage=proposals_from_sources(raw,runner)
+            self.assertEqual(coverage['registry_source_count'],5)
+            self.assertEqual(coverage['canonical_available'],4)
+            self.assertEqual(coverage['scheduled'],3)
+            self.assertEqual(coverage['not_scheduled'],['rare'])
+            self.assertEqual(coverage['noncanonical_or_empty'],['duplicate'])
