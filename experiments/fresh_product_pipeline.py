@@ -13,6 +13,7 @@ import time
 from commentscope.agents.grounded_inputs import compile_inputs
 from commentscope.factory import argument_graph, membership_policy, product_evaluation
 from commentscope.factory import semantic_neighborhood, target_ranking, grounded_factory, nli_fact_records
+from commentscope.factory.core_admission_bound import CoreAdmissionBound
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.fact_checks import live
@@ -27,8 +28,8 @@ from experiments.argument_graph_probe import profile, profile_capacity
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.target_ranking_probe import choose
 
-VERSION = 'fresh-product-graph-pipeline-0.1'
-LIMITS = {'analysis_seconds': 3600, 'source_analysis_seconds': 1800, 'groups': 20,
+VERSION = 'fresh-product-graph-pipeline-0.2'
+LIMITS = {'analysis_seconds': 3600, 'source_analysis_seconds': 2100, 'groups': 20,
           'call_seconds': 90, 'embedding_seconds': 300, 'ranking_seconds': 600, 'fact_seconds': 240,
           'source_request_bytes': 27000, 'candidate_threshold': .45,
           'core_relations': 200, 'profile_candidates': 6, 'detail_relations': 120}
@@ -77,6 +78,8 @@ def combine(left, right, limit=6):
         reason = 'insufficient_core_support' if counts[key] < 3 else 'profile_capacity_budget' if len(kept) >= limit else None
         if reason:
             deferred.append({'id': p['id'], 'reason': reason, 'model_support_count': counts[key],
+                             'support_count_complete': all(state != 'unassessed' for _, state in decisions[key].values()),
+                             'support_upper_bound': counts[key] + sum(state == 'unassessed' for _, state in decisions[key].values()),
                              'retrieval_candidate_ids': p['retrieval_candidate_ids']}); continue
         kept.append(p)
         for sid, (row, state) in sorted(decisions[key].items()):
@@ -90,11 +93,18 @@ class Relations:
     def __init__(self, runner):
         self.runner = runner; self.results = {}; self.trace = []
 
-    def judge(self, rows, stage):
+    def judge(self, rows, stage, *, admission_bound=None):
         actual = {}
         for row in rows:
             req = row['request']; key = digest(req)
             if key != row['request_sha256']: raise ValueError('Relation request changed')
+            proof = admission_bound.skip_proof(row) if admission_bound is not None and key not in self.results else None
+            if proof is not None:
+                actual[row['id']] = 'unassessed'
+                self.trace.append({'stage': stage, 'row_id': row['id'], 'candidate_id': row['candidate_id'],
+                                  'request_sha256': key, 'call_sequence': None, 'reused_within_run': False,
+                                  'unassessed_reason': 'pooled_support_upper_bound_below_minimum', 'bound': proof})
+                continue
             reused = key in self.results
             if reused:
                 old, result, sequence = self.results[key]
@@ -103,6 +113,7 @@ class Relations:
                 result = self.runner.call(stage, req); sequence = self.runner.seq
                 self.results[key] = (deepcopy(req), result, sequence)
             actual[row['id']] = verdict(result)
+            if admission_bound is not None: admission_bound.observe(row, actual[row['id']])
             self.trace.append({'stage': stage, 'row_id': row['id'], 'candidate_id': row['candidate_id'],
                               'request_sha256': key, 'call_sequence': sequence, 'reused_within_run': reused})
         return actual
@@ -192,10 +203,13 @@ def execute(directory):
         rows = {name:source_rows(values,plan['membership_policy']) for name,values in populations.items()}
         if sum(map(len,rows.values())) > plan['limits']['core_relations']: raise ValueError('Core relation population exceeds budget')
         write(directory/'core-populations.json', {'proposals':populations,'rows':rows})
+        admission_bound = CoreAdmissionBound([r for values in rows.values() for r in values])
         actual = {}
         with owned_server(plan['deployments']['membership'],'baseline',directory/'core-server'):
-            for name,values in rows.items(): actual[name] = relations.judge(values,'core-'+name)
+            for name,values in rows.items():
+                actual[name] = relations.judge(values,'core-'+name,admission_bound=admission_bound)
         write(directory/'core-verdicts.json',actual)
+        write(directory/'core-admission-bound.json',admission_bound.report())
         left = choose(proposals,rows['baseline'],actual['baseline'],alternatives,rows['alternative'],actual['alternative'])
         right = {'proposals':neighbors,'rows':rows['neighborhood'],'actual':actual['neighborhood']}
         selected = combine(left,right,plan['limits']['profile_candidates'])
@@ -238,6 +252,7 @@ def execute(directory):
             'profile_candidates':len(selected['proposals']),'typed_candidates':len(typed),'typing_deferred':deferred,
             'detail_relations':len(details),'fact_claims':len(packets),'screened_inputs':len(compiled['profiles']),
             'relation_reuse_within_run':sum(r['reused_within_run'] for r in relations.trace),
+            'core_relations_unassessed_by_bound':sum(r['call_sequence'] is None for r in relations.trace),
             'qualified_agents':0,'quality_gate_passed':False,'runtime_reference_labels':False,
             'bundle_sha256':sha(directory/'bundle.json'),'compiled_sha256':sha(directory/'compiled.json'),
             'budget_after':budget.summary(), 'remaining_gates':['all_actual_input_content','actual_answers','actual_browser','fixed_relation_diagnostic']}
