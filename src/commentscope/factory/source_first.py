@@ -66,7 +66,9 @@ def bucket(unit):
     return unit['scope'], unit['modality'], unit['stance'], target
 
 
-def candidates(units, vectors, sources, *, threshold=.45, cluster=average_linkage):
+def candidates(units, vectors, sources, *, threshold=.45, cluster=average_linkage, minimum_sources=3):
+    if type(minimum_sources) is not int or minimum_sources not in (1, 3):
+        raise ValueError('Discovery minimum must be explicit 1 or legacy 3; admission stays 3')
     if not math.isfinite(threshold) or not 0 < threshold < 1:
         raise ValueError('Finite distance threshold in (0,1) required')
     if len(units) != len(vectors) or len({u['claim_id'] for u in units}) != len(units):
@@ -99,7 +101,7 @@ def candidates(units, vectors, sources, *, threshold=.45, cluster=average_linkag
             by_source = defaultdict(list)
             for j in members:
                 by_source[units[indexes[j]]['source_comment_id']].append(j)
-            if len(by_source) < 3:
+            if len(by_source) < minimum_sources:
                 deferred.append({'claim_ids': [units[i]['claim_id'] for i in original], 'reason': 'fewer_than_three_sources'})
                 continue
             # One source gets one weight even if it emits many paraphrases.
