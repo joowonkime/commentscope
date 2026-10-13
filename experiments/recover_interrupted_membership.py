@@ -4,6 +4,7 @@ The local server must be absent. Unfinished ledger reservations remain charged;
 their elapsed time is unknown. This is transport recovery, not semantic repair.
 """
 import argparse
+from contextlib import closing
 from datetime import datetime,timezone
 import json
 from pathlib import Path
@@ -23,7 +24,9 @@ def recover(directory,budget_path=base.DEFAULT_BUDGET):
     except ConnectionRefusedError: pass
     plan=read_json(directory/'plan.json'); plan_hash=sha(directory/'plan.json')
     recovered=[]
-    with sqlite3.connect(budget_path) as db:
+    # sqlite3's transaction context does not close the connection. Explicitly
+    # release the Windows file handle, including ambiguous-attempt failures.
+    with closing(sqlite3.connect(Path(budget_path).resolve().as_uri()+'?mode=ro',uri=True)) as db:
         for row in plan['rows']:
             path=directory/(row['id']+'.json')
             if path.exists():continue

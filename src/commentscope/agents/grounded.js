@@ -16,8 +16,9 @@ function render(state, inventory = false) {
     $('profiles').replaceChildren();
     for (const p of state.profiles) {
       const article = node('article', ''), check = document.createElement('input');
+      article.className = 'profile';
       check.type = 'checkbox'; check.value = p.candidate_id; check.checked = state.selected.includes(p.candidate_id);
-      const label = node('label', p.candidate_id + ' · 원문 지지 ' + p.model_core_support_count + '개 (모델 판정)');
+      const label = node('label', p.candidate_id + ' · 검사한 원문 중 지지 ' + p.model_core_support_count + '개 (모델 판정)');
       label.prepend(check); article.append(label);
       for (const entry of p.prompt_entries) article.append(node('p', entry.text + ' [' + entry.kind + ']'));
       $('profiles').append(article);
@@ -26,9 +27,11 @@ function render(state, inventory = false) {
   }
   $('rounds').replaceChildren();
   for (const r of state.rounds) {
-    const section = node('section', ''); section.append(node('h3', r.question));
+    const section = node('section', ''); section.className = 'round'; section.append(node('h3', r.question));
+    const answers = node('div', ''); answers.className = 'grid'; section.append(answers);
     for (const answer of r.answers) {
       const card = node('article', ''); card.append(node('h4', answer.candidate_id + ' · ' + answer.status));
+      card.className = 'answer';
       if (!answer.points.length) card.append(node('p', '허용된 근거에 답이 없어 보류합니다.'));
       for (const entry of [...answer.points, ...answer.required_premises]) {
         card.append(node('p', entry.text), node('small', `${entry.epistemic_status} · 이 주장 지지 ${entry.member_source_count}개`));
@@ -42,7 +45,7 @@ function render(state, inventory = false) {
           if (u.protocol === 'https:') { link.href = u.href; link.target = '_blank'; link.rel = 'noopener noreferrer'; card.append(link); }
         }
       }
-      section.append(card);
+      answers.append(card);
     }
     $('rounds').append(section);
   }

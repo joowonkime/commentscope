@@ -4,9 +4,12 @@ Same frozen targets/full sources/reference100 and criteria. The local binary's
 --help documents the reasoning controls. Private reasoning is never UI content.
 """
 import argparse
+from contextlib import closing
 from copy import deepcopy
 import json
 from pathlib import Path
+import socket
+import sqlite3
 from commentscope.agents.runtime import request
 from commentscope.factory import scoped_discovery as core
 from commentscope.factory.automatic_contract import digest
@@ -48,13 +51,57 @@ def prepare(directory,source,thinking,*,plumbing=False):
     print({'prepared':True,'rows':len(plan['rows']),'thinking':thinking,'plumbing_only':plumbing},flush=True)
 
 
+def prepare_resume(directory,source,*,budget_path=base.DEFAULT_BUDGET):
+    if directory.exists():raise ValueError('Never overwrite an attempt')
+    try:
+        with socket.create_connection(('127.0.0.1',8091),timeout=.5):
+            raise ValueError('Inference endpoint live; cannot prepare interruption recovery')
+    except ConnectionRefusedError:pass
+    original=read_json(source/'plan.json');old_sha=sha(source/'plan.json')
+    if (original.get('artifact_kind')!='bounded-reasoning-membership-0.1'
+            or read_json(source/'started.json')['plan_sha256']!=old_sha):
+        raise ValueError('Invalid interrupted run')
+    if any(sha(p)!=h for p,h in original['inputs'].items()):raise ValueError('Original inputs changed')
+    if (source/'completed.json').exists():raise ValueError('Completed run does not need recovery')
+    plan=deepcopy(original);reused={}
+    with closing(sqlite3.connect(Path(budget_path).resolve().as_uri()+'?mode=ro',uri=True)) as db:
+        for row in plan['rows']:
+            if digest(row['request'])!=row['request_sha256']:raise ValueError('Request changed')
+            path=source/(row['id']+'.json')
+            if path.exists():
+                item=read_json(path)
+                if item['request_sha256']!=row['request_sha256']:raise ValueError('Record changed')
+                result=item['result']
+                if result['raw'] is not None and not result['errors'] and json.loads(result['raw'])!=result['output']:
+                    raise ValueError('Parsed record changed')
+                reused[row['id']]={'path':str(path),'sha256':sha(path)}
+            elif db.execute('SELECT 1 FROM calls WHERE plan_sha=? AND request_sha=?',(old_sha,row['request_sha256'])).fetchone():
+                raise ValueError('Recover interrupted ledger records before preparing continuation; never retry')
+    if not reused:raise ValueError('No completed/recovered records to continue from')
+    plan['reused_records']=reused
+    plan['continuation_of']={'directory':str(source),'plan_sha256':old_sha,
+                             'semantic_requests_changed':False,'retry_interrupted_calls':False}
+    plan['inputs']={**original['inputs'],str(source/'plan.json'):old_sha,
+                    str(source/'started.json'):sha(source/'started.json'),
+                    **{v['path']:v['sha256'] for v in reused.values()}}
+    plan['code_sha256']=code_hashes()
+    validate(plan)
+    write(directory/'plan.json',plan)
+    print({'prepared_continuation':True,'reused':len(reused),'new_calls':len(plan['rows'])-len(reused)},flush=True)
+
+
 def execute(directory):
     plan=read_json(directory/'plan.json');validate(plan)
     plan_sha=sha(directory/'plan.json');budget=InferenceBudget(base.DEFAULT_BUDGET,base.CYCLE)
     write(directory/'started.json',{'plan_sha256':plan_sha,'budget_before':budget.summary()})
     results={}
+    for rid,record in plan.get('reused_records',{}).items():
+        if sha(record['path'])!=record['sha256']:raise ValueError('Reused record changed')
+        item=read_json(record['path']);item['reused_from']=record
+        write(directory/(rid+'.json'),item);results[rid]=core.verdict(item['result'])
     with owned_server(plan,'baseline',directory/'server'):
         for row in plan['rows']:
+            if row['id'] in results:continue
             req=row['request'];raw_response=[]
             def call(s,d,c):
                 response=budget.call(req,plan_sha,timeout_seconds=90)
@@ -90,7 +137,10 @@ def execute(directory):
 
 
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['prepare','run']);p.add_argument('directory',type=Path)
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['prepare','prepare-resume','run']);p.add_argument('directory',type=Path)
     p.add_argument('--source',type=Path,default=Path('runs/atomic-membership-20261013'))
     p.add_argument('--thinking',action='store_true');p.add_argument('--plumbing',action='store_true')
-    a=p.parse_args();prepare(a.directory,a.source,a.thinking,plumbing=a.plumbing) if a.phase=='prepare' else execute(a.directory)
+    a=p.parse_args()
+    if a.phase=='prepare':prepare(a.directory,a.source,a.thinking,plumbing=a.plumbing)
+    elif a.phase=='prepare-resume':prepare_resume(a.directory,a.source)
+    else:execute(a.directory)

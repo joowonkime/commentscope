@@ -1,4 +1,5 @@
 import json
+import sqlite3
 from pathlib import Path
 import tempfile
 import unittest
@@ -53,3 +54,19 @@ class MembershipRecoveryTests(unittest.TestCase):
         self.budget.reserve(self.req,sha(self.root/'plan.json'),90)
         with self.offline(),self.assertRaises(ValueError):recover(self.root,self.budget.path)
         self.assertFalse((self.root/'J001.json').exists())
+
+    def test_database_handle_is_closed_after_recovery(self):
+        connections=[];connect=sqlite3.connect
+        class TrackedConnection(sqlite3.Connection):
+            closed=False
+            def close(self):
+                self.closed=True
+                return super().close()
+        def tracked(*args,**kwargs):
+            db=connect(*args,**kwargs,factory=TrackedConnection)
+            connections.append(db);self.addCleanup(db.close)
+            return db
+        with self.offline(),patch('experiments.recover_interrupted_membership.sqlite3.connect',side_effect=tracked):
+            recover(self.root,self.budget.path)
+        self.assertEqual(len(connections),1)
+        self.assertTrue(connections[0].closed)

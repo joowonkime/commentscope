@@ -711,3 +711,17 @@ canonical 원문 수와 각 주장 지지 수를 구분하고, 입력 조립에 
 `/api/source`는 세션과 source ID를 확인한 뒤 원문을 반환한다. 개발 화면의 원문 수는 모델 지지 판정 수이지 독립 검증 수가 아니다.
 loopback 주소·Host/Origin·세션 토큰·단일 추론 lane·질문6회·지속 예산을 적용한다. 데이터가 바뀌거나 만료되면 답변을 차단한다.
 UI의 `--experimental` 옵션은 개발 경로 선택이며 사용자에게 runtime 의미 검수를 요구하는 단계가 아니다.
+
+## 새 분석과 중단 복구 기록
+
+`fresh-grounded-pipeline-0.1`은 snapshot·모델 파일·코드·배포 설정·외부 근거 문서를 사전 동결한다.
+`fresh-snapshot-embedding-0.1` worker는 기존 raw 분석 cache를 읽지 않고 오프라인 모델로 임베딩을 새로 수행한다.
+1000댓글 초과·snapshot 변경·기존 출력 경로 재사용을 거부한다. 유사도 임계값0.45와 상위20개 후보 탐색은 의미 승인 규칙이 아니다.
+생성 후 다음 단계의 구체적인 요청을 호출 전에 별도 기록하며, 모든 추론은 공유 budget으로 차감한다.
+전체 경과 시간에는 입력 무결성 검사·서버 시작·각 모델 로딩·새 임베딩·가입·유형·상세·사실 검사를 포함한다.
+`completed.json`의 `screened_inputs`는 입력 조립 수이고 `qualified_agents=0`/`quality_gate_passed=false`를 유지한다.
+실제 산출물 감사·답변 성능·비교 지연은 별도 완료 조건이다. 중간 예외는 `failed.json`에 남기며 자동 재시도하지 않는다.
+
+추론 모드 continuation은 부모 plan과 재사용할 기록의 hash를 결합한 새 plan이다. 부모 파일과 기존 오류를 덮어쓰지 않는다.
+ledger에 시도가 있는데 checkpoint가 없으면 먼저 복구해야 하며, 응답 유실을 새 호출로 교체하지 않는다.
+복구는 read-only SQLite 연결을 사용하고 성공·오류 모두 handle을 닫는다. 참조100·동일 요청·실패 비용을 보존한다.
