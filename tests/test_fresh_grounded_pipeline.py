@@ -1,5 +1,7 @@
 from pathlib import Path
 import tempfile
+import subprocess
+import sys
 import unittest
 from unittest.mock import Mock, patch
 from experiments.fresh_grounded_pipeline import Runner, proposals_from_groups, source_rows, classify, prepare
@@ -87,6 +89,15 @@ class FreshGroundedPipelineTests(unittest.TestCase):
             out=Path(tmp)/'new'
             with self.assertRaisesRegex(ValueError,'source gate'):
                 prepare(out,None,None,None,None,None)
+            self.assertFalse(out.exists())
+
+    def test_cli_requires_explicit_proposal_deployment(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/'must-not-exist'
+            result=subprocess.run([sys.executable,'-m','experiments.fresh_grounded_pipeline',
+                'prepare',str(out),'--source-gate',str(Path(tmp)/'missing-gate')],capture_output=True,text=True)
+            self.assertEqual(result.returncode,2)
+            self.assertIn('prepare requires --proposal-plan',result.stderr)
             self.assertFalse(out.exists())
 
     def runner(self,budget,clock):

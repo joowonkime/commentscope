@@ -1,5 +1,21 @@
 # 다음 세션 시작점
 
+## 승인된 모델 정리와 14B 비교 준비 2026-10-13
+
+사용자가4B·OpenJev 가중치 삭제 후 새 로컬 모델1종 다운로드를 승인했다. 아래 다운로드 허가 대기 상태를 대체한다.
+4B 파일2,497,281,120bytes와 OpenJev 가중치4,426,571,240bytes 및 해당 symlink만 삭제했다.
+8B·MiniLM·DeBERTa·댓글·코드·실험 기록은 보존했다. [모델 복구 정보](LOCAL_MODEL_STORAGE.md)를 따른다.
+
+- 공식 `Qwen/Qwen3-14B-GGUF` revision `530227a7d994db8eca5ab5ced2fb692b614357fd`, Q4_K_M9,001,752,960bytes를 선택했다.
+  `.partial` 다운로드 중에는 로딩하지 않는다. 전체 길이와SHA256을 검사한 뒤 최종 파일로 rename한다.
+- private `runs/model-replacement-20261013/authorized-plan.json`에 삭제 전 hash·복구 경로·새 모델 정보를 기록했다.
+  삭제는 완료됐으며 로컬 복사본은 없다.4B 복구 원본의 고정 revision/파일/hash는 공개 API와도 대조했다.
+- `experiments.larger_membership_deployment`는 동일 directed 정책/256추론/512출력/100참조를 유지하고 모델과GPU28layer만 바꾼다.
+  먼저 합성8통제를 전부 통과해야 실제100관계로 확대한다. 기존 실패·중단 기록을 덮어쓰지 않는다.
+- 신규 비교 준비 테스트3개 포함 Python660/Node7 통과. fresh CLI는 삭제한4B 배포를 기본으로 선택하지 않도록
+  prepare 시 `--proposal-plan`을 명시하게 했다. 품질 gate와 실제 모델 로딩은 별도다.
+- 플랫폼 Goal 표시는 아직paused이나 사용자 요청으로 직접 작업 중이다. 자동 백그라운드 재개나 MVP 완료로 보고하지 않는다.
+
 ## 재개와 판정 정책 연결 2026-10-13
 
 사용자가 "ㄱㄱ 다 진행 ㄱㄱ"로 작업 재개를 요청했다. 아래 일시중단 지시는 해제됐고 채팅 요청으로 직접 작업 중이다.
