@@ -26,8 +26,23 @@ from experiments.fresh_grounded_pipeline import Runner, classify
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.target_ranking_probe import choose, VERSION as RANKING_VERSION
 
-VERSION='cached-source-range-integration-0.2'
+VERSION='cached-source-range-integration-0.3'
 TYPERS={t.VERSION:t for t in (span_typing,bounded_span_typing)}
+
+
+def deployment_for_trial(baseline, gpu_layers=None):
+    """Explicit runtime change, never an automatic fallback or historical edit."""
+    deployment=deepcopy(baseline)
+    change=None
+    if gpu_layers is not None:
+        if type(gpu_layers) is not int or not 0 <= gpu_layers <= 32:
+            raise ValueError('GPU layers must be an integer from 0 to 32')
+        previous=deployment['runtime']['gpu_layers']
+        deployment['runtime']['gpu_layers']=gpu_layers
+        change={'field':'gpu_layers','baseline':previous,'trial':gpu_layers,
+                'scope':'deployment change; not a schema-only comparison',
+                'automatic_fallback':False}
+    return deployment,change
 
 
 def frozen_typing(selection, policy, *, typer=span_typing):
@@ -58,7 +73,7 @@ def frozen_typing(selection, policy, *, typer=span_typing):
     return requests,max_details
 
 
-def prepare(directory, source, *, typing_version=span_typing.VERSION):
+def prepare(directory, source, *, typing_version=span_typing.VERSION, gpu_layers=None):
     if directory.exists():raise ValueError('Never overwrite an attempt')
     if typing_version not in TYPERS:raise ValueError('Unknown typing policy')
     typer=TYPERS[typing_version]
@@ -100,12 +115,14 @@ def prepare(directory, source, *, typing_version=span_typing.VERSION):
     if (read_json(source/'membership-server/runtime.json')['command']!=command(deployment,'baseline')
             or read_json(source/'membership-server/stopped.json')['returncode']!=0):
         raise ValueError('Historical deployment mismatch')
+    deployment,deployment_change=deployment_for_trial(deployment,gpu_layers)
     policy=ranked_plan['membership_policy']
     if original['membership_policy']!=policy:raise ValueError('Membership policy changed')
     typing_requests,max_details=frozen_typing(selected,policy,typer=typer)
     plan={'artifact_kind':VERSION,'expires_at':ranked_plan['expires_at'],'source':str(source),
           'inputs':{str(p):h for p,h in files.items()},'code_sha256':code_hashes(),
           'model_files':ranked_plan['model_files'],'deployment':deployment,'membership_policy':policy,
+          'deployment_change':deployment_change,
           'selection':selected,'typing_requests':typing_requests,'typing_version':typer.VERSION,
           'classifier':original['classifier'],'documents':original['documents'],'selections':original['selections'],
           'evaluation':original['evaluation'],'budget':ranked_plan['budget'],
@@ -154,6 +171,7 @@ def execute(directory):
                 'selected_candidates':len(selected['proposals']),'typed_candidates':len(typed),'typing_deferred':deferred,
                 'detail_relations':len(details),'fact_claims':len(packets),'screened_inputs':len(compiled['profiles']),
                 'qualified_agents':0,'quality_gate_passed':False,'runtime_reference_labels':False,
+                'deployment_change':plan.get('deployment_change'),
                 'evaluation':plan['evaluation'],'budget_after':budget.summary(),
                 'bundle_sha256':sha(directory/'bundle.json'),'compiled_sha256':sha(directory/'compiled.json'),
                 'remaining_gates':['actual_core_and_reason_audit','actual_answers_and_abstention','actual_comparison_latency','fresh_analysis']}
@@ -167,7 +185,10 @@ def execute(directory):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['prepare','run']);p.add_argument('directory',type=Path)
-    p.add_argument('--source',type=Path);p.add_argument('--typing',choices=list(TYPERS),default=span_typing.VERSION);a=p.parse_args()
+    p.add_argument('--source',type=Path);p.add_argument('--typing',choices=list(TYPERS),default=span_typing.VERSION)
+    p.add_argument('--gpu-layers',type=int,choices=range(33),help='Explicit frozen deployment override; prepare only')
+    a=p.parse_args()
     if a.phase=='prepare' and a.source is None:p.error('prepare requires --source')
-    if a.phase=='prepare':prepare(a.directory,a.source,typing_version=a.typing)
+    if a.phase=='run' and a.gpu_layers is not None:p.error('GPU layers are frozen during prepare')
+    if a.phase=='prepare':prepare(a.directory,a.source,typing_version=a.typing,gpu_layers=a.gpu_layers)
     else:execute(a.directory)

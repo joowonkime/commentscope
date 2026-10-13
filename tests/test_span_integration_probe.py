@@ -53,6 +53,25 @@ class ScenarioRunner:
 
 
 class SpanIntegrationTests(unittest.TestCase):
+    def test_explicit_deployment_override_preserves_baseline_and_other_settings(self):
+        baseline={'runtime':{'gpu_layers':'all','context':4096},'models':{'baseline':{'sha256':'fixed'}}}
+        before=deepcopy(baseline)
+        unchanged,change=probe.deployment_for_trial(baseline)
+        self.assertEqual(unchanged,baseline);self.assertIsNone(change)
+        for layers in (0,16,32):
+            trial,change=probe.deployment_for_trial(baseline,layers)
+            self.assertEqual(trial['runtime'],{'gpu_layers':layers,'context':4096})
+            self.assertEqual(trial['models'],baseline['models'])
+            self.assertEqual(change['baseline'],'all');self.assertEqual(change['trial'],layers)
+            self.assertFalse(change['automatic_fallback'])
+        self.assertEqual(baseline,before)
+
+    def test_invalid_deployment_override_rejected(self):
+        baseline={'runtime':{'gpu_layers':'all'}}
+        for value in (-1,33,True,16.0,'16','all'):
+            with self.subTest(value=value),self.assertRaises(ValueError):
+                probe.deployment_for_trial(baseline,value)
+
     def fixture(self):
         policy=fresh_tests.FreshGroundedPipelineTests().policy();proposals=[]
         for i in range(3):
