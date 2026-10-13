@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from commentscope.factory import argument_graph as graph, source_first, membership_policy
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.scoped_discovery import judge_request
-from experiments.argument_graph_probe import union_selections, members, profile
+from experiments.argument_graph_probe import union_selections, members, profile, profile_capacity, allocate
 from experiments.fresh_grounded_pipeline import source_rows
 from tests.test_source_first import output
 
@@ -106,6 +106,28 @@ class ArgumentGraphTests(unittest.TestCase):
         self.assertEqual([p['id'] for p in union['proposals']], ['P', 'Q'])
         self.assertEqual(len(union['rows']), 6); self.assertEqual(len(union['actual']), 6)
         with self.assertRaises(ValueError): union_selections(left, left)
+
+    def test_capacity_changes_limits_not_semantic_inputs_or_membership_deployment(self):
+        deployment = {'runtime': {'context': 4096, 'reasoning_budget': 256, 'gpu_layers': 32, 'seed': 407}, 'models': {'baseline': 'fixed'}}
+        before = deepcopy(deployment); expanded, extra = profile_capacity(deployment, 'expanded')
+        self.assertEqual(deployment, before)
+        self.assertEqual(expanded['runtime'], {**before['runtime'], 'context': 8192, 'reasoning_budget': 1024})
+        self.assertEqual(extra, 768)
+        req = graph.type_request('A claim.', {'s': 'Original source.'}); changed = allocate(req, extra)
+        self.assertEqual(changed['max_tokens'], 1152)
+        for key in ('system', 'data', 'schema'): self.assertEqual(req[key], changed[key])
+        self.assertEqual(allocate(req, 0), req)
+        for invalid in (-1, 1, True, 100000):
+            with self.assertRaises(ValueError): allocate(req, invalid)
+
+    def test_expanded_profile_records_actual_request_hashes(self):
+        units, p, policy, selection = self.fixture(); evidence = graph.inventory(units, p['sources']); selected = self.selected(evidence)
+        runner = Mock(); runner.call.side_effect = [self.result({'kind': 'value'}), self.result(selected), self.result({'kind': 'prediction'})]
+        typed, _ = profile(p, selection, units, policy, runner, extra_tokens=768)
+        calls = runner.call.call_args_list
+        self.assertEqual([c.args[1]['max_tokens'] for c in calls], [1152, 1280, 1152])
+        self.assertEqual(typed['decision_request_hashes']['core_type'], digest(calls[0].args[1]))
+        self.assertEqual(typed['decision_request_hashes']['argument_selection'], digest(calls[1].args[1]))
 
 
 if __name__ == '__main__': unittest.main()

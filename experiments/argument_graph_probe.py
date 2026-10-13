@@ -27,8 +27,24 @@ from experiments.fresh_grounded_pipeline import Runner, source_rows
 from experiments.scoped_discovery_probe import code_hashes
 from experiments import span_integration_probe as prior
 
-VERSION = 'cached-argument-graph-product-0.1'
+VERSION = 'cached-argument-graph-product-0.2'
 CONTROLS = Path('tests/fixtures/epistemic-type-controls.json')
+CAPACITIES = {'baseline': (4096, 256, 0), 'expanded': (8192, 1024, 768)}
+
+
+def profile_capacity(deployment, mode):
+    if mode not in CAPACITIES: raise ValueError('Explicit known profile capacity required')
+    if deployment['runtime']['context'] != 4096 or deployment['runtime']['reasoning_budget'] != 256:
+        raise ValueError('Capacity comparison requires the frozen 4096/256 baseline')
+    context, reasoning, extra = CAPACITIES[mode]
+    result = deepcopy(deployment)
+    result['runtime'].update(context=context, reasoning_budget=reasoning)
+    return result, extra
+
+
+def allocate(req, extra):
+    if type(extra) is not int or extra not in {0, 768}: raise ValueError('Unknown token allocation')
+    return {**deepcopy(req), 'max_tokens': req['max_tokens']+extra}
 
 
 def union_selections(left, right):
@@ -58,7 +74,7 @@ def members(proposal, selection, policy):
     return result
 
 
-def prepare(directory, ranked_source, neighborhood_source):
+def prepare(directory, ranked_source, neighborhood_source, *, capacity='baseline'):
     if directory.exists(): raise ValueError('Never overwrite an attempt')
     # Reuse the existing strict provenance verifier. Its prepared-only manifest
     # does not execute typing or reuse its previous outputs.
@@ -112,29 +128,31 @@ def prepare(directory, ranked_source, neighborhood_source):
     controls = read_json(CONTROLS); files[str(CONTROLS)] = sha(CONTROLS)
     plan = {k: deepcopy(base[k]) for k in ['expires_at', 'deployment', 'membership_policy', 'classifier',
             'documents', 'selections', 'budget', 'evaluation', 'model_files']}
+    profiling, extra = profile_capacity(base['deployment'], capacity)
     plan.update(artifact_kind=VERSION, inputs=files, code_sha256=code_hashes(), selection=selection,
         units=current['units'], graphs=graphs, controls=controls,
+        profile_capacity=capacity, profile_deployment=profiling, profile_extra_tokens=extra,
         limits={'analysis_seconds': 1800, 'call_seconds': 90, 'fact_seconds': 240, 'detail_relations': maximum},
         fresh_analysis=False, runtime_reference_labels=False, quality_gate_passed=False,
         acceptance={'distinct_agents_min': 2, 'canonical_support_min': 3, 'review_all_compiled_profiles': True,
                     'critical_distortions_max': 0, 'type_controls_are_diagnostic_not_independent_gold': True})
     write(directory/'plan.json', plan)
     print({'prepared': True, 'all_candidates': len(selection['proposals']), 'cached_core_relations': len(selection['rows']),
-           'max_detail_relations': maximum, 'type_controls': len(controls)}, flush=True)
+           'max_detail_relations': maximum, 'type_controls': len(controls), 'profile_capacity': capacity}, flush=True)
 
 
-def profile(proposal, selection, units, policy, runner):
+def profile(proposal, selection, units, policy, runner, *, extra_tokens=0):
     supported = members(proposal, selection, policy); evidence = graph.inventory(units, supported)
-    core_req = graph.type_request(proposal['claims']['C']['text'], supported)
+    core_req = allocate(graph.type_request(proposal['claims']['C']['text'], supported), extra_tokens)
     core_kind = graph.kind(runner.call('core-kind', core_req))
     if core_kind not in {'fact', 'value', 'prediction'}: return None, 'core_'+core_kind
-    select_req = graph.select_request(proposal['claims']['C'], supported, evidence)
+    select_req = allocate(graph.select_request(proposal['claims']['C'], supported, evidence), extra_tokens)
     chosen = graph.selection(runner.call('argument-selection', select_req), evidence)
     if chosen['status'] == 'defer': return None, chosen['reason']
     kinds = {}; traces = {'core_type': digest(core_req), 'argument_selection': digest(select_req)}
     for nid in chosen['node_ids']:
         node = evidence['nodes'][nid]
-        req = graph.type_request(node['text'], {node['source_id']: supported[node['source_id']]})
+        req = allocate(graph.type_request(node['text'], {node['source_id']: supported[node['source_id']]}), extra_tokens)
         kinds[nid] = graph.kind(runner.call('ground-kind', req)); traces[nid] = digest(req)
     if any(k not in {'fact', 'value', 'prediction'} for k in kinds.values()): return None, 'ground_type_unresolved'
     typed = graph.assemble(proposal, supported, units, core_kind, chosen, kinds)
@@ -145,6 +163,9 @@ def profile(proposal, selection, units, policy, runner):
 def execute(directory):
     started = time.monotonic(); plan = read_json(directory/'plan.json'); live(plan['expires_at'])
     if plan['artifact_kind'] != VERSION: raise ValueError('Unknown graph trial')
+    profiling, extra = profile_capacity(plan['deployment'], plan['profile_capacity'])
+    if profiling != plan['profile_deployment'] or extra != plan['profile_extra_tokens']:
+        raise ValueError('Frozen profile capacity changed')
     for field in ('inputs', 'code_sha256', 'model_files'):
         if any(sha(p) != h for p, h in plan[field].items()): raise ValueError('Frozen input/code/model changed')
     for info in (plan['deployment']['server'], plan['deployment']['models']['baseline']):
@@ -155,9 +176,10 @@ def execute(directory):
     write(directory/'started.json', {'plan_sha256': runner.plan_sha, 'budget_before': budget.summary(), 'fresh_analysis': False})
     try:
         selected = plan['selection']; typed = []; deferred = []; detail_actual = {}; controls = []
-        with owned_server(plan['deployment'], 'baseline', directory/'membership-server'):
+        with owned_server(plan['profile_deployment'], 'baseline', directory/'profile-server'):
             for row in plan['controls']:
-                result = runner.call('type-control', graph.type_request(row['target'], {'synthetic': row['source']}))
+                req = allocate(graph.type_request(row['target'], {'synthetic': row['source']}), extra)
+                result = runner.call('type-control', req)
                 try: actual = graph.kind(result)
                 except ValueError: actual = 'error'
                 controls.append({'id': row['id'], 'expected': row['expected'], 'actual': actual, 'passed': actual == row['expected']})
@@ -165,7 +187,7 @@ def execute(directory):
             for proposal in selected['proposals']:
                 if graph.inventory(plan['units'], members(proposal, selected, plan['membership_policy'])) != plan['graphs'][proposal['id']]:
                     raise ValueError('Argument population changed')
-                try: value, reason = profile(proposal, selected, plan['units'], plan['membership_policy'], runner)
+                try: value, reason = profile(proposal, selected, plan['units'], plan['membership_policy'], runner, extra_tokens=extra)
                 except (ValueError, TypeError, KeyError, AttributeError) as exc: value, reason = None, 'profile_contract_'+type(exc).__name__
                 if value is None: deferred.append({'id': proposal['id'], 'reason': reason})
                 else: typed.append(value)
@@ -179,7 +201,11 @@ def execute(directory):
             details = membership_policy.bind_rows(plan['membership_policy'], factory.detail_requests(typed, derived, selected['actual']))
             if len(details) > plan['limits']['detail_relations']: raise ValueError('Detail population exceeded')
             write(directory/'typed.json', {'proposals': typed, 'core_rows': derived, 'details': details, 'deferred': deferred})
-            for row in details: detail_actual[row['id']] = verdict(runner.call('detail', row['request']))
+        if details:
+            # Membership keeps its evaluated context/reasoning/token limits.
+            # A profiling budget increase must not consume its answer allowance.
+            with owned_server(plan['deployment'], 'baseline', directory/'membership-server'):
+                for row in details: detail_actual[row['id']] = verdict(runner.call('detail', row['request']))
         write(directory/'detail-verdicts.json', detail_actual)
         admitted, argument_deferred = graph.admit(typed, details, detail_actual)
         admitted_ids = {p['id'] for p in admitted}
@@ -197,6 +223,7 @@ def execute(directory):
         compiled = compile_inputs(bundle)
         write(directory/'bundle.json', bundle); write(directory/'compiled.json', compiled)
         report = {'artifact_kind': VERSION, 'elapsed_seconds': time.monotonic()-started,
+            'profile_capacity': plan['profile_capacity'],
             'fresh_analysis': False, 'candidates': len(selected['proposals']), 'typed_candidates': len(typed),
             'typing_deferred': deferred, 'detail_relations': len(details), 'fact_claims': len(packets),
             'argument_deferred': argument_deferred,
@@ -216,8 +243,9 @@ def execute(directory):
 if __name__ == '__main__':
     p = argparse.ArgumentParser(description=__doc__); p.add_argument('phase', choices=['prepare', 'run'])
     p.add_argument('directory', type=Path); p.add_argument('--ranked-source', type=Path); p.add_argument('--neighborhood-source', type=Path)
+    p.add_argument('--profile-capacity', choices=list(CAPACITIES), default='baseline')
     args = p.parse_args()
     if args.phase == 'prepare':
         if args.ranked_source is None or args.neighborhood_source is None: p.error('prepare requires both cached sources')
-        prepare(args.directory, args.ranked_source, args.neighborhood_source)
+        prepare(args.directory, args.ranked_source, args.neighborhood_source, capacity=args.profile_capacity)
     else: execute(args.directory)
