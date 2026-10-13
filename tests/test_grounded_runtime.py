@@ -29,6 +29,19 @@ class GroundedRuntimeTests(unittest.TestCase):
         self.assertEqual(turn['points'][0]['member_source_count'], 1)
         self.assertTrue(turn['points'][0]['citations']['verification_evidence'])
 
+    def test_mutable_export_cache_cannot_change_published_entries(self):
+        session = self.session()
+        for entry in session.allowed['allowed_entries']:
+            entry['text'] = 'Unbound invented text'
+            entry['member_source_count'] = 99999
+        turn = session.ask('What is the position?')
+        self.assertEqual(turn['points'][0]['text'], 'Safety reviews should be required.')
+        self.assertEqual(turn['points'][0]['member_source_count'], 3)
+
+    def test_host_verifier_rejects_limits_outside_the_schema(self):
+        for limit in ['ambiguous_question', 'out_of_scope']:
+            self.assertTrue(errors(selection([], 'not_in_evidence', limit), {'position'}))
+
     def test_rejected_facts_and_raw_comments_excluded_from_request(self):
         session = self.session()
         request = session.invocation('What is the position?')

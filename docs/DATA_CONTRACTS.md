@@ -673,7 +673,7 @@ profile은 core 지지 수, 각 prompt entry의 개별 지지 수·범위·종�
 
 ## 선택형 답변과 추론 예산 계약
 
-`fact-screened-extractive-answer-0.2`는 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
+`fact-screened-extractive-answer-0.3`는 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
 answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한다. 모델은 허용 claim ID만 선택한다.
 문장·scope·개별 지지 수·인용은 원래 compiled profile에서 복사하며 외부/탈락 ID는 거부한다.
 호출 전후 재조립·만료 검사를 수행하고, 오류를 정상적인 보류나 유효 답변으로 세지 않는다.
@@ -686,6 +686,8 @@ answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한�
 답변0.2에서는 prompt entry에 upstream의 core/reason/prerequisite 역할을 명시한다. 역할은 새로운 사실 근거나 인간 승인이 아니다.
 JSON schema는 grounded/partial/not_in_evidence별로 claim 수와 limitation을 고정해 모순된 조합을 허용하지 않는다.
 0.1의 실패 결과는 수정하지 않고 이전 코드 revision에서 재생한다.
+0.3은 호출 후 재검증한 `prompt_input`에서 문장과 지지 수를 가져오므로 세션의 가변 캐시가 공개 내용을 바꾸지 못한다.
+limitation은 schema의 `none`/`missing_evidence`만 허용한다.0.2의 합성 성능 측정과0.3의 코드 회귀 검증은 구분한다.
 
 ## NLI 사실 기록과 자동 입력 adapter
 
@@ -693,7 +695,8 @@ JSON schema는 grounded/partial/not_in_evidence별로 claim 수와 limitation을
 case의 주장/문서 구간, batch request hash, label mapping, logits/softmax 점수, 고정 threshold, pair 판정과 aggregate를 보존한다.
 재생은 logits→확률→판정→집계를 다시 계산하며 자료 목록·만료·주장/문서 결합을 검사한다.
 `batch_request_sha256`은 상위 runner의 batch 원본과 함께 검증해야 하며 변조 방지 서명은 아니다.
-기존40건의 기록 adapter 재생은 새 모델 호출 없이 수행할 수 있다. compiler에서 이 버전을 받는 연결은 별도 구현 단계다.
+기존40건의 기록 adapter 재생은 새 모델 호출 없이 수행할 수 있다. `fact-screened-agent-inputs-0.2` compiler는
+이 artifact kind를 NLI 전용 validator로 전달하고, 생성형 기록은 기존 validator로 검사한다. 사실 의존성 정책은 동일하다.
 
 `factory/grounded_factory.py`는 원문별 모델 판정을 grounded bundle로 변환한다. 후보 C/R1/R2/F1/F2를 candidate ID로
 이름 공간화하고 모든 사실 의존성을 보존한다. 핵심 지지가3개 미만이면 상세 추론을 예약하지 않으며,

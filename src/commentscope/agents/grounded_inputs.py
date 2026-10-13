@@ -8,8 +8,9 @@ from copy import deepcopy
 
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory import fact_checks as facts
+from commentscope.factory import nli_fact_records
 
-VERSION = 'fact-screened-agent-inputs-0.1'
+VERSION = 'fact-screened-agent-inputs-0.2'
 
 
 def indexed(rows, name):
@@ -78,7 +79,10 @@ def compile_inputs(bundle):
         if cid in fact_status:
             raise ValueError('Ambiguous multiple fact judgments')
         bound = facts.packet(claims[cid],bundle['documents'],check['selections'],bundle['expires_at'])
-        passed = facts.validate_record(check['record'],bound,bundle['model'])
+        validator = (nli_fact_records.validate_record
+                     if check['record'].get('artifact_kind') == nli_fact_records.VERSION
+                     else facts.validate_record)
+        passed = validator(check['record'],bound,bundle['model'])
         expiry = min(expiry, facts.live(bound['expires_at']))
         fact_status[cid] = 'supported' if passed else check['record']['state']
         check_records[cid] = digest(check['record'])

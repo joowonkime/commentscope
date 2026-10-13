@@ -738,6 +738,20 @@ GitHub Actions의 checkout/setup-python은 공식 사용법을 확인하고 comm
 - 기존 API corpus와 공개 문서 capture를 재사용하고 외부 검색·새 다운로드·유료 모델을 추가하지 않는다.
   실제 corpus 평가와 첫 실행 속도를 통과하기 전에는 자동 MVP로 승격하지 않는다.
 
+## ADR 042 가입 실패와 제한된 추론 배포 비교 2026-10-13
+
+- ADR041의 joint proposal은 core-only 생성 → 별도 가입 → 유형/이유/필수 전제 추출로 분리한다.
+  생성 단계에서 잘못된 anchor quote나 전제 연결을 함께 만드는 문제를 줄이기 위한 구조 변경이며 품질 통과는 아니다.
+- 고정100 관계의 기존8B/DeBERTa 조합은 조기 실패 상한이 입증됐고, OpenJev도 정밀도62.5%·보존71.4%로 미달했다.
+  같은 판정기 표를 임의로 합치거나 threshold를 조절하지 않는다. 사실 문서용 NLI의 통과를 원문 가입 성능으로 전용하지 않는다.
+- 기존8B를 full GPU/context4096에 배치한 뒤 추론 off와256token 제한 on을 비교한다. 같은 원문·주장·참조·프롬프트·schema를 유지한다.
+  on은 최종 답변까지512tokens, off는180tokens이고 모두90초 deadline/재시도0이다. 추론 내용은 private 로그이며 사용자 답변이 아니다.
+  모델 크기·기존 CPU offload·context 변경 효과와 추론 효과를 혼동하지 않도록 matched off 배포를 함께 동결한다.
+- `experiments/membership_checkpoint.py`는 분모100을 고정한 관측치와 최선의 정밀도/보존율 상한을 계산한다.
+  미실행 사례는 정상 거절이 아니며 부분 실행으로 합격할 수 없다. 합격 불가능해지면 남은 동일 호출을 아낄 수 있다.
+- compiler0.2는 NLI record를 별도 validator로 검사한다. runtime0.3은 호출 후 재검증한 입력으로만 문장과 출처를 렌더링한다.
+  가변 세션 캐시나 모델이 작성한 설명이 공개 문장·지지 수를 바꾸지 못하게 한다. upstream의 의미 정확성 검증을 대체하지 않는다.
+
 ## 변경 시 필수 체크리스트
 
 1. 이 문서에 결정/대안/영향 범위를 추가한다. 과거 ADR 변경이면 superseded 대상도 명시한다.

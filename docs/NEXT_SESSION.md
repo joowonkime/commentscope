@@ -11,7 +11,7 @@
 - 다음은 고정100 원문 관계를 assistant가 오프라인 사전 판정하고 별도 full-source 가입 판정을 실행하는 단계다.
   참조 라벨은 runtime 입력이 아니며 독립 gold도 아니다. 캐시된 후보를 사용하므로 이번 개발 실행은 첫 분석1시간 측정이 아니다.
 - `factory/nli_fact_records.py`는 classifier logits·점수·입력 packet·모델을 결합한다. 기존40건 실제 결과를 모델0회로 재생했다.
-  LLM 응답으로 가장하지 않는다. compiler에 대한 연결은 아직 남아 있다.
+  LLM 응답으로 가장하지 않는다. `fact-screened-agent-inputs-0.2` compiler 연결과 변조 거부 테스트를 추가했다.
 - `agents/grounded_web.py`와 전용 화면을 추가했다. loopback·동일 origin·세션·단일 추론 lane·질문6회·예산 제한을 사용한다.
   비교/후속 질문/원문 확인 경로는 합성 HTTP 테스트로 검사했고 실제 댓글 bundle 연결과 브라우저 시각 검사는 남아 있다.
 - 실험 코드가 동결됐으므로 완료 전 기존 source 파일을 수정하지 않는다. 신규 파일은 과거 manifest에 추가하지 않는다.
@@ -31,11 +31,16 @@
   같은137개 full-source NLI는 고정100에서 정상13/21·오승인5건이므로 교집합 보존율 상한61.9%다.
   **두 사전 채택 후보 모두 합격 불가능하여 남은 동일 호출을 조기 중단했다.** 분모100/참조/threshold는 바꾸지 않았다.
   `early-stopped.json`에 관측·미실행·오류·상한식을 남겼다.100건 LLM 완료나 실패를 제외한 합격으로 보고하지 않는다.
-- 다음 진단은 이미 설치된 OpenJev2B의 같은137개 full-source 입력 비교다. 기존500문자 wrapper만 제거하고512token/threshold0.8은 유지한다.
-  source가512tokens를 넘으면 잘라서 판정하지 않고 오류로 남긴다. CPU 환경과 고정600초 batch deadline을 사용한다.
-  private `runs/atomic-openjev-20261013`; OpenJev는 상용 Jev가 아니다. 새 다운로드·외부 전송·임계값 조정은 없다.
+- OpenJev2B도 같은137개 full-source 입력 비교를 완료했다. 고정100에서 정밀도15/24=62.5%, 정상 보존15/21=71.4%로 미달했다.
+  기존500문자 wrapper만 제거했고512token/threshold0.8은 유지했다. 초과 입력은 자르지 않고 오류로 남겼다.
+  private `runs/atomic-openjev-20261013`; CPU 로딩 포함254.38초다. OpenJev는 상용 Jev가 아니다.
+- 다음은 같은8B의 추론 on/off를 full GPU/context4096의 일치된 배포 조건으로 비교한다. 원문·대상·참조100·기준은 유지한다.
+  추론 예산256tokens, 전체 출력512tokens, 요청90초, 재시도0이다. off는 기존180tokens를 사용한다.
+  합성2건의 연결 시험에서 추론과 최종 JSON 분리는 동작했으나 정상 예시1건을 partial로 잘못 거절했다. 품질 통과가 아니다.
+  private `runs/reasoning-membership-on-20261013`, `runs/reasoning-membership-off-20261013`에 실행 전 요청을 동결했다.
 - 코드 `f891200`: Python609/Node7 통과, Linux/Windows CI run38316386632 성공. 원문 평가 참조·모델 출력은 public Git 제외다.
-  NLI compiler dispatch와 실제 agent/첫 분석1시간 검증은 아직 남아 있다. 현재 active goal을 임의로 완료/중단 처리하지 않는다.
+  NLI compiler dispatch는 구현했고 Python618개가 통과했다. 답변0.3은 가변 캐시 대신 재검증한 입력에서 문장·지지 수를 복사한다.
+  실제 agent/첫 분석1시간 검증은 아직 남아 있다. 현재 active goal을 임의로 완료/중단 처리하지 않는다.
 
 ## 사실 판정과 선택형 답변 부품 검증 완료 2026-10-13
 

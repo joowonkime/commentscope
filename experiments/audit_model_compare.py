@@ -93,11 +93,20 @@ def make_plan():
 
 def command(plan, name):
     runtime = plan['runtime']
-    return [plan['server']['path'],'-m',plan['models'][name]['path'],
+    result = [plan['server']['path'],'-m',plan['models'][name]['path'],
             '--host','127.0.0.1','--port','8091','-c',str(runtime['context']),
             '--no-context-shift','-ngl',str(runtime['gpu_layers']),'-t',str(runtime['threads']),
             '--parallel','1','--no-cache-prompt','--jinja',
             '--chat-template-kwargs',json.dumps(runtime['template_kwargs'],sort_keys=True)]
+    if 'reasoning_budget' in runtime:
+        budget = runtime['reasoning_budget']
+        if type(budget) is not int or not 0 <= budget <= 2048:
+            raise ValueError('Explicit bounded reasoning budget required')
+        if runtime.get('reasoning') not in {'on','off'}:
+            raise ValueError('Explicit reasoning mode required')
+        result += ['--reasoning',runtime['reasoning'],'--reasoning-budget',str(budget),
+                   '--reasoning-format','deepseek']
+    return result
 
 
 @contextmanager

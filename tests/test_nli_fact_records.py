@@ -52,3 +52,17 @@ class NLIFactRecordTests(unittest.TestCase):
     def test_cannot_forge_llm_as_classifier(self):
         p,m,r=self.fixture(); m['name']='Qwen'
         with self.assertRaises(ValueError): n.records([p],m,r)
+
+    def test_actual_compiler_dispatch_and_runtime_boundary(self):
+        from commentscope.agents.grounded_inputs import compile_inputs
+        from commentscope.agents.grounded_runtime import GroundedSession
+        p,m,r=self.fixture();b=fixture();b['model']=m
+        check=next(x for x in b['checks'] if x['claim_id']==p['claim']['id'])
+        b['checks']=[{**check,'record':n.records([p],m,r)[0]}]
+        compiled=compile_inputs(b)
+        self.assertEqual(len(compiled['profiles']),1)
+        self.assertEqual(compiled['claim_decisions']['observed']['fact_state'],'supported')
+        session=GroundedSession(b,'P1',provider=lambda *a,**k:None)
+        self.assertNotIn('eliminated',str(session.invocation('What fact is available?')))
+        b['checks'][0]['record']['state']='refuted'
+        with self.assertRaises(ValueError):compile_inputs(b)
