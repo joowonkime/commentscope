@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 import tempfile
+import time
 import unittest
 from unittest.mock import Mock, patch
 
@@ -22,6 +23,13 @@ NORMALIZED = [NormalizedComment(k, v, 'test', None) for k, v in SOURCES.items()]
 
 class SyntheticRunner(p.CompletionRunner):
     audit_fails = False
+    limited_discovery = False
+    timeout_one = False
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.offset = 0.; self.extractions = 0
+        self.clock = lambda: time.monotonic()+self.offset
 
     def call(self, stage, req, **kwargs):
         self.timeout(90); self.seq += 1
@@ -34,6 +42,9 @@ class SyntheticRunner(p.CompletionRunner):
         if stage in ('source-extraction', 'member-extraction'):
             text = req['data']['TARGET'].split(' Additional')[0]
             value = output(text, stance='support' if 'required' in text else 'oppose')
+            if stage == 'source-extraction':
+                self.extractions += 1
+                if self.limited_discovery and self.extractions == 2: self.offset = 601
         elif stage == 'discovery-candidates':
             units = req['data']['units']; vectors = [[1., 0.] if 'required' in u['claim'] else [0., 1.] for u in units]
             return {**source_first.candidates(units, vectors, req['data']['sources'], minimum_sources=1),
@@ -46,7 +57,10 @@ class SyntheticRunner(p.CompletionRunner):
             d = req['data']; s = json.dumps(d, sort_keys=True)
             same = not ('required' in s and 'voluntary' in s)
             value = {'verdict': 'supported' if same else 'unsupported', 'reason': 'Synthetic only.'}
-        elif stage == 'core-kind': value = {'kind': 'value'}
+        elif stage == 'core-kind':
+            if self.timeout_one and 'voluntary' in req['data']['TARGET']:
+                raise TimeoutError('Synthetic candidate deadline')
+            value = {'kind': 'value'}
         elif stage == 'argument-selection': value = {'status': 'selected', 'node_ids': [], 'essential_node_ids': []}
         elif stage == 'argument-audit':
             value = {'core_fidelity': 'distorted' if self.audit_fails else 'faithful', 'core_kind_matches': True,
@@ -93,6 +107,21 @@ class CandidateCompletionPipelineTests(unittest.TestCase):
             self.assertTrue(all(r['state'] == 'argument_audit_failed' for r in report['outcomes']))
             self.assertEqual(len(list((directory/'candidates').glob('*/typed.json'))), 2)
             self.assertEqual(p.read_json(directory/'bundle.json')['claims'], [])
+
+    def test_completed_candidate_survives_another_candidate_timeout(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(SyntheticRunner, 'timeout_one', True):
+            directory = Path(tmp); report = self.run_synthetic(directory, False)
+            self.assertEqual(report['screened_inputs'], 1)
+            self.assertEqual({r['state'] for r in report['outcomes']}, {'screened_input', 'candidate_failed_TimeoutError'})
+            self.assertFalse(report['quality_gate_passed'])
+
+    def test_unextracted_supporters_are_analyzed_after_membership(self):
+        with tempfile.TemporaryDirectory() as tmp, patch.object(SyntheticRunner, 'limited_discovery', True):
+            directory = Path(tmp); report = self.run_synthetic(directory, False)
+            self.assertEqual(report['coverage']['source_records'], 2)
+            self.assertEqual(report['analyzed_unique_sources'], 6)
+            self.assertEqual(len(list((directory/'member-source-results').glob('*.json'))), 4)
+            self.assertEqual(report['screened_inputs'], 2)
 
 
 if __name__ == '__main__': unittest.main()

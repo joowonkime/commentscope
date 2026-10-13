@@ -45,16 +45,27 @@ class CompletionRunner(Runner):
         return self.allocation.timeout(super().timeout(maximum))
 
 
-def prepare(directory, snapshot, source_config, graph_config, *, gpu_layers):
+def prepare(directory, snapshot, source_config, graph_config, *, gpu_layers, audit_controls):
     if directory.exists(): raise ValueError('Never overwrite an attempt')
     # Reuse the explicit configuration allowlist; this child plan executes no calls.
     legacy.prepare(directory/'configuration', snapshot, source_config, graph_config, gpu_layers=gpu_layers)
     plan = read_json(directory/'configuration'/'plan.json')
+    control_plan = read_json(audit_controls/'plan.json'); control_report = read_json(audit_controls/'completed.json')
+    if (control_plan['artifact_kind'] != 'argument-role-fixed-controls-0.1'
+            or control_report['plan_sha256'] != sha(audit_controls/'plan.json')
+            or control_plan['deployment'] != plan['deployments']['profile']):
+        raise ValueError('Completed matched argument controls required')
+    # Failed development controls remain visible. They do not become approval
+    # merely because product-diagnostic execution is permitted by policy.
+    for name in ('plan.json', 'completed.json'):
+        plan['inputs'][str(audit_controls/name)] = sha(audit_controls/name)
     plan.update(artifact_kind=VERSION, limits=deepcopy(LIMITS),
                 retrieval_limits=deepcopy(support_retrieval.LIMITS),
                 candidate_contract=completion.VERSION, discovery_min_sources=1, admission_min_sources=3,
                 detail_scope='selected_ground_original_author_only',
-                source_argument_audit=True, quality_gate_passed=False)
+                source_argument_audit=True, quality_gate_passed=False,
+                argument_control_measurement={k: deepcopy(control_report[k]) for k in
+                    ('positive_retained', 'negative_false_approvals', 'development_controls_passed')})
     write(directory/'plan.json', plan)
     print({'prepared': True, 'fresh_analysis': True, 'candidate_atomic': True}, flush=True)
 
@@ -227,7 +238,9 @@ if __name__ == '__main__':
     p = sub.add_parser('prepare'); p.add_argument('directory', type=Path)
     for key in ('snapshot', 'source-config', 'graph-config'): p.add_argument('--'+key, type=Path, required=True)
     p.add_argument('--gpu-layers', choices=['all', '32'], required=True)
+    p.add_argument('--audit-controls', type=Path, required=True)
     p = sub.add_parser('run'); p.add_argument('directory', type=Path)
     args = parser.parse_args()
-    if args.action == 'prepare': prepare(args.directory, args.snapshot, args.source_config, args.graph_config, gpu_layers=args.gpu_layers)
+    if args.action == 'prepare': prepare(args.directory, args.snapshot, args.source_config, args.graph_config,
+                                        gpu_layers=args.gpu_layers, audit_controls=args.audit_controls)
     else: execute(args.directory)
