@@ -196,17 +196,17 @@ def source_rows(proposals,policy):
     return rows
 
 
-def classify(proposals,rows,actual,runner):
+def classify(proposals,rows,actual,runner,*,typer=typing):
     policy=membership_policy.from_rows(rows) if rows else None
     typed=[];deferred=[]
     for proposal in proposals:
         members={r['source_id']:r['text'] for r in rows if r['candidate_id']==proposal['id'] and actual[r['id']]=='supported'}
         if len(members)<3:
             deferred.append({'id':proposal['id'],'reason':'insufficient_core_support'});continue
-        result=runner.call('typing',typing.invocation(proposal['claims']['C'],members))
+        result=runner.call('typing',typer.invocation(proposal['claims']['C'],members))
         try:
             if result['errors']:raise ValueError('typing_error')
-            value=typing.apply(proposal,result['output'],members)
+            value=typer.apply(proposal,result['output'],members)
             if value is None:deferred.append({'id':proposal['id'],'reason':result['output']['reason']})
             else:typed.append(value)
         except (ValueError,TypeError,KeyError,AttributeError):deferred.append({'id':proposal['id'],'reason':'typing_contract'})
