@@ -116,6 +116,15 @@ def execute(directory):
             write(directory/(row['id']+'.json'),item);results[row['id']]=core.verdict(result)
             print({'completed':row['id'],'verdict':results[row['id']],
                    'reasoning':item['reasoning_nonempty'],'seconds':result['seconds']},flush=True)
+            if plan.get('stop_on_impossible') and not plan['plumbing_only']:
+                from experiments.membership_checkpoint import checkpoint
+                status=checkpoint(directory)
+                if status['cannot_pass']:
+                    status['stop_reason']='Fixed-denominator best-case bound cannot reach the preregistered gate.'
+                    status['budget_after']=budget.summary()
+                    write(directory/'early-stopped.json',status)
+                    print({k:v for k,v in status.items() if k not in {'unexecuted_evaluation','budget_after'}},flush=True)
+                    return
     ids=plan['evaluation_ids']
     refs=({r['id']:r['expected'] for r in plan['rows']} if plan['plumbing_only'] else
           read_json(Path(plan['reference_source'])/'references.json')['labels'])

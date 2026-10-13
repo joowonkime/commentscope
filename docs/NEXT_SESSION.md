@@ -18,7 +18,7 @@
 - private `runs/reasoning-membership-off-20261013`은 prepare만 한 미실행 plan이다. 이후 복구 코드 변경으로 hash가 달라졌으므로
   재개할 때 그 파일을 수정하지 말고 현재 코드로 별도 새 plan을 준비한다.
 - Windows CI run38348473498은 recovery 도구의 SQLite handle 미종료로 실패했다. `closing`과 read-only 연결로 수정했고
-  handle 종료 회귀 테스트를 추가해 로컬에서 확인했다. 현재 Python635/Node7 통과, 수정 후 양쪽 CI 재확인은 별도다.
+  handle 종료 회귀 테스트를 추가했다. `199be50`에서 Python635/Node7 및 Linux/Windows CI run38353964445 성공을 확인했다.
 - `experiments.fresh_grounded_pipeline`에 새 임베딩부터 core 생성/가입/typing/상세/사실/NLI 입력 조립까지 실행 경로를 추가했다.
   snapshot 경로는 인자이며 모델 호출은 공유 budget과 전체3600초 deadline으로 제한한다. 참조 라벨은 runtime에 쓰지 않는다.
   합성 단계 연결 검사는 통과했지만, 원문 gate 통과 전 prepare를 거부하므로 실제 fresh 통합 실행과1시간 측정은 아직 없다.
@@ -29,6 +29,12 @@
   대상/조건을 부당하게 확대하는 target을 혼동시킬 수 있다. 이 해석은 원인 가설이며 아직 개선 증명이 아니다.
   별도 합성 방향/조건/주체/인용 통제 예시를 먼저 동결해 검사하고, 통과 시에만 동일100개 참조로 마지막 비교한다.
   기존100개를 고치거나 새 예시로 대체하지 않으며, 동일4B auditor 반복도 재개하지 않는다.
+  `runs/directed-membership-controls-20261013`의8개 통제는 정상4/4·비지원 오승인0/4·오류0으로 통과했다.
+  조건 삭제 사례는 partial로 거절했으며 supported 여부의 이진 통제 통과이지 모든 세부 verdict 일치는 아니다.
+  `runs/directed-membership-fixed100-20261013`은 같은137요청의 대상·원문과 평가100/정상21을 유지한 마지막 방향 명료화 비교다.
+  모델/추론256/context4096/schema를 고정했고 system의 함의 방향 설명만 바꿨다. 합격 불가능한 상한이 나오면 호출 사이에 자동 종료한다.
+  향후 통과 시 통합 runner의 가입/상세 요청에도 이 정확한 system 정책을 연결해야 한다. 현재 fresh runner는 원래 정책만 사용하므로
+  아직 directed 구성을 그대로 실행할 준비가 된 상태가 아니다. 통과 전 전체 실행은 계속 차단한다.
 
 - `experiments.scoped_discovery_probe`에서 전체 corpus의 기존 raw 유사도 묶음 중 크기·ID 순서 상위20개를 자동 선택했다.
   private `runs/scoped-discovery-20261013/plan.json`을 동결하고 캐시된8B로 각 묶음의 핵심·이유·필수 전제를 제안한다.
