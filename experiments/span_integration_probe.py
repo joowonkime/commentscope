@@ -25,8 +25,9 @@ from experiments.audit_model_compare import command, file_hash, owned_server
 from experiments.fresh_grounded_pipeline import Runner, classify
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.target_ranking_probe import choose, VERSION as RANKING_VERSION
+from experiments.integration_replay import bind_prefix, ReplayRunner
 
-VERSION='cached-source-range-integration-0.3'
+VERSION='cached-source-range-integration-0.4'
 TYPERS={t.VERSION:t for t in (span_typing,bounded_span_typing)}
 
 
@@ -73,7 +74,7 @@ def frozen_typing(selection, policy, *, typer=span_typing):
     return requests,max_details
 
 
-def prepare(directory, source, *, typing_version=span_typing.VERSION, gpu_layers=None):
+def prepare(directory, source, *, typing_version=span_typing.VERSION, gpu_layers=None, continue_from=None):
     if directory.exists():raise ValueError('Never overwrite an attempt')
     if typing_version not in TYPERS:raise ValueError('Unknown typing policy')
     typer=TYPERS[typing_version]
@@ -128,9 +129,14 @@ def prepare(directory, source, *, typing_version=span_typing.VERSION, gpu_layers
           'evaluation':original['evaluation'],'budget':ranked_plan['budget'],
           'limits':{'analysis_seconds':900,'call_seconds':90,'fact_seconds':240,'detail_relations':max_details},
           'fresh_analysis':False,'runtime_reference_labels':False,'quality_gate_passed':False}
+    if continue_from is not None:
+        reused,files=bind_prefix(continue_from,plan)
+        plan.update(reused_calls=reused,continuation_of=str(continue_from))
+        plan['inputs'].update(files)
     write(directory/'plan.json',plan)
     print({'prepared':True,'candidates':len(typing_requests),'max_detail_relations':max_details,
-           'typing_request_bytes':[len(json.dumps(r['request']).encode()) for r in typing_requests]},flush=True)
+           'typing_request_bytes':[len(json.dumps(r['request']).encode()) for r in typing_requests],
+           'reused_calls':len(plan.get('reused_calls',[]))},flush=True)
 
 
 def execute(directory):
@@ -144,9 +150,16 @@ def execute(directory):
     expected,maximum=frozen_typing(plan['selection'],plan['membership_policy'],typer=typer)
     if expected!=plan['typing_requests'] or maximum!=plan['limits']['detail_relations']:
         raise ValueError('Frozen typing inventory changed')
+    if plan.get('continuation_of'):
+        entries,files=bind_prefix(Path(plan['continuation_of']),plan)
+        if entries!=plan.get('reused_calls') or any(plan['inputs'].get(p)!=h for p,h in files.items()):
+            raise ValueError('Continuation inventory changed')
+    elif plan.get('reused_calls'):
+        raise ValueError('Reused calls require a bound terminal predecessor')
     os.environ['HF_HUB_OFFLINE']='1';os.environ['TRANSFORMERS_OFFLINE']='1'
     budget=InferenceBudget(Path(plan['budget']['ledger']),plan['budget']['cycle_id'])
-    runner=Runner(directory,plan,budget);runner.started=started
+    runner_type=ReplayRunner if plan.get('reused_calls') else Runner
+    runner=runner_type(directory,plan,budget);runner.started=started
     write(directory/'started.json',{'plan_sha256':runner.plan_sha,'budget_before':budget.summary(),'fresh_analysis':False})
     try:
         selected=plan['selection'];detail_actual={}
@@ -172,6 +185,8 @@ def execute(directory):
                 'detail_relations':len(details),'fact_claims':len(packets),'screened_inputs':len(compiled['profiles']),
                 'qualified_agents':0,'quality_gate_passed':False,'runtime_reference_labels':False,
                 'deployment_change':plan.get('deployment_change'),
+                'reused_calls':len(plan.get('reused_calls',[])),
+                'continuation_of':plan.get('continuation_of'),
                 'evaluation':plan['evaluation'],'budget_after':budget.summary(),
                 'bundle_sha256':sha(directory/'bundle.json'),'compiled_sha256':sha(directory/'compiled.json'),
                 'remaining_gates':['actual_core_and_reason_audit','actual_answers_and_abstention','actual_comparison_latency','fresh_analysis']}
@@ -187,8 +202,10 @@ if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['prepare','run']);p.add_argument('directory',type=Path)
     p.add_argument('--source',type=Path);p.add_argument('--typing',choices=list(TYPERS),default=span_typing.VERSION)
     p.add_argument('--gpu-layers',type=int,choices=range(33),help='Explicit frozen deployment override; prepare only')
+    p.add_argument('--continue-from',type=Path,help='Reuse every attempted call of a terminal v0.3 trial; never retry failures')
     a=p.parse_args()
     if a.phase=='prepare' and a.source is None:p.error('prepare requires --source')
     if a.phase=='run' and a.gpu_layers is not None:p.error('GPU layers are frozen during prepare')
-    if a.phase=='prepare':prepare(a.directory,a.source,typing_version=a.typing,gpu_layers=a.gpu_layers)
+    if a.phase=='run' and a.continue_from is not None:p.error('Continuation is frozen during prepare')
+    if a.phase=='prepare':prepare(a.directory,a.source,typing_version=a.typing,gpu_layers=a.gpu_layers,continue_from=a.continue_from)
     else:execute(a.directory)
