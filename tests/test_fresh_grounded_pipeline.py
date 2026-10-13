@@ -106,6 +106,20 @@ class FreshGroundedPipelineTests(unittest.TestCase):
         write(path/'plan.json',plan)
         return Runner(path,plan,budget,clock=clock)
 
+    def test_cli_requires_explicit_evaluation_and_candidate_algorithm(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/'must-not-exist'
+            command=[sys.executable,'-m','experiments.fresh_grounded_pipeline','prepare',str(out),
+                     '--source-gate',str(Path(tmp)/'missing-gate'),
+                     '--proposal-plan',str(Path(tmp)/'missing-proposal.json')]
+            for extra, message in (([], 'prepare requires --purpose'),
+                                   (['--purpose','product_diagnostic'], 'prepare requires --algorithm')):
+                with self.subTest(message=message):
+                    result=subprocess.run(command+extra,capture_output=True,text=True)
+                    self.assertEqual(result.returncode,2)
+                    self.assertIn(message,result.stderr)
+                    self.assertFalse(out.exists())
+
     def test_remaining_analysis_deadline_caps_call(self):
         clock=Mock(side_effect=[100,104,107]); runner=self.runner(Mock(),clock)
         self.assertEqual(runner.timeout(90),3)

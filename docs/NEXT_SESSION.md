@@ -7,11 +7,29 @@
 플랫폼 objective 문자열 자체는 수정하지 않았으며, 관계95%/80% 목표도 유지한다.
 
 - 정책: [MVP_PRODUCT_POLICY](MVP_PRODUCT_POLICY.md). 알고리즘과 구현 순서: [MVP_ALGORITHM](MVP_ALGORITHM.md).
-- 다음 구현은 평가 상태 분리 → 원문 분석 adapter → 공통 입장/개별 이유·조건의 실제 산출물 → 통합 실행 → 실제 제품 검증 순서다.
+- fresh runner0.3에 평가 상태 분리, 원문 분석 adapter, 단위 medoid 후보와 기존 membership/typing/fact 조립을 연결했다.
+  합성6원문에서2개 입력을 만들되 승인 Agent0·MVP 미검증으로 남기는 통합 테스트가 통과했다. 실제 의미 품질 증거는 아니다.
+  다음은 고정 설정의 실제 통합 실행 → 자동 산출물 전체 검토 → 실제 질문/UI/시간 검사다.
 - 기존 ClaimUnit 계약·임베딩·집계·사실 입력·ID 선택형 응답을 재사용한다. 새 source-first 기준선도 과거 실패가 있는 가설이며 성공한 알고리즘으로 보고하지 않는다.
 - 프롬프트는 기준선 동안 동결하고, 원문/문맥·model·schema·설정 hash를 함께 남긴다. 모호한 의미를 정규식이나 confidence로 완벽히 해결했다고 가정하지 않는다.
 - 제품 정책은 `e3be50a`로 기존 개발 branch에 저장·push했다. 미채택 condition-veto의 로컬 사전 진단 변경은 별도로 보존하며 새 경로에 자동 연결하지 않는다.
-- 이번 단계는 정책/알고리즘 문서 정리다. 새 모델 호출·다운로드는 없고 기존 runner의 관계 gate 코드도 아직 변경하지 않았다.
+- fresh 준비 CLI는 `--purpose`와 `--algorithm`을 명시해야 한다. 새 경로는 `product_diagnostic`과
+  `source-first-medoid-candidates-0.1`을 사용한다. 관계 실패 기록을 유지하고 별도 제품 평가를 허용하며,
+  기존 staged runner와 미채택 조건 veto는 새 실행 경로로 바꾸지 않았다. 프롬프트는 수정하지 않았다.
+- 전체 Python694개·Node7개 테스트와 설치된 ML 환경의 단위 clustering smoke 검사가 통과했다.
+  새 경로의 실제 모델 호출·다운로드는 아직 없다. 기존 추론 예산과 실제 승인 Agent0 상태를 유지한다.
+- private `runs/source-first-fresh-20261013/plan.json`을 실제 파일·코드·모델 hash와 결합해 준비했다. 아직 시작하지 않았다.
+  원문 추출은 기존8B/off, 관계 검사는 기존8B/thinking256의 실패·부분 관측 구성을 진단용으로 사용한다.
+  전체3600초, 원문 분석1800초, raw 후보20묶음, threshold0.45를 고정했다. 실행 중 코드·프롬프트·표본을 바꾸지 않는다.
+
+다음 실행은 저장소 루트에서 기존 ML 환경을 사용한다. 먼저 같은 디렉터리의 `started.json`과 소유 프로세스를 확인하여 중복 실행을 피한다.
+
+```bash
+/home/taeng/.venvs/commentscope-clustering/bin/python -m experiments.fresh_grounded_pipeline run runs/source-first-fresh-20261013
+```
+
+완료 후 `source-analysis.json`의 처리·미처리·오류 수, `unit-candidates.json`의 분할/보류,
+`typed.json`과 `compiled.json`의 지지·사실 보류 이유를 검사한다. 입력2개가 만들어져도 실제 내용·답변·UI 검증 전에는 MVP 완료가 아니다.
 
 ## 최신 합의 MVP 중심 평가와 구조 재정리
 
@@ -21,7 +39,7 @@
 
 - 실제 Agent2개 이상/각 canonical 지지3개 이상, 실제 내용의 중대한 왜곡0, 답변·보류 각각90%, 첫 분석1시간 등 기존 제품 기준을 유지한다.
 - 미검증 사실에 의존한 관점의 Agent 소개를 허용하는 제안은 미합의다. 현재 사실 입력·필수 전제 보류 정책을 유지한다.
-- fresh/staged runner의 기존 관계 gate 차단 코드는 아직 그대로다. 다음은 평가용 통합 실행과 제품 승인을 분리하는 정책 연결 및 Factory 구조 정리다.
+- 이 합의 시점에는 fresh/staged gate가 그대로였다. 이후 fresh0.3의 상태 분리를 구현했으며 현재 실행 경로는 최상단 절을 따른다.
   단순 bypass나 과거 실패를 성공으로 재기록하지 않는다. 서비스에서 사람이 후보를 수정·선택하는 단계도 넣지 않는다.
 - 조건 veto 비교는 미채택으로 종료됐다.8통제는 모델0회 재생에서 통과했지만 실제5관계 중 오승인2건으로 조기 종료했다.
   별도 결정적 분석에서 정상19건 중5건을 막아 보존율 최대73.7%임을 확인했다. 이 규칙·프롬프트의 후속 수정 실험은 하지 않는다.
