@@ -4,7 +4,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -93,3 +93,22 @@ class IntegrationReplayTests(unittest.TestCase):
             runner=replay.ReplayRunner(new,plan,budget)
             with self.assertRaises(ValueError):runner.call('typing',req)
             budget.call.assert_not_called()
+
+    def test_ledger_response_tampering_is_rejected_before_freezing(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source,plan,_,_=self.fixture(Path(tmp))
+            different={'choices':[{'message':{'content':'{"status":"changed"}'},'finish_reason':'stop'}]}
+            with sqlite3.connect(plan['budget']['ledger']) as db:
+                db.execute('UPDATE calls SET response_json=?',(json.dumps(different),))
+            with self.assertRaises(ValueError):replay.bind_prefix(source,plan)
+
+    def test_only_calls_after_prefix_use_the_bounded_runner(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            source,plan,req,result=self.fixture(Path(tmp));entries,_=replay.bind_prefix(source,plan)
+            new=Path(tmp)/'new';new.mkdir();plan={**plan,'reused_calls':entries}
+            write(new/'plan.json',plan);runner=replay.ReplayRunner(new,plan,Mock())
+            with patch.object(replay.Runner,'call',return_value={'new_call':True}) as fresh:
+                self.assertEqual(runner.call('typing',req),result)
+                fresh.assert_not_called()
+                self.assertEqual(runner.call('detail',req),{'new_call':True})
+                fresh.assert_called_once_with('detail',req)
