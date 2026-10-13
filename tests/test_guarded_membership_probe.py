@@ -63,7 +63,8 @@ class GuardedMembershipProbeTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             root = Path(tmp); self.replay(root)
             parent = self.parent(); write(root/'parent'/'plan.json', parent)
-            with patch.object(probe, 'validate'), patch.object(probe, 'code_hashes', return_value={}):
+            with patch.object(probe, 'validate'), patch.object(probe, 'code_hashes', return_value={}), \
+                 patch.object(probe, 'ceiling', return_value={'cannot_pass': False}):
                 probe.prepare_trial(root/'trial', root/'parent', root/'replay')
             trial = read_json(root/'trial'/'plan.json')
             self.assertEqual(trial['evaluation_ids'], parent['evaluation_ids'])
@@ -74,6 +75,17 @@ class GuardedMembershipProbeTests(unittest.TestCase):
                     self.assertEqual(old['request'][key], new['request'][key])
             self.assertEqual(trial['membership_guard'], guard.VERSION)
             self.assertNotIn('reused_records', trial)
+
+    def test_impossible_host_policy_blocks_before_model_validation_or_new_files(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp); self.replay(root)
+            write(root/'parent'/'plan.json', self.parent())
+            with patch.object(probe, 'ceiling', return_value={'cannot_pass': True}), \
+                 patch.object(probe, 'verify_controls') as verify, patch.object(probe, 'validate') as validate:
+                with self.assertRaisesRegex(ValueError, 'perfect model'):
+                    probe.prepare_trial(root/'trial', root/'parent', root/'replay')
+            verify.assert_not_called(); validate.assert_not_called()
+            self.assertFalse((root/'trial').exists())
 
     def test_tampered_raw_record_cannot_be_replayed(self):
         with tempfile.TemporaryDirectory() as tmp:

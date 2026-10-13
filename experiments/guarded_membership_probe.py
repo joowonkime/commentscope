@@ -17,6 +17,7 @@ from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.storage import write_json_exclusive as write
 from experiments.directed_off_deployment import control_rows
 from experiments.reasoning_membership_probe import execute
+from experiments.policy_retention_ceiling import ceiling
 from experiments.scoped_discovery_probe import code_hashes, validate
 
 
@@ -102,9 +103,11 @@ def prepare_trial(directory, source, controls):
                 runtime=deepcopy(control['runtime']), budget=deepcopy(control['budget']),
                 code_sha256=code_hashes(), plumbing_only=False, stop_on_impossible=True,
                 comparison='One lexical-veto8B/off fixed100 trial; unchanged sources/targets/references/system/schema. No further tuning on failure.')
-    verify_controls(controls, plan)
     plan['inputs'] = {**parent['inputs'], str(source/'plan.json'): sha(source/'plan.json'),
                       **{str(controls/n): sha(controls/n) for n in ('plan.json', 'completed.json', 'report.json')}}
+    if ceiling(plan)['cannot_pass']:
+        raise ValueError('Deterministic veto cannot retain80% even with a perfect model; no trial')
+    verify_controls(controls, plan)
     validate(plan)
     write(directory/'plan.json', plan)
 
