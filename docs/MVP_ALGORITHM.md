@@ -38,6 +38,12 @@ cached 성공과 fresh1시간 달성은 구분한다. 검증 전에는 기존 pr
 구현 경계는 `factory/semantic_neighborhood.py`, `factory/unit_reason_typing.py`,
 `experiments/product_path_probe.py`다. 기존 medoid·range typing과 과거 실행 기록은 비교 기준으로 보존한다.
 
+실제 실행은14분35초에 완료됐지만 후보6개→지지3개 이상2개→최종 입력0개였다.
+현재 조합은 제품 개선으로 채택하지 않는다. 두 이유가 원래 설명하던 주장과 새 core의 관계가 다르고,
+예측의 사실 오분류가 남았다. 개인 경험의 외부 검증 불가도 별도 정책 제약이다.
+다음 교체 경계는 원문 내 주장–이유 연결 보존과 유형 판정의 분리이며, 후보 검색 threshold를 다시 조정하는 작업이 아니다.
+실행 기록과 비용은 [재개 지점](NEXT_SESSION.md#제품-목표-중심-통합-사이클-결과)에 있다.
+
 ## 네 가지 변경 경계
 
 | 경계 | 결정할 일 | 변경 시 필요한 증거 |
