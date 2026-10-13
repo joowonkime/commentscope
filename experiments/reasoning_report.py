@@ -18,16 +18,18 @@ def render(directory):
            '<title>CommentScope 추론 모드 검증 결과</title><style>body{font:16px/1.7 system-ui;max-width:1050px;margin:24px auto;padding:20px;color:#172c34}pre{white-space:pre-wrap;overflow-wrap:anywhere}.notice{background:#fff3cd;padding:16px}article{border-top:1px solid #ccc;padding:18px 0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #ccc;padding:8px;text-align:left}</style>',
            '<h1>추론 모드 원문 충실성 검증</h1><p class="notice">'+esc(title)+
            '. 자동 MVP 완료나 실제 에이전트 품질 승인이 아닙니다. 댓글 원문이 포함된 로컬 연구용 파일이므로 공개하지 마세요.</p>',
-           '<p>동결된 평가100건 · 정상 지지21건 · assistant 개발 참조이며 독립 gold가 아닙니다. 참조는 모델 입력에 전달하지 않았습니다.</p>',
+           '<p>동결된 평가'+esc(status['planned_evaluation'])+'건 · 정상 지지'+esc(status['reference_positive'])+'건 · assistant 개발 참조이며 독립 gold가 아닙니다. 참조는 모델 입력에 전달하지 않았습니다.</p>',
            '<table><tr><th>지표</th><th>결과</th></tr>']
-    metrics=[('평가 관측',str(status['observed_evaluation'])+'/100'),
+    metrics=[('평가 관측',str(status['observed_evaluation'])+'/'+str(status['planned_evaluation'])),
              ('지지 승인 관측',status['accepted_observed']),('올바른 승인 관측',status['true_accepted_observed']),
              ('오승인 관측',len(status['false_accepted_observed'])),('정상 지지 손실 관측',len(status['missed_positive_observed'])),
+             ('호출 오류 관측',len(status['errors_observed'])),
              ('정밀도 최선 상한',f"{status['precision_best_possible']:.1%}"),
              ('정상 보존율 최선 상한',f"{status['retention_best_possible']:.1%}")]
     parts += ['<tr><td>'+esc(k)+'</td><td>'+esc(v)+'</td></tr>' for k,v in metrics]
     parts += ['</table><p>기준: 승인 정밀도95% 이상, 정상 보존80% 이상. 미실행은 정상 거절이 아니며 부분 결과로 합격할 수 없습니다.</p>',
-              '<p>256token 제한 추론, 전체 응답512tokens, full GPU/context4096. 같은 조건의 off 비교는 별도 실행이며 이 화면의 결과로 대체하지 않습니다.</p>',
+              '<p>실행 설정: '+esc(json.dumps({k:plan['runtime'].get(k) for k in ['reasoning','reasoning_budget','max_tokens','gpu_layers','context']},ensure_ascii=False))+'.</p>',
+              '<p>호출 오류에는 사용자 중단·전원 종료 등이 포함될 수 있습니다. 고정 평가의 누락으로 계산하지만 모델의 의미 오판과 구분해야 합니다.</p>',
               '<h2>고정100건 원문 대조</h2>']
     rows={r['id']:r for r in plan['rows']}
     for rid in plan['evaluation_ids']:

@@ -11,6 +11,7 @@ from pathlib import Path
 from commentscope.agents.runtime import request
 from commentscope.factory import grounded_factory as factory, perspective_typing as typing
 from commentscope.factory import scoped_discovery as discovery,nli_fact_records as nli_records
+from commentscope.factory import membership_policy
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.providers.budget import InferenceBudget
@@ -18,14 +19,19 @@ from commentscope.providers import evidence_nli
 from commentscope.storage import write_json_exclusive as write
 from experiments import fact_evidence_probe as base
 from experiments.scoped_discovery_probe import code_hashes,run_calls
+from experiments.membership_checkpoint import checkpoint
 
 
 def prepare(source,directory):
     if directory.exists():raise ValueError('Never overwrite an attempt')
+    gate=checkpoint(source)
+    if not gate['development_gate_passed'] or not gate['all_relations_complete']:
+        raise ValueError('Complete source fidelity gate required; no downstream promotion')
     previous=read_json(source/'plan.json');report=read_json(source/'report.json')
     if (not report['development_gate_passed'] or report['precision']<.95 or report['positive_retention']<.8
             or len(previous['evaluation_ids'])!=100 or len(set(previous['evaluation_ids']))!=100):
         raise ValueError('Source fidelity gate failed; no downstream promotion')
+    policy=membership_policy.from_rows(previous['rows'])
     actual={}
     records={}
     for row in previous['rows']:
@@ -41,7 +47,8 @@ def prepare(source,directory):
         if len(members)<3:continue
         req=typing.invocation(p['claims']['C'],members)
         rows.append({'id':p['id'],'proposal':p,'members':members,'request':req,'request_sha256':digest(req)})
-    plan={**deepcopy(previous),'artifact_kind':'grounded-integration-0.1','rows':rows,
+    plan={**deepcopy(previous),'artifact_kind':'grounded-integration-0.2','rows':rows,
+          'membership_policy':policy,
           'core_rows':previous['rows'],'core_verdicts':actual,'code_sha256':code_hashes(),
           'inputs':{str(source/'plan.json'):sha(source/'plan.json'),str(source/'report.json'):sha(source/'report.json'),**records},
           'quality_gate_passed':False}
@@ -50,7 +57,12 @@ def prepare(source,directory):
 
 
 def type_claims(directory):
-    plan=read_json(directory/'plan.json');records=run_calls(directory,plan,plan['rows'],'typing')
+    plan=read_json(directory/'plan.json')
+    if plan.get('artifact_kind')!='grounded-integration-0.2':
+        raise ValueError('Prepare a new plan with an explicit membership policy')
+    policy=membership_policy.from_rows(plan['core_rows'])
+    if policy!=plan['membership_policy']:raise ValueError('Membership policy changed')
+    records=run_calls(directory,plan,plan['rows'],'typing')
     typed=[];deferred=[]
     for row in plan['rows']:
         result=records[row['id']]['result']
@@ -66,9 +78,9 @@ def type_claims(directory):
     for row in plan['core_rows']:
         if row['candidate_id'] not in byid:continue
         claim=byid[row['candidate_id']]['claims']['C']
-        if discovery.judge_request(row['text'],claim)!=row['request']:raise ValueError('Typing changed the membership target')
+        if membership_policy.invocation(policy,row['text'],claim)!=row['request']:raise ValueError('Typing changed the membership target')
         core_rows.append({**deepcopy(row),'claim':deepcopy(claim),'pretyping_claim_sha256':digest(row['claim'])})
-    details=factory.detail_requests(typed,core_rows,plan['core_verdicts'])
+    details=membership_policy.bind_rows(policy,factory.detail_requests(typed,core_rows,plan['core_verdicts']))
     write(directory/'typed.json',{'proposals':typed,'deferred':deferred,'core_rows':core_rows,'detail_rows':details})
     write(directory/'typed-frozen.json',{'sha256':sha(directory/'typed.json')})
     print({'typed_candidates':len(typed),'deferred':deferred,'detail_requests':len(details)},flush=True)

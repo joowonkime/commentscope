@@ -714,7 +714,11 @@ UI의 `--experimental` 옵션은 개발 경로 선택이며 사용자에게 runt
 
 ## 새 분석과 중단 복구 기록
 
-`fresh-grounded-pipeline-0.1`은 snapshot·모델 파일·코드·배포 설정·외부 근거 문서를 사전 동결한다.
+`fresh-grounded-pipeline-0.2`는 snapshot·모델 파일·코드·배포 설정·외부 근거 문서를 사전 동결한다.
+`frozen-membership-policy-0.1`은 평가 요청들에서 동일한 system/schema/max_tokens를 추출하고 source/target/hash 결합을 검사한다.
+핵심 가입과 상세 근거 검사에 동일 정책을 전달하며 유형 metadata 변경으로 요청의 의미가 바뀌면 거부한다.
+`grounded-integration-0.2`에도 같은 정책을 연결했다. 정책이 없던 과거 plan을 암묵적으로 현재 기본값으로 실행하지 않는다.
+평가 라벨은 정책에 포함하지 않는다. 구성 결합은 의미 정확성 보증이 아니며 미통과 source gate의 전체 실행은 차단한다.
 `fresh-snapshot-embedding-0.1` worker는 기존 raw 분석 cache를 읽지 않고 오프라인 모델로 임베딩을 새로 수행한다.
 1000댓글 초과·snapshot 변경·기존 출력 경로 재사용을 거부한다. 유사도 임계값0.45와 상위20개 후보 탐색은 의미 승인 규칙이 아니다.
 생성 후 다음 단계의 구체적인 요청을 호출 전에 별도 기록하며, 모든 추론은 공유 budget으로 차감한다.

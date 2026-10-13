@@ -16,6 +16,7 @@ import time
 from commentscope.agents.grounded_inputs import compile_inputs
 from commentscope.agents.runtime import request
 from commentscope.factory import scoped_discovery as discovery
+from commentscope.factory import membership_policy
 from commentscope.factory import grounded_factory as factory, perspective_typing as typing
 from commentscope.factory import nli_fact_records as records
 from commentscope.factory.automatic_contract import digest
@@ -37,6 +38,7 @@ def prepare(directory, snapshot, source_gate, proposal_plan, evidence_plan, nli_
     if not gate['development_gate_passed'] or not gate['all_relations_complete']:
         raise ValueError('Complete source gate must pass before a fresh integration trial')
     membership=read_json(source_gate/'plan.json'); proposal=read_json(proposal_plan)
+    policy=membership_policy.from_rows(membership['rows'])
     evidence=read_json(evidence_plan); classifier=read_json(nli_records)['model']
     loaded=load_snapshot(snapshot); live(loaded.snapshot.usage.expires_at)
     if len(loaded.snapshot.comments)>1000: raise ValueError('MVP comment cap exceeded')
@@ -56,7 +58,8 @@ def prepare(directory, snapshot, source_gate, proposal_plan, evidence_plan, nli_
     nli_weight=hub/('models--'+NLI_MODEL.replace('/','--'))/'snapshots'/NLI_REV/'model.safetensors'
     if sha(nli_weight)!=classifier['weights_sha256']: raise ValueError('Classifier weights changed')
     paths=[snapshot,source_gate/'plan.json',source_gate/'completed.json',source_gate/'report.json',proposal_plan,evidence_plan,nli_records]
-    plan={'artifact_kind':'fresh-grounded-pipeline-0.1','snapshot':str(snapshot),
+    plan={'artifact_kind':'fresh-grounded-pipeline-0.2','snapshot':str(snapshot),
+          'membership_policy':policy,
           'expires_at':loaded.snapshot.usage.expires_at,'code_sha256':code_hashes(),
           'inputs':{str(p):sha(p) for p in paths},'model_files':model_files,
           'deployments':{'proposal':{k:deepcopy(proposal[k]) for k in ['server','models','runtime']},
@@ -123,12 +126,13 @@ def proposals_from_groups(raw,runner):
     return proposals,deferred
 
 
-def source_rows(proposals,max_tokens):
+def source_rows(proposals,policy):
+    membership_policy.validate(policy)
     queues=[];rows=[]
     for proposal in proposals:
         queue=[]
         for sid,text in sorted(proposal['sources'].items(),key=lambda x:digest(x[0])):
-            claim=proposal['claims']['C'];req=discovery.judge_request(text,claim);req['max_tokens']=max_tokens
+            claim=proposal['claims']['C'];req=membership_policy.invocation(policy,text,claim)
             queue.append({'candidate_id':proposal['id'],'source_id':sid,'text':text,'claim':claim,
                           'request':req,'request_sha256':digest(req)})
         queues.append(queue)
@@ -139,6 +143,7 @@ def source_rows(proposals,max_tokens):
 
 
 def classify(proposals,rows,actual,runner):
+    policy=membership_policy.from_rows(rows) if rows else None
     typed=[];deferred=[]
     for proposal in proposals:
         members={r['source_id']:r['text'] for r in rows if r['candidate_id']==proposal['id'] and actual[r['id']]=='supported'}
@@ -155,7 +160,7 @@ def classify(proposals,rows,actual,runner):
     for row in rows:
         if row['candidate_id'] not in byid:continue
         claim=byid[row['candidate_id']]['claims']['C']
-        req=discovery.judge_request(row['text'],claim);req['max_tokens']=row['request']['max_tokens']
+        req=membership_policy.invocation(policy,row['text'],claim)
         if req!=row['request']:raise ValueError('Typing changed membership target')
         derived.append({**deepcopy(row),'claim':deepcopy(claim)})
     return typed,derived,deferred
@@ -164,6 +169,9 @@ def classify(proposals,rows,actual,runner):
 def execute(directory):
     analysis_started=time.monotonic()
     plan=read_json(directory/'plan.json');live(plan['expires_at'])
+    if plan.get('artifact_kind')!='fresh-grounded-pipeline-0.2':
+        raise ValueError('Prepare a new plan with an explicit membership policy')
+    membership_policy.validate(plan['membership_policy'])
     # Include integrity checks, model startup, fresh embedding, and all stages.
     for field in ['inputs','code_sha256','model_files']:
         if any(sha(p)!=h for p,h in plan[field].items()):raise ValueError('Frozen input/code/model changed')
@@ -184,17 +192,15 @@ def execute(directory):
         with owned_server(plan['deployments']['proposal'],'baseline',directory/'proposal-server'):
             proposals,deferred=proposals_from_groups(raw,runner)
         write(directory/'proposals.json',{'proposals':proposals,'deferred':deferred})
-        membership=plan['deployments']['membership'];tokens=membership['runtime']['max_tokens']
-        rows=source_rows(proposals,tokens);write(directory/'source-requests.json',rows)
+        membership=plan['deployments']['membership'];policy=plan['membership_policy']
+        rows=source_rows(proposals,policy);write(directory/'source-requests.json',rows)
         actual={};detail_actual={}
         runner.timeout(90)
         with owned_server(membership,'baseline',directory/'membership-server'):
             for row in rows:actual[row['id']]=discovery.verdict(runner.call('membership',row['request']))
             write(directory/'source-verdicts.json',actual)
             typed,core_rows,type_deferred=classify(proposals,rows,actual,runner)
-            details=factory.detail_requests(typed,core_rows,actual)
-            for row in details:
-                row['request']['max_tokens']=tokens;row['request_sha256']=digest(row['request'])
+            details=membership_policy.bind_rows(policy,factory.detail_requests(typed,core_rows,actual))
             write(directory/'typed.json',{'proposals':typed,'core_rows':core_rows,'details':details,'deferred':type_deferred})
             for row in details:detail_actual[row['id']]=discovery.verdict(runner.call('detail',row['request']))
         bundle=factory.bundle(typed,core_rows,actual,details,detail_actual,expires_at=plan['expires_at'],model=plan['classifier'],documents=plan['documents'])
