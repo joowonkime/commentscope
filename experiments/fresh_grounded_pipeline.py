@@ -38,6 +38,8 @@ def prepare(directory, snapshot, source_gate, proposal_plan, evidence_plan, nli_
     if not gate['development_gate_passed'] or not gate['all_relations_complete']:
         raise ValueError('Complete source gate must pass before a fresh integration trial')
     membership=read_json(source_gate/'plan.json'); proposal=read_json(proposal_plan)
+    if membership.get('membership_guard') is not None:
+        raise ValueError('Experimental guarded policy is not bound to the fresh runtime')
     policy=membership_policy.from_rows(membership['rows'])
     evidence=read_json(evidence_plan); classifier=read_json(nli_records)['model']
     loaded=load_snapshot(snapshot); live(loaded.snapshot.usage.expires_at)

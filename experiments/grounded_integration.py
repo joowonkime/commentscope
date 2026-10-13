@@ -28,6 +28,8 @@ def prepare(source,directory):
     if not gate['development_gate_passed'] or not gate['all_relations_complete']:
         raise ValueError('Complete source fidelity gate required; no downstream promotion')
     previous=read_json(source/'plan.json');report=read_json(source/'report.json')
+    if previous.get('membership_guard') is not None:
+        raise ValueError('Experimental guarded policy is not bound to the staged runtime')
     if (not report['development_gate_passed'] or report['precision']<.95 or report['positive_retention']<.8
             or len(previous['evaluation_ids'])!=100 or len(set(previous['evaluation_ids']))!=100):
         raise ValueError('Source fidelity gate failed; no downstream promotion')

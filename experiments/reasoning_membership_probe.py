@@ -4,7 +4,7 @@ Same frozen targets/full sources/reference100 and criteria. The local binary's
 --help documents the reasoning controls. Private reasoning is never UI content.
 """
 import argparse
-from contextlib import closing
+from contextlib import closing, nullcontext
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -12,6 +12,7 @@ import socket
 import sqlite3
 from commentscope.agents.runtime import request
 from commentscope.factory import scoped_discovery as core
+from commentscope.factory import condition_guard
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.providers.budget import InferenceBudget
@@ -98,8 +99,11 @@ def execute(directory):
     for rid,record in plan.get('reused_records',{}).items():
         if sha(record['path'])!=record['sha256']:raise ValueError('Reused record changed')
         item=read_json(record['path']);item['reused_from']=record
-        write(directory/(rid+'.json'),item);results[rid]=core.verdict(item['result'])
-    with owned_server(plan,'baseline',directory/'server'):
+        row=next(r for r in plan['rows'] if r['id']==rid)
+        write(directory/(rid+'.json'),item)
+        results[rid]=condition_guard.from_row(item['result'],row,plan.get('membership_guard'))
+    server=owned_server(plan,'baseline',directory/'server') if len(results)<len(plan['rows']) else nullcontext()
+    with server:
         for row in plan['rows']:
             if row['id'] in results:continue
             req=row['request'];raw_response=[]
@@ -113,7 +117,8 @@ def execute(directory):
                 result={'raw':None,'output':None,'errors':['bounded_call_failed'],'seconds':None,'usage':None}
             item={'request_sha256':digest(req),'result':result,
                   'reasoning_nonempty':bool(raw_response and raw_response[0]['choices'][0]['message'].get('reasoning_content'))}
-            write(directory/(row['id']+'.json'),item);results[row['id']]=core.verdict(result)
+            write(directory/(row['id']+'.json'),item)
+            results[row['id']]=condition_guard.from_row(result,row,plan.get('membership_guard'))
             print({'completed':row['id'],'verdict':results[row['id']],
                    'reasoning':item['reasoning_nonempty'],'seconds':result['seconds']},flush=True)
             if plan.get('stop_on_impossible') and not plan['plumbing_only']:

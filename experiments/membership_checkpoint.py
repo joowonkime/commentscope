@@ -9,6 +9,7 @@ from pathlib import Path
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.scoped_discovery import verdict
+from commentscope.factory import condition_guard
 from commentscope.storage import write_json_exclusive as write
 
 
@@ -48,7 +49,7 @@ def checkpoint(directory):
                     raise ValueError('Parsed response changed')
         elif not result['errors']:
             raise ValueError('Missing raw response marked usable')
-        actual[rid] = verdict(result)
+        actual[rid] = condition_guard.from_row(result,row,plan.get('membership_guard'))
     positives = {i for i in ids if refs['labels'][i] == 'supported'}
     accepted = {i for i in ids if actual.get(i) == 'supported'}
     true = len(accepted & positives)
