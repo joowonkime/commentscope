@@ -1,4 +1,5 @@
 from copy import deepcopy
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -32,7 +33,7 @@ class IntegrationReplayTests(unittest.TestCase):
         if state!='ok':result={'raw':None,'output':None,'errors':['bounded_call_failed'],'seconds':None,'usage':None}
         write(source/'calls/0001-typing.request.json',{'request':req,'request_sha256':digest(req),'plan_sha256':ph})
         write(source/'calls/0001-typing.result.json',result)
-        with sqlite3.connect(plan['budget']['ledger']) as db:
+        with closing(sqlite3.connect(plan['budget']['ledger'])) as db, db:
             db.execute('CREATE TABLE calls(plan_sha,request_sha,state,response_json)')
             db.execute('INSERT INTO calls VALUES(?,?,?,?)',(ph,digest(req),state,json.dumps(response) if state=='ok' else None))
         return source,plan,req,result
@@ -73,12 +74,12 @@ class IntegrationReplayTests(unittest.TestCase):
     def test_unfinished_or_unrepresented_ledger_call_is_not_retried(self):
         with tempfile.TemporaryDirectory() as tmp:
             source,plan,_,_=self.fixture(Path(tmp))
-            with sqlite3.connect(plan['budget']['ledger']) as db:
+            with closing(sqlite3.connect(plan['budget']['ledger'])) as db, db:
                 db.execute('UPDATE calls SET state="reserved"')
             with self.assertRaises(ValueError):replay.bind_prefix(source,plan)
         with tempfile.TemporaryDirectory() as tmp:
             source,plan,_,_=self.fixture(Path(tmp))
-            with sqlite3.connect(plan['budget']['ledger']) as db:
+            with closing(sqlite3.connect(plan['budget']['ledger'])) as db, db:
                 db.execute('INSERT INTO calls VALUES(?,?,?,?)',(sha(source/'plan.json'),'unrepresented','timeout',None))
             with self.assertRaises(ValueError):replay.bind_prefix(source,plan)
 
@@ -98,7 +99,7 @@ class IntegrationReplayTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             source,plan,_,_=self.fixture(Path(tmp))
             different={'choices':[{'message':{'content':'{"status":"changed"}'},'finish_reason':'stop'}]}
-            with sqlite3.connect(plan['budget']['ledger']) as db:
+            with closing(sqlite3.connect(plan['budget']['ledger'])) as db, db:
                 db.execute('UPDATE calls SET response_json=?',(json.dumps(different),))
             with self.assertRaises(ValueError):replay.bind_prefix(source,plan)
 
@@ -112,3 +113,18 @@ class IntegrationReplayTests(unittest.TestCase):
                 fresh.assert_not_called()
                 self.assertEqual(runner.call('detail',req),{'new_call':True})
                 fresh.assert_called_once_with('detail',req)
+
+    def test_read_connection_is_closed_on_success_and_rejection(self):
+        connect = sqlite3.connect
+        for state in ('ok', 'reserved'):
+            with self.subTest(state=state), tempfile.TemporaryDirectory() as tmp:
+                source, plan, _, _ = self.fixture(Path(tmp), state=state)
+                opened = []
+                def tracking(*args, **kwargs):
+                    db = connect(*args, **kwargs); opened.append(db); return db
+                with patch.object(replay.sqlite3, 'connect', side_effect=tracking):
+                    if state == 'ok': replay.bind_prefix(source, plan)
+                    else:
+                        with self.assertRaises(ValueError): replay.bind_prefix(source, plan)
+                self.assertEqual(len(opened), 1)
+                with self.assertRaises(sqlite3.ProgrammingError): opened[0].execute('SELECT 1')

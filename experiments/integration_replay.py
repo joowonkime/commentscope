@@ -1,5 +1,6 @@
 """Continue a terminal cached trial without retrying any attempted inference."""
 from collections import defaultdict
+from contextlib import closing
 import json
 from pathlib import Path
 import sqlite3
@@ -38,7 +39,7 @@ def bind_prefix(source, plan):
     files={str(source/n):sha(source/n) for n in ('plan.json','started.json','failed.json',
            'membership-server/runtime.json','membership-server/stopped.json')}
     records=[];ledger=defaultdict(list)
-    with sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro',uri=True)) as db:
         for req_sha,state,response in db.execute(
                 'SELECT request_sha,state,response_json FROM calls WHERE plan_sha=? ORDER BY rowid',(old_sha,)):
             if state=='reserved':raise ValueError('Unfinished ledger reservation; never retry')
