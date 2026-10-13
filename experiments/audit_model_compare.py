@@ -2,7 +2,6 @@
 import argparse
 from collections import Counter
 from contextlib import contextmanager
-import hashlib
 import html
 import json
 import os
@@ -17,6 +16,7 @@ from commentscope.factory import positional_support as p
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.storage import write_json_exclusive as write
+from commentscope.file_integrity import file_sha256
 from experiments import audit_repeatability_probe as prior
 from experiments.grounded_core_probe import check_inputs
 
@@ -34,7 +34,7 @@ CODE = [*prior.CODE,'experiments/audit_model_compare.py']
 
 
 def file_hash(path):
-    with Path(path).open('rb') as f: return hashlib.file_digest(f,'sha256').hexdigest()
+    return file_sha256(path)
 
 
 def audit_request(original, target):

@@ -7,7 +7,6 @@ without rerunning embeddings. All research artifacts must stay out of public Git
 import argparse
 from collections import Counter
 from datetime import datetime, timezone
-import hashlib
 import html
 import importlib.metadata
 import json
@@ -19,6 +18,7 @@ from commentscope.cluster_baseline import MODEL, REVISION, token_chunks
 from commentscope.contracts.claims import VERSION as CLAIM_VERSION, bind_source, validate_extraction
 from commentscope.ingestion import load_snapshot, normalize_snapshot
 from commentscope.storage import write_json_exclusive
+from commentscope.file_integrity import file_sha256
 
 VERSION = 'claim-candidates-0.1'
 
@@ -28,7 +28,7 @@ def read_json(path):
 
 
 def sha(path):
-    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+    return file_sha256(path)
 
 
 def prepare(snapshot_path, extraction_path):
