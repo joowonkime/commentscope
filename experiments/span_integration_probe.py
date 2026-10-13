@@ -13,7 +13,7 @@ import time
 
 from commentscope.agents.grounded_inputs import compile_inputs
 from commentscope.factory import grounded_factory as factory, membership_policy
-from commentscope.factory import span_typing, target_ranking, nli_fact_records as records
+from commentscope.factory import span_typing, bounded_span_typing, target_ranking, nli_fact_records as records
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.fact_checks import live
@@ -26,10 +26,11 @@ from experiments.fresh_grounded_pipeline import Runner, classify
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.target_ranking_probe import choose, VERSION as RANKING_VERSION
 
-VERSION='cached-source-range-integration-0.1'
+VERSION='cached-source-range-integration-0.2'
+TYPERS={t.VERSION:t for t in (span_typing,bounded_span_typing)}
 
 
-def frozen_typing(selection, policy):
+def frozen_typing(selection, policy, *, typer=span_typing):
     """Bind every selected candidate; no hand-picked subset or text repair."""
     proposals=selection['proposals'];rows=selection['rows'];actual=selection['actual']
     ids=[p['id'] for p in proposals]
@@ -50,15 +51,17 @@ def frozen_typing(selection, policy):
                 raise ValueError('Core source/target/request changed')
             if actual[row['id']]=='supported':members[row['source_id']]=row['text']
         if len(members)<3:raise ValueError('Selected candidate lacks three sources')
-        req=span_typing.invocation(p['claims']['C'],members)
+        req=typer.invocation(p['claims']['C'],members)
         requests.append({'candidate_id':p['id'],'request':req,'request_sha256':digest(req)})
         max_details+=2*len(members)
     if max_details>40:raise ValueError('Cached detail budget exceeded')
     return requests,max_details
 
 
-def prepare(directory, source):
+def prepare(directory, source, *, typing_version=span_typing.VERSION):
     if directory.exists():raise ValueError('Never overwrite an attempt')
+    if typing_version not in TYPERS:raise ValueError('Unknown typing policy')
+    typer=TYPERS[typing_version]
     ranked_plan=read_json(source/'plan.json');completed=read_json(source/'completed.json')
     if ranked_plan['artifact_kind']!=RANKING_VERSION:raise ValueError('Expected ranked source candidates')
     live(ranked_plan['expires_at'])
@@ -99,11 +102,11 @@ def prepare(directory, source):
         raise ValueError('Historical deployment mismatch')
     policy=ranked_plan['membership_policy']
     if original['membership_policy']!=policy:raise ValueError('Membership policy changed')
-    typing_requests,max_details=frozen_typing(selected,policy)
+    typing_requests,max_details=frozen_typing(selected,policy,typer=typer)
     plan={'artifact_kind':VERSION,'expires_at':ranked_plan['expires_at'],'source':str(source),
           'inputs':{str(p):h for p,h in files.items()},'code_sha256':code_hashes(),
           'model_files':ranked_plan['model_files'],'deployment':deployment,'membership_policy':policy,
-          'selection':selected,'typing_requests':typing_requests,'typing_version':span_typing.VERSION,
+          'selection':selected,'typing_requests':typing_requests,'typing_version':typer.VERSION,
           'classifier':original['classifier'],'documents':original['documents'],'selections':original['selections'],
           'evaluation':original['evaluation'],'budget':ranked_plan['budget'],
           'limits':{'analysis_seconds':900,'call_seconds':90,'fact_seconds':240,'detail_relations':max_details},
@@ -115,12 +118,13 @@ def prepare(directory, source):
 
 def execute(directory):
     started=time.monotonic();plan=read_json(directory/'plan.json');live(plan['expires_at'])
-    if plan['artifact_kind']!=VERSION or plan['typing_version']!=span_typing.VERSION:raise ValueError('Unknown trial')
+    if plan['artifact_kind']!=VERSION or plan['typing_version'] not in TYPERS:raise ValueError('Unknown trial')
+    typer=TYPERS[plan['typing_version']]
     for key in ('inputs','code_sha256','model_files'):
         if any(sha(p)!=h for p,h in plan[key].items()):raise ValueError('Frozen input/code/model changed')
     for info in (plan['deployment']['server'],plan['deployment']['models']['baseline']):
         if file_hash(info['path'])!=info['sha256']:raise ValueError('Deployment changed')
-    expected,maximum=frozen_typing(plan['selection'],plan['membership_policy'])
+    expected,maximum=frozen_typing(plan['selection'],plan['membership_policy'],typer=typer)
     if expected!=plan['typing_requests'] or maximum!=plan['limits']['detail_relations']:
         raise ValueError('Frozen typing inventory changed')
     os.environ['HF_HUB_OFFLINE']='1';os.environ['TRANSFORMERS_OFFLINE']='1'
@@ -130,7 +134,7 @@ def execute(directory):
     try:
         selected=plan['selection'];detail_actual={}
         with owned_server(plan['deployment'],'baseline',directory/'membership-server'):
-            typed,core_rows,deferred=classify(selected['proposals'],selected['rows'],selected['actual'],runner,typer=span_typing)
+            typed,core_rows,deferred=classify(selected['proposals'],selected['rows'],selected['actual'],runner,typer=typer)
             details=membership_policy.bind_rows(plan['membership_policy'],factory.detail_requests(typed,core_rows,selected['actual']))
             if len(details)>maximum:raise ValueError('Detail relation budget exceeded')
             write(directory/'typed.json',{'proposals':typed,'core_rows':core_rows,'details':details,'deferred':deferred})
@@ -163,7 +167,7 @@ def execute(directory):
 
 if __name__=='__main__':
     p=argparse.ArgumentParser(description=__doc__);p.add_argument('phase',choices=['prepare','run']);p.add_argument('directory',type=Path)
-    p.add_argument('--source',type=Path);a=p.parse_args()
+    p.add_argument('--source',type=Path);p.add_argument('--typing',choices=list(TYPERS),default=span_typing.VERSION);a=p.parse_args()
     if a.phase=='prepare' and a.source is None:p.error('prepare requires --source')
-    if a.phase=='prepare':prepare(a.directory,a.source)
+    if a.phase=='prepare':prepare(a.directory,a.source,typing_version=a.typing)
     else:execute(a.directory)

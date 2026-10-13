@@ -6,7 +6,7 @@ import time
 import unittest
 from unittest.mock import Mock, patch
 
-from commentscope.factory import span_typing
+from commentscope.factory import span_typing, bounded_span_typing
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.product_evaluation import execution_state
 from commentscope.providers.local_nli import MODEL, REVISION
@@ -25,6 +25,14 @@ class ScenarioRunner:
         self.seq+=1
         if stage=='typing':
             # Synthetic, authored outputs; no claim of model behavior.
+            if self.plan['typing_version']==bounded_span_typing.VERSION:
+                prefix,source=next(iter(req['data']['MEMBER_SOURCES'].items()));sid=source['source_id']
+                detail={'range_id':prefix+':1:1','kind':'normative_preference','required_fact':False}
+                if self.plan.get('synthetic_case')=='bad_range' and sid.startswith('s0'):detail['range_id']='missing'
+                if self.plan.get('synthetic_case')=='required_fact' and sid.startswith('s0'):
+                    detail.update(kind='empirical_description',required_fact=True)
+                value={'status':'classified','kind':'normative_preference','details':[detail]}
+                return {'output':value,'raw':json.dumps(value),'errors':[]}
             sid,parts=next(iter(req['data']['MEMBER_SOURCES'].items()));part=parts[1]
             detail={'id':'D1','kind':'normative_preference','source_id':sid,'first':part['id'],'last':part['id']}
             required=[]
@@ -76,10 +84,10 @@ class SpanIntegrationTests(unittest.TestCase):
                 s=deepcopy(selected);mutate(s,field)
                 with self.assertRaises(ValueError):probe.frozen_typing(s,policy)
 
-    def execute_fixture(self,directory,case='normal'):
-        selected,policy=self.fixture();requests,maximum=probe.frozen_typing(selected,policy)
+    def execute_fixture(self,directory,case='normal',typer=span_typing):
+        selected,policy=self.fixture();requests,maximum=probe.frozen_typing(selected,policy,typer=typer)
         info={'path':'synthetic','sha256':'fixture'}
-        plan={'artifact_kind':probe.VERSION,'typing_version':span_typing.VERSION,'expires_at':'2099-01-01T00:00:00Z',
+        plan={'artifact_kind':probe.VERSION,'typing_version':typer.VERSION,'expires_at':'2099-01-01T00:00:00Z',
               'inputs':{},'code_sha256':{},'model_files':{},'selection':selected,'typing_requests':requests,
               'membership_policy':policy,'deployment':{'server':info,'models':{'baseline':info}},
               'budget':{'ledger':str(directory/'unused.sqlite'),'cycle_id':'synthetic'},
@@ -118,3 +126,13 @@ class SpanIntegrationTests(unittest.TestCase):
         self.assertEqual(core['requires'],['C0:R1'])
         self.assertEqual(compiled['claim_decisions']['C0:R1']['fact_state'],'unassessed')
         self.assertNotIn('C0',[p['candidate_id'] for p in compiled['profiles']])
+
+    def test_bounded_contract_keeps_all_candidates_and_fact_deferral_policy(self):
+        for case,count in [('normal',3),('bad_range',2),('required_fact',2)]:
+            with self.subTest(case=case),tempfile.TemporaryDirectory() as tmp:
+                report,bundle,compiled=self.execute_fixture(Path(tmp),case,bounded_span_typing)
+            self.assertEqual(report['selected_candidates'],3);self.assertEqual(report['screened_inputs'],count)
+            self.assertEqual(report['qualified_agents'],0)
+            if case=='required_fact':
+                self.assertEqual(next(c for c in bundle['claims'] if c['id']=='C0:C')['requires'],['C0:R1'])
+                self.assertEqual(compiled['claim_decisions']['C0:R1']['fact_state'],'unassessed')
