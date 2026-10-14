@@ -2,7 +2,12 @@
 
 맨 위 checkpoint가 현재 상태다. 아래 과거 기록의 ‘다음 작업’은 당시 계획이며 현재 지시로 재실행하지 않는다.
 
-## 원문 직접 논거 구성 비교 준비
+## 원문 직접 논거 구성 비교 실행 중
+
+코드`52ea074`의 private `runs/direct-argument-product-20261014`가 session16389·PID74248로 실행 중이다.
+계획 SHA는`a8bcbf8ee59be6e4629f8ee28909cd460ae2cf8151c25dea5b163154f1ffba4d`, 동결 Python172개다.
+`started.json`과 실제 core 유형·직접 근거 선택 호출을 확인했다. 연결이 끊기면 이 handle과 종료 기록부터 확인하고
+중복 시작하지 않는다. 실행 중 코드를 변경하지 않는다. Python852개(54.17초)·UI7개·CI `38503980330` 통과다.
 
 `direct_arguments.py`와 `experiments.direct_argument_completion`을 추가했다. 모든 구성원의 전체 논거 추출 성공을
 요구하는 대신, 전체 원문 문맥에서 현재 핵심의 주요 근거를 구간 ID로 선택한다. 정확한 핵심 반복은 host에서 제외하고
