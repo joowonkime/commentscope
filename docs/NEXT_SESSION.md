@@ -2,11 +2,16 @@
 
 맨 위 checkpoint가 현재 상태다. 아래 과거 기록의 ‘다음 작업’은 당시 계획이며 현재 지시로 재실행하지 않는다.
 
-## 원문 구간 선택 비교 준비
+## 원문 구간 선택 비교 실행 중
 
-`source_span_selection.py`와 `experiments.source_span_product_probe`를 추가했다. 자유 생성 대신 원문 구간 ID를
+코드`5c138e9`의 `source_span_selection.py`와 `experiments.source_span_product_probe`를 추가했다. 자유 생성 대신 원문 구간 ID를
 선택하고 host가 원문을 복사한다. 새 범위 문구는 생성하지 않으며 전체 문맥·모든 검색 원문·기존 후단 검사를 유지한다.
-합성 계약·통합12검사는 통과했다. 실제 실행 전 상태이며 Agent 품질 개선이나 기본 경로 채택을 주장하지 않는다.
+Python839개(49.21초)·UI7개와 GitHub CI `38499784410`을 통과했다. Agent 품질 개선이나 기본 경로 채택을 주장하지 않는다.
+
+private `runs/source-span-product-20261014`의 session28611·PID67796이 실행 중이다. 계획 SHA는
+`9678e6f8891cb4e12ddeab1eac76b04a6044b2e461f5a406c3955eb1a7691cea`, 동결 Python169개다.
+첫2개 실제 응답은 각각 선택 작성자 누락·출처 ID 중복으로 보류됐다. 응답을 사람이 고치거나 같은 요청을 재시도하지 않는다.
+연결이 끊기면 이 프로세스·완료/실패 기록부터 확인하며 중복 시작하지 않는다. 실행 중 코드를 수정하지 않는다.
 
 원래 `runs/fresh-path-completion-20261014`의24개 묶음 전체를 비교한다. 준비 검사상23개 요청 구성 가능,
 1개는 byte 한도 초과다. 원문을 잘라 구제하거나 해당 묶음을 분모에서 제외하지 않는다.
