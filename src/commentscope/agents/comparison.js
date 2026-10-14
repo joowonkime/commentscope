@@ -10,9 +10,21 @@ const errors = {
   session_expired: '대화가 1시간 동안 사용되지 않아 만료됐습니다. 페이지를 새로 열어주세요.',
   dataset_expired: '댓글 사용 기한이 만료됐습니다. 데이터를 갱신하기 전에는 사용할 수 없습니다.',
   source_validation_failed: '원문·검수 파일이 변경됐거나 유효하지 않습니다. 서버 입력을 확인해주세요.',
+  no_agents: '자동 생성 기준을 통과한 관점이 없습니다. 처리 범위와 미배정 결과를 확인하세요.',
   session_capacity: '열린 세션이 너무 많습니다. 기존 탭을 사용하거나 잠시 후 다시 시도하세요.',
   local_server_error: '로컬 서버 또는 기록 저장 오류입니다. 서버와 저장 경로를 확인해주세요.',
   round_failed_check_local_inputs_or_storage: '질문 처리를 완료하지 못했습니다. 원문 파일·사용 기한·저장 공간을 확인해주세요. 불완전한 답변은 표시하지 않았습니다.'
+};
+const factoryReasons = {
+  insufficient_neighbors_unverified: '유사 후보 부족 — 소수 관점인지 검색 누락인지는 미검증',
+  gate_budget_exhausted: '정해 둔 의미 검사 예산 소진',
+  no_accepted_group: '자동 기준을 통과한 묶음에 배정되지 않음',
+  unclear_mode: '주장 표현 유형이 불확실함',
+  extraction_failed: '주장 추출 또는 출력 형식 검사 실패',
+  context_budget_exceeded: '원문·부모 문맥 길이 상한 초과 — 자르지 않고 보존',
+  segmentation_limit: '원문 구간 수 상한 초과',
+  non_substantive: '모델이 실질적인 주장이 없는 댓글로 분류',
+  uncertain: '모델이 해석 불확실로 분류'
 };
 function el(tag, text, cls) { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; }
 function showError(message) { $('error').textContent = message; $('error').hidden = !message; }
@@ -26,7 +38,12 @@ async function api(path, body) {
 }
 function citation(card) {
   const d = el('details', undefined, 'citation'); d.append(el('summary', `근거 ${card.evidence_id} · 원문 확인`));
-  d.append(el('blockquote', card.original_text), el('p', `검수자 해석 (직역 아님): ${card.reviewer_reading_ko}`), el('p', `보존할 차이: ${card.cautions_ko}`));
+  if (card.support_spans) {
+    d.append(el('p', `자동 추출 주장 (원문 아님): ${card.allowed_claim}`));
+    for (const span of card.support_spans) d.append(el('blockquote', span.text));
+    const context = el('details'); context.append(el('summary', '댓글 전체 문맥 — 미배정 주장은 근거 아님'), el('blockquote', card.original_text)); d.append(context);
+  } else d.append(el('blockquote', card.original_text), el('p', `검수자 해석 (직역 아님): ${card.reviewer_reading_ko}`));
+  d.append(el('p', `보존할 차이: ${card.cautions_ko}`));
   try { const url = new URL(card.source_url); if (url.protocol === 'https:' && ['youtube.com', 'www.youtube.com', 'youtu.be'].includes(url.hostname)) { const a = el('a', 'YouTube 출처 ↗'); a.href = url.href; a.target = '_blank'; a.rel = 'noopener noreferrer'; d.append(a); } } catch (_) { /* No source link. */ }
   const p = card.parent_context;
   if (p.text !== null) d.append(el('p', '부모 댓글 — 문맥 전용, 이 에이전트의 주장 근거 아님'), el('blockquote', p.text));
@@ -35,6 +52,8 @@ function citation(card) {
 }
 function renderProfiles() {
   $('profiles').replaceChildren();
+  const automatic = state.bundle.human_handling === false;
+  if (!state.bundle.agents.length) $('profiles').append(el('p', '자동 기준을 통과한 관점이 없습니다. 수동 승인을 기다리는 상태가 아니라 자동 보류 결과입니다.', 'empty'));
   for (const agent of state.bundle.agents) {
     const card = el('article', undefined, 'profile');
     card.append(el('p', agent.agent_id, 'eyebrow'), el('h3', agent.title), el('p', `근거 댓글 ${agent.evidence.length}개 · 독립 대화 상태`, 'hint'));
@@ -43,11 +62,11 @@ function renderProfiles() {
     for (const source of agent.evidence) detail.append(citation(source));
     card.append(detail); $('profiles').append(card);
   }
-  $('scope').textContent = `개발용 ${state.bundle.agents.length}개 · 정식 승인 0개`;
+  $('scope').textContent = `${automatic ? '자동 생성 잠정 관점' : '검수 지원 개발용'} ${state.bundle.agents.length}개 · 독립 품질 검증 전`;
   const meta = $('metadata'); meta.replaceChildren();
-  meta.append(el('p', `수집 표본 ${state.bundle.dataset.sample_size}개 중 검수 ${state.bundle.dataset.reviewed_sources}개. 전체 댓글을 모두 가져온 결과나 대표성 있는 표본이 아닙니다.`));
+  meta.append(el('p', `수집 표본 ${state.bundle.dataset.sample_size}개 중 ${automatic ? '자동 처리 ' + state.bundle.dataset.processed_sources : '검수 ' + state.bundle.dataset.reviewed_sources}개. 전체 댓글을 모두 가져온 결과나 대표성 있는 표본이 아닙니다.`));
   meta.append(el('p', `댓글 사용 기한: ${state.bundle.expires_at}`));
-  const list = el('ul'); for (const n of state.bundle.non_agents) list.append(el('li', `${n.title} · ${n.reason} · ${n.member_ids.join(', ')}`)); meta.append(list);
+  const list = el('ul'); for (const n of state.bundle.non_agents) list.append(el('li', `${n.title} · ${factoryReasons[n.reason] || n.reason} · ${n.member_ids.join(', ')}`)); meta.append(list);
   meta.append(el('pre', JSON.stringify({dataset:state.bundle.dataset, runtime:state.runtime}, null, 2)));
 }
 const reasonLabels = {not_in_evidence:'이 관점의 댓글에 필요한 정보가 없습니다.', generation_or_contract_error:'모델 연결·생성 또는 출력 형식 문제입니다. 로컬 모델 서버 상태를 확인하세요.', audit_rejected_or_failed:'원문 검사에서 거절되거나 검사에 실패했습니다. 검사기의 과도한 거절일 수도 있습니다.', no_supported_answer:'검사된 답변을 확보하지 못했습니다.'};
@@ -84,7 +103,8 @@ function update(next, initial = false) {
   if (job.status === 'error') showError(errors[job.error] || '처리 오류');
   if (pending && job.request_id === pending.request_id) { pending = null; $('question').value = ''; $('counter').textContent = '0 / 1000'; }
   clearTimeout(polling);
-  if (running || !state.can_ask && state.remaining_questions) polling = setTimeout(refresh, 1000);
+  if (!state.bundle.agents.length) $('progress').textContent = errors.no_agents;
+  if (running || state.bundle.agents.length && !state.can_ask && state.remaining_questions) polling = setTimeout(refresh, 1000);
 }
 async function refresh() {
   try { update(await (await api('/api/state')).json()); $('reconnect').hidden = true; }

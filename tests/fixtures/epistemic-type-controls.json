@@ -1,0 +1,10 @@
+[
+  {"id":"F1","target":"I worked in a library last year.","source":"I worked in a library last year. I now work elsewhere.","expected":"fact"},
+  {"id":"F2","target":"The experiment reduced recorded errors.","source":"The experiment reduced recorded errors. I have not provided the measurements here.","expected":"fact"},
+  {"id":"V1","target":"Everyone should have access to a public library.","source":"Everyone should have access to a public library. That is what I want.","expected":"value"},
+  {"id":"V2","target":"I prefer a shorter working week.","source":"I prefer a shorter working week.","expected":"value"},
+  {"id":"P1","target":"If my rent were covered, I would use my earnings for travel.","source":"If my rent were covered, I would use my earnings for travel. That is my plan, not a past observation.","expected":"prediction"},
+  {"id":"P2","target":"Machines may replace these jobs in the future.","source":"Machines may replace these jobs in the future. I do not know whether that will happen.","expected":"prediction"},
+  {"id":"M1","target":"I earned less last year and would work longer if my costs were covered.","source":"I earned less last year and would work longer if my costs were covered.","expected":"mixed_or_unclear"},
+  {"id":"M2","target":"We should fund the program because last year's trial reduced errors.","source":"We should fund the program because last year's trial reduced errors.","expected":"mixed_or_unclear"}
+]

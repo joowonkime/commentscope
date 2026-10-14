@@ -1,0 +1,18 @@
+{
+  "version":"openjev-transfer-0.1",
+  "purpose":"Frozen before OpenJev inference; assistant-authored exact-fidelity transfer cases, not independent gold. No benchmark scores claimed.",
+  "cases":[
+    {"id":"water_condition_kept","source":"If the river becomes polluted, the town should install a water filter.","target":"The town should install a water filter if the river becomes polluted.","expected":true},
+    {"id":"water_condition_lost","source":"If the river becomes polluted, the town should install a water filter.","target":"The town should install a water filter.","expected":false},
+    {"id":"clinic_willingness","source":"If transport were free, I would start volunteering at a clinic.","target":"If transport were free, I would be willing to volunteer at a clinic.","expected":true},
+    {"id":"clinic_invented_current_role","source":"If transport were free, I would start volunteering at a clinic.","target":"If transport were free, I would continue my current volunteering at a clinic.","expected":false},
+    {"id":"cool_roof_possibility","source":"White roofs might reduce indoor temperatures.","target":"White roofs may reduce indoor temperatures.","expected":true},
+    {"id":"cool_roof_certainty","source":"White roofs might reduce indoor temperatures.","target":"White roofs will reduce indoor temperatures.","expected":false},
+    {"id":"bicycle_recommendation","source":"The city ought to widen its bicycle lanes.","target":"The city should make its bicycle lanes wider.","expected":true},
+    {"id":"bicycle_current_event","source":"The city ought to widen its bicycle lanes.","target":"The city is widening its bicycle lanes.","expected":false},
+    {"id":"battery_future","source":"These batteries will become cheaper next year.","target":"Next year, these batteries will cost less.","expected":true},
+    {"id":"battery_present","source":"These batteries will become cheaper next year.","target":"These batteries are becoming cheaper now.","expected":false},
+    {"id":"report_attribution","source":"The mayor claims the bridge is safe. I do not believe that claim.","target":"The author does not believe the mayor's claim that the bridge is safe.","expected":true},
+    {"id":"report_endorsement","source":"The mayor claims the bridge is safe. I do not believe that claim.","target":"The author believes the bridge is safe.","expected":false}
+  ]
+}

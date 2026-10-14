@@ -1,0 +1,22 @@
+{
+  "version": "eligibility-witness-cases-0.1",
+  "purpose": "Assistant development contrasts frozen before inference. Not independent gold. required_text is offline evaluation only.",
+  "cases": [
+    {"id":"mixed_question_first","source":"Is rent affordable? My rent doubled this year.","expected":true,"required_text":"My rent doubled this year."},
+    {"id":"only_question","source":"Is rent affordable?","expected":false},
+    {"id":"mixed_agreement_first","source":"I agree with that. If childcare were free, I would work more hours.","expected":true,"required_text":"If childcare were free, I would work more hours."},
+    {"id":"only_agreement","source":"I completely agree with it.","expected":false},
+    {"id":"adopted_quote","source":"\"Schools should provide free lunches.\" I support this proposal.","expected":true,"required_text":"Schools should provide free lunches."},
+    {"id":"quote_without_adoption","source":"\"Schools should provide free lunches.\"","expected":false},
+    {"id":"quoted_against","source":"Some say \"Schools should charge for lunches.\" I disagree: school lunches should be free.","expected":true,"required_text":"school lunches should be free."},
+    {"id":"unresolved_proof","source":"That was disproven years ago.","expected":false},
+    {"id":"resolved_pronoun","source":"Our library closes at noon. It should stay open until evening.","expected":true},
+    {"id":"unresolved_pronoun","source":"It should stay open until evening.","expected":false},
+    {"id":"specific_conditional","source":"If the last bus left later, I could finish my evening shift.","expected":true,"required_text":"If the last bus left later, I could finish my evening shift."},
+    {"id":"unspecified_action","source":"We must stop doing that immediately.","expected":false},
+    {"id":"korean_mixed","source":"정말 그럴까요? 저는 출근에 매일 두 시간이 걸립니다.","expected":true,"required_text":"저는 출근에 매일 두 시간이 걸립니다."},
+    {"id":"korean_missing","source":"그건 반드시 바뀌어야 합니다.","expected":false},
+    {"id":"humor_after_experience","source":"My bus fare increased by 30 percent. My wallet is crying!","expected":true,"required_text":"My bus fare increased by 30 percent."},
+    {"id":"arrival_chatter","source":"First! The notification squad is here!","expected":false}
+  ]
+}

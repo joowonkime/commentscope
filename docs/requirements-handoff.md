@@ -738,3 +738,71 @@ Record cluster count, source-comment coverage, number of rare/uncertain items, w
 | Reflection | Keep as a product requirement, but phase its implementation after the perspective pipeline is stable. | Agreed direction |
 | What counts as a perspective | Only a meaningful, traceable, sufficiently supported interpretation becomes a full agent. Spam/non-substantive material is excluded; rare meaningful views remain visible without becoming a full agent. | Design rule adopted |
 | MAS contribution claim | Decide whether the offline Cluster Auditor is a research contribution only after V0/V1/V2 evidence. User-facing evidence-bounded agents and audit authority remain the core hypothesis. | Deferred intentionally |
+
+### 16.10 Service-time automation clarification on 2026-10-11
+
+The user clarified that the service must not require a person or the conversation assistant to classify,
+repair, or approve clusters. Earlier manual/developer inspection and fallback in Sections 16.4–16.5 refer
+only to development baselines and offline evaluation, not the target service path. Automatic failures
+must produce bounded retries, preserved unresolved items, or no agent, rather than a manual approval queue.
+Independent sampled evaluation remains necessary for research and release quality claims.
+
+Implementation and limitations are tracked in `AUTOMATIC_FACTORY.md` and ADR-017. This dated clarification
+extends the repository copy of the original handoff; the parent-directory historical original is unchanged.
+
+### 16.11 Local MVP and major factual premises on 2026-10-13
+
+The current MVP uses local model inference and retains perspective discovery, same-question comparison,
+follow-up questions, and original-source inspection as its initial product tasks. Perspective formation,
+factual-premise checking, and agent-input construction are separate replaceable stages.
+
+Do not fact-check every comment. Select the major factual premises used by candidate agents and check them
+against frozen external source documents. Only evidence-supported factual claims may enter agent input;
+unsupported, refuted, conflicting, unassessed, or errored claims may not supply factual grounds. A model
+support judgment is provisional and bounded to the supplied evidence, not certified truth.
+
+Values and predictions remain attributed positions rather than verified facts. Never add an external
+argument that the comments did not support, rewrite a failed premise to rescue a viewpoint, or let a
+candidate whose major factual grounds all failed pass merely by dropping its reasons. Dependencies on
+failed required premises also block the candidate. Preserve exclusions and their impact on representation.
+
+Count support for the common position separately from support for each reason. At least three canonical
+comment sources remain a necessary, not sufficient, condition for an agent candidate. Service-time human
+classification, repair, or approval remains excluded; offline research evaluation is separate.
+
+Implemented status and remaining experiments are in `FACT_GROUNDED_AGENTS.md` and ADR-038. The new input
+compiler is not connected to the existing answer runtime or UI. Automatic source retrieval, semantic
+quality, claim/dependency extraction, and final treatment of purely value-based candidates remain open.
+This clarification supersedes any earlier assumption that comment-faithfulness alone is sufficient for
+factual agent grounds. It extends the repository handoff; the parent-directory historical original is unchanged.
+
+### 16.12 Demonstration scope and value perspectives on 2026-10-13
+
+The user accepted one demonstration video, with configurable video/snapshot inputs so that additional
+videos can be prepared later. First analysis of the collected up-to-1,000-comment snapshot may take up
+to one hour. This replaces the proposed 30-minute limit; interactive answer latency remains separate.
+The new development cycle has a cumulative eight-hour local model inference budget, not an eight-hour
+delivery promise. Count failed/retried model calls, preserve results, and report unmet criteria when
+the budget is exhausted rather than weakening them. Budget enforcement is not yet implemented.
+
+Value perspectives may become agents when their source support and fidelity qualify. They are not
+restricted to passive cards merely because a value cannot be fact-checked. Agents represent the
+cluster position and its actually expressed reasons; they do not invent new rationales, personal
+experiences, factual effects, or borrowed reasons from other agents. Values/predictions must remain
+distinguishable from evidence-supported factual claims. Required false/unsupported premises must not
+be stripped out to relabel a dependent position as a pure value perspective.
+
+This resolves the value-perspective admission direction left open in 16.11, not its runtime implementation.
+The other proposed numerical quality gates and iteration-count limits have not yet been explicitly
+confirmed. See `FACT_GROUNDED_AGENTS.md` for agreed conditions, proposed thresholds, and measurement scope.
+This dated clarification extends only the repository handoff; the historical parent copy remains unchanged.
+
+### 16.13 Acceptance gates confirmed on 2026-10-13
+
+The user subsequently approved the proposed minimum quality table and requested autonomous goal work.
+The numerical criteria under `FACT_GROUNDED_AGENTS.md` are now acceptance gates, not measured results.
+Freeze evaluation samples and denominators before inference, retain failures, and do not weaken thresholds
+or use offline reference labels as service inputs. Source-faithfulness, factual evidence, useful answers,
+abstentions, runtime, and actual agent output must all pass; passing code tests alone is insufficient.
+The prior stream interruption did not complete or evaluate the MVP. The eight-hour inference allowance
+starts with the new cycle, not with historical experiments or time spent editing code.
