@@ -35,14 +35,14 @@
 Python3.12 이상이 필요하다. **합성 연동 데모**이므로 GPU·모델·API키가 필요 없다. 실제 댓글/모델 품질의 시연은 아니다.
 
 ```bash
-git clone --branch feat/backend-team-handoff-20261023 https://github.com/joowonkime/commentscope.git
+git clone https://github.com/joowonkime/commentscope.git
 cd commentscope/src
 python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 ```
 
-이 실행은 Python 표준 라이브러리만 사용한다. 가상환경·pip 설치 없이 확인할 수 있다. 이미 저장소를 받았다면 해당 브랜치를 fetch/checkout하고 `src` 폴더에서 실행한다.
+이 실행은 Python 표준 라이브러리만 사용한다. 가상환경·pip 설치 없이 확인할 수 있다. 이미 저장소를 받았다면 `main`을 최신으로 갱신하고 `src` 폴더에서 실행한다.
 
-브라우저에서 **http://127.0.0.1:8766**을 연다. 포트가 사용 중이면 `--port 8767`, 종료는 `Ctrl+C`. 이미 저장소를 받았다면 위 브랜치를 fetch/checkout한 뒤 실행한다.
+브라우저에서 **http://127.0.0.1:8766**을 연다. 포트가 사용 중이면 `--port 8767`, 종료는 `Ctrl+C`.
 
 | 해 볼 동작 | 기대 결과 |
 | --- | --- |

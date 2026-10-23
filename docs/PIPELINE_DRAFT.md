@@ -7,7 +7,7 @@
 Python 3.12 이상에서 저장소 루트를 기준으로 실행한다. pip 설치·GPU·모델·API 키가 필요 없다.
 
 ```bash
-git clone --branch feat/backend-team-handoff-20261023 https://github.com/joowonkime/commentscope.git
+git clone https://github.com/joowonkime/commentscope.git
 cd commentscope
 python tools/check_factory_draft.py
 ```
@@ -77,9 +77,11 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 ## 조원이 수정하는 방법
 
-이 브랜치를 기준으로 개인 작업 브랜치를 만든다.
+최신 `main`에서 개인 작업 브랜치를 만든다. 코딩 에이전트는 [AGENTS.md](../AGENTS.md)와 [조원 시작 안내](TEAM_START.md)의 절차를 따른다.
 
 ```bash
+git switch main
+git pull --ff-only
 git switch -c feat/my-factory-change
 # 위 표의 담당 모듈 수정
 python tools/check_factory_draft.py
@@ -88,6 +90,6 @@ git commit -m "Describe the pipeline change"
 git push -u origin feat/my-factory-change
 ```
 
-PR 대상은 `feat/backend-team-handoff-20261023`으로 지정한다. 제목과 본문에 수정 단계, 기대하는 동작, 실행한 검사, 실제 모델 검증 여부를 적는다. 저장소 쓰기 권한이 없으면 GitHub에서 fork한 뒤 같은 대상 브랜치로 PR을 보낸다. 팀원 초대는 저장소 소유자가 Settings → Collaborators에서 처리할 수 있다.
+PR 대상은 `main`으로 지정한다. 제목과 본문에 수정 단계, 기대하는 동작, 실행한 검사, 실제 모델 검증 여부를 적는다. 쓰기 권한이 없으면 fork로 참여한다. 소유자는 Settings → Collaborators에서 조원 계정을 초대할 수 있다.
 
 팀 분담 예시는 후보 추출/통합, 원문별 소속·논거, Agent/runtime·프론트 연결이다. 출력 필드·출처 ID·판정 의미를 바꾸면 연결 단계와 테스트도 함께 수정한다. 실제 댓글·ledger·모델 응답은 기존 정책대로 Git에 올리지 않는다.
