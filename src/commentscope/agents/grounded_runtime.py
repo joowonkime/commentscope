@@ -70,6 +70,11 @@ def question_roles(question):
         roles.add('reason')
     if re.search(r'\b(?:conditions?|prerequisites?|requirements?)\b|조건|전제', question, re.I):
         roles.update(('essential_condition', 'prerequisite', 'factual_premise'))
+    # Explicit joint requests may include the position under its own role.
+    # Merely mentioning the position in a "why" question is insufficient.
+    if (roles and re.search(r'\b(?:both|separately)\b|각각|함께', question, re.I)
+            and re.search(r'\b(?:core|position|stance)\b|입장', question, re.I)):
+        roles.add('core')
     return roles
 
 

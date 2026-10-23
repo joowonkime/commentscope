@@ -108,6 +108,8 @@ def bind(sources, candidates, pairs, result, qualifications=(), contextual_asses
                 elif not assessment['passed']:guards.append('candidate_qualification_not_supported')
         bound.append({'artifact_kind': VERSION, **pair, 'source_sha256': digest(source),
                       'candidate_text_sha256': digest(candidate['text']),
+                      **({'candidate_context_sha256': digest(candidate['meaning_context'])}
+                         if 'meaning_context' in candidate else {}),
                       'request_sha256': digest(req), 'decision': deepcopy(row),
                       'relation': 'uncertain' if guards else row['relation'], 'guards': guards,
                       'evidence': evidence, 'semantic_approval': False})

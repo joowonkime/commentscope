@@ -16,7 +16,7 @@ const all = n => [n,...n.children.flatMap(all)];
 const text = n => n.textContent+n.children.map(text).join('');
 const settle = () => new Promise(resolve=>setImmediate(resolve));
 function harness() {
-  const ids=Object.fromEntries(['status','profiles','select','ask','question','submit','rounds','source','deferred'].map(id=>[id,new Element('div')]));
+  const ids=Object.fromEntries(['status','profiles','select','ask','question','submit','rounds','source','deferred','initial-opinion'].map(id=>[id,new Element('div')]));
   const state={profiles:[{candidate_id:'A',model_core_support_count:3,prompt_entries:[{text:'<script>not executable</script>',kind:'value'}]}],
     selected:['A'],deferred:[],rounds:[],remaining_questions:6,can_ask:true,job:'idle'};
   const requests=[];

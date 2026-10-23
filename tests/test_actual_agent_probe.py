@@ -16,14 +16,17 @@ class ActualAgentProbeTests(unittest.TestCase):
 
     def rounds(self, plan):
         result = []
+        texts = {c['id']: c['text'] for c in plan['bundle']['claims']}
         for row in plan['rows']:
             turns = {}
             for cid in plan['all_profile_ids']:
                 ids = plan['references'][cid][row['target']]
                 value = {'claim_ids': ids, 'answerability': 'grounded' if ids else 'not_in_evidence',
                          'limitation': 'none' if ids else 'missing_evidence'}
-                turns[cid] = GroundedSession(plan['bundle'], cid,
-                    provider=lambda *a, v=value, **k: response(v)).ask(row['text'])
+                def provider(system, data, schema, *, v=value, **kwargs):
+                    aliases = {e['text']: e['claim_id'] for e in data['PERSPECTIVE']['allowed_entries']}
+                    return response({**v, 'claim_ids': [aliases[texts[i]] for i in v['claim_ids']]})
+                turns[cid] = GroundedSession(plan['bundle'], cid, provider=provider).ask(row['text'])
             result.append({'id': row['id'], 'turns': turns, 'pair_seconds': 1})
         return result
 
@@ -32,7 +35,8 @@ class ActualAgentProbeTests(unittest.TestCase):
         self.assertEqual(Counter(r['cohort'] for r in plan['rows']), {'answerable': 10, 'unanswerable': 10})
         for row in plan['rows']:
             req = GroundedSession(plan['bundle'], 'P1').invocation(row['text'])
-            self.assertEqual(set(req['data']), {'PERSPECTIVE','QUESTION','HISTORY'})
+            self.assertFalse(set(req['data']) - {'PERSPECTIVE','QUESTION','HISTORY','QUESTION_ROLE_CONSTRAINT'})
+            self.assertNotIn('cohort', req['data']); self.assertNotIn('target', req['data'])
 
     def test_all_profiles_scored_without_quality_promotion(self):
         plan = self.setup_plan(); report = probe.summarize(plan, self.rounds(plan))

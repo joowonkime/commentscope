@@ -152,7 +152,8 @@ class StanceAgentTests(unittest.TestCase):
 
     def test_runtime_loads_cites_and_keeps_separate_history(self):
         out = self.output(); cid = self.candidate['id']; core_id = cid + ':C'
-        provider = lambda *args, **kwargs: response({'answerability': 'grounded', 'claim_ids': [core_id], 'limitation': 'none'})
+        provider = lambda system, data, schema, **kwargs: response({
+            'answerability': 'grounded', 'claim_ids': [data['PERSPECTIVE']['core_claim_id']], 'limitation': 'none'})
         one = GroundedSession(out['bundle'], cid, provider=provider)
         two = GroundedSession(out['bundle'], cid, provider=provider)
         answer = one.ask('What is the position?')

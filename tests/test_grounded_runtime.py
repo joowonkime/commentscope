@@ -12,6 +12,15 @@ def selection(ids=None, kind='grounded', limitation='none'):
 
 
 class GroundedRuntimeTests(unittest.TestCase):
+    def test_explicit_joint_question_keeps_core_separate_from_reason(self):
+        for question in ('Show both the core position and its available reasons.', '핵심 입장과 제시된 이유를 각각 보여줘.'):
+            session = self.session(selection(['position', 'observed']))
+            roles = {e['declared_role'] for e in session.invocation(question)['data']['PERSPECTIVE']['allowed_entries']}
+            self.assertEqual(roles, {'core', 'reason'})
+            self.assertEqual(session.ask(question)['status'], 'answered')
+        request = self.session().invocation('Why does this perspective take that position?')
+        self.assertEqual({e['declared_role'] for e in request['data']['PERSPECTIVE']['allowed_entries']}, {'reason'})
+
     def session(self, output=None, bundle=None):
         bundle = bundle or fixture()
         # Legacy behavior tests choose fixture claims by identity; the mock model
