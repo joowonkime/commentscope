@@ -6,7 +6,6 @@ or modify inference records. Every observation and action stays private.
 """
 import argparse
 from datetime import datetime, timezone
-import fcntl
 import json
 import math
 import os
@@ -55,6 +54,9 @@ def unsafe_reasons(observation):
 
 
 def guard(directory, attempt):
+    if not hasattr(os, 'pidfd_open'):
+        raise RuntimeError('The owned-executor resource guard requires Linux/WSL pidfd support')
+    import fcntl
     directory = Path(directory)
     if not directory.resolve().is_relative_to(PRIVATE_ROOT.resolve()) or not 1 <= attempt <= 9999:
         raise ValueError('Private run and exact attempt required')

@@ -11,6 +11,7 @@ from pathlib import Path
 import os
 import shutil
 import sqlite3
+from contextlib import closing
 import time
 
 from commentscope.agents.grounded_inputs import compile_inputs
@@ -88,7 +89,7 @@ def prepare(directory):
                         raise ValueError('Prior review evidence changed')
                     files.append(Path(evidence))
     plan['inputs'] = {str(p): base.sha(p) for p in files}
-    with sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro', uri=True) as db:
+    with closing(sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro', uri=True)) as db:
         blocked = db.execute('SELECT id,request_sha,state FROM calls WHERE id IN (6974,7119)').fetchall()
     if len(blocked) != 2 or any(r[2] != 'interrupted' for r in blocked):
         raise ValueError('Interrupted requests must remain unavailable')

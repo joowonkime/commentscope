@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -118,12 +119,12 @@ class InterruptedRecoveryTests(unittest.TestCase):
             with self.assertRaises(ValueError): self.reconcile()
 
     def test_failure_ledger_disagreement_rejected(self):
-        with sqlite3.connect(self.ledger) as db:
+        with closing(sqlite3.connect(self.ledger)) as db, db:
             db.execute('UPDATE calls SET charged=184 WHERE id=?', (self.call_id,))
         with self.assertRaises(ValueError): self.reconcile()
 
     def test_successful_ledger_response_never_converted_to_failure(self):
-        with sqlite3.connect(self.ledger) as db:
+        with closing(sqlite3.connect(self.ledger)) as db, db:
             db.execute('UPDATE calls SET state=?,response_json=?,error=NULL WHERE id=?',
                        ('ok', json.dumps({'output': 'value'}), self.call_id))
         with self.assertRaises(ValueError): self.reconcile()

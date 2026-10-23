@@ -1,6 +1,7 @@
 """Read-only ledger receipts for the actual full-snapshot census partitions."""
 import json
 import sqlite3
+from contextlib import closing
 from pathlib import Path
 from commentscope.factory import policy_stance_hypotheses as stance,policy_stance_union as union
 from commentscope.factory.automatic_contract import digest
@@ -34,7 +35,7 @@ def load(directory,*,deployment,sources):
     records=[old];batches=[(req,res)];receipts=[];paths=[directory/p for p in
         ['plan.json','completed.json','report.json','all-sources.json','artifacts/combined-record.json']]
     ledger=Path(plan['budget']['ledger']).resolve()
-    with sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True)) as db:
         for number,ids in enumerate(plan['source_batch_ids'],1):
             tag=f'{number:04}';prefix=tag+'-policy-value-census'
             record_path=directory/'artifacts'/('part-'+tag+'.json')

@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 import tempfile
 import unittest
 from unittest.mock import Mock, patch
@@ -109,10 +110,10 @@ class SequentialRecoveryTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'ambiguous ledger'): self.reconcile()
 
     def test_successful_ledger_response_and_refund_mismatch_rejected(self):
-        with sqlite3.connect(self.ledger) as db:
+        with closing(sqlite3.connect(self.ledger)) as db, db:
             db.execute('UPDATE calls SET charged=1804 WHERE id=?', (self.call_id,))
         with self.assertRaisesRegex(ValueError, 'ledger disagree'): self.reconcile()
-        with sqlite3.connect(self.ledger) as db:
+        with closing(sqlite3.connect(self.ledger)) as db, db:
             db.execute('UPDATE calls SET state=?,response_json=?,error=NULL WHERE id=?', ('ok', '{"value":"response"}', self.call_id))
         with self.assertRaisesRegex(ValueError, 'does not prove'): self.reconcile()
 

@@ -24,6 +24,8 @@ class ResourceGuardTests(unittest.TestCase):
                 guard.unsafe_reasons({**self.safe(), 'available_mb': bad})
 
     def run_guard(self, *, observe, readiness):
+        if not hasattr(guard.os, 'pidfd_open'):
+            self.skipTest('Pinned-executor signaling requires Linux/WSL pidfd support')
         tmp = tempfile.TemporaryDirectory(); self.addCleanup(tmp.cleanup)
         directory = Path(tmp.name)/'run'; directory.mkdir()
         write(directory/'plan.json', {})

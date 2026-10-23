@@ -8,6 +8,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 
 from commentscope.factory import shared_claims
 from commentscope.factory.automatic_contract import digest
@@ -54,7 +55,7 @@ def load(directory, *, deployment, originals):
         by_request[key] = (path, packet)
     receipts = []; used = set()
     ledger = Path(plan['budget']['ledger']).resolve()
-    with sqlite3.connect(ledger.as_uri()+'?mode=ro', uri=True) as db:
+    with closing(sqlite3.connect(ledger.as_uri()+'?mode=ro', uri=True)) as db:
         for record in records:
             logical = shared_claims.request(record['sources'], version=shared_claims.COMMON)
             actual = allocate(logical, deployment['runtime']); key = digest(actual)

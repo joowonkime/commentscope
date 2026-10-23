@@ -1,5 +1,6 @@
 import json
 import sqlite3
+from contextlib import closing
 import unittest
 
 from commentscope.factory.claim_clusters import read_json
@@ -25,7 +26,7 @@ class CompletedModelResponseTests(unittest.TestCase):
 
     def test_interrupted_request_is_unavailable_and_never_a_new_request(self):
         f=self.fixture
-        with sqlite3.connect(f.db) as db:db.execute("update calls set state='interrupted',response_json=NULL")
+        with closing(sqlite3.connect(f.db)) as db, db:db.execute("update calls set state='interrupted',response_json=NULL")
         f.request_path.with_name(f.request_path.name.replace('.request.json','.result.json')).unlink()
         for p in (f.root/'checkpoints').glob('*.result.json'):p.unlink()
         cache=CompletedResponses(f.root,deployment=f.deployment)

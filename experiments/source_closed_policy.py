@@ -5,6 +5,7 @@ from datetime import datetime,timezone
 from pathlib import Path
 import os
 import sqlite3
+from contextlib import closing
 import time
 from commentscope.factory import source_closed_policy as closed,shared_claims,candidate_consolidation as cc
 from commentscope.factory import fact_checks,explicit_discourse as ed,reviewed_source_admission as source_review
@@ -73,7 +74,7 @@ def prepare(directory):
     caches=[CompletedResponses(p,deployment=plan['deployment']) for p in PRIORS]
     plan['nomination_proof_sha256']=digest(proof);plan['prior_cache_proof_sha256']=[digest(c.proof) for c in caches]
     plan['candidate_sha256']=digest(shared_claims.candidates([record]))
-    with sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(Path(plan['budget']['ledger']).resolve().as_uri()+'?mode=ro',uri=True)) as db:
         blocked=db.execute('SELECT id,request_sha,state FROM calls WHERE id IN (6974,7119)').fetchall()
     if len(blocked)!=2 or any(r[2]!='interrupted' for r in blocked):raise ValueError('Prior interrupted requests must stay explicit')
     plan['unavailable_requests']={r[1]:r[0] for r in blocked}

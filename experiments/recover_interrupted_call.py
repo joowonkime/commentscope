@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import re
 import sqlite3
+from contextlib import closing
 
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -83,7 +84,7 @@ def reconcile(directory, key, *, apply=False):
                 or digest(logged['request']) != identity['request_sha256']):
             raise ValueError('Request identity changed')
         ledger_path = Path(plan['budget']['ledger']).resolve()
-        with sqlite3.connect(ledger_path.as_uri()+'?mode=ro', uri=True) as db:
+        with closing(sqlite3.connect(ledger_path.as_uri()+'?mode=ro', uri=True)) as db:
             db.row_factory = sqlite3.Row
             policy = db.execute('SELECT cycle,limit_seconds FROM policy WHERE id=1').fetchone()
             if policy['cycle'] != plan['budget']['cycle_id'] or policy['limit_seconds'] is not None:

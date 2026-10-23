@@ -1,6 +1,7 @@
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 from tempfile import TemporaryDirectory
 import unittest
 
@@ -43,7 +44,7 @@ class CompletedSharedProposalTests(unittest.TestCase):
         write(checkpoint.with_suffix('.intent.json'), identity)
         write(checkpoint.with_suffix('.result.json'), {'identity': identity, 'result': result,
                                                        'result_sha256': digest(result)})
-        with sqlite3.connect(self.db) as db:
+        with closing(sqlite3.connect(self.db)) as db, db:
             db.execute('create table calls(id integer primary key, plan_sha text, request_sha text, request_json text, response_json text, state text)')
             db.execute('insert into calls values(?,?,?,?,?,?)',
                        (1, self.plan_hash, digest(req), json.dumps(req), json.dumps(response), 'ok'))
@@ -57,12 +58,12 @@ class CompletedSharedProposalTests(unittest.TestCase):
 
     def test_modified_or_unfinished_ledger_cannot_become_a_cache_hit(self):
         for update in ("update calls set response_json='{}'", "update calls set state='interrupted'"):
-            with sqlite3.connect(self.db) as db:
+            with closing(sqlite3.connect(self.db)) as db, db:
                 original = db.execute('select response_json,state from calls').fetchone()
                 db.execute(update)
             with self.subTest(update=update), self.assertRaises((ValueError, KeyError)):
                 load(self.root, deployment=self.deployment, originals=self.originals)
-            with sqlite3.connect(self.db) as db:
+            with closing(sqlite3.connect(self.db)) as db, db:
                 db.execute('update calls set response_json=?,state=?', original)
 
     def test_changed_request_is_rejected_despite_unchanged_result_file(self):

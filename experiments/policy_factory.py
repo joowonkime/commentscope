@@ -6,6 +6,7 @@ from pathlib import Path
 import os
 import time
 import sqlite3
+from contextlib import closing
 
 from commentscope.factory import policy_admission,shared_claims,minimal_pipeline,candidate_consolidation as cc
 from commentscope.factory import fact_checks,raw_membership_verification as verification
@@ -70,7 +71,7 @@ def prepare(directory):
     plan['nomination_proof_sha256']=digest(proof);plan['prior_cache_proof_sha256']=digest(prior.proof)
     plan['candidate_sha256']=digest(shared_claims.candidates([record]))
     ledger=Path(plan['budget']['ledger']).resolve()
-    with sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True)) as db:
         blocked=db.execute('SELECT id,request_sha,state FROM calls WHERE id IN (6974,7119)').fetchall()
     if len(blocked)!=2 or any(r[2]!='interrupted' for r in blocked):raise ValueError('Prior interrupted requests must stay explicit')
     plan['unavailable_requests']={r[1]:r[0] for r in blocked}

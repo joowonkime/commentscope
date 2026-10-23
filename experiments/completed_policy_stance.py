@@ -2,6 +2,7 @@
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 from commentscope.factory import policy_stance_hypotheses as stance
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
@@ -31,7 +32,7 @@ def load(directory,*,deployment,sources):
             packet['request_sha256']!=digest(request) or response!=record['response']):
         raise ValueError('Actual nomination call artifacts changed')
     ledger=Path(plan['budget']['ledger']).resolve()
-    with sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True)) as db:
         rows=db.execute('SELECT id,state,request_json,response_json FROM calls WHERE plan_sha=? AND request_sha=?',
             (sha(directory/'plan.json'),digest(request))).fetchall()
     if len(rows)!=1 or rows[0][1]!='ok' or json.loads(rows[0][2])!=request or json.loads(rows[0][3])!=response:

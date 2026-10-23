@@ -8,6 +8,7 @@ from copy import deepcopy
 import json
 from pathlib import Path
 import sqlite3
+from contextlib import closing
 
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -55,7 +56,7 @@ class CompletedResponses:
             if key in intents:raise ValueError('Duplicate previous logical request')
             intents[key]=(path,identity)
         ledger=Path(plan['budget']['ledger']).resolve()
-        with sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True) as db:
+        with closing(sqlite3.connect(ledger.as_uri()+'?mode=ro',uri=True)) as db:
             rows=db.execute('SELECT id,request_sha,request_json,state,response_json FROM calls WHERE plan_sha=?',(plan_hash,)).fetchall()
         by_request={}
         for row in rows:by_request.setdefault(row[1],[]).append(row)
