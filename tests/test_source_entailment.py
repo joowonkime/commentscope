@@ -109,4 +109,3 @@ class SourceEntailmentTests(unittest.TestCase):
         self.assertEqual(sum(r['relation']=='supported' for r in mm.collect(self.sources,self.candidates,[record])),3)
         for invalid in [batches[:-1],batches+[batches[0]],[]]:
             with self.assertRaises(ValueError):se.from_completed_batches(self.sources,self.candidates,self.raw,invalid)
-

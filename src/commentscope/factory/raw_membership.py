@@ -106,4 +106,3 @@ def batch(sources, candidates, assessments):
     return {'artifact_kind': VERSION + '-batch', 'sources': deepcopy(sources),
             'candidates': deepcopy(candidates), 'pairs': pairs, 'raw_assessments': deepcopy(assessments),
             'memberships': rows}
-
