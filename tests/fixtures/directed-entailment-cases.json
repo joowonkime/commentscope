@@ -1,0 +1,14 @@
+{
+  "reference_origin": "assistant_authored_synthetic_development_not_independent_gold",
+  "runtime_input_labels": false,
+  "cases": [
+    {"id":"T1","source":"If the bus service closed, I would cycle to my office each morning.","target":"I would travel to my office if the bus service closed.","expected":"supported","dimension":"specific activity entails its broader activity"},
+    {"id":"T2","source":"If the bus service closed, I would travel to my office each morning.","target":"I would cycle to my office if the bus service closed.","expected":"unsupported","dimension":"reverse direction invents a means"},
+    {"id":"T3","source":"If a guaranteed income were introduced, I would keep working as a librarian.","target":"I would keep working if a guaranteed income were introduced.","expected":"supported","dimension":"incidental occupation can be omitted"},
+    {"id":"T4","source":"I would keep working if a guaranteed income were introduced and childcare remained available.","target":"I would keep working if a guaranteed income were introduced.","expected":"unsupported","dimension":"necessary condition cannot be omitted"},
+    {"id":"T5","source":"I think both a higher wage and a regular cash grant would help me pay my rent.","target":"I think a regular cash grant would help me pay my rent.","expected":"supported","dimension":"one asserted conjunct is entailed"},
+    {"id":"T6","source":"Some people say that cash grants would stop everybody working. I disagree; I would still work.","target":"I think cash grants would stop everybody working.","expected":"unsupported","dimension":"quoted opponent is not the author"},
+    {"id":"T7","source":"The pilot included 120 unemployed adults between 30 and 50 years of age.","target":"The pilot included unemployed adults.","expected":"supported","dimension":"removing incidental quantity and age does not enlarge the population"},
+    {"id":"T8","source":"I would keep working if a guaranteed income were introduced.","target":"Everybody would keep working if a guaranteed income were introduced.","expected":"unsupported","dimension":"individual is not a universal claim"}
+  ]
+}

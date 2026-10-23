@@ -15,6 +15,7 @@ from pathlib import Path
 
 from commentscope.ingestion import load_snapshot, normalize_snapshot
 from commentscope.storage import write_json_exclusive
+from commentscope.factory.source_index import build as build_source_index
 
 MODEL = "sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
 REVISION = "e8f8c211226b894fcb81acc59f3b34ba3efd5f42"
@@ -155,6 +156,8 @@ def run(snapshot_path, output, threshold=0.45):
               'summary':{'source_count':len(s.comments),'canonical_nonempty':len(rows),'token_chunks':len(chunks),
                          'groups':len(clusters),'candidates_ge3':sum(len(g['members'])>=3 for g in clusters),'accepted_perspectives':0},
               'threshold_sweep':sweeps,'clusters':clusters,
+              'source_index':build_source_index(rows, vectors.tolist(), loaded.sha256, MODEL, REVISION,
+                                               sources={c.comment_id:c.text_original for c in s.comments}),
               'sources':{c.comment_id:{'text':c.text_original,'parent_id':c.parent_id} for c in s.comments},
               'limitations':['No eligibility filtering or claim extraction','No stance compatibility gate','No automatic perspective acceptance','Threshold sweep is sensitivity, not accuracy','English-heavy single-video sample; not multilingual validation','Partial threads; embedded mentions remain; local review only']}
     write_json_exclusive(output,report)

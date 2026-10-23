@@ -18,9 +18,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--output-prefix', type=Path, required=True)
-    parser.add_argument('--question', action='append', required=True)
+    parser.add_argument('--question', action='append', default=[])
+    parser.add_argument('--expect-no-agents', action='store_true', help='Verify automatic empty state without submitting a question')
     args = parser.parse_args()
-    if not 1 <= len(args.question) <= 6:
+    if args.expect_no_agents and args.question:
+        parser.error('Empty-state check does not submit questions')
+    if not args.expect_no_agents and not 1 <= len(args.question) <= 6:
         parser.error('Use 1..6 questions')
     suffixes = ['.initial.png', '.first-answer.png', '.final.png', '.mobile.png',
                 '.comparison.json', '.comparison.html', '.checks.json']
@@ -50,6 +53,24 @@ def main():
         page.on('pageerror', lambda error: checks['page_errors'].append(str(error)))
         try:
             page.goto(origin, wait_until='networkidle')
+            if args.expect_no_agents:
+                page.wait_for_function("() => document.querySelector('#scope').textContent.length > 0")
+                assert page.locator('#profiles > .profile').count() == 0
+                assert page.locator('#ask').is_disabled()
+                assert '자동 보류' in page.locator('#profiles').inner_text()
+                assert page.locator('#export-json').is_disabled()
+                assert page.locator('#export-html').is_disabled()
+                page.screenshot(path=str(paths['.initial.png']), full_page=True)
+                page.set_viewport_size({'width': 390, 'height': 844})
+                assert page.evaluate('document.documentElement.scrollWidth <= innerWidth')
+                page.screenshot(path=str(paths['.mobile.png']), full_page=True)
+                assert not checks['page_errors']
+                checks['checks'] = {'zero_profiles': True, 'question_disabled': True,
+                                    'exports_disabled': True, 'automatic_abstention_visible': True,
+                                    'mobile_no_horizontal_overflow': True}
+                checks['status'] = 'passed'
+                print(json.dumps({'status': 'passed', 'empty_state': True}), flush=True)
+                return
             page.wait_for_function("() => document.querySelector('#ask').disabled === false")
             checks['checks']['profile_cards'] = page.locator('#profiles > .profile').count()
             page.screenshot(path=str(paths['.initial.png']), full_page=True)

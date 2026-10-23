@@ -6,6 +6,37 @@ Eligibility 이후의 전체 Factory 계약과 RunManifest는 후속 구현 명�
 기존 snapshot-0.1이나 아래 전체 Factory 명세를 자동으로 0.2로 바꾸는 것은 아닙니다.
 합성 예시는 [snapshot](examples/synthetic-snapshot.json)과 [Factory trace](examples/synthetic-factory-trace.json)에 있습니다.
 
+## 후보 검색과 방향성 검사 진단 계약
+
+`candidate-search-0.1`은 동일 claim/vector의 same_mode, cross_mode, hybrid 검색을 분리합니다.
+hybrid는 embedding8+추가 lexical4, source 중복 제외, 유형 제한 없음이며 의미 승인 결과가 아닙니다.
+입력은 이 진단에서512claims 이하입니다. 실제 실행은 기존64개 댓글의123claims를 재사용합니다.
+
+`grounded-core-0.2`의 verify는 원문과 target의 digest, NLI 원시 점수, relational audit,
+차단 사유와 allowed를 반환합니다. NLI threshold0.8과 scope/time/modality/conditions/polarity/presuppositions
+전부 preserved 및 support=supported가 필요합니다. evidence_quote는 원문의 정확한 substring이어야 합니다.
+인용 검사는 구조 검증이며 모델의 의미 판정을 독립적으로 보증하지 않습니다.
+0.1 실패를 보존하고0.2에 `qualification-witnesses-0.1`을 추가했습니다. 영어 future/present-progressive/past
+명시 표지의 위치, 조건 operator/antecedent 원문을 저장합니다. 조건 operator 목록 변화나 제한된 단순 문장의
+명시 시점 변화는 모델 통과와 무관하게 차단합니다. 표지를 못 찾았다는 것은 의미 보존 승인이 아닙니다.
+
+discover는 원문→추출 claim 검사를 먼저 수행하고, 제안1개+입력 claim2개를 고정 비교합니다.
+각 core를 원문 및 claim에 별도로 검증하고 첫 통과 후보를 선택합니다. 제안 우선이지 최단 문자열 우선이 아닙니다.
+core_groups의 cross_mode=true는 `common-core-assembly-0.2`로 기록하며 기존 false 경로는0.1을 유지합니다.
+기본 Factory/artifact loader에는 이 진단을 연결하지 않습니다.
+
+`grounded-core-diagnostic-0.2`는 입력·fixture·코드·모델·프롬프트 hash, 실행 정책,
+quality_gate_passed=false를 저장합니다. probe는 exact target 평가와 관점 연결 평가를 분리하고,
+integration은 최소3source/결정64개 한도로만 조립합니다. verify는 cache miss에 RuntimeError를 내며
+모델 호출 없이 고정 입력과 결과를 재계산합니다. 완료 artifact를 덮어쓰지 않습니다.
+`--reuse-run`은 원시 request/result의 digest와 입력/모델/runtime/prompt/추론 코드의 일치를 검증하며
+host 판정 결과는 복사하지 않습니다. reuse origin manifest hash가 실행 설정에 포함됩니다.
+
+`grounded-core-new-sample-0.1`은 이전64개와 full1000 배정 source를 제외한 고정 hash-order12개에서
+source-only 추출과 원문 충실성 검사를 수행합니다. 평가 계획의 source ID는 selection과 대조하지만
+기대 판정은 inference payload에 포함하지 않습니다. 원문/추출/판정/코드 hash를 보존하고 readonly replay합니다.
+별도 표본이지 독립 gold나 완전히 미사용 corpus는 아닙니다. 이 artifact는 service 입력이나 profile이 아닙니다.
+
 ## 추출 실험 계약 claims-0.2 (2026-10-10)
 
 로컬 모델의 출력은 `{eligibility, claims}`입니다. 각 claim의 필수 키:
@@ -351,6 +382,223 @@ PipelineError 필수 필드: `code`, `stage`, `entity_id: string|null`, `message
 Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final을 구분합니다.
 존재하는 citation ID라는 이유만으로 의미적 지지가 있다고 승인하지 않습니다.
 
+## Automatic Factory와 잠정 에이전트
+
+서비스 실행 시 수동 처리가 없는 별도 자동 경로입니다. 기존 assistant-reviewed artifact나 수동 승인을 입력으로 받지 않습니다.
+기본 실행은 `automatic-factory-0.2`, bundle은 `automatic-perspective-bundle-0.1`을 사용합니다.
+과거 `automatic-factory-0.1`도 재검증해 읽되0.2 실행으로 재표기하지 않습니다.
+
+- 추출: `{status: claims|non_substantive|uncertain|context_dependent, claims: [{statement, mode, segment_ids}]}`.
+  최대4개; claims 상태와 비어 있지 않은 배열이 일치해야 함. 중복/외부 segment ID 거절.
+  코드가 정확한 `{start,end,text}` span과 source/claim ID를 부착. model은 offset/출처를 생성하지 않음.
+- 0.2 추출에는 parent 텍스트를 전달하지 않음. `context_dependent`는 독립 명제가 없는 동의/참조이며 claims가 비어야 함.
+  이것만으로 부모에 대한 동의/반대 edge를 확정하지 않으며 독립 근거 수에 포함하지 않음.
+- 0.2 각 gate result에 `source_audit` 필수: `{verdict: supported|unsupported|unclear, reason}`의 request 결과.
+  입력은 `PROPOSED_CLAIM`, `SOURCE_SPANS`뿐. 원문 검사 실패는 `source_audit_rejected`, common gate 미호출.
+  source audit가 supported이며 뒤의 common gate도 통과해야 member를 배정. 동일 입력 cache 재사용.
+- 의미 검사: `{unit_faithful, core_supported, compatible, reason}`. 각 판정은 supported/unsupported/unclear.
+  모두 supported이고 형식/전송/완료 오류가 없어야 잠정 통과. 같은 모델의 판정은 독립 gold가 아님.
+- run: snapshot hash/expiry/config/code/prompt/model 선언, 전체 selected record, claim unit, top-k 후보,
+  실제 gate edge와 원시 응답/재시도, group, unresolved, 모든 원문의 disposition, coverage를 보존.
+  selection은 canonical source ID hash 정렬의 앞 limit개. 대표성 있는 무작위 표본이라고 주장하지 않음.
+- group: anchor/common_claim/member_ids/status. 모든 member의 직접 gate, anchor self gate,
+  서로 다른 canonical 원문 ≥3, claim당 최대1개 group. 간접 연결은 지지로 간주하지 않음.
+- profile: `status=auto_accepted_unvalidated`, 각 evidence에 `support_spans`, `allowed_claim`, full original/URL/parent.
+  의미 검증 완료/사람 승인을 뜻하지 않음. `human_handling=false`, `human_approved=false`, `accepted_perspectives=0`.
+  auto_agents와 정식 PerspectiveSpec 수를 구분. profile 생성은 저장된 group 전이와 source binding을 재계산해 검증.
+- AgentSession: 자동 생성 입력에는 배정 span만 전달하며 profile/title/allowed_claim을 제외.
+  원문 감사에 allowed_claim을 주지 않고, 별도 scope 감사에만 전달. 후자는 `audit_kind=scope_only`로 기록하며
+  둘 다 supported여야 답변 공개. full original/parent는 citation context이고 다른 주장의 지지 근거가 아님.
+  기존 검수 profile의 계약은 유지. 자동/검수 지원 origin을 UI와 export에서 구분.
+- 0 agent도 유효한 bundle이며 UI는 질문을 차단하고 자동 보류를 표시. 이웃 부족은 검증된 rare가 아니라
+  `insufficient_neighbors_unverified`. snapshot의 미선택/중복/비주장/실패/미배정 정보를 숨기지 않음.
+
+### 실험적 호환성 guard: automatic-factory-0.3
+
+- 명시적 `--experimental-frame-guard`에서만 사용. 실제 개발 회귀 실패로 기본 미채택입니다.
+  config/검색/agent bundle 형식은 유지하고 report의 `frame_policy=claim-frame-0.2`와 gate별 `frame_guard`를 추가합니다.
+- frame: `status=atomic|mixed|context_dependent|unclear`,
+  `scope=self|individual_other|population|unclear`, `time=past|present|future|timeless|unclear`,
+  `commitment=assertion|prediction|possibility|normative|wish|unclear`, `condition=none|explicit|unclear`,
+  `condition_quotes`(최대3개, 각1..179자, 입력 span의 정확한 부분 문자열).
+  explicit만 비어 있지 않은 인용을 허용합니다. schema 상한180자는 validator에서 경계 잘림 가능성으로 거절합니다.
+- guard: version/input_digest/frames/condition_checks/blocked_reasons/allowed.
+  frames는 anchor/member claim ID별 source/claim을 가지며 각 측은4개 components의 원시 요청 결과와
+  조합 output/errors를 보존합니다. 평가 expected 라벨은 여기에 포함하지 않습니다.
+- 조건 비교는 `verdict=equivalent|different|unclear`. 동일 공백 정규화 인용은 코드 비교, 그 외 별도 모델 요청.
+  거절 시 `errors=[frame_incompatible], output=null, attempts=[]`; source/common gate 미호출입니다.
+  통과 시0.2 source audit 및 common gate가 여전히 필수입니다.
+- loader는0.1/0.2/0.3을 구분하고0.3의 policy를 gate0개인 경우도 확인합니다.
+  입력 binding·component 조합·조건 판정·최종 allowed를 재계산하며 누락/변경 시 거절합니다.
+  replay는 보존된 모델 출력의 구조 검증이지 모델 해석이 참이라는 증명이 아닙니다.
+- `claim-frame-diagnostic-0.1`은 별도 offline 실험 artifact입니다. expected 라벨/합성 사례/기존 개발 member,
+  baseline·fixture·reference·code·prompt hash 및 결과를 기록합니다. 독립 gold나 서비스 입력이 아닙니다.
+
+### Offline NLI 비교 artifact
+
+- `claim-support-diagnostic-0.1`은 Factory report나 agent bundle이 아닙니다. 서비스 입력/수동 승인 자료로 쓰지 않습니다.
+  snapshot/baseline/reference/fixture/frame 보고서 hash, 원본에 재연결한 cases, 만료, 코드 hash,
+  고정 모델 revision/threshold/runtime, 두 정책 및 다음 단계 조건을 inference 전에 manifest로 저장합니다.
+- 각 case의 checks는 premise/hypothesis와 LocalNLI 원시 logits/scores/relation/errors/시간을 보존합니다.
+  정책은 directional의3검사와 mutual_claims의5검사를 모두 통과해야 allowed이며 원문 실패를 다른 검사로 구제하지 않습니다.
+  `expected`는 별도 offline 라벨이고 모델은 두 문자열만 받습니다. 결과에 따라 기준을 수정하지 않습니다.
+- checkpoint는 입력 hash 파일명과 request/result/result_sha256을 가지며 exact-input cache만 재사용합니다.
+  manifest/입력/결과 hash 변경 시 거절합니다. relation은 scores와 고정 threshold로 다시 계산하며 불일치 시 거절합니다.
+  영어500자/512token 상한은 기존 provider를 따르고 길이 초과를 조용히 자르지 않습니다. 만료 후 추론/캐시 사용 금지.
+- summary는 양성 유지/음성 차단/오류/각 실패 ID를 별도로 기록합니다. `next_stage_eligible`도 품질 승인을 뜻하지 않으며
+  이번 실제 실행에서는 양 정책 모두 false입니다. 개인 댓글 포함 report/overview/checkpoint는 Git 제외입니다.
+
+### 공통 주장 진단 계약
+
+- `temporal-guard-0.2`: input_digest/parts(commitment,time)/lexical(overrides,witnesses)/output/errors.
+  lexical witness의 정확한 offset/텍스트 및 component 조합을 재계산합니다. 기존 raw 모델 판단은 덮어쓰지 않습니다.
+- `shared-core-0.3`: 두 unit 입력 digest, source fidelity 및 source/claim 시간 검사, 개인 행동 표지,
+  proposal, 원래 claim2개+생성안1개 이하 candidates, candidate별 source/claim→core NLI/시간/조건 검사,
+  selected_core/blocked_reasons. 생성안은250자 경계 미만이며 빈 문자열은 제안 없음입니다. 최대1회 형식 repair만 허용합니다.
+- `shared-core-diagnostic-0.1`은 새 공통 주장 검색을 별도 offline protocol로 기록합니다.
+  기존 reference 기대값은 inference에 전달하지 않습니다. 모든 중간 실행과 prototype version을 보존하고
+  `next_stage_eligible=false`를 최종 품질 실패로 유지합니다. cache 재사용은 request/model/prompt/runtime/expiry/hash를 확인합니다.
+- `common-core-assembly-0.1`: unit/candidate digest, 결정 예산, seed_limit, seed/attach decisions, groups, unassigned_ids.
+  seed별 core는 고정하고 member마다 직접 지지를 요구합니다. 3개 distinct source 미만은 그룹을 승격하지 않습니다.
+  greedy disjoint 배정/최대9member/10,000자이며 미배정은 검증된 희소 관점이 아닙니다. replay는 원시 cache로 결과와 전이를 재계산합니다.
+- `shared-core-integration-0.1`은 `--diagnostic-only` 전용입니다. 최대64개 source를 처리한 source-only0.2 추출만 재사용합니다.
+  inference 전 manifest에 protocol amendment, quality_gate_passed=false, 원본/code/model hash 및 예산을 기록합니다.
+  조립 결과와 source-bound provisional profiles를 저장하되 기본 자동 bundle/정식 PerspectiveSpec으로 재표기하지 않습니다.
+- 진단 profile은 기존 AgentSession의 auto_accepted_unvalidated 계약을 따르고 original span offset/3개 distinct source를
+  검증합니다. source 만료/입력 hash 변경을 거절합니다. 실제 최신 진단은 profiles=[]이므로 실제 새 agent 질의는 실행되지 않았습니다.
+  기존 앱 자동 loader는 새 진단 report를 승인된 입력으로 취급하지 않습니다. corpus/원시 결과는 계속 Git 제외입니다.
+
+### 원문 선택 진단 계약
+
+- `evidence-units-0.1`: 모델은 `status`와 최대4개 `first/last` sentence-ID 범위만 반환합니다.
+  host가 원문에서 `statement`를 복사하고 `focus_spans`, 문맥용 `spans`, `topic_quote`,
+  `source_digest`, source ID와 offset으로 계산한 claim ID를 저장합니다. 재결합 검증에서 다르면 거절합니다.
+- eligibility는 전체 자기 댓글과 focus만 받습니다. `status=substantive` 및 원문에 있는 topic quote가 필요합니다.
+  구조적 substring 검증은 미해결 지시 대상이나 의미 품질을 보장하지 않습니다.
+- 짧은 댓글 전체 또는 긴 댓글의 focus/topic envelope와 인접 문장을 최대500자로 저장합니다.
+  넘으면 보류하며 부분 절단하지 않습니다. 현재 긴 댓글에서 필요한 앞 문장이 빠지는 실패가 발견됐습니다.
+  따라서 전체 댓글 eligibility와 최종 evidence의 의미 동등성을 완료 기능으로 취급하지 않습니다.
+- `evidence-core-0.1`: 공통 후보의 독립성, 각 source→core NLI와 qualification 감사를 요구합니다.
+  원문 표현 우선, 생성 제안은 최대1개이며 생성 문장은 근거가 아닙니다.
+- `common-core-assembly-0.3`: `seed_order=source_density`, 서로 다른 두 source의 유사도 우선.
+  기존 degree 순서와 최소3source·직접 가입·고정 core·예산 규칙은 동일합니다. 동적 순서도 replay합니다.
+- `evidence-units-probe-0.1`: 고정 source_plan·fixtures/input/code hash·runtime·만료·실패를 기록합니다.
+  `policy.schema_visible`와 대상 단계를 명시하며 schema 노출은 request cache 전에 수행합니다.
+  raw prompt가 다른 결과를 재사용하지 않습니다. 기존 기본 transport나 Factory loader를 변경하지 않습니다.
+- 진단 보고서는 정식 bundle이 아니며 `quality_gate_passed=false`, `independent_gold=false`입니다.
+  모델 호출 없는 exact replay는 재현성 검사이지 의미 정확성 증명이 아닙니다.
+
+### 주제 위치와 최종 근거 진단 계약
+
+- `evidence-positions-0.1`는 기존 sentence-ID focus와 별도로 `topic`에 최대1개의 첫/끝 token ID를 받습니다.
+  token은 Unicode 비공백 원문 구간이며 언어 분석 결과가 아닙니다. substring/offset/선택 occurrence를 host가 결정합니다.
+  topic120자·statement450자·evidence500자 상한을 넘으면 보류합니다. 모델이 topic/statement 문자열을 작성할 수 없습니다.
+- unit의 `topic_span`에는 first/last ID와 원문 start/end/text를 저장합니다. source digest, focus/context,
+  topic occurrence를 재결합해 검증하며 변경 시 거절합니다. 구조적 정확성은 의미적 주제 타당성 보장이 아닙니다.
+- `position_units`는 주제 위치 단계 산출물이고 `units`는 최종 근거 eligibility까지 통과한 부분집합입니다.
+  final 요청은 FINAL_EVIDENCE/FOCUS/TOPIC만 받습니다. 이전 판정·전체 원문·다른 댓글은 입력에 포함하지 않습니다.
+  최종 allowed는 모델의 fallible 판정이며 raw 결과/입력 digest/오류를 보존합니다. 진단 결과를 정식 agent bundle로 승인하지 않습니다.
+- `evidence-positions-probe-0.1`는 기존 선택 범위 고정 개입, 만료/input/code hash, 모델/embedding revision,
+  원문과 두 단계 units에 대한 source-level 검색 노출을 기록합니다. 미추출 source를 분모에서 빼지 않습니다.
+  원시 cache를 통한 exact replay는 새 모델/embedding 호출 없이 수행합니다.
+
+## Raw candidates 0.1 (진단 전용)
+
+- registry: `sources[{source_id,text,source_digest,parent_id,indexable}]`, `aliases`, `selected_input_ids`.
+  normalize_snapshot으로 재구성한 값과 일치해야 한다. 공백 원문도 보존, alias는 추가 표가 아니다.
+- embedding cache: model/revision, 순서가 고정된 source IDs와 exact texts, vectors와 digest/runtime.
+  길이·차원·유한값·0이 아닌 norm을 검사한다. 오류 source를 조용히 누락하지 않는다.
+- candidates: 모든 canonical ID가 key, 최대12개 이웃과 cosine/lexical/route. 검색은 지지 판정이 아니다.
+- queue: 원문 digest에 결합한 pair_id/source_ids, first_discovered_from/candidate_rank,
+  available_unique_pairs/deferred_pairs/budget_exhausted. 양방향 동일 pair는 한 번만 검사 대기한다.
+  `support_count=null`, `quality_gate_passed=false`, `agents=[]`. 미검사는 비지지가 아니다.
+- source_packet: 두 댓글의 ID/digest/text만 전달. parent 본문을 답글에 덧붙이지 않는다.
+- probe: snapshot 만료 및 input/code/model pin, evaluation-only reference pairs, 별도 단계 시간.
+  plan/run/verify, 저장 vectors만 사용한 replay 일치. 원문 포함 산출물은 Git 제외와 만료 상속.
+- [지지도 상태/분모/잠정 표시 등급/시간 목표 계약](RAW_RETRIEVAL_MVP.md)은 다음 집계 모듈의 설계이며
+  현재 runtime 지지 판정 구현으로 읽지 않는다.
+
+## Raw support 0.1 (진단 전용)
+
+- pair trace: source-bound pair_id/input_digest, 단일 proposal, 독립 source checks, selected_core/status.
+  두 source 모두 support일 때만 pair_supported_unvalidated. 없음/오류/미검사와 의미 거절을 구분한다.
+- source decision: source_id/source_digest/core_digest,5상태 state/reason, NLI, audit, qualification_guard, evidence.
+  인용의 모든 exact occurrence offset을 보존하며 동일 문자열 반복에서 모델이 특정 위치를 골랐다고 가정하지 않는다.
+- ledger: 고정 core/registry digest, canonical source별 한 행, counts/support_count/completed_count,
+  canonical_denominator, 잠정 tier/major_threshold. 미예약은 unchecked이며5상태 합은 N이다.
+  중복/alias/foreign source/변경된 core/hash/support trace 누락은 거부한다.
+- 모든 ledger는 quality_gate_passed=false/agents=[]/model_counts_unvalidated다.
+  단위 테스트 통과와 모델 의미 정확도는 별개이며 지지 수를 사실·독립 사용자 수로 표시하지 않는다.
+- raw-support-probe0.1은 별도 고정 회귀/실제64쌍, source-bound cache/replay, 제한된 확장 여부와 시간을 기록한다.
+  자세한 입력 길이와 평가 계약은 [공통 주장·지지도 MVP](RAW_SUPPORT_MVP.md)를 따른다.
+
+## Positional support 0.1 (진단 전용)
+
+- pair alignment는 left/right 각각 최대1개 first/last ID 범위이며 L/R prefix가 다른 원문 ID 혼입을 막는다.
+  bound span은 source_digest/start/end/first/last/text다. 값은 원문에서 매번 재구성한다.
+- audit에는 assertion/eligibility/6속성/evidence 범위만 있고 supported나 자유 quote 필드는 없다.
+  enum·ID 오류와 semantic disagreement를 구분한다. host가 5상태 결정을 만들고 original/evidence NLI와 guard를 보존한다.
+- evidence가 없거나 독립성이 불명확한 판정은 support로 승격하지 않는다. 실제 의미 오판을 코드 검증으로 증명했다고 읽지 않는다.
+- 기존 raw-support ledger와 호환된다고 간주하지 않는다. 이 버전은 pair/직접 판정 probe만 제공하며 agent/가입 확대0이다.
+  [계약·사전 기준](POSITIONAL_SUPPORT.md)을 따른다.
+
+## Extractive candidates 0.1 (비교 전용)
+
+- inventory는 source ID/digest/segment ID/start/end/text와 candidate ID를 결합한다. 항상 원문 slice와 일치해야 한다.
+  eligible=false와 deferred_reason은 길이/예산 상태이며 의미 비지지 판정이 아니다. 원문 registry는 변경하지 않는다.
+- 선택은 source별 최대2개, 후보의 반대 source 최대 cosine 순서이며 동점은 candidate ID다.
+  selected의 core는 원문 문자열 그대로이고 core_digest와 origins가 재결합돼야 한다. 문자열 중복만 병합한다.
+- support_count=null/agents=[]/quality_gate_passed=false다. origins 개수와 cosine은 지지 수가 아니다.
+  assess는 두 전체 원문 각각을 positional-support로 검사하며 출처 원문의 자동 지지도 금지한다.
+- [추출형 평가·예산 계약](EXTRACTIVE_CANDIDATES.md). 모델 통과와 실제 원문 충실성은 별도 평가한다.
+
+## Audit repeatability 0.1 (진단 전용)
+
+- plan은 기존 exact 감사 request와 개발 기대/과거 출력, 입력·코드·모델·런타임 hash, 4arm/3반복/144회 예산을 고정한다.
+- attempt는 arm/sequence/case/repeat/request_sha256/result/result_sha256/원본 response/host decision을 담고 전체 hash도 결합한다.
+  동일 request도 별도 sequence로 저장하며 추론 응답 cache는 사용하지 않는다. 중단 실행 재개는 금지한다.
+- report의 support는 NLI·guard를 제외한 provisional projection이다. ledger/agent 입력이 아니며 agents=[]/quality_gate_passed=false다.
+  [반복성 평가 계약](AUDIT_REPEATABILITY.md)을 따른다. 일관성과 정확도는 별도 측정한다.
+
+## Audit model comparison 0.1 (진단 전용)
+
+- 40평가 행은 cohort/expected/request_id를 담고39고유 요청은 system/data/schema만 담는다. 라벨은 추론에 전달하지 않는다.
+- 모델별 attempt는 model/sequence/request_sha256/result/result_sha256/원본 HTTP response/host decision과 전체 hash를 저장한다.
+  양쪽 요청 순서와 payload를 고정하고 모델별 fresh39회씩 실행한다.
+- report는 군별 정상 보존/부정 오승인·거절·보류/오류와 사전 진입 기준을 출력한다.
+  candidate_eligible_for_full_pipeline_trial은 다음 시험 자격일 뿐 quality_gate_passed=false/agents=[]를 바꾸지 않는다.
+  [모델 비교 계약](AUDIT_MODEL_COMPARISON.md)을 따른다.
+
+## Source eligibility 0.1 (opt-in 비교 전용)
+
+- request_for는 원문 전체의 위치 결합 SOURCE만 전달한다. target/평가 라벨/peer/parent는 입력하지 않는다.
+- 단일 eligibility enum을 host가 eligible/excluded/context_dependent/uncertain/error로 해석한다.
+  eligibility는 support_count나 source-target 충실성/agent 승인이 아니다. 미확정은 eligible이 아니다.
+- identity는 exact 요청과 모델 식별정보/version을 결합한 재사용 키다. corpus 필터/실제 cache/ledger 연결은 없다.
+- 3조건 probe는 각32개 source별 새 호출을 저장하고 원문별 label 변화와 군별 정상 보존/오승인/보류/오류를 보고한다.
+  [평가·실행 계약](SOURCE_ELIGIBILITY.md)을 따른다. quality_gate_passed=false/agents=[]를 유지한다.
+
+## Eligibility witness 0.1 비교 전용
+
+- SOURCE 전체와 WORDS 배열을 주고 반열린 단어 범위로 candidate/endorsement/mention/antecedent를 받는다.
+  공백 단위 분할은 원문 시작·끝 위치를 유지하며 host가 source digest·문자 위치·원문 slice를 결합한다.
+- 구조 오류는 error, 위치상 유효하지만 관계 모순은 uncertain, 미해결 문맥은 context_dependent다.
+  eligible은 해당 source의 한 주장 자격만 의미하며 support_count/agent 승인으로 사용하지 않는다.
+- 입력4,000자/128tokens·candidate1·references4 한도이며 초과 시 자르지 않고 보류한다. 서비스 필터/cache 미연결이다.
+- [고정 비교](ELIGIBILITY_WITNESS.md)는 기존 단일 enum과48원문씩 비교한다. required_text는 평가 전용이며 추론 입력이 아니다.
+  quality_gate_passed=false/agents=[]를 유지한다.
+
+## Factory evaluation kit 0.1 준비 전용
+
+- plan은 입력·코드 hash, component별 partition, 개발/예약 선택 ID,12개 calibration ID,embedding 식별정보를 보존한다.
+  parent·동일 정규화 텍스트로 이어진 원문은 같은 partition이다. 원문 ID와 기존 canonical vote 정책을 바꾸지 않는다.
+- baseline은 immutable 기존 벡터에서 만든 candidate partition과 exact medoid quote다. common_claim/support_count 및
+  의미 precision/유효 관점 coverage는 null이며 후보 size를 승인 지표로 대입하지 않는다.
+- calibration은 full source·digest·parent ID를 제공하지만 assessment/user_feedback는 null이다.
+  assistant 검토는 별도 hash-bound 파일이며 런타임 입력이 아니다. 예약 표본은 unseen/독립 gold로 표시하지 않는다.
+- [준비 프로토콜](FACTORY_EVALUATION_PROTOCOL.md). comparison_ready=false/quality_gate_passed=false/agents=[]다.
+  이 계약은 모델 비교 결과나 실제 자동 필터가 아니다.
+
 ## 합성 예제의 읽는 순서
 
 1. c1의 두 문장이 safety review와 fee waiver의 서로 다른 claim으로 추출됩니다.
@@ -364,3 +612,120 @@ Auditor의 approve/revise/add_uncertainty/abstain을 저장하며 draft와 final
 예제의 모든 추출·검토·카드는 사람이 작성한 합성 설계 자료입니다. 모델 출력이나 평가 결과가 아닙니다.
 trace 파일의 `initial_clusters`, `review_created_clusters`, `expected`는 전이를 설명하는 설계 전용 컨테이너입니다.
 실제 실행 artifact의 파일 형식이나 RunManifest를 대신하지 않습니다. replay 시 초기 후보에서 시작해 review 순서에 따라 출력 후보를 추가합니다.
+# Matched Factory 개발 비교 계약 0.1
+
+`experiments/matched_factory_probe.py`는 기존 평가 kit를 재검증한 뒤 별도 불변 plan을 만든다.
+원문·입력·코드 hash, 모델/서버 hash, 정책, source 분모64, 단계별 예산과 판정 기준을 포함한다.
+`calls/R*.json`은 정확한 system/data/schema/max_tokens, 요청 digest, 서버 원시 응답, 파싱 결과·시간·보류 사유를 보존한다.
+추출 claim은 기존 source-bound segment 계약을 사용하고 모든 source의 결과(실패/빈 주장 포함)를 보존한다.
+V0/V1은 같은 assignment0.2를 canonical draft로 변환한다. `candidate_source_count`는 distinct canonical source 수이며
+의미 검증된 `support_count`는 null이다. V2는 V1 카드 digest를 저장하고 검사 통과 카드의 내용을 수정하지 않는다.
+`completed.json`은 실행 artifact hash를 결합한다. verify는 hash와 정확한 V1 부분집합을 검사하고 추가 추론을 하지 않는다.
+assistant 평가와 사용자 피드백은 별도 offline 파일이며 runner 입력에 허용되지 않는다. 모든 결과는 `quality_gate_passed=false`, `agents=[]`다.
+
+## Fixed-core membership 개발 계약 0.1
+
+`factory/fixed_core.py`는 기존 claim/vector/candidate/source registry에서 불변 target을 선택한다.
+core ID/digest는 candidate ID·anchor unit ID·exact text를 결합한다. anchor spans는 원문 위치로 검사한다.
+`relations`는 모든 검사 source를 보존하며 source text digest·core digest·판정 trace를 포함한다.
+state는 `model_supported/not_supported/uncertain/error`다. partial/unsupported는 비지지, unclear는 보류이며 반대 입장으로 세지 않는다.
+`model_support_count`는 해당 target에 supported인 canonical source 수다. 검증된 `support_count`는 null이며 `agents=[]`다.
+`evidence`는 전체 own-comment 인용이고 `quotation_scope=whole_own_comment_not_shared_detail`, `generated_details=[]`다.
+희소/미결정 target과 단일 source 검색 후보도 artifact에 보존한다. 모든 원문의 모든 claim을 검사했다는 뜻이 아니다.
+`fixed_core_probe`는 입력·코드·모델 hash/예산을 동결하고 기존 audit v2의 개별 요청을 저장한다.
+별도 `fixed_core_review`는 plan/report hash에 결합한 전체 source별 offline 판정만 집계하며 runtime 입력이 아니다.
+비교 계약과 중단 조건은 [FIXED_CORE_COMPARISON](FIXED_CORE_COMPARISON.md)에 있다.
+
+`matched_factory_review.py`는 실행 완료 후 별도 renderer다. `assistant-ratings.json`은 plan/report hash에 결합되며
+모든 V0/V1 카드의 common/detail 인용별 판정과 설명이 있어야 한다. 같은 문장 안의 동일 source 판정이 상충하면 거부한다.
+통계는 card/statement/distinct source 기준으로 중복 제거한다. 비어 있는 분모의 비율은 null이다.
+V2 평가에는 같은 V1 판정을 재사용하며 runtime 승인·원문·카드 내용을 수정하지 않는다. metadata는 `blinded=false`, `independent_gold=false`, `runtime_input=false`다.
+
+## 주요 사실 근거 판정과 입력 조립 계약 0.1
+
+[정책·예제·실험 경계](FACT_GROUNDED_AGENTS.md). `factory/fact_checks.py`와 `agents/grounded_inputs.py`가 host validator다.
+기존 automatic Factory/AgentSession 계약을 자동으로 대체하지 않는다.
+
+| 입력 | 필드와 불변조건 |
+|---|---|
+| Claim | `id,text,kind,scope,requires`; kind는 fact/value/prediction, scope는 entity/time/conditions; 의존성은 기존 fact ID, cycle 금지 |
+| Source | `id,text,canonical_id`; alias는 지지에 투표하지 않음; canonical chain 금지 |
+| Relation | claim/source ID·hash, 정확한 span, verdict, trace_id, origin; 동일 claim/source 중복 금지, supported만 집계 |
+| Document | ID·전체 text·HTTPS URL·title·publisher·published_at·retrieved_at·expires_at·source_kind; 선택 구간과 전체 문서 hash 결합 |
+| Selection | `id,document_id,span`; span은 정수 start/end와 정확한 text, 중복 evidence ID 금지 |
+| Model | name·revision·weights_sha256·runtime_sha256; artifact의 선언된 identity이며 실행기 attestation은 아님 |
+| Candidate | `id,core_claim_id,reason_claim_ids,major_fact_ids`; 이유와 reachable 사실 집합에 결합 |
+| Bundle | `expires_at,sources,claims,relations,documents,checks,candidates,model`; check는 claim_id·selections·record |
+
+`evidence-bound-fact-check-0.1`은 packet/request hash, model identity, expiry, raw/parsed 결과·오류·시간·usage,
+판정 state를 저장한다. 지원/반박 인용은 packet 내부 ID이며 각 방향에 필요한 인용이 있어야 한다.
+판정은 supplied passages에 한정된다. `supported/refuted/conflicting/insufficient/unassessed/error` 외의 승격 상태는 없다.
+model origin·human_approved=false·quality_gate_passed=false를 유지하고 기록 재사용 시 원래 자료로 packet/request를 재구성한다.
+코드 hash에 대한 runner manifest, 자동 source retrieval provenance, publisher/date 의미 검증은 후속 통합 범위다.
+
+`fact-screened-agent-inputs-0.1`은 input hash·최단 expiry·profiles·deferred·claim_decisions를 저장한다.
+profile은 core 지지 수, 각 prompt entry의 개별 지지 수·범위·종류·전제, 댓글 인용/사실 검증 인용, omitted 이유를 분리한다.
+기존 runtime에서 허용하지 않는 상태를 사용하며 `quality_gate_passed=false`, `agents=[]`다.
+`prompt_input`은 원래 bundle로 재조립해 일치를 확인한 후 허용 entries만 반환한다. 원문 전체·탈락 사실은 생성 입력에서 제외한다.
+
+원문 관계와 claim typing/major/dependency 선언은 아직 upstream 의미 판단이다. `local_model` origin이나 hash만으로 정확성·진위를
+입증하지 않는다. 합성 입력도 허용하는 개발 계약이므로 이 output을 자동으로 서비스 품질 승인으로 읽어서는 안 된다.
+
+## 선택형 답변과 추론 예산 계약
+
+`fact-screened-extractive-answer-0.3`는 candidate ID, compiled/request hash, 질문, 선택된 points, 필수 전제,
+answerability/limitation, 실제 raw/parsed 응답·오류·시간을 보존한다. 모델은 허용 claim ID만 선택한다.
+문장·scope·개별 지지 수·인용은 원래 compiled profile에서 복사하며 외부/탈락 ID는 거부한다.
+호출 전후 재조립·만료 검사를 수행하고, 오류를 정상적인 보류나 유효 답변으로 세지 않는다.
+`quality_gate_passed=false`, `semantic_guarantee=false`이며 공개 서비스 승격 상태가 아니다.
+
+`local-inference-budget-0.1`은 SQLite의 cycle policy와 호출별 request/plan hash, 원문 요청, 예약·실측·차감 시간,
+상태·응답을 저장한다. cycle/한도 교체와 두 번 완료를 금지하며 미완료 예약은 보수적으로 유지한다.
+이 저장소는 비공개 실행 artifact다. 기록 결합은 재현을 위한 것이며 외부 변조 방지 서명이나 GPU 사용률 계측은 아니다.
+
+답변0.2에서는 prompt entry에 upstream의 core/reason/prerequisite 역할을 명시한다. 역할은 새로운 사실 근거나 인간 승인이 아니다.
+JSON schema는 grounded/partial/not_in_evidence별로 claim 수와 limitation을 고정해 모순된 조합을 허용하지 않는다.
+0.1의 실패 결과는 수정하지 않고 이전 코드 revision에서 재생한다.
+0.3은 호출 후 재검증한 `prompt_input`에서 문장과 지지 수를 가져오므로 세션의 가변 캐시가 공개 내용을 바꾸지 못한다.
+limitation은 schema의 `none`/`missing_evidence`만 허용한다.0.2의 합성 성능 측정과0.3의 코드 회귀 검증은 구분한다.
+
+## NLI 사실 기록과 자동 입력 adapter
+
+`evidence-nli-fact-record-0.1`은 생성형 판정의 `raw` 문자열을 흉내 내지 않는다. packet hash, classifier model identity,
+case의 주장/문서 구간, batch request hash, label mapping, logits/softmax 점수, 고정 threshold, pair 판정과 aggregate를 보존한다.
+재생은 logits→확률→판정→집계를 다시 계산하며 자료 목록·만료·주장/문서 결합을 검사한다.
+`batch_request_sha256`은 상위 runner의 batch 원본과 함께 검증해야 하며 변조 방지 서명은 아니다.
+기존40건의 기록 adapter 재생은 새 모델 호출 없이 수행할 수 있다. `fact-screened-agent-inputs-0.2` compiler는
+이 artifact kind를 NLI 전용 validator로 전달하고, 생성형 기록은 기존 validator로 검사한다. 사실 의존성 정책은 동일하다.
+
+`factory/grounded_factory.py`는 원문별 모델 판정을 grounded bundle로 변환한다. 후보 C/R1/R2/F1/F2를 candidate ID로
+이름 공간화하고 모든 사실 의존성을 보존한다. 핵심 지지가3개 미만이면 상세 추론을 예약하지 않으며,
+상세는 핵심을 지지한 source에서만 검사한다. offline reference label을 입력 인자로 받지 않는다.
+canonical 원문 수와 각 주장 지지 수를 구분하고, 입력 조립에 성공해도 `quality_gate_passed`를 자동 승격하지 않는다.
+
+## 근거 기반 로컬 비교 화면
+
+`agents/grounded_web.py`는 별도의 개발 전용 HTTP 계약이다. `/api/session`에서 비교할 관점을 최대2개 선택하고,
+`/api/ask`의 question/request_id로 공통 질문과 후속 질문을 보낸다. 동일 request_id 재전송은 중복 추론을 만들지 않는다.
+`/api/state`는 host가 렌더링한 points/required_premises와 상태만 반환하며 모델 원시 응답은 private checkpoint에만 남긴다.
+`/api/source`는 세션과 source ID를 확인한 뒤 원문을 반환한다. 개발 화면의 원문 수는 모델 지지 판정 수이지 독립 검증 수가 아니다.
+loopback 주소·Host/Origin·세션 토큰·단일 추론 lane·질문6회·지속 예산을 적용한다. 데이터가 바뀌거나 만료되면 답변을 차단한다.
+UI의 `--experimental` 옵션은 개발 경로 선택이며 사용자에게 runtime 의미 검수를 요구하는 단계가 아니다.
+
+## 새 분석과 중단 복구 기록
+
+`fresh-grounded-pipeline-0.2`는 snapshot·모델 파일·코드·배포 설정·외부 근거 문서를 사전 동결한다.
+`frozen-membership-policy-0.1`은 평가 요청들에서 동일한 system/schema/max_tokens를 추출하고 source/target/hash 결합을 검사한다.
+핵심 가입과 상세 근거 검사에 동일 정책을 전달하며 유형 metadata 변경으로 요청의 의미가 바뀌면 거부한다.
+`grounded-integration-0.2`에도 같은 정책을 연결했다. 정책이 없던 과거 plan을 암묵적으로 현재 기본값으로 실행하지 않는다.
+평가 라벨은 정책에 포함하지 않는다. 구성 결합은 의미 정확성 보증이 아니며 미통과 source gate의 전체 실행은 차단한다.
+`fresh-snapshot-embedding-0.1` worker는 기존 raw 분석 cache를 읽지 않고 오프라인 모델로 임베딩을 새로 수행한다.
+1000댓글 초과·snapshot 변경·기존 출력 경로 재사용을 거부한다. 유사도 임계값0.45와 상위20개 후보 탐색은 의미 승인 규칙이 아니다.
+생성 후 다음 단계의 구체적인 요청을 호출 전에 별도 기록하며, 모든 추론은 공유 budget으로 차감한다.
+전체 경과 시간에는 입력 무결성 검사·서버 시작·각 모델 로딩·새 임베딩·가입·유형·상세·사실 검사를 포함한다.
+`completed.json`의 `screened_inputs`는 입력 조립 수이고 `qualified_agents=0`/`quality_gate_passed=false`를 유지한다.
+실제 산출물 감사·답변 성능·비교 지연은 별도 완료 조건이다. 중간 예외는 `failed.json`에 남기며 자동 재시도하지 않는다.
+
+추론 모드 continuation은 부모 plan과 재사용할 기록의 hash를 결합한 새 plan이다. 부모 파일과 기존 오류를 덮어쓰지 않는다.
+ledger에 시도가 있는데 checkpoint가 없으면 먼저 복구해야 하며, 응답 유실을 새 호출로 교체하지 않는다.
+복구는 read-only SQLite 연결을 사용하고 성공·오류 모두 handle을 닫는다. 참조100·동일 요청·실패 비용을 보존한다.

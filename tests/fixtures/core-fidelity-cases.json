@@ -1,0 +1,18 @@
+{
+  "version": "core-fidelity-cases-0.1",
+  "purpose": "Exact target fidelity, separate from pair compatibility. Assistant-authored development cases frozen before the first grounded-core run; not independent gold.",
+  "cases": [
+    {"id":"job_start_not_continuation","source":"Even if I received a basic income, I would take a job.","target":"Even if I received a basic income, I would continue my current job.","expected":false},
+    {"id":"job_start_willingness","source":"Even if I received a basic income, I would take a job.","target":"Even if I received a basic income, I would be willing to work.","expected":true},
+    {"id":"job_continuation_willingness","source":"Even if I received a basic income, I would keep working.","target":"Even if I received a basic income, I would be willing to work.","expected":true},
+    {"id":"library_recommendation","source":"The library ought to extend its opening hours.","target":"The library should stay open longer.","expected":true},
+    {"id":"recommendation_not_future_event","source":"The library ought to extend its opening hours.","target":"The library will stay open longer.","expected":false},
+    {"id":"condition_synonym","source":"If housing rent goes up, housing support should increase.","target":"If rent increases, housing support should increase.","expected":true},
+    {"id":"condition_omission","source":"If housing rent goes up, housing support should increase.","target":"Housing support should increase.","expected":false},
+    {"id":"future_not_current","source":"Automation will replace routine jobs.","target":"Automation is replacing routine jobs.","expected":false},
+    {"id":"personal_not_population","source":"I would work fewer hours with a basic income.","target":"People would work fewer hours with a basic income.","expected":false},
+    {"id":"possibility_synonym","source":"Remote work could reduce commuting time.","target":"Remote work may reduce commuting time.","expected":true},
+    {"id":"possibility_not_certainty","source":"Remote work could reduce commuting time.","target":"Remote work will reduce commuting time.","expected":false},
+    {"id":"reason_not_shared_requirement","source":"Electric buses reduce local air pollution and street noise.","target":"Electric buses reduce local air pollution.","expected":true}
+  ]
+}

@@ -1,0 +1,59 @@
+{
+  "artifact_kind": "minimal-claims-20261017-v3",
+  "source": {
+    "id": "historical-toy",
+    "text": "Adopt P. Equity matters.",
+    "parent": null
+  },
+  "source_sha256": "fc41f4ead5ba35a2cf15dd8167e4175172f2e251d4a9e9579cea50990be1b697",
+  "status": "partial",
+  "claims": [
+    {
+      "id": "MCe6ac55c02c26b10448c9cf6c00b5b7efca4528aa2432f65b01851c81fd301b00",
+      "text": "Adopt P.",
+      "source_id": "historical-toy",
+      "source_sha256": "fc41f4ead5ba35a2cf15dd8167e4175172f2e251d4a9e9579cea50990be1b697",
+      "record_id": "MEe3ad74eceae260e76cfc062a73e11b943f32fc467078d067c834657307340c68",
+      "authorship": "asserted",
+      "evidence": [
+        {
+          "id": "S000",
+          "start": 0,
+          "end": 9,
+          "text": "Adopt P. "
+        }
+      ],
+      "essential_conditions": []
+    }
+  ],
+  "additional_passes": 0,
+  "previous": null,
+  "batch_sources": [
+    {
+      "id": "historical-toy",
+      "text": "Adopt P. Equity matters.",
+      "parent": null
+    }
+  ],
+  "batch_previous": [],
+  "extraction": {
+    "sources": [
+      {
+        "source_id": "historical-toy",
+        "status": "partial",
+        "claims": [
+          {
+            "text": "Adopt P.",
+            "authorship": "asserted",
+            "evidence_segment_ids": [
+              "S000"
+            ],
+            "essential_condition_segment_ids": []
+          }
+        ]
+      }
+    ]
+  },
+  "request_sha256": "13119bad698180d5b3c8209e3052cd2a0066fdf0c973a437c28f8919481ff976",
+  "semantic_approval": false
+}

@@ -1,0 +1,47 @@
+{
+  "as_of": "2026-10-23",
+  "scope": "One fixed UBI snapshot and a limited backend path; not the full MVP.",
+  "actual_agents": 2,
+  "reviewed_canonical_supports_each": [
+    3,
+    3
+  ],
+  "reviewed_sources": 6,
+  "reviewed_profiles": 2,
+  "reviewed_runtime_turns": 6,
+  "answered": 3,
+  "appropriate_abstentions": 3,
+  "http_rounds": 3,
+  "http_answers": 6,
+  "source_lookups": 6,
+  "parent_context_lookups": 2,
+  "fixed40": {
+    "supported_kept": 9,
+    "supported_denominator": 10,
+    "unsupported_false_support": 0,
+    "unsupported_denominator": 30
+  },
+  "actual_essential_empirical_facts": 0,
+  "limitations": [
+    "5attributed values/1prediction; no empirical policy efficacy validation",
+    "Not independent gold; direct review by development agent",
+    "No whole-change before/after ablation",
+    "Raw comments/corpus/ledger/model responses remain private",
+    "Public team demo uses synthetic fixtures and no model inference"
+  ],
+  "historical_failures": {
+    "v12_new_valid_supports": 0,
+    "v13_new_valid_supports": 0,
+    "first_runtime": "5pass/1fail:core used as reason",
+    "second_runtime": "empty enum rejected by actual server",
+    "final_runtime": "6pass after role allowlist/schema correction"
+  },
+  "private_HTTP_fingerprints": {
+    "plan_sha256": "928d55fcd0ef7f6ef202470e3b3ddc5120469abb6c6bf75c2d3d38c3369ae97b",
+    "report_sha256": "55c251399f4c7ea7af2e2b7ec70c9bed567d8bd51786c915da33c92ef100721f",
+    "exchanges_sha256": "0ba138bd2f5ed79aa60547e7a388198cc790e8056b9576d7903a8c8021e5bac4"
+  },
+  "overall_factory_quality_gate_passed": false,
+  "independent_gold": false,
+  "human_approved": false
+}

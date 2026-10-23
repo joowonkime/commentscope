@@ -1,0 +1,22 @@
+{
+  "version": "source-eligibility-contrast-0.1",
+  "purpose": "Assistant-authored contrast cases frozen before this experiment's inference. No independent human gold or unseen real-world accuracy claim.",
+  "cases": [
+    {"id":"transit_assertion","source":"Free city buses could reduce car traffic.","expected":true,"contrast":"question_vs_assertion"},
+    {"id":"transit_question","source":"Could free city buses reduce car traffic?","expected":false,"contrast":"question_vs_assertion"},
+    {"id":"resolved_reference","source":"The night bus service is unreliable. It should run on a fixed schedule.","expected":true,"contrast":"reference_resolution"},
+    {"id":"missing_reference","source":"It should run on a fixed schedule.","expected":false,"contrast":"reference_resolution"},
+    {"id":"specific_recommendation","source":"Employers should publish salary ranges.","expected":true,"contrast":"specified_recommendation"},
+    {"id":"unspecified_recommendation","source":"They should do that.","expected":false,"contrast":"specified_recommendation"},
+    {"id":"video_opinion","source":"Your video should explain the limits of its survey.","expected":true,"contrast":"video_reference_not_automatic_exclusion"},
+    {"id":"arrival_only","source":"I just arrived here from your other video!","expected":false,"contrast":"video_reference_not_automatic_exclusion"},
+    {"id":"endorsed_position","source":"I believe libraries should open on Sundays.","expected":true,"contrast":"endorsement"},
+    {"id":"quotation_only","source":"\"Libraries should open on Sundays.\"","expected":false,"contrast":"endorsement"},
+    {"id":"claim_with_question","source":"Why are trains so crowded? My commute takes two hours each day.","expected":true,"contrast":"mixed_message"},
+    {"id":"question_only","source":"Why are trains so crowded?","expected":false,"contrast":"mixed_message"},
+    {"id":"claim_with_humor","source":"Haha, my rent rose by 20 percent this year. My wallet needs a helmet.","expected":true,"contrast":"humor_not_automatic_exclusion"},
+    {"id":"joke_only","source":"Haha, my wallet needs a tiny helmet!","expected":false,"contrast":"humor_not_automatic_exclusion"},
+    {"id":"korean_specific","source":"야간 버스 운행 시간을 늘려야 한다고 생각합니다.","expected":true,"contrast":"korean_reference"},
+    {"id":"korean_unresolved","source":"저도 그 말에 동의합니다.","expected":false,"contrast":"korean_reference"}
+  ]
+}

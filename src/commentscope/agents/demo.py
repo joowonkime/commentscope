@@ -15,10 +15,15 @@ from commentscope.storage import write_json_exclusive
 
 def citation_html(card):
     esc=lambda v:html.escape(str(v),quote=True)
-    parts=['<details class="citation"><summary>근거 '+esc(card['evidence_id'])+' · 원문 보기</summary>',
-           '<blockquote>'+esc(card['original_text'])+'</blockquote>',
-           '<p><strong>검수자 해석 (직역 아님):</strong> '+esc(card['reviewer_reading_ko'])+'</p>',
-           '<p><strong>보존할 차이:</strong> '+esc(card['cautions_ko'])+'</p>']
+    parts=['<details class="citation"><summary>근거 '+esc(card['evidence_id'])+' · 원문 보기</summary>']
+    if card.get('support_spans'):
+        parts.append('<p>자동 추출 주장 (원문 아님): '+esc(card['allowed_claim'])+'</p>')
+        parts.extend('<blockquote>'+esc(p['text'])+'</blockquote>' for p in card['support_spans'])
+        parts.append('<details><summary>댓글 전체 문맥 — 미배정 주장은 근거 아님</summary><blockquote>'+esc(card['original_text'])+'</blockquote></details>')
+    else:
+        parts += ['<blockquote>'+esc(card['original_text'])+'</blockquote>',
+                  '<p><strong>검수자 해석 (직역 아님):</strong> '+esc(card['reviewer_reading_ko'])+'</p>']
+    parts.append('<p><strong>보존할 차이:</strong> '+esc(card['cautions_ko'])+'</p>')
     url=card.get('source_url') or ''; parsed=urlparse(url)
     if parsed.scheme=='https' and parsed.hostname in ['youtube.com','www.youtube.com','youtu.be']:
         parts.append('<a href="'+esc(url)+'" target="_blank" rel="noopener noreferrer">YouTube 출처</a>')
@@ -35,9 +40,9 @@ def render(report):
     bundle=report['bundle']; profiles={a['agent_id']:a for a in bundle['agents']}
     parts=['<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>CommentScope · 관점 에이전트 비교</title>',
         '<style>body{font:17px/1.65 system-ui;background:#f3f6fb;color:#18243c;max-width:1250px;margin:24px auto;padding:20px}h1,h2,h3{line-height:1.4}.banner{background:#fff0cc;padding:18px;border-radius:10px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(310px,1fr));gap:18px}article,section{background:white;border:1px solid #d7dfec;border-radius:12px;padding:20px;margin:18px 0}article{margin:0}blockquote{background:#edf3fb;padding:12px;margin:10px 0;font-size:15px}.citation{border-left:3px solid #5483b7;padding:12px;margin:12px 0}summary{cursor:pointer}small,.muted{color:#5a6880}pre{white-space:pre-wrap;overflow-wrap:anywhere}nav a{display:inline-block;padding:8px}a{color:#175baa}.status{font-size:14px;color:#765400}</style></head><body>',
-        '<h1>CommentScope · 두 관점에서 질문하기</h1>',
-        '<p class="banner"><strong>개발용 에이전트 비교</strong><br>검수 지원 묶음에서 생성한 미승인 에이전트입니다. 답변은 같은 로컬 모델의 별도 요청으로 검사하며 독립 검증은 아닙니다. 검사 통과도 의미 정확성을 보장하지 않습니다. 보류된 초안은 답변으로 표시하지 않습니다.</p>',
-        '<p>댓글 → 검수된 묶음 → 개발용 프로필 → 독립 응답 → 근거 검사 → 비교·출처 확인</p>',
+        '<h1>CommentScope · 관점에서 질문하기</h1>',
+        '<p class="banner"><strong>연구용 에이전트 비교</strong><br>'+('수동 검수 입력 없이 자동 생성한 잠정 관점입니다.' if bundle.get('human_handling') is False else '검수 지원 묶음에서 생성한 미승인 에이전트입니다.')+' 답변은 같은 로컬 모델의 별도 요청으로 검사하며 독립 검증은 아닙니다. 검사 통과도 의미 정확성을 보장하지 않습니다. 보류된 초안은 답변으로 표시하지 않습니다.</p>',
+        '<p>댓글 → 근거가 연결된 묶음 → 프로필 → 독립 응답 → 근거 검사 → 비교·출처 확인</p>',
         '<div class="grid">']
     for agent in bundle['agents']:
         parts.append('<article><h2>'+esc(agent['agent_id'])+' · '+esc(agent['title'])+'</h2><p>자기 근거 '+str(len(agent['evidence']))+'개만 접근 · 대화 상태 분리</p><details><summary>관점 범위와 전체 근거</summary><ul>')

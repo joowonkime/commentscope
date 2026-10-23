@@ -1,0 +1,22 @@
+{
+  "version":"evidence-unit-cases-0.1",
+  "purpose":"Frozen before inference; assistant-authored development and transfer controls, not independent gold.",
+  "cases":[
+    {"id":"salary_context","split":"development","source":"I receive housing assistance. I get $820 each month.","expected":true},
+    {"id":"video_arrival","split":"development","source":"Came here after your genetics video!","expected":false},
+    {"id":"ai_production_explicit","split":"development","source":"AI-generated videos can mislead viewers.","expected":true},
+    {"id":"deictic_action","split":"development","source":"We should do it.","expected":false},
+    {"id":"conditional_normative","split":"development","source":"If rents rise, housing support should increase.","expected":true},
+    {"id":"question_not_assertion","split":"development","source":"Could free public transport reduce traffic?","expected":false},
+    {"id":"personal_hypothetical","split":"development","source":"Even with a basic income, I would keep working.","expected":true},
+    {"id":"bare_agreement","split":"development","source":"I agree with that.","expected":false},
+    {"id":"bus_context","split":"transfer","source":"The school bus is often late. It should arrive on time.","expected":true},
+    {"id":"empty_reference","split":"transfer","source":"This is exactly what I meant.","expected":false},
+    {"id":"video_substantive","split":"transfer","source":"Videos about genetics should distinguish inheritance from genetic determinism.","expected":true},
+    {"id":"unclear_imperative","split":"transfer","source":"They ought to do that!","expected":false},
+    {"id":"conditional_personal","split":"transfer","source":"If train fares fall, I would travel more often.","expected":true},
+    {"id":"joke","split":"transfer","source":"Those cartoon ducks need tiny top hats, haha!","expected":false},
+    {"id":"supply_distinction","split":"transfer","source":"Prices are not determined by money supply alone.","expected":true},
+    {"id":"unknown_proposition","split":"transfer","source":"It has already been proven otherwise.","expected":false}
+  ]
+}
