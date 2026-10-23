@@ -94,7 +94,9 @@ def preflight(directory, plan, *, observe=None):
     return report
 
 
-def prepare(directory, frame_source, deployment_source, cycle):
+def prepare(directory, frame_source, deployment_source, cycle, *,
+            discovery_plan=Path('runs/source-bound-discovery-20261014-plan.json'),
+            host_plan=Path('runs/source-bound-comparison-host-20261015-plan.json')):
     if directory.exists() or not directory.resolve().is_relative_to(PRIVATE_ROOT.resolve()):
         raise ValueError('A new private directory is required')
     settings = read_json(cycle)
@@ -124,8 +126,7 @@ def prepare(directory, frame_source, deployment_source, cycle):
         if file_hash(item['path']) != item['sha256']: raise ValueError('Existing deployment changed')
     paths += [*qualification_paths, frame_source/'plan.json', frame_source/'completed.json', deployment_source, cycle,
               Path('docs/MVP_GOAL.md'), Path('docs/MVP_PRODUCT_POLICY.md'),
-              Path('runs/source-bound-discovery-20261014-plan.json'),
-              Path('runs/source-bound-comparison-host-20261015-plan.json')]
+              Path(discovery_plan), Path(host_plan)]
     requests = {'frame_views': clusters.proposal_request(records), 'source_bound': boundary.invocation(records)}
     plan = {'artifact_kind': VERSION, 'arms': list(ARMS), 'records': records, 'frame_paths': frame_paths,
         'snapshot_sha256': digest(snapshot.to_dict()), 'requests': requests,

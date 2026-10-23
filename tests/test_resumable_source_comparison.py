@@ -56,7 +56,12 @@ class ResumableComparisonTests(unittest.TestCase):
         budget = Mock(); budget.summary.return_value = {'calls':[]}
         stack.enter_context(patch.object(c,'InferenceBudget',return_value=budget))
         FakeBase.calls = []; FakeBase.interrupt_member = False
-        c.prepare(self.directory,self.frames,self.source,self.cycle)
+        discovery_plan=self.root/'synthetic-discovery-plan.json'
+        host_plan=self.root/'synthetic-host-plan.json'
+        write(discovery_plan, {'synthetic_contract_fixture': 'discovery'})
+        write(host_plan, {'synthetic_contract_fixture': 'host'})
+        c.prepare(self.directory,self.frames,self.source,self.cycle,
+                  discovery_plan=discovery_plan,host_plan=host_plan)
 
     def test_two_phases_reuse_only_proposals_and_keep_all_memberships(self):
         stage = c.run(self.directory,proposals_only=True)

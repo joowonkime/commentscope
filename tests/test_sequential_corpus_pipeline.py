@@ -80,7 +80,10 @@ class SequentialCorpusTests(unittest.TestCase):
         self.admission = stack.enter_context(patch.object(p, 'preflight', return_value={'admitted': True}))
 
     def prepare(self):
-        return p.prepare(self.directory, self.snapshot, self.reference, self.source, self.auxiliary, self.cycle)
+        implementation=self.root/'synthetic-implementation-plan.json'
+        if not implementation.exists():write(implementation, {'synthetic_contract_fixture': 'sequential'})
+        return p.prepare(self.directory, self.snapshot, self.reference, self.source, self.auxiliary, self.cycle,
+                         implementation_plan=implementation)
 
     def test_full_semantic_path_runtime_and_exclusive_resource_ownership(self):
         plan = self.prepare(); report = p.run(self.directory)

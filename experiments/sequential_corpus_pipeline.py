@@ -59,7 +59,8 @@ def deployment_check(deployment):
     command(deployment, 'baseline')
 
 
-def prepare(directory, snapshot_path, reference_path, deployment_source, auxiliary_source, cycle):
+def prepare(directory, snapshot_path, reference_path, deployment_source, auxiliary_source, cycle, *,
+            implementation_plan=Path('runs/sequential-corpus-integration-20261015-plan.json')):
     private(directory)
     if directory.exists(): raise ValueError('Never overwrite a pipeline plan')
     loaded = load_snapshot(snapshot_path); snapshot = loaded.snapshot
@@ -77,7 +78,7 @@ def prepare(directory, snapshot_path, reference_path, deployment_source, auxilia
     for doc in auxiliary['documents']: live(doc['expires_at'])
     paths = [snapshot_path, reference_path, deployment_source, auxiliary_source, cycle, *qualified_paths,
              Path('docs/MVP_GOAL.md'), Path('docs/MVP_PRODUCT_POLICY.md'),
-             Path('runs/sequential-corpus-integration-20261015-plan.json')]
+             Path(implementation_plan)]
     plan = {'artifact_kind': VERSION, 'goal_revision': settings['goal_revision'], 'snapshot': str(snapshot_path),
         'snapshot_file_sha256': loaded.sha256, 'expires_at': snapshot.usage.expires_at,
         'reference': {'path': str(reference_path), 'sha256': reference_hash, 'runtime_input': False},
