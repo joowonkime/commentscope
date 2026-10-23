@@ -37,7 +37,7 @@ class R5ReviewTests(TestCase):
                       {'agent_inputs': {'map': {'opinion_map': {}}}}, {})
             read, sha = review.read_json, review.sha
             def fixture_read(path):
-                if str(path) == 'runs/design-freeze-20261016/samples.json':
+                if Path(path) == Path('runs/design-freeze-20261016/samples.json'):
                     return {'meaning_reference': 'synthetic-reference', 'meaning_reference_sha256': 'fixed'}
                 if str(path) == 'synthetic-reference':
                     return {'rows': [{'source_id': f's{i}' if i < meaningful else f'outside{i}',

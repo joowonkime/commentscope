@@ -11,7 +11,7 @@ from experiments.opinion_map_report import report
 
 class OpinionMapReportTests(TestCase):
     def prepare(self, root, *, verdict='supported', missing=False, change=False, supplement=False):
-        snapshot=json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text())
+        snapshot=json.loads(Path('tests/fixtures/synthetic-snapshot.json').read_text(encoding='utf-8'))
         snapshot['usage']['expires_at']='2099-01-01T00:00:00Z'
         snapshot['comments']=snapshot['comments'][:3]
         path=root/'snapshot.json';write(path,snapshot)
