@@ -18,6 +18,7 @@ from commentscope.providers.budget import InferenceBudget
 from commentscope.storage import write_json_exclusive as write
 
 ROOT = Path(__file__).parent
+MAX_INITIAL_OPINION = 500
 
 
 class GroundedApp:
@@ -43,14 +44,17 @@ class GroundedApp:
 
     def public(self,item):
         return {'profiles':deepcopy(self.compiled['profiles']),'deferred':deepcopy(self.compiled['deferred']),
+                'initial_opinion':item['initial_opinion'],
                 'rounds':deepcopy(item['rounds']),'selected':list(item['agents']),
                 'job':item['job'],'remaining_questions':6-len(item['requests']),
                 'can_ask':bool(item['agents']) and not self.busy and len(item['requests'])<6,
                 'quality_gate_passed':False,'human_approved':False,
                 'notice':'Development only. Source judgments and claim types remain fallible; screened inputs are not certified agents.'}
 
-    def create(self,ids=None):
+    def create(self,ids=None,*,initial_opinion=''):
         with self.lock:
+            if not isinstance(initial_opinion,str) or len(initial_opinion)>MAX_INITIAL_OPINION:
+                raise WebError(400,'invalid_initial_opinion')
             self.live()
             available=[p['candidate_id'] for p in self.compiled['profiles']]
             if ids is None: ids=available[:2]
@@ -59,8 +63,10 @@ class GroundedApp:
             self.sessions={k:v for k,v in self.sessions.items() if v['running'] or time.monotonic()-v['touched']<3600}
             if len(self.sessions)>=8: raise WebError(429,'session_capacity')
             token=secrets.token_urlsafe(32); folder=self.session_dir/str(uuid4())
-            write(folder/'manifest.json',{'bundle_sha256':digest(self.bundle),'compiled':self.compiled,'selected':ids})
+            write(folder/'manifest.json',{'bundle_sha256':digest(self.bundle),'compiled':self.compiled,
+                                         'selected':ids,'initial_opinion':initial_opinion})
             item={'agents':{i:GroundedSession(self.bundle,i,provider=self.provider) for i in ids},
+                  'initial_opinion':initial_opinion,
                   'rounds':[],'requests':{},'touched':time.monotonic(),'folder':folder,'running':False,'job':'idle'}
             self.sessions[token]=item
             return {'token':token,**self.public(item)}
@@ -73,7 +79,10 @@ class GroundedApp:
             self.get(token)
             row=next((s for s in self.bundle['sources'] if s['id']==sid),None)
             if row is None: raise WebError(404,'source_missing')
-            return deepcopy(row)
+            result=deepcopy(row)
+            context=self.bundle.get('source_contexts',{}).get(sid)
+            if context is not None:result['PARENT_CONTEXT_ONLY']=deepcopy(context['parent'])
+            return result
 
     def ask(self,token,question,rid):
         if not isinstance(question,str) or not question.strip() or len(question)>1000:
@@ -137,7 +146,8 @@ class GroundedHandler(ComparisonHandler):
                 body=json.loads(self.rfile.read(size))
                 if not isinstance(body,dict): raise ValueError()
             except (ValueError,UnicodeError): raise WebError(400,'invalid_body') from None
-            if self.path=='/api/session' and set(body)<= {'ids'}: return self.reply(201,app.create(body.get('ids')))
+            if self.path=='/api/session' and set(body)<= {'ids','initial_opinion'}:
+                return self.reply(201,app.create(body.get('ids'),initial_opinion=body.get('initial_opinion','')))
             if self.path=='/api/ask' and set(body)=={'question','request_id'}:
                 return self.reply(202,app.ask(token,body['question'],body['request_id']))
             if self.path=='/api/source' and set(body)=={'source_id'}: return self.reply(200,app.source(token,body['source_id']))

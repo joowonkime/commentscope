@@ -10,7 +10,7 @@ import time
 
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.core_admission_bound import CoreAdmissionBound
-from commentscope.providers.budget import InferenceBudget
+from commentscope.providers.budget import InferenceBudget, remaining_allowance
 from commentscope.storage import write_json_exclusive as write
 from experiments import fresh_direct_pipeline as source
 from experiments.pending_candidate_probe import pending
@@ -75,7 +75,7 @@ class Runner(source.base.Runner):
     def timeout(self, maximum):
         b = self.budget.summary()
         allowance = min(INFERENCE_SECONDS-(b['charged_seconds']-self.initial_charge),
-                        b['remaining_seconds']-FOLLOWUP_SECONDS)-3
+                        remaining_allowance(b)-FOLLOWUP_SECONDS)-3
         if allowance <= 0: raise TimeoutError('Core allowance exhausted; followup retained')
         return min(super().timeout(maximum), allowance)
 

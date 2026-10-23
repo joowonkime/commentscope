@@ -1,10 +1,11 @@
 import json
+import math
 from pathlib import Path
 import tempfile
 import time
 import unittest
 
-from commentscope.providers.budget import InferenceBudget, BudgetExhausted
+from commentscope.providers.budget import InferenceBudget, BudgetExhausted, remaining_allowance, LEGACY_VERSION
 
 REQUEST = {'system':'synthetic','data':{},'schema':{},'max_tokens':10}
 PLAN = 'a'*64
@@ -61,7 +62,7 @@ class InferenceBudgetTests(unittest.TestCase):
         with self.assertRaises(BudgetExhausted): reopened.reserve(REQUEST,PLAN,15)
 
     def test_cycle_cannot_reset_or_change_limit(self):
-        for cycle,limit in [('new-cycle',60),('test',120),('test',30)]:
+        for cycle,limit in [('new-cycle',60),('test',120),('test',30),('test',None)]:
             with self.assertRaises(ValueError): InferenceBudget(self.path,cycle,limit_seconds=limit)
         self.assertEqual(self.budget.summary()['limit_seconds'],60)
 
@@ -82,6 +83,60 @@ class InferenceBudgetTests(unittest.TestCase):
         cid = self.budget.reserve(REQUEST,PLAN,10)
         self.budget.finish(cid,1,'interrupted',error='KeyboardInterrupt')
         self.assertEqual(self.budget.summary()['charged_seconds'],13)
+
+    def test_uncapped_cycle_records_more_than_eight_hours_and_reopens(self):
+        path = Path(self.tmp.name)/'uncapped.sqlite'
+        budget = InferenceBudget(path, 'uncapped', limit_seconds=None)
+        cid = budget.reserve(REQUEST, PLAN, 10)
+        budget.finish(cid, 28801, 'ok', {})
+        reopened = InferenceBudget(path, 'uncapped')
+        reopened.reserve(REQUEST, PLAN, 10)
+        summary = reopened.summary()
+        self.assertIsNone(summary['limit_seconds'])
+        self.assertIsNone(summary['remaining_seconds'])
+        self.assertEqual(summary['charged_seconds'], 28814)
+        self.assertEqual(summary['unfinished_reservations'], 1)
+        self.assertEqual(len(summary['calls']), 2)
+        json.dumps(summary, allow_nan=False)
+        self.assertTrue(math.isinf(remaining_allowance(summary)))
+        with self.assertRaises(ValueError):
+            InferenceBudget(path, 'uncapped', limit_seconds=28800)
+
+    def test_uncapped_cycle_still_terminates_timed_out_worker(self):
+        budget = InferenceBudget(Path(self.tmp.name)/'uncapped.sqlite', 'uncapped', limit_seconds=None)
+        with self.assertRaises(RuntimeError):
+            budget.call(REQUEST, PLAN, timeout_seconds=.2, provider=stall)
+        summary = budget.summary()
+        self.assertEqual(summary['calls'][0]['state'], 'timeout')
+        self.assertGreaterEqual(summary['charged_seconds'], 3.2)
+        self.assertEqual(summary['unfinished_reservations'], 0)
+
+    def test_uncapped_cycle_still_requires_finite_call_timeout(self):
+        budget = InferenceBudget(Path(self.tmp.name)/'uncapped.sqlite', 'uncapped', limit_seconds=None)
+        for timeout in (None, True, 0, -1, math.inf, math.nan):
+            with self.assertRaises(ValueError): budget.reserve(REQUEST, PLAN, timeout)
+        self.assertEqual(budget.summary()['calls'], [])
+
+    def test_legacy_policy_reopens_without_being_rewritten(self):
+        with self.budget.transaction() as db:
+            db.execute('UPDATE policy SET version=? WHERE id=1', (LEGACY_VERSION,))
+        reopened = InferenceBudget(self.path, 'test')
+        self.assertEqual(reopened.summary()['artifact_kind'], LEGACY_VERSION)
+        self.assertEqual(reopened.summary()['limit_seconds'], 60)
+        with self.assertRaises(BudgetExhausted): reopened.reserve(REQUEST, PLAN, 60)
+        with self.assertRaises(ValueError): InferenceBudget(self.path, 'test', limit_seconds=None)
+
+    def test_allowance_rejects_ambiguous_or_invalid_summary(self):
+        for summary in ({'remaining_seconds': None}, {'remaining_seconds': None, 'limit_seconds': 60},
+                        {'remaining_seconds': math.inf}, {'remaining_seconds': -1}, {'remaining_seconds': True}):
+            with self.assertRaises(ValueError): remaining_allowance(summary)
+        self.assertEqual(remaining_allowance({'remaining_seconds': 0}), 0)
+        self.assertEqual(remaining_allowance({'remaining_seconds': 60}), 60)
+
+    def test_invalid_cycle_limits_are_rejected(self):
+        for limit in (True, 0, -1, math.inf, math.nan):
+            with self.assertRaises(ValueError):
+                InferenceBudget(Path(self.tmp.name)/'invalid.sqlite', 'invalid', limit_seconds=limit)
 
 
 if __name__ == '__main__': unittest.main()

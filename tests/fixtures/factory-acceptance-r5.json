@@ -1,0 +1,160 @@
+{
+  "goal_revision": "factory-goal-20261017-r5",
+  "acceptance_revision": "factory-acceptance-20261017-r5",
+  "base_design": "factory-implementation-20261016-v1",
+  "base_autonomy": "factory-autonomy-20261016-v1",
+  "approved_at": "2026-10-17T09:04:22.450146+00:00",
+  "authorization": "User accepted 60% first-MVP correct utilization and autonomous structural/prompt/algorithm fixes; goal setup now, implementation in another session.",
+  "scope": "Fixed snapshot viewpoint clustering through automatic grounded Agent generation and actual runtime verification; UI/online Auditor/Single-Agent study remain subsequent work.",
+  "snapshot": {
+    "path": "data/ubi-research-20261010.json",
+    "canonical_count": 999,
+    "meaningful_denominator": 755,
+    "expires_at": "2026-11-08"
+  },
+  "correct_utilization": {
+    "numerator": "unique meaningful canonical comments correctly contributing to a valid shared perspective cluster",
+    "minimum_count": 453,
+    "denominator": 755,
+    "ratio_numerator": 3,
+    "ratio_denominator": 5,
+    "selection_rate_is_not_utilization": true,
+    "singleton_storage_counts": false,
+    "runtime_cannot_change_denominator": true,
+    "minimum_valid_contributors_per_shared_cluster": 2
+  },
+  "counted_supports": {
+    "review_scope": "all",
+    "invalid_allowed": 0,
+    "unreviewed_allowed_for_approval": 0,
+    "deduplicate": "one canonical comment per perspective; unique comment once for global utilization"
+  },
+  "agents": {
+    "minimum_distinct": 2,
+    "minimum_valid_canonical_supports_each": 3,
+    "fixed_count_or_forced_binary_split": false,
+    "review_all_generated": true,
+    "load_and_run_required": true,
+    "questions_each": 3,
+    "isolated_evidence_and_history": true,
+    "critical_distortion_allowed": 0
+  },
+  "facts": {
+    "fixed_fixture_total": 40,
+    "minimum_supported_approvals": 8,
+    "supported_denominator": 10,
+    "unsupported_approvals_allowed": 0,
+    "unsupported_denominator": 30,
+    "actual_agent_essential_facts_separately_checked": true,
+    "drop_failed_essential_premises_to_pass": false
+  },
+  "gates": {
+    "G0": {
+      "scope": "changed contracts and offline regression",
+      "invariants": "unchanged"
+    },
+    "G1": {
+      "synthetic_sources": 12,
+      "expected_behavior": "existing full synthetic behavior and two Agent runtime checks unchanged"
+    },
+    "G2": {
+      "sources": 24,
+      "meaningful_denominator": 19,
+      "candidate_preservation_minimum": 12,
+      "ratio_numerator": 3,
+      "ratio_denominator": 5,
+      "incorrect_counted_supports_allowed": 0,
+      "core_distortion_allowed": 0,
+      "call_failures_allowed": 0
+    },
+    "G3": {
+      "sources": 96,
+      "meaningful_denominator": 74,
+      "candidate_preservation_minimum": 45,
+      "ratio_numerator": 3,
+      "ratio_denominator": 5,
+      "incorrect_counted_supports_allowed": 0,
+      "incorrect_merges_allowed": 0,
+      "essential_condition_loss_allowed": 0,
+      "call_failures_allowed": 0
+    },
+    "G4": {
+      "sources": 999,
+      "fresh_end_to_end": true,
+      "correct_utilization_minimum": 453,
+      "meaningful_denominator": 755,
+      "all_final_requirements_apply": true
+    }
+  },
+  "candidate_preservation_definition": "unique meaningful sampled sources with at least one substantive proposition preserved without condition or attribution loss; singleton may qualify for this diagnostic only, not global cluster utilization",
+  "g2_g3_threshold_rationale": "Align intermediate coverage gates with approved selective 60% first MVP; keep integrity, facts and runtime criteria. Engineering gate alignment is explicit, not a historical result change.",
+  "diagnostics_unchanged": {
+    "existing_100_relation_precision": 0.95,
+    "existing_100_relation_valid_support_retention": 0.8,
+    "diagnostic_not_standalone_factory_gate": true
+  },
+  "selection": {
+    "prefer": "contextually identifiable positions and verifiable source-to-claim relations with viewpoint diversity",
+    "avoid": "fixed strongest-assertion percentile, raw model self-confidence approval, topic/source-specific exceptions",
+    "retain": "all original sources, candidate and membership holds, unassessed relations, rare perspectives and exclusion reasons",
+    "detail_analysis": "all counted supports of Agent-eligible candidates; preserve essential grounds and facts"
+  },
+  "autonomy": {
+    "allow": [
+      "repository implementation",
+      "algorithm and prompt changes",
+      "source and candidate representation changes",
+      "offline tests",
+      "bounded local experiments",
+      "evidence-based retries under revised plans",
+      "limited public primary-source research",
+      "checkpoint recovery",
+      "G0 through G4 without stepwise approval"
+    ],
+    "fixed": [
+      "acceptance criteria",
+      "denominator",
+      "original sources",
+      "resource safeguards",
+      "historical artifacts"
+    ],
+    "no_new_aggregate_budget": true,
+    "no_total_iteration_cap": true,
+    "transport_retries": 0,
+    "no_improvement_review_after_cycles": 3,
+    "not_authorized": [
+      "new GPT experiments",
+      "paid APIs",
+      "new models or large downloads",
+      "external comment or secret transmission",
+      "publish/push/deploy",
+      "unrelated destructive operations"
+    ]
+  },
+  "model": {
+    "name": "Qwen3-8B",
+    "device": "GPU",
+    "thinking": false,
+    "pinned_plan": "runs/model-selection-20261016/off/plan.json",
+    "ledger": "runs/mvp-factory-20261014/inference.sqlite",
+    "new_total_token_budget": null,
+    "new_total_time_budget": null
+  },
+  "first_work": [
+    "Inspect dirty tree, processes, checkpoint034/035 and ledger.",
+    "Version the evaluator acceptance profile without invalidating or overwriting the old reference/artifacts; exercise 452/453 boundary, invalid support, unknown review and denominator guards offline.",
+    "Connect raw source plus parent plus candidate comparison to the existing path; distinguish candidate extraction from membership errors.",
+    "Use stored Terra v2 six-source outputs only for isolated diagnosis; freeze Qwen call list and rubric before a local run. Subsequent changed-hypothesis runs are authorized.",
+    "Run changed G0/full G1 then G2/G3/G4; final generation must work automatically without Terra fixtures or reviewer labels."
+  ],
+  "historical_results_unchanged": true,
+  "runtime_evaluator_migrated": false,
+  "quality_passed": false,
+  "supersedes": [
+    "604/755 final threshold",
+    "16/19 and 60/74 mandatory intermediate preservation thresholds",
+    "local-diagnostic-goal-20261017-v1 as final objective",
+    "diagnostic-only completion or global one-experiment restriction"
+  ],
+  "future_70_80_percent": "follow-up improvement, not required for this r5 completion; 50% is not the new acceptance threshold"
+}

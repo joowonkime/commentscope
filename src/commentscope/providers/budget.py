@@ -1,11 +1,14 @@
 """Persistent local-call budget. Unfinished calls retain their full reservation.
 
-SQLite transactions protect the shared cycle allowance across processes. Each
+SQLite transactions protect the shared cycle accounting across processes. Each
 model request runs in a disposable process with a wall-clock deadline. This is
 call elapsed time, not a GPU utilization meter or an authenticity certificate.
+An explicit limit_seconds=None removes only the cumulative cap. Existing cycle
+policies are never changed when reopened; legacy finite caps remain enforceable.
 """
 from contextlib import contextmanager
 from datetime import datetime, timezone
+from functools import partial
 import json
 import math
 import multiprocessing
@@ -16,7 +19,9 @@ import time
 from commentscope.factory.automatic_contract import digest
 from commentscope.providers.local_llama import generate
 
-VERSION = 'local-inference-budget-0.1'
+VERSION = 'local-inference-budget-0.2'
+LEGACY_VERSION = 'local-inference-budget-0.1'
+_UNSET = object()
 MAX_RESPONSE_BYTES = 2_000_000
 SHUTDOWN_RESERVATION_SECONDS = 3
 
@@ -27,6 +32,18 @@ class BudgetExhausted(RuntimeError):
 
 def positive(value):
     return type(value) in (int, float) and math.isfinite(value) and value > 0
+
+
+def remaining_allowance(summary):
+    """Numeric scheduling allowance; infinity is never stored in JSON or SQL."""
+    remaining = summary['remaining_seconds']
+    if remaining is None:
+        if summary.get('limit_seconds', _UNSET) is not None:
+            raise ValueError('Uncapped allowance requires an explicit null limit')
+        return math.inf
+    if type(remaining) not in (int, float) or not math.isfinite(remaining) or remaining < 0:
+        raise ValueError('Invalid remaining allowance')
+    return remaining
 
 
 def worker(pipe, provider, request):
@@ -47,18 +64,31 @@ def worker(pipe, provider, request):
 
 
 class InferenceBudget:
-    def __init__(self, path, cycle_id, *, limit_seconds=8*60*60):
-        if not isinstance(cycle_id, str) or not cycle_id.strip() or not positive(limit_seconds):
-            raise ValueError('Explicit cycle ID and positive finite budget required')
+    def __init__(self, path, cycle_id, *, limit_seconds=_UNSET):
+        if (not isinstance(cycle_id, str) or not cycle_id.strip()
+                or (limit_seconds is not _UNSET and limit_seconds is not None and not positive(limit_seconds))):
+            raise ValueError('Explicit cycle ID and positive finite budget or None required')
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.cycle_id, self.limit = cycle_id, float(limit_seconds)
+        self.cycle_id = cycle_id
         with self.transaction() as db:
             db.execute('CREATE TABLE IF NOT EXISTS policy (id INTEGER PRIMARY KEY CHECK(id=1), version TEXT, cycle TEXT, limit_seconds REAL)')
             db.execute('CREATE TABLE IF NOT EXISTS calls (id INTEGER PRIMARY KEY, plan_sha TEXT, request_sha TEXT, request_json TEXT, started_at TEXT, reserved REAL, charged REAL, elapsed REAL, state TEXT, response_json TEXT, error TEXT)')
-            db.execute('INSERT OR IGNORE INTO policy VALUES (1,?,?,?)', (VERSION, cycle_id, self.limit))
-            if db.execute('SELECT version,cycle,limit_seconds FROM policy WHERE id=1').fetchone() != (VERSION, cycle_id, self.limit):
+            row = db.execute('SELECT version,cycle,limit_seconds FROM policy WHERE id=1').fetchone()
+            if row is None:
+                # Preserve the old safe default for callers creating historical
+                # experiments. The current project cycle explicitly opts out.
+                limit = 8*60*60 if limit_seconds is _UNSET else limit_seconds
+                row = (VERSION, cycle_id, None if limit is None else float(limit))
+                db.execute('INSERT INTO policy VALUES (1,?,?,?)', row)
+            version, stored_cycle, stored_limit = row
+            if (version not in (VERSION, LEGACY_VERSION) or stored_cycle != cycle_id
+                    or (stored_limit is None and version != VERSION)
+                    or (stored_limit is not None and not positive(stored_limit))):
+                raise ValueError('Invalid or mismatched stored cycle policy')
+            if limit_seconds is not _UNSET and stored_limit != limit_seconds:
                 raise ValueError('Existing cycle policy cannot be replaced')
+            self.version, self.limit = version, stored_limit
 
     @contextmanager
     def transaction(self):
@@ -84,7 +114,7 @@ class InferenceBudget:
         reserve = timeout_seconds + SHUTDOWN_RESERVATION_SECONDS
         with self.transaction() as db:
             charged = db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
-            if charged + reserve > self.limit:
+            if self.limit is not None and charged + reserve > self.limit:
                 raise BudgetExhausted('Cycle inference budget cannot cover another bounded call')
             cursor = db.execute('INSERT INTO calls(plan_sha,request_sha,request_json,started_at,reserved,charged,state) VALUES (?,?,?,?,?,?,?)',
                 (plan_sha, digest(request), encoded, datetime.now(timezone.utc).isoformat(), reserve, reserve, 'reserved'))
@@ -110,8 +140,8 @@ class InferenceBudget:
             rows = db.execute('SELECT id,plan_sha,request_sha,reserved,charged,elapsed,state,error FROM calls ORDER BY id').fetchall()
         calls = [dict(zip(['id','plan_sha256','request_sha256','reserved_seconds','charged_seconds','elapsed_seconds','state','error'], row)) for row in rows]
         charged = sum(c['charged_seconds'] for c in calls)
-        return {'artifact_kind':VERSION,'cycle_id':self.cycle_id,'limit_seconds':self.limit,
-                'charged_seconds':charged,'remaining_seconds':max(0,self.limit-charged),
+        return {'artifact_kind':self.version,'cycle_id':self.cycle_id,'limit_seconds':self.limit,
+                'charged_seconds':charged,'remaining_seconds':None if self.limit is None else max(0,self.limit-charged),
                 'unfinished_reservations':sum(c['state']=='reserved' for c in calls),'calls':calls}
 
     def call(self, request, plan_sha, *, timeout_seconds=180, provider=generate):
@@ -119,7 +149,10 @@ class InferenceBudget:
         started = time.monotonic()
         context = multiprocessing.get_context('spawn')
         receiver, sender = context.Pipe(duplex=False)
-        process = context.Process(target=worker, args=(sender,provider,request), daemon=True)
+        # The disposable worker still enforces the wall-clock deadline. Match
+        # the local HTTP timeout instead of imposing a hidden180second CPU cap.
+        bounded_provider = partial(generate, timeout_seconds=timeout_seconds) if provider is generate else provider
+        process = context.Process(target=worker, args=(sender,bounded_provider,request), daemon=True)
         state, response, error = 'error', None, 'worker_start_failed'
         caught = None
         try:

@@ -16,7 +16,7 @@ from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.fact_checks import live
 from commentscope.agents.grounded_inputs import compile_inputs
-from commentscope.providers.budget import InferenceBudget,BudgetExhausted
+from commentscope.providers.budget import InferenceBudget,BudgetExhausted,remaining_allowance
 from commentscope.storage import write_json_exclusive as write
 from experiments import candidate_completion_pipeline as base
 from experiments import direct_argument_completion as downstream
@@ -82,7 +82,7 @@ def validate(plan):
 
 class Runner(base.CompletionRunner):
     def timeout(self,maximum):
-        remaining=self.budget.summary()['remaining_seconds']-QA_RESERVE_SECONDS-3
+        remaining=remaining_allowance(self.budget.summary())-QA_RESERVE_SECONDS-3
         if remaining<=0:raise TimeoutError('Preparation allowance exhausted; QA reserve retained')
         return min(super().timeout(maximum),remaining)
 
@@ -146,7 +146,7 @@ def complete(directory,plan,runner,queue):
     for p in queue:
         cid=p['id'];cd=directory/'candidates'/cid
         if reserved+len(p['sources'])>plan['limits']['core_relations']:state='unprocessed_core_capacity'
-        elif runner.budget.summary()['remaining_seconds']<QA_RESERVE_SECONDS+base.completion.SLOT_SECONDS:
+        elif remaining_allowance(runner.budget.summary())<QA_RESERVE_SECONDS+base.completion.SLOT_SECONDS:
             state='unprocessed_preparation_budget'
         elif not runner.allocation.begin(cid):state=runner.allocation.refusal
         else:

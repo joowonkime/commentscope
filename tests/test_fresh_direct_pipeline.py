@@ -83,5 +83,15 @@ class FreshDirectPipelineTests(unittest.TestCase):
             self.assertEqual(outcomes,[{'id':'unprocessed','state':'unprocessed_preparation_budget'}])
             self.assertEqual(compiled['profiles'],[])
 
+    def test_uncapped_cycle_keeps_request_and_analysis_timeouts(self):
+        with TemporaryDirectory() as tmp:
+            root=Path(tmp);plan={'limits':deepcopy(p.base.LIMITS)}
+            write(root/'plan.json',plan)
+            budget=Mock();budget.summary.return_value={'remaining_seconds':None,'limit_seconds':None}
+            runner=p.Runner(root,plan,budget)
+            self.assertEqual(runner.timeout(90),90)
+            runner.started=runner.clock()-3601
+            with self.assertRaises(TimeoutError): runner.timeout(90)
+
 
 if __name__=='__main__':unittest.main()

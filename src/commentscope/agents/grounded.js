@@ -45,7 +45,11 @@ function render(state, inventory = false) {
         for (const [index,cite] of entry.citations.comment_evidence.entries()) {
           const b = node('button', '원문 ' + (index+1)); b.title = cite.source_id;
           b.type = 'button'; b.onclick = () => api('/api/source', {source_id: cite.source_id})
-            .then(s => { $('source').textContent = (s.id || cite.source_id)+'\n'+s.text; }).catch(fail); card.append(b);
+            .then(s => {
+              let text = (s.id || cite.source_id)+'\n'+s.text;
+              if (s.PARENT_CONTEXT_ONLY) text += '\n\n부모 댓글 · 문맥 참고\n'+s.PARENT_CONTEXT_ONLY.id+'\n'+s.PARENT_CONTEXT_ONLY.text;
+              $('source').textContent = text;
+            }).catch(fail); card.append(b);
         }
         for (const cite of entry.citations.verification_evidence) {
           const link = node('a', cite.title); const u = new URL(cite.url);
@@ -63,7 +67,9 @@ async function poll() {
   try { render(await api('/api/state')); } catch (error) { fail(error); }
 }
 async function create(ids) {
-  const state = await api('/api/session', ids ? {ids} : {}); token = state.token; render(state, true);
+  const body = {initial_opinion: $('initial-opinion').value};
+  if (ids) body.ids = ids;
+  const state = await api('/api/session', body); token = state.token; render(state, true);
 }
 $('select').onclick = () => {
   const ids = Array.from($('profiles').querySelectorAll('input:checked')).map(x => x.value);

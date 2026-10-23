@@ -13,7 +13,16 @@ def selection(ids=None, kind='grounded', limitation='none'):
 
 class GroundedRuntimeTests(unittest.TestCase):
     def session(self, output=None, bundle=None):
-        return GroundedSession(bundle or fixture(), 'P1', provider=lambda *a, **k: response(output or selection()))
+        bundle = bundle or fixture()
+        # Legacy behavior tests choose fixture claims by identity; the mock model
+        # returns the corresponding local address actually supplied in its input.
+        texts = {c['id']:c['text'] for c in bundle['claims']}
+        def provider(system,data,schema,**kwargs):
+            aliases = {e['text']:e['claim_id'] for e in data['PERSPECTIVE']['allowed_entries']}
+            value = deepcopy(output or selection())
+            value['claim_ids'] = [aliases.get(texts.get(cid),cid) for cid in value['claim_ids']]
+            return response(value)
+        return GroundedSession(bundle, 'P1', provider=provider)
 
     def test_exact_entry_and_citations_not_model_prose(self):
         session = self.session()
@@ -53,7 +62,7 @@ class GroundedRuntimeTests(unittest.TestCase):
     def test_roles_explicit_and_schema_cannot_mix_abstention_with_no_limit(self):
         request = self.session().invocation('What reason is provided?')
         roles = {entry['claim_id']: entry['declared_role'] for entry in request['data']['PERSPECTIVE']['allowed_entries']}
-        self.assertEqual(roles, {'observed': 'reason', 'position': 'core'})
+        self.assertEqual(roles, {'E1': 'reason'})
         for branch in request['schema']['anyOf']:
             properties = branch['properties']
             if properties['answerability']['const'] == 'not_in_evidence':
@@ -62,6 +71,35 @@ class GroundedRuntimeTests(unittest.TestCase):
             else:
                 self.assertEqual(properties['claim_ids']['minItems'], 1)
         self.assertIn('Required JSON schema:', request['system'])
+
+    def test_reason_question_cannot_select_core_even_if_provider_ignores_schema(self):
+        session = self.session()
+        session.provider = lambda *a, **k: response(selection(['E2']))
+        turn = session.ask('What reasons and conditions are actually available?')
+        self.assertEqual(turn['status'], 'error')
+        self.assertEqual(turn['points'], [])
+
+    def test_core_only_reason_question_requires_abstention_and_keeps_history_addresses(self):
+        bundle = fixture()
+        bundle['candidates'][0]['reason_claim_ids'] = []
+        bundle['candidates'][0]['major_fact_ids'] = []
+        session = self.session(bundle=bundle)
+        session.ask('What is the position?')
+        invocation = session.invocation('이 입장을 지지하는 이유는 무엇인가요?')
+        self.assertEqual(invocation['data']['PERSPECTIVE']['allowed_entries'], [])
+        self.assertEqual(invocation['data']['HISTORY'][0]['selected_claim_ids'], ['E1'])
+        self.assertEqual(len(invocation['schema']['anyOf']), 1)
+        self.assertNotIn('enum', invocation['schema']['anyOf'][0]['properties']['claim_ids']['items'])
+        self.assertEqual(invocation['schema']['anyOf'][0]['properties']['claim_ids']['maxItems'], 0)
+        session.provider = lambda *a, **k: response(selection([], 'not_in_evidence', 'missing_evidence'))
+        self.assertEqual(session.ask('Why support this?')['status'], 'abstain')
+
+    def test_concession_and_additional_position_cannot_substitute_for_reason(self):
+        for role in ('concession', 'additional_position', 'core_restatement'):
+            bundle = fixture()
+            bundle['candidates'][0]['argument_roles'] = {cid:role for cid in bundle['candidates'][0]['reason_claim_ids']}
+            invocation = self.session(bundle=bundle).invocation('What reason is available?')
+            self.assertEqual(invocation['data']['PERSPECTIVE']['allowed_entries'], [])
 
     def test_cannot_add_new_claim_or_citation_text(self):
         session = self.session({**selection(), 'answer': 'Invented fact'})
@@ -119,7 +157,8 @@ class GroundedRuntimeTests(unittest.TestCase):
         for i in range(3): session.ask('Question '+str(i))
         history = session.invocation('And then?')['data']['HISTORY']
         self.assertEqual(len(history), 2)
-        self.assertEqual(history[-1]['selected_claim_ids'], ['position'])
+        self.assertEqual(history[-1]['selected_claim_ids'], ['E2'])
+        self.assertEqual(session.history[-1]['selected_claim_ids'], ['position'])
         self.assertNotIn('result', json.dumps(history))
         for i in range(3): session.ask('More '+str(i))
         with self.assertRaises(ValueError): session.ask('Seventh')
@@ -129,6 +168,29 @@ class GroundedRuntimeTests(unittest.TestCase):
         def fail(*a, **k): raise OSError('unavailable')
         session.provider = fail
         self.assertEqual(session.ask('Question')['status'], 'error')
+
+    def test_model_cannot_return_canonical_or_unknown_local_id(self):
+        for cid in ('position','E999'):
+            session=self.session()
+            session.provider=lambda *a,**kw:response(selection([cid]))
+            turn=session.ask('Position?')
+            self.assertEqual(turn['status'],'error')
+            self.assertEqual(turn['points'],[])
+
+    def test_aliases_bind_core_dependencies_and_exact_published_citations(self):
+        bundle=fixture();bundle['claims'][0]['requires']=['observed']
+        for r in bundle['relations']:
+            if r['claim_id']=='position':r['claim_sha256']=facts.claim_identity(bundle['claims'][0])
+        session=self.session(bundle=bundle);request=session.invocation('Position?')
+        entries=request['data']['PERSPECTIVE']['allowed_entries']
+        core=next(e for e in entries if e['declared_role']=='core')
+        self.assertEqual(core['claim_id'],'E2');self.assertEqual(core['requires'],['E1'])
+        turn=session.ask('Position?')
+        self.assertEqual(turn['selection_id_map'],{'E1':'observed','E2':'position'})
+        self.assertEqual(turn['result']['output']['claim_ids'],['E2'])
+        self.assertEqual(turn['points'][0]['claim_id'],'position')
+        self.assertEqual(turn['required_premises'][0]['claim_id'],'observed')
+        self.assertEqual(len(turn['points'][0]['citations']['comment_evidence']),3)
 
 
 if __name__ == '__main__': unittest.main()

@@ -28,6 +28,7 @@ from commentscope.ingestion import load_snapshot
 from commentscope.providers import fresh_embedding, evidence_nli
 from commentscope.providers import source_first_candidates
 from commentscope.providers.budget import InferenceBudget, BudgetExhausted
+from commentscope.providers.budget import positive
 from commentscope.storage import write_json_exclusive as write
 from experiments import atomic_discovery_probe as atomic, fact_evidence_probe as base
 from experiments.audit_model_compare import owned_server, file_hash
@@ -99,7 +100,11 @@ class Runner:
         self.started=clock(); self.plan_sha=sha(directory/'plan.json'); self.seq=0
 
     def timeout(self,maximum):
-        remaining=self.plan['limits']['analysis_seconds']-(self.clock()-self.started)
+        if not positive(maximum): raise ValueError('Finite positive per-call timeout required')
+        limit=self.plan['limits']['analysis_seconds']
+        if limit is None: return maximum
+        if not positive(limit): raise ValueError('Invalid analysis time limit')
+        remaining=limit-(self.clock()-self.started)
         if remaining<=3: raise TimeoutError('Fresh analysis deadline reached')
         return min(maximum,remaining-3)
 

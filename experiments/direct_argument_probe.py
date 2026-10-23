@@ -17,7 +17,7 @@ from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.factory.fact_checks import live
 from commentscope.factory.scoped_discovery import verdict
 from commentscope.agents.grounded_inputs import compile_inputs
-from commentscope.providers.budget import InferenceBudget,BudgetExhausted
+from commentscope.providers.budget import InferenceBudget,BudgetExhausted,remaining_allowance
 from commentscope.storage import write_json_exclusive as write
 from experiments import source_span_product_probe as previous
 from experiments import direct_argument_completion as downstream
@@ -122,7 +122,7 @@ class Runner(pipeline.CompletionRunner):
     def timeout(self,maximum):
         b=self.budget.summary()
         remaining=min(INFERENCE_SECONDS-(b['charged_seconds']-self.initial_charge),
-                      b['remaining_seconds']-FOLLOWUP_RESERVE_SECONDS)-3
+                      remaining_allowance(b)-FOLLOWUP_RESERVE_SECONDS)-3
         if remaining<=0:raise TimeoutError('Direct comparison allowance exhausted; followup reserve retained')
         return min(super().timeout(maximum),remaining)
 

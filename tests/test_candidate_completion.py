@@ -27,6 +27,17 @@ def argument(core='Reviews should be mandatory.', reason='Safety matters more th
 
 
 class CandidateCompletionTests(unittest.TestCase):
+    def test_uncapped_cycle_keeps_per_analysis_deadline(self):
+        now = [0.]
+        runner = SimpleNamespace(clock=lambda: now[0], started=0., plan={'limits': {'analysis_seconds': 3600}}, budget=Mock())
+        runner.budget.summary.return_value = {'remaining_seconds': None, 'limit_seconds': None}
+        allocation = cc.Allocation(runner)
+        self.assertTrue(allocation.begin('A'))
+        allocation.finish('done')
+        now[0] = 3600
+        self.assertFalse(allocation.begin('B'))
+        self.assertEqual(allocation.refusal, 'unprocessed_completion_budget')
+
     def test_candidate_slot_reserved_before_start_and_failures_never_retry(self):
         now = [0.]
         runner = SimpleNamespace(clock=lambda: now[0], started=0., plan={'limits': {'analysis_seconds': 3600}}, budget=Mock())

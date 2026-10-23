@@ -125,6 +125,14 @@ class FreshGroundedPipelineTests(unittest.TestCase):
         self.assertEqual(runner.timeout(90),3)
         with self.assertRaises(TimeoutError):runner.timeout(90)
 
+    def test_null_analysis_limit_keeps_finite_call_timeout(self):
+        runner=self.runner(Mock(),lambda:100)
+        runner.plan['limits']['analysis_seconds']=None
+        runner.started=-100000
+        self.assertEqual(runner.timeout(90),90)
+        for value in (None,0,-1,True,float('inf'),float('nan')):
+            with self.subTest(value=value),self.assertRaises(ValueError):runner.timeout(value)
+
     def test_exhausted_cycle_is_not_an_ordinary_model_rejection(self):
         budget=Mock();budget.call.side_effect=BudgetExhausted('exhausted')
         runner=self.runner(budget,lambda:100)

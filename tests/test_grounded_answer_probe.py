@@ -26,6 +26,7 @@ class GroundedAnswerProbeTests(unittest.TestCase):
 
     def test_contract_perfect_fixture_still_not_real_agents(self):
         bundle = probe.bundle_fixture(EXPIRY); rows = probe.questions(); rounds = []
+        texts = {c['id']: c['text'] for c in bundle['claims']}
         for row in rows:
             turns = {}
             for cid, available in [('P1', ['position', 'observed']), ('P2', ['optional', 'choice'])]:
@@ -33,7 +34,10 @@ class GroundedAnswerProbeTests(unittest.TestCase):
                 ids = [] if target == 'none' else available if target == 'both' else available[:1] if target == 'core' else available[1:]
                 output = {'answerability': 'grounded' if ids else 'not_in_evidence', 'claim_ids': ids,
                           'limitation': 'none' if ids else 'missing_evidence'}
-                turns[cid] = GroundedSession(bundle, cid, provider=lambda *a, out=output, **k: response(out)).ask(row['text'])
+                def perfect_provider(system, data, schema, *, out=output, **kwargs):
+                    aliases = {e['text']: e['claim_id'] for e in data['PERSPECTIVE']['allowed_entries']}
+                    return response({**out, 'claim_ids': [aliases[texts[i]] for i in out['claim_ids']]})
+                turns[cid] = GroundedSession(bundle, cid, provider=perfect_provider).ask(row['text'])
             rounds.append({'id': row['id'], 'turns': turns, 'seconds': 1})
         report = probe.summarize({'rows': rows, 'scope': 'test'}, rounds)
         self.assertTrue(report['controlled_answer_gate_passed'])

@@ -1,7 +1,7 @@
 """Frozen, opt-in deployment comparison of two local auditors; no selector changes."""
 import argparse
 from collections import Counter
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import html
 import json
 import os
@@ -106,6 +106,43 @@ def command(plan, name):
             raise ValueError('Explicit reasoning mode required')
         result += ['--reasoning',runtime['reasoning'],'--reasoning-budget',str(budget),
                    '--reasoning-format','deepseek']
+    if 'memory_profile' in runtime:
+        from commentscope.providers.host_resources import validate
+        profile = runtime['memory_profile']
+        host_only = profile.get('version') == 'local-memory-profile-0.4'
+        mapped = host_only or profile.get('version') == 'local-memory-profile-0.3'
+        compact = mapped or profile.get('version') == 'local-memory-profile-0.2'
+        keys = {'version', 'load_mode', 'cache_ram_mib', 'cache_idle_slots', 'host_resource_policy'}
+        if compact:
+            keys |= {'kv_cache', 'flash_attention', 'batch_size', 'ubatch_size'}
+        if mapped:
+            keys |= {'host_buffer', 'repack'}
+        if host_only:
+            keys |= {'device', 'op_offload'}
+        if (set(profile) != keys
+                or profile['version'] not in {'local-memory-profile-0.1', 'local-memory-profile-0.2', 'local-memory-profile-0.3', 'local-memory-profile-0.4'}
+                or profile['load_mode'] != ('mmap' if mapped else 'dio')
+                or type(profile['cache_ram_mib']) is not int or profile['cache_ram_mib'] != 0
+                or profile['cache_idle_slots'] is not False):
+            raise ValueError('Unknown local memory profile')
+        validate(profile['host_resource_policy'])
+        result += ['--load-mode', profile['load_mode'], '--cache-ram', '0', '--no-cache-idle-slots']
+        if compact:
+            if (profile['kv_cache'] != {'k': 'q8_0', 'v': 'q8_0'} or profile['flash_attention'] != 'on'
+                    or type(profile['batch_size']) is not int or profile['batch_size'] != 512
+                    or type(profile['ubatch_size']) is not int or profile['ubatch_size'] != 128):
+                raise ValueError('Unknown compact cache/compute contract')
+            result += ['--cache-type-k', 'q8_0', '--cache-type-v', 'q8_0', '--flash-attn', 'on',
+                       '--batch-size', '512', '--ubatch-size', '128']
+        if mapped:
+            if profile['host_buffer'] is not False or profile['repack'] is not False:
+                raise ValueError('Unknown mapped loading contract')
+            result += ['--no-host', '--no-repack']
+        if host_only:
+            if (profile['device'] != 'none' or profile['op_offload'] is not False
+                    or type(runtime['gpu_layers']) is not int or runtime['gpu_layers'] != 0):
+                raise ValueError('Host-only profile cannot enable device allocations')
+            result += ['--device', 'none', '--no-op-offload']
     return result
 
 
@@ -114,29 +151,36 @@ def owned_server(plan, name, directory):
     with socket.socket() as probe:
         probe.setsockopt(socket.SOL_SOCKET,socket.SO_REUSEADDR,1)
         probe.bind(('127.0.0.1',8091))
+    argv = command(plan, name)
     directory.mkdir(parents=True,exist_ok=False)
     env = {k:v for k,v in os.environ.items() if not k.startswith('LLAMA_ARG_')}
     env['LD_LIBRARY_PATH'] = plan['server']['libraries']
     with (directory/'server.log').open('x') as log:
-        proc = subprocess.Popen(command(plan,name),env=env,stdout=log,stderr=subprocess.STDOUT)
+        proc = subprocess.Popen(argv,env=env,stdout=log,stderr=subprocess.STDOUT)
         started = time.perf_counter()
         try:
-            opener = build_opener(ProxyHandler({}))
-            while True:
-                if proc.poll() is not None: raise RuntimeError('Owned server failed; inspect its private log')
-                try:
-                    with opener.open('http://127.0.0.1:8091/health',timeout=1) as response:
-                        if json.load(response).get('status')=='ok': break
-                except OSError: pass
-                if time.perf_counter()-started>60: raise TimeoutError('Server startup budget')
-                time.sleep(.2)
-            maps = Path(f'/proc/{proc.pid}/maps').read_text()
-            libraries = sorted({line.split()[-1] for line in maps.splitlines()
-                                if '/' in line and any(s in line for s in ['libggml','libcuda','libcublas'])})
-            write(directory/'runtime.json',{'pid':proc.pid,'command':command(plan,name),
-                  'startup_seconds':time.perf_counter()-started,
-                  'loaded_library_sha256':{f:file_hash(f) for f in libraries if Path(f).is_file()}})
-            yield proc
+            guard = nullcontext()
+            if 'memory_profile' in plan['runtime']:
+                from commentscope.providers.host_resources import watch
+                from experiments.corpus_resource_guard import host_observation
+                guard = watch(directory/'resources', plan['runtime']['memory_profile']['host_resource_policy'], host_observation)
+            with guard:
+                opener = build_opener(ProxyHandler({}))
+                while True:
+                    if proc.poll() is not None: raise RuntimeError('Owned server failed; inspect its private log')
+                    try:
+                        with opener.open('http://127.0.0.1:8091/health',timeout=1) as response:
+                            if json.load(response).get('status')=='ok': break
+                    except OSError: pass
+                    if time.perf_counter()-started>60: raise TimeoutError('Server startup budget')
+                    time.sleep(.2)
+                maps = Path(f'/proc/{proc.pid}/maps').read_text()
+                libraries = sorted({line.split()[-1] for line in maps.splitlines()
+                                    if '/' in line and any(s in line for s in ['libggml','libcuda','libcublas'])})
+                write(directory/'runtime.json',{'pid':proc.pid,'command':argv,
+                      'startup_seconds':time.perf_counter()-started,
+                      'loaded_library_sha256':{f:file_hash(f) for f in libraries if Path(f).is_file()}})
+                yield proc
         finally:
             if proc.poll() is None:
                 proc.send_signal(signal.SIGINT)

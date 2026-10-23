@@ -6,6 +6,7 @@ from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import argument_graph, argument_paths, grounded_factory, membership_policy
 from commentscope.factory.automatic_contract import digest
 from commentscope.providers.local_nli import THRESHOLD
+from commentscope.providers.budget import remaining_allowance
 
 VERSION = 'candidate-completion-contract-0.2'
 SLOT_SECONDS = 600
@@ -29,7 +30,7 @@ class Allocation:
         self.refusal = ('unprocessed_search_capacity' if len(self.attempts) >= MAX_ATTEMPTS else
                         'unprocessed_completion_capacity' if len(self.completions) >= MAX_COMPLETIONS else
                         'unprocessed_completion_budget' if available < SLOT_SECONDS + FINALIZE_SECONDS
-                        or self.runner.budget.summary()['remaining_seconds'] < SLOT_SECONDS else None)
+                        or remaining_allowance(self.runner.budget.summary()) < SLOT_SECONDS else None)
         if self.refusal is not None:
             return False
         self.deadline = now + WORK_SECONDS
