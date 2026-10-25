@@ -157,6 +157,10 @@ def owned_server(deployment, directory, observe, check_quota):
     if refusals:
         raise RuntimeError('Portable model startup resource policy refused')
     with socket.socket() as probe:
+        # POSIX can reuse TIME_WAIT addresses while refusing active listeners.
+        # Windows SO_REUSEADDR can also share an active port; keep its default.
+        if os.name == 'posix':
+            probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         probe.bind(('127.0.0.1', d['runtime']['port']))
     argv = command(d); write(directory/'deployment.json', d)
     env = {k: v for k, v in os.environ.items() if not k.startswith('LLAMA_ARG_')}

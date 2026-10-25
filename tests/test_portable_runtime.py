@@ -2,6 +2,7 @@ from contextlib import nullcontext
 from copy import deepcopy
 from io import BytesIO
 import json
+import os
 from pathlib import Path
 import pickle
 import socket
@@ -99,12 +100,32 @@ class PortableRuntimeTests(unittest.TestCase):
 
     def test_busy_port_is_not_reused_or_killed(self):
         with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
             listener.bind(('127.0.0.1', 0)); listener.listen()
             self.d['runtime']['port'] = listener.getsockname()[1]
             with patch.object(runtime.subprocess, 'Popen') as spawn, self.assertRaises(OSError):
                 with runtime.owned_server(self.d, self.root/'run', observation, lambda: None):
                     pass
             spawn.assert_not_called()
+
+    @unittest.skipUnless(os.name == 'posix', 'POSIX TIME_WAIT reuse semantics')
+    def test_closed_server_connection_allows_immediate_restart(self):
+        with socket.socket() as listener:
+            listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            listener.bind(('127.0.0.1', 0)); listener.listen()
+            self.d['runtime']['port'] = listener.getsockname()[1]
+            with socket.create_connection(listener.getsockname(), timeout=2) as client:
+                connection, _ = listener.accept()
+                connection.close()
+                self.assertEqual(client.recv(1), b'')
+        proc = Mock(pid=12345, returncode=0)
+        proc.poll.return_value = None
+        with patch.object(runtime.subprocess, 'Popen', return_value=proc), \
+             patch.object(runtime.host_resources, 'watch', return_value=nullcontext()), \
+             patch.object(runtime.Client, 'post', return_value={'status': 'ok'}):
+            with runtime.owned_server(self.d, self.root/'restarted', observation, lambda: None):
+                pass
+        proc.send_signal.assert_called_once()
 
     def test_request_exception_still_stops_owned_process(self):
         proc = Mock(pid=12345, returncode=0)
