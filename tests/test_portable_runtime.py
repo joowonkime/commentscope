@@ -142,6 +142,17 @@ class PortableRuntimeTests(unittest.TestCase):
             checkpoint.call('extract', req)
         budget.call.assert_called_once()
 
+    def test_unclean_server_shutdown_vetoes_completed_operation(self):
+        proc = Mock(pid=12345, returncode=1)
+        proc.poll.return_value = None
+        with patch.object(runtime.subprocess, 'Popen', return_value=proc), \
+             patch.object(runtime.host_resources, 'watch', return_value=nullcontext()), \
+             patch.object(runtime.Client, 'post', return_value={'status': 'ok'}):
+            with self.assertRaisesRegex(RuntimeError, 'shutdown was not clean'):
+                with runtime.owned_server(self.d, self.root/'run', observation, lambda: None):
+                    pass
+        self.assertEqual(json.loads((self.root/'run/stopped.json').read_text())['returncode'], 1)
+
     def test_replacement_client_cannot_use_other_deployment_plan(self):
         plan = {'deployment': deepcopy(self.d)}
         plan['deployment']['model']['sha256'] = 'f'*64

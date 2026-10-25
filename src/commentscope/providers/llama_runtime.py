@@ -195,3 +195,5 @@ def owned_server(deployment, directory, observe, check_quota):
                 except subprocess.TimeoutExpired:
                     proc.kill(); proc.wait(timeout=5)
             write(directory/'stopped.json', {'pid': proc.pid, 'returncode': proc.returncode})
+        if proc.returncode != 0:
+            raise RuntimeError('Owned llama-server shutdown was not clean')
