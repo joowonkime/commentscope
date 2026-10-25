@@ -11,6 +11,8 @@ from datetime import datetime, timezone
 import os
 from pathlib import Path
 from shutil import copy2
+import subprocess
+import tempfile
 import time
 
 from commentscope.factory import minimal_pipeline, fact_checks, acceptance
@@ -20,6 +22,8 @@ from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.framed_corpus import sources
 from commentscope.ingestion import load_snapshot
 from commentscope.providers import framed_embedding, evidence_nli, host_resources, context_capacity
+from commentscope.providers import llama_runtime
+from commentscope.providers.runtime_runner import RuntimeRunner
 from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner
 from commentscope.providers.exclusive_models import ExclusiveModels
@@ -34,7 +38,7 @@ from experiments.fresh_grounded_pipeline import Runner
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.sequential_corpus_pipeline import SequentialRunner, runtime_check, cycle_check
 
-VERSION = 'minimal-factory-executor-20261018-v13'
+VERSION = 'minimal-factory-executor-20261025-v15'
 DESIGN = 'factory-implementation-20261016-v1'
 AUTONOMY = 'factory-autonomy-20261016-v1'
 LIMITS = {'analysis_seconds': None, 'call_seconds': 600, 'embedding_seconds': 900,
@@ -59,6 +63,9 @@ def synthetic12():
 
 
 def deployment_check(deployment):
+    if deployment.get('version') == llama_runtime.VERSION:
+        llama_runtime.validate(deployment)
+        return
     runtime = deployment['runtime']
     expected = read_json(BASE)['deployment']
     if deployment != expected or runtime['reasoning'] != 'off' or runtime['gpu_layers'] != 99:
@@ -66,7 +73,62 @@ def deployment_check(deployment):
     command(deployment, 'baseline')
 
 
-def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hypothesis_file=None):
+def portable_host_observation():
+    host = host_observation()
+    gpu = subprocess.run(['nvidia-smi', '--query-gpu=memory.free', '--format=csv,noheader,nounits'],
+                         capture_output=True, text=True, timeout=15, check=True)
+    lines = gpu.stdout.strip().splitlines()
+    if len(lines) != 1:
+        raise ValueError('Exactly one observed GPU required')
+    return {**host, 'gpu_free_mb': int(lines[0])}
+
+
+def check_admission(gate, deployment, manifest_path, discovery_mode='free', membership_mode='raw'):
+    """Prior offline reviews bind model/code/output; never model-input labels."""
+    required = {'G1': (), 'G2': ('G1',), 'G3': ('G1', 'G2'), 'G4': ('G1', 'G2', 'G3')}[gate]
+    if not required:
+        return
+    if manifest_path is None:
+        raise ValueError('Passed qualification gates required before larger run')
+    private(Path(manifest_path))
+    manifest = read_json(manifest_path)
+    current_code = code_hashes()
+    for stage in required:
+        row = manifest['gates'][stage]
+        for key in ('run', 'packet', 'review', 'result'):
+            private(Path(row[key]))
+        prior = read_json(Path(row['run'])/'plan.json')
+        completed = read_json(Path(row['run'])/'completed.json')
+        packet, review, result = (read_json(row[k]) for k in ('packet', 'review', 'result'))
+        if (prior['gate'] != stage or result['gate'] != stage or result['gate_passed'] is not True
+                or not result['requirements'] or any(v is not True for v in result['requirements'].values())
+                or prior['deployment'] != deployment or prior['code_sha256'] != current_code
+                or prior['discovery_mode'] != discovery_mode or prior['membership_mode'] != membership_mode
+                or prior['verification_contract'] != raw_membership_verification.ALIGNED
+                or completed['execution_complete'] is not True
+                or completed['plan_sha256'] != sha(Path(row['run'])/'plan.json')
+                or packet['plan_sha256'] != completed['plan_sha256']
+                or packet['run'] != row['run']
+                or result['review_sha256'] != sha(row['review'])
+                or result['packet_sha256'] != digest(packet) or review['packet_sha256'] != digest(packet)
+                or packet['output_sha256'] != completed['output_sha256']
+                or packet['runtime_sha256'] != completed['runtime_sha256']
+                or completed['output_sha256'] != sha(Path(row['run'])/'artifacts/output.json')
+                or completed['runtime_sha256'] != sha(Path(row['run'])/'artifacts/runtime.json')):
+            raise ValueError('Qualification failed or belongs to another deployment/code/output: '+stage)
+        if acceptance.from_plan(prior) is None:
+            raise ValueError('Qualification requires the unchanged r5 acceptance profile')
+        # Recompute the existing offline evaluator from the bound full review.
+        # A hand-written gate_passed flag alone cannot authorize a larger run.
+        from experiments.minimal_factory_review import evaluate
+        with tempfile.TemporaryDirectory(dir='runs', prefix='admission-replay-') as tmp:
+            replayed = evaluate(Path(row['packet']).parent, Path(row['review']), Path(tmp)/'result.json')
+        if replayed != result:
+            raise ValueError('Qualification report does not match its full offline review')
+
+
+def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hypothesis_file=None,
+            deployment_file=None, admission_file=None):
     private(directory)
     if directory.exists(): raise ValueError('New run required; frozen plans are never overwritten')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
@@ -74,7 +136,13 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership mode')
     profile = acceptance.validate(read_json(ACCEPTANCE), acceptance.R5_DIGEST)
     settings = read_json(CYCLE); cycle_check(settings)
-    base = read_json(BASE); deployment_check(base['deployment'])
+    deployment = read_json(deployment_file) if deployment_file is not None else read_json(BASE)['deployment']
+    deployment_check(deployment)
+    portable = deployment.get('version') == llama_runtime.VERSION
+    if portable:
+        if membership_mode != 'raw':
+            raise ValueError('Portable qualification requires full original raw membership')
+        check_admission(gate, deployment, admission_file, discovery_mode, membership_mode)
     auxiliary = read_json(AUXILIARY); evidence = read_json(FACTS); samples = read_json(SAMPLES)
     if gate == 'G1':
         snapshot = synthetic12(); snapshot_path = directory/'snapshot.json'
@@ -93,13 +161,16 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
     # Reuse source material only. Historical rows/agents and labels stay outside.
     documents = [document]; selections = evidence['selections']
     if gate == 'G1': write(snapshot_path, snapshot.to_dict())
-    paths = [BASE, AUXILIARY, FACTS, SAMPLES, CYCLE, snapshot_path, ACCEPTANCE,
+    paths = [deployment_file or BASE, AUXILIARY, FACTS, SAMPLES, CYCLE, snapshot_path, ACCEPTANCE,
              Path(samples['meaning_reference']),
              Path('docs/MVP_EXECUTION_SPEC.md'), Path('docs/MVP_GOAL.md'), Path('docs/MVP_PRODUCT_POLICY.md'),
              Path('docs/MVP_HANDOFF_2026-10-16.md'), Path('experiments/framed_agent_probe.py')]
     if hypothesis_file is not None:
         private(hypothesis_file)
         paths.append(hypothesis_file)
+    if admission_file is not None:
+        private(admission_file)
+        paths.append(admission_file)
     plan = {'artifact_kind': VERSION, 'design_version': DESIGN, 'autonomy_version': AUTONOMY, 'gate': gate,
             'goal_revision': profile['goal_revision'], 'acceptance_profile': deepcopy(profile),
             'acceptance_profile_sha256': digest(profile),
@@ -111,17 +182,19 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
             'expires_at': snapshot.usage.expires_at, 'scope_ids': scope,
             'canonical_population': len(sources(snapshot)), 'processing_count': len(scope),
             'code_sha256': code_hashes(), 'inputs': {str(p): sha(p) for p in paths},
-            'deployment': deepcopy(base['deployment']), 'model_files': deepcopy(auxiliary['model_files']),
+            'deployment': deepcopy(deployment), 'model_files': deepcopy(auxiliary['model_files']),
             'classifier': deepcopy(auxiliary['classifier']), 'documents': documents, 'selections': selections,
             'document_sha256': {d['id']: digest(d) for d in documents},
             'cycle': str(CYCLE), 'budget': {k: settings[k] for k in ('cycle_id', 'ledger')},
-            'limits': deepcopy(LIMITS), 'preflight': deepcopy(PREFLIGHT),
+            'limits': deepcopy(LIMITS), 'preflight': deepcopy(llama_runtime.STARTUP if portable else PREFLIGHT),
             'schedule': deepcopy(minimal_pipeline.SCHEDULE),
             'resource_policy': deepcopy(host_resources.POLICY), 'questions': deepcopy(QUESTIONS),
             'sample_manifest_sha256': sha(SAMPLES), 'reference_runtime_input': False,
             'cross_run_response_reuse': False, 'quality_gate_passed': False,
             'hypothesis': 'Minimal source claims, complete-link equivalence, independent final wording support, delayed source arguments.',
             'acceptance': 'MVP_EXECUTION_SPEC section5; offline all-output review; no runtime corrections.'}
+    if portable:
+        plan['portable_admission_file'] = str(admission_file) if admission_file else None
     if hypothesis_file is not None:plan['frozen_experiment_hypothesis']=read_json(hypothesis_file)
     write(directory/'plan.json', plan)
     for path, expected in plan['code_sha256'].items():
@@ -133,6 +206,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
 
 
 def validate(plan):
+    portable = plan['deployment'].get('version') == llama_runtime.VERSION
     if acceptance.from_plan(plan) is None: raise ValueError('New executions require r5 acceptance')
     if (plan['artifact_kind'] != VERSION or plan['design_version'] != DESIGN or plan['autonomy_version'] != AUTONOMY
             or plan['discovery_mode'] not in ('free','contextual')
@@ -141,16 +215,20 @@ def validate(plan):
             or plan['representative_policy'] != (candidate_consolidation.REPRESENTATIVE_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['dependency_capacity_policy'] != (contextual_dependencies.CAPACITY_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['schedule'] != minimal_pipeline.SCHEDULE
-            or plan['limits'] != LIMITS or plan['preflight'] != PREFLIGHT or plan['questions'] != QUESTIONS
+            or plan['limits'] != LIMITS or plan['preflight'] != (llama_runtime.STARTUP if portable else PREFLIGHT) or plan['questions'] != QUESTIONS
             or plan['resource_policy'] != host_resources.POLICY or plan['reference_runtime_input'] is not False
             or plan['cross_run_response_reuse'] is not False or plan['quality_gate_passed'] is not False):
         raise ValueError('Frozen Factory execution contract changed')
     settings = read_json(plan['cycle']); cycle_check(settings)
     if plan['budget'] != {k: settings[k] for k in ('cycle_id', 'ledger')}: raise ValueError('Ledger changed')
     deployment_check(plan['deployment'])
+    if portable:
+        check_admission(plan['gate'], plan['deployment'],
+                        Path(plan['portable_admission_file']) if plan['portable_admission_file'] else None,
+                        plan['discovery_mode'], plan['membership_mode'])
     for group in ('inputs', 'code_sha256', 'model_files'):
         if any(sha(p) != h for p, h in plan[group].items()): raise ValueError('Frozen code/input/model changed: '+group)
-    for info in (plan['deployment']['server'], plan['deployment']['models']['baseline']):
+    for info in (plan['deployment']['server'], plan['deployment']['model'] if portable else plan['deployment']['models']['baseline']):
         if file_hash(info['path']) != info['sha256']: raise ValueError('Model/server changed')
     fact_checks.live(plan['expires_at'])
     for document in plan['documents']:
@@ -168,7 +246,16 @@ def lifetimes(directory, plan, attempt):
     root = directory/'models'/f'{attempt:04}'
     @contextmanager
     def server(sequence):
-        observation = observe(); target = root/f'llm-{sequence:04}'
+        target = root/f'llm-{sequence:04}'
+        if plan['deployment'].get('version') == llama_runtime.VERSION:
+            from experiments.compare_backend_discovery import check_quota
+            with llama_runtime.owned_server(plan['deployment'], target/'server',
+                                            portable_host_observation, check_quota) as client:
+                yield client
+            if read_json(target/'server/resources/finished.json')['observer_stopped'] is not True:
+                raise RuntimeError('Portable resource observer shutdown not confirmed')
+            return
+        observation = observe()
         write(target/'preflight.json', observation)
         if observation['refusal_reasons']: raise RuntimeError('GPU deployment start refused by resource policy')
         with owned_server(plan['deployment'], 'baseline', target/'server') as process:
@@ -186,8 +273,10 @@ def lifetimes(directory, plan, attempt):
 
 
 def run(directory):
+    from experiments.compare_backend_discovery import check_quota, quota_watch
+    check_quota()
     private(directory); started = time.monotonic(); at = datetime.now(timezone.utc).isoformat()
-    with experiment_lock(directory):
+    with experiment_lock(directory), quota_watch():
         plan = read_json(directory/'plan.json'); snapshot = validate(plan); plan_hash = sha(directory/'plan.json')
         if (directory/'completed.json').exists():
             report = read_json(directory/'completed.json')
@@ -201,7 +290,13 @@ def run(directory):
         pending = [p for p in (directory/'checkpoints').glob('*.intent.json')
                    if not p.with_name(p.name.replace('.intent.json', '.result.json')).exists()]
         if pending: raise RuntimeError('Pending requests require process/ledger reconciliation')
-        observation = observe(); write(directory/'preflight'/f'{attempt:04}.json', observation)
+        portable = plan['deployment'].get('version') == llama_runtime.VERSION
+        if portable:
+            host = portable_host_observation()
+            observation = {'host': host, 'refusal_reasons': llama_runtime.startup_reasons(host, plan['deployment'])}
+        else:
+            observation = observe()
+        write(directory/'preflight'/f'{attempt:04}.json', observation)
         if observation['refusal_reasons']: raise RuntimeError('Factory startup resource policy refused')
         budget = InferenceBudget(Path(plan['budget']['ledger']), plan['budget']['cycle_id'], limit_seconds=None)
         write(directory/'attempts'/f'{attempt:04}.started.json', {'pid': os.getpid(), 'plan_sha256': plan_hash,
@@ -213,22 +308,28 @@ def run(directory):
             else: write(path, value)
         try:
             with lifetimes(directory, plan, attempt) as models:
-                base = Runner(directory, plan, budget)
+                client = llama_runtime.Client(plan['deployment']) if portable else None
+                base = RuntimeRunner(directory, plan, budget, client) if portable else Runner(directory, plan, budget)
                 sequential = SequentialRunner(base, models, directory/'transitions'/f'{attempt:04}')
-                checkpoint = CheckpointRunner(sequential, plan['deployment']['runtime'])
+                allocation = ({'context': 8192, 'reasoning': 'off', 'reasoning_budget': 0}
+                              if portable else plan['deployment']['runtime'])
+                checkpoint = CheckpointRunner(sequential, allocation)
                 def inspect(req):
-                    return models.invoke('llm', lambda: context_capacity.measure(req))
+                    check_quota()
+                    return models.invoke('llm', lambda: client.measure(req) if portable else context_capacity.measure(req))
                 class CheckedRunner:
                     def call(self, stage, req):
                         measured = inspect(req)
                         if not measured['fits']: raise ValueError('Unsplit request exceeds model context')
                         result = checkpoint.call(stage, req)
+                        check_quota()
                         usage = result.get('usage') or {}
                         if usage.get('prompt_tokens', 0) > measured['input_tokens'] + measured['safety_margin']:
                             raise ValueError('Actual prompt exceeds measured template allocation')
                         return result
                 runner = CheckedRunner()
                 def embed(stage, texts):
+                    check_quota()
                     path = directory/'artifacts'/('embedding-'+stage+'.json')
                     req = {'system': framed_embedding.VERSION, 'data': {'texts': texts, 'output': str(path)}, 'schema': {}, 'max_tokens': 1}
                     result = checkpoint.call('embed-'+stage, req, provider=framed_embedding.generate, maximum=LIMITS['embedding_seconds'])
@@ -240,6 +341,7 @@ def run(directory):
                         raise ValueError('Embedding provenance changed')
                     return artifact['vectors']
                 def facts(req):
+                    check_quota()
                     return checkpoint.call('facts-'+digest(req)[:20], req, provider=evidence_nli.generate, maximum=LIMITS['fact_batch_seconds'])
                 output = minimal_pipeline.process(snapshot, runner, embed, inspect, facts, model=plan['classifier'],
                     documents=plan['documents'], selections=plan['selections'], scope_ids=plan['scope_ids'], save=save,
@@ -273,9 +375,12 @@ if __name__ == '__main__':
     p.add_argument('--discovery-mode',choices=['free','contextual'],default='free')
     p.add_argument('--membership-mode',choices=['scoped','raw'],default='scoped')
     p.add_argument('--hypothesis-file',type=Path)
+    p.add_argument('--deployment-file',type=Path)
+    p.add_argument('--admission-file',type=Path)
     p = sub.add_parser('run'); p.add_argument('directory', type=Path)
     args = parser.parse_args()
     if args.action == 'prepare':
-        plan = prepare(args.directory, args.gate, args.discovery_mode, args.membership_mode, args.hypothesis_file)
+        plan = prepare(args.directory, args.gate, args.discovery_mode, args.membership_mode,
+                       args.hypothesis_file, args.deployment_file, args.admission_file)
         print({'prepared': str(args.directory), 'gate': args.gate, 'processing_count': plan['processing_count'], 'model_calls': 0})
     else: run(args.directory)
