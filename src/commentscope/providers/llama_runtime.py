@@ -5,7 +5,6 @@ observations; the existing ledger/checkpoint layer still owns model requests.
 """
 from contextlib import contextmanager
 from copy import deepcopy
-import hashlib
 import json
 import math
 import os
@@ -17,6 +16,7 @@ import subprocess
 import time
 from urllib.request import Request, build_opener, ProxyHandler
 
+from commentscope.file_integrity import file_sha256
 from commentscope.providers import context_capacity, host_resources
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.storage import write_json_exclusive as write
@@ -29,11 +29,7 @@ STARTUP = {'minimum_available_mb': 4096,
 
 
 def file_hash(path):
-    value = hashlib.sha256()
-    with Path(path).open('rb') as stream:
-        for block in iter(lambda: stream.read(8 * 1024**2), b''):
-            value.update(block)
-    return value.hexdigest()
+    return file_sha256(path)
 
 
 def validate(deployment):
