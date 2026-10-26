@@ -27,4 +27,3 @@ class CoreShapeTests(TestCase):
     def test_frozen_aligned_route_contract_remains_replayable(self):
         result=self.route('Lower bus fares because commuters pay too much.',verification.ALIGNED)
         self.assertTrue(result['passed'])
-
