@@ -96,6 +96,10 @@ class CodexOwnedProcessTests(unittest.TestCase):
         self.assertEqual(intent['provider'],'codex_chatgpt_cli')
         self.assertFalse(list((self.run/'codex').glob('*/home/auth.json')))
         self.assertEqual((self.auth/'auth.json').read_bytes(),original)
+        started=json.loads(next((self.run/'codex').glob('*/started.json')).read_text())
+        self.assertFalse(Path(started['work_directory']).is_relative_to(self.run))
+        self.assertFalse(started['repository_context'])
+        self.assertFalse(Path(started['work_directory']).exists())
 
     def test_timeout_stops_process_and_canceled_checkpoint_cannot_replay(self):
         self.exe.write_text(FAKE % 'sleep');self.plan['deployment']['sha256']=cr.file_sha256(self.exe)
