@@ -70,7 +70,8 @@ def prepare(directory, qwen_deployment, model, effort, ledger, cycle_id):
         'call_seconds': 600})
     pack = request_pack()
     write(directory/'requests.json', pack)
-    plan = {'artifact_kind': VERSION, 'request_pack_sha256': sha(directory/'requests.json'),
+    plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()),
+        'request_pack_sha256': sha(directory/'requests.json'),
         'code_sha256': code_hashes(), 'backends': {'codex': deployment,
             'qwen': llama_runtime.validate(read_json(qwen_deployment))},
         'budget': {'ledger': str(ledger.resolve()), 'cycle_id': cycle_id},
@@ -91,7 +92,8 @@ def prepare(directory, qwen_deployment, model, effort, ledger, cycle_id):
 def validate(directory):
     private(directory)
     plan = read_json(directory/'plan.json')
-    if (plan['artifact_kind'] != VERSION or plan['resource_policy'] != host_resources.POLICY
+    if (plan['artifact_kind'] != VERSION or plan.get('run_directory') != str(directory.resolve())
+            or plan['resource_policy'] != host_resources.POLICY
             or plan['codex_resource_policy'] != codex_runner.HOST_POLICY
             or sha(directory/'requests.json') != plan['request_pack_sha256']
             or plan['code_sha256'] != code_hashes()):

@@ -62,6 +62,11 @@ class ComparisonTests(unittest.TestCase):
         v['cases'][0]['request']['data']={'review_answer':'injected'};p.write_text(json.dumps(v))
         with self.assertRaisesRegex(ValueError,'Frozen'):compare.report(self.directory)
 
+    def test_frozen_plan_cannot_be_copied_as_a_new_run_identity(self):
+        other=self.root/'copied-comparison'
+        compare.shutil.copytree(self.directory,other)
+        with self.assertRaisesRegex(ValueError,'Frozen'):compare.validate(other)
+
     def test_rebound_backend_deployment_is_rejected_even_with_new_output_hashes(self):
         root=self.backend('codex');p=root/'plan.json';v=json.loads(p.read_text(encoding='utf-8'))
         v['deployment']['model']='other-model';p.write_text(json.dumps(v))
