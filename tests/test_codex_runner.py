@@ -21,6 +21,10 @@ MODE = %r
 if MODE == 'sleep': time.sleep(60)
 if MODE == 'cache':
     cache=Path(os.environ['CODEX_HOME'])/'plugins';cache.mkdir();(cache/'index.json').write_text('{}')
+if MODE == 'throttle':
+    print(json.dumps({'type':'error','message':'last status: 429 Too Many Requests'}),flush=True)
+    print(json.dumps({'type':'turn.failed','error':{'message':'429'}}),flush=True)
+    sys.exit(1)
 print(json.dumps({'type':'turn.started'}),flush=True)
 if MODE == 'tool': print(json.dumps({'type':'item.completed','item':{'type':'command_execution'}}))
 Path(sys.argv[sys.argv.index('--output-last-message')+1]).write_text('{"ok":true}')
@@ -29,6 +33,23 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':50,'output_tok
 
 
 class CodexContractTests(unittest.TestCase):
+    def test_dispatch_wait_checks_guard_and_yields_in_short_intervals(self):
+        now=[0];sleeps=[];checks=[]
+        def sleep(seconds):
+            sleeps.append(seconds);now[0]+=seconds
+        cr.wait_for_dispatch(12,lambda:checks.append(now[0]),clock=lambda:now[0],sleep=sleep)
+        self.assertEqual(now[0],12)
+        self.assertTrue(all(0<t<=5 for t in sleeps))
+        self.assertGreaterEqual(len(checks),3)
+
+    def test_quota_hold_interrupts_dispatch_wait(self):
+        now=[0]
+        def guard():
+            if now[0]>=5:raise RuntimeError('quota hold')
+        with self.assertRaisesRegex(RuntimeError,'quota hold'):
+            cr.wait_for_dispatch(60,guard,clock=lambda:now[0],sleep=lambda x:now.__setitem__(0,now[0]+x))
+        self.assertEqual(now[0],5)
+
     def test_cloud_guard_does_not_require_local_weight_disk_or_gpu_reserves(self):
         sample={'available_mb':2048,'committed_bytes':2*1024**3,'commit_limit':4*1024**3,
                 'disk_free_bytes':2*1024**3,'gpu_free_mb':0}
@@ -139,6 +160,16 @@ class CodexOwnedProcessTests(unittest.TestCase):
         self.assertEqual(self.states(),[('ok',)])
         self.assertFalse(list((self.run/'codex').glob('*/home/auth.json')))
         self.assertTrue(list((self.run/'codex').glob('*/home/plugins/index.json')))
+
+    def test_http429_is_recorded_and_never_automatically_replayed(self):
+        self.exe.write_text(FAKE % 'throttle');self.plan['deployment']['sha256']=cr.file_sha256(self.exe)
+        (self.run/'plan.json').write_text(json.dumps(self.plan))
+        cached=CheckpointRunner(self.runner(),{'context':8192,'reasoning':'off','reasoning_budget':0})
+        with self.assertRaises(RuntimeError):cached.call('case',self.request)
+        failed=json.loads(next((self.run/'codex').glob('*/failed.json')).read_text())
+        self.assertEqual(failed['kind'],'http_429');self.assertFalse(failed['retry_performed'])
+        with self.assertRaises(PendingCallError):cached.call('case',self.request)
+        self.assertEqual(self.states(),[('error',)])
 
     def test_api_auth_and_changed_executable_are_rejected_before_dispatch(self):
         (self.auth/'auth.json').write_text(json.dumps({'auth_mode':'apikey','OPENAI_API_KEY':'synthetic'}))

@@ -22,6 +22,29 @@ from commentscope.storage import write_json_exclusive as write
 VERSION = 'codex-subscription-baseline-0.1'
 HOST_POLICY = {'version':'codex-cloud-cli-host-0.1', 'minimum_available_mb':1536,
                'minimum_commit_headroom_bytes':1024**3, 'minimum_disk_free_bytes':1024**3}
+SCHEDULE = {'version':'codex-dispatch-spacing-0.1', 'minimum_start_interval_seconds':60,
+            'transport_retries':0, 'on_throttle':'record_and_stop'}
+
+
+def wait_for_dispatch(earliest, guard, *, clock=time.monotonic, sleep=time.sleep):
+    while True:
+        guard()
+        remaining = earliest-clock()
+        if remaining <= 0:
+            return
+        sleep(min(5, remaining))
+
+
+def failure_kind(path):
+    try:
+        for line in path.read_text(encoding='utf-8').splitlines():
+            event = json.loads(line)
+            if event.get('type') in ('error','turn.failed'):
+                if re.search(r'\b429\b', json.dumps(event)):
+                    return 'http_429'
+    except (OSError,ValueError):
+        pass
+    return 'codex_call_failed'
 
 
 def resource_reasons(observation):
@@ -84,7 +107,7 @@ def isolated_environment(home, work):
 
 
 def parse_events(path):
-    events = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    events = [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines() if line.strip()]
     if (sum(e.get('type') == 'turn.completed' for e in events) != 1
             or sum(e.get('type') == 'turn.started' for e in events) != 1
             or any(e.get('type') in ('turn.failed', 'error') for e in events)):
@@ -127,6 +150,10 @@ class CodexRunner:
         self.budget = budget
         self.guard = guard
         self.seq = 0
+        self.schedule = deepcopy(plan.get('codex_schedule', SCHEDULE))
+        if self.schedule != SCHEDULE:
+            raise ValueError('Frozen Codex dispatch schedule required')
+        self.last_dispatch = None
 
     def call(self, stage, req, *, provider=None, maximum=None):
         if provider is not None:
@@ -142,13 +169,15 @@ class CodexRunner:
         if file_sha256(d['executable']) != d['sha256']:
             raise ValueError('Codex executable changed')
         auth = Path(d['auth_home'])/'auth.json'
-        credentials = json.loads(auth.read_text())
+        credentials = json.loads(auth.read_text(encoding='utf-8'))
         if credentials.get('auth_mode') != 'chatgpt' or credentials.get('OPENAI_API_KEY'):
             raise ValueError('ChatGPT authentication required; API-key mode rejected')
         del credentials
         timeout = d['call_seconds'] if maximum is None else min(maximum, d['call_seconds'])
         if type(timeout) not in (int, float) or not math.isfinite(timeout) or timeout <= 0:
             raise ValueError('Finite deadline required')
+        if self.last_dispatch is not None:
+            wait_for_dispatch(self.last_dispatch+self.schedule['minimum_start_interval_seconds'], self.guard)
         self.seq += 1
         prefix = f'{self.seq:04}-{stage}'
         root = self.directory/'codex'/prefix
@@ -178,6 +207,7 @@ class CodexRunner:
                 proc = subprocess.Popen(command(d, root.resolve()), cwd=work,
                     env=isolated_environment(home.resolve(), work.resolve()),
                     stdin=subprocess.PIPE, stdout=out, stderr=err, text=True, start_new_session=True)
+                self.last_dispatch = time.monotonic()
                 write(root/'started.json', {'pid': proc.pid, 'ledger_call_id': call_id,
                       'work_directory': str(work), 'repository_context': False})
                 pending_input = prompt
@@ -196,7 +226,7 @@ class CodexRunner:
                 if proc.returncode:
                     raise RuntimeError('Codex CLI failed; inspect private stderr')
             usage = parse_events(root/'events.jsonl')
-            raw = (root/'answer.json').read_text(); output = json.loads(raw)
+            raw = (root/'answer.json').read_text(encoding='utf-8'); output = json.loads(raw)
             response = {'choices': [{'finish_reason': 'stop', 'message': {'content': raw}}],
                 'usage': {'prompt_tokens': usage['input_tokens'], 'completion_tokens': usage['output_tokens'],
                           'native_codex': usage}, 'provider': self.provider_identity}
@@ -207,9 +237,12 @@ class CodexRunner:
             return result
         except TimeoutError:
             state = 'timeout'
+            write(root/'failed.json', {'kind':'deadline_exceeded','ledger_call_id':call_id,'retry_performed':False})
             raise
-        except Exception:
+        except Exception as exc:
             state = 'error'
+            write(root/'failed.json', {'kind':failure_kind(root/'events.jsonl'),
+                  'exception':type(exc).__name__,'ledger_call_id':call_id,'retry_performed':False})
             raise
         finally:
             try:

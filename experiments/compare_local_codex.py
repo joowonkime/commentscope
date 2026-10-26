@@ -27,7 +27,7 @@ from experiments.framed_corpus_pipeline import experiment_lock
 from experiments.minimal_factory_pipeline import portable_host_observation, private
 from experiments.scoped_discovery_probe import code_hashes
 
-VERSION = 'codex-local-development-comparison-0.2'
+VERSION = 'codex-local-development-comparison-0.3'
 
 
 def request_pack():
@@ -77,6 +77,7 @@ def prepare(directory, qwen_deployment, model, effort, ledger, cycle_id):
         'budget': {'ledger': str(ledger.resolve()), 'cycle_id': cycle_id},
         'resource_policy': deepcopy(host_resources.POLICY),
         'codex_resource_policy': deepcopy(codex_runner.HOST_POLICY),
+        'codex_schedule': deepcopy(codex_runner.SCHEDULE),
         'limits': {'call_seconds': 600, 'analysis_seconds': None},
         'runtime': {'context': 8192, 'reasoning': 'off', 'reasoning_budget': 0},
         'codex_output_budget': 'advisory only; native usage includes harness and reasoning',
@@ -95,6 +96,7 @@ def validate(directory):
     if (plan['artifact_kind'] != VERSION or plan.get('run_directory') != str(directory.resolve())
             or plan['resource_policy'] != host_resources.POLICY
             or plan['codex_resource_policy'] != codex_runner.HOST_POLICY
+            or plan['codex_schedule'] != codex_runner.SCHEDULE
             or sha(directory/'requests.json') != plan['request_pack_sha256']
             or plan['code_sha256'] != code_hashes()):
         raise ValueError('Frozen comparison inputs or code changed')

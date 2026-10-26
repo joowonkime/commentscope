@@ -30,6 +30,8 @@ Codex는 매 요청마다 저장소 밖의 빈 임시 작업 디렉터리와 별
 
 Codex CLI에는 API와 같은 hard `max_tokens` 옵션이 없다. 요청의 출력 예산은 기록하지만 advisory로 표시하며, 실제 Codex 사용량에는 harness·reasoning이 포함된다. Codex reasoning effort와 Qwen thinking off도 별도 기록한다. 따라서 이 결과는 두 실행 환경의 개발 비교이며 bare-model API의 동일 조건 벤치마크나 실제 API 비용 측정이 아니다. 최종 서비스 연동의 품질·비용·지연은 별도로 확인한다.
 
+Codex 새 요청은 시작 시점 사이에 최소60초를 둔다. 완료 checkpoint 재사용에는 대기를 추가하지 않는다. 대기 중에도 quota와 자원을 확인하고, 429는 failed.json에 분류해 저장한 뒤 재전송 없이 중단한다. 이 간격은 속도 제한 완화책이며 서버 한도 해제를 보장하지 않는다.
+
 오프라인 검사는 모델·API·실제 인증 없이 실행할 수 있다.
 
 ```bash
