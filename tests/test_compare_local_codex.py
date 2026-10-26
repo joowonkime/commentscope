@@ -29,10 +29,10 @@ class ComparisonTests(unittest.TestCase):
             compare.prepare(self.directory,qwen,'test-model','low',self.root/'ledger.sqlite','test')
 
     def backend(self,name):
-        plan=json.loads((self.directory/'plan.json').read_text());root=self.directory/name
+        plan=json.loads((self.directory/'plan.json').read_text(encoding='utf-8'));root=self.directory/name
         write(root/'plan.json',{**deepcopy(plan),'deployment':plan['backends'][name],
                                'comparison_plan_sha256':sha(self.directory/'plan.json')})
-        cases=json.loads((self.directory/'requests.json').read_text())['cases']
+        cases=json.loads((self.directory/'requests.json').read_text(encoding='utf-8'))['cases']
         write(root/'outputs.json',[{'id':c['id'],'request_sha256':digest(c['request']),
                                    'result':{'output':{'baseline':name}}} for c in cases])
         write(root/'completed.json',{'plan_sha256':sha(root/'plan.json'),'outputs_sha256':sha(root/'outputs.json')})
@@ -58,12 +58,12 @@ class ComparisonTests(unittest.TestCase):
         self.assertFalse((self.directory/'codex').exists())
 
     def test_modified_request_pack_is_not_accepted(self):
-        p=self.directory/'requests.json';v=json.loads(p.read_text())
+        p=self.directory/'requests.json';v=json.loads(p.read_text(encoding='utf-8'))
         v['cases'][0]['request']['data']={'review_answer':'injected'};p.write_text(json.dumps(v))
         with self.assertRaisesRegex(ValueError,'Frozen'):compare.report(self.directory)
 
     def test_rebound_backend_deployment_is_rejected_even_with_new_output_hashes(self):
-        root=self.backend('codex');p=root/'plan.json';v=json.loads(p.read_text())
+        root=self.backend('codex');p=root/'plan.json';v=json.loads(p.read_text(encoding='utf-8'))
         v['deployment']['model']='other-model';p.write_text(json.dumps(v))
-        done=root/'completed.json';v=json.loads(done.read_text());v['plan_sha256']=sha(p);done.write_text(json.dumps(v))
+        done=root/'completed.json';v=json.loads(done.read_text(encoding='utf-8'));v['plan_sha256']=sha(p);done.write_text(json.dumps(v))
         with self.assertRaisesRegex(ValueError,'Stored output changed'):compare.report(self.directory)
