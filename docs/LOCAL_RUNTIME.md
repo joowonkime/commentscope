@@ -1,5 +1,7 @@
 # 로컬 모델 실행 모듈
 
+개발 중 Codex와 로컬 Qwen의 같은 요청을 비교하려면 [Codex·로컬 비교 안내](CODEX_LOCAL_COMPARISON.md)를 사용한다. OpenRouter 예산을 사용하지 않으며 기존 전체 Factory 합격 판정과는 별도로 기록한다.
+
 클러스터링·Agent 생성은 같은 처리 코드를 사용하고, 모델 파일과 실행 설정은 별도 deployment JSON으로 전달한다. 엔진은 llama.cpp이며 채팅 템플릿·JSON schema 호환은 실제 로딩 후 확인한다. 현재 공통 실행기·Factory 연결과 합성 검사를 구현했고, 작은 모델의 실제 자원·품질 검증과 999개 실행은 미완료다.
 
 | 코드 | 책임 |
