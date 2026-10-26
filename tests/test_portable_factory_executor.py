@@ -35,7 +35,7 @@ class PortableExecutorTests(TestCase):
     def qualification(self):
         run = self.root/'g1'; packet_dir = self.root/'review'
         prior = {'gate': 'G1', 'deployment': deepcopy(self.d), 'code_sha256': {'code': 'fixed'},
-                 'verification_contract': executor.raw_membership_verification.ALIGNED,
+                 'verification_contract': executor.raw_membership_verification.FULL_SCOPE,
                  'discovery_mode': 'free', 'membership_mode': 'raw'}
         write(run/'plan.json', prior)
         write(run/'artifacts/output.json', {'synthetic': 'output'})

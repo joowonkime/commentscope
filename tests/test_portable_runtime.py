@@ -127,6 +127,30 @@ class PortableRuntimeTests(unittest.TestCase):
                 pass
         proc.send_signal.assert_called_once()
 
+    def test_frozen_graph_setting_controls_child_environment(self):
+        for enabled in (True, False):
+            with self.subTest(enabled=enabled):
+                d = deepcopy(self.d)
+                d['runtime']['cuda_graphs'] = enabled
+                proc = Mock(pid=12345, returncode=0)
+                proc.poll.return_value = None
+                with patch.dict(runtime.os.environ, {'GGML_CUDA_DISABLE_GRAPHS': 'unfrozen'}), \
+                     patch.object(runtime.subprocess, 'Popen', return_value=proc) as spawn, \
+                     patch.object(runtime.host_resources, 'watch', return_value=nullcontext()), \
+                     patch.object(runtime.Client, 'post', return_value={'status': 'ok'}):
+                    with runtime.owned_server(d, self.root/str(enabled), observation, lambda: None):
+                        pass
+                actual = spawn.call_args.kwargs['env']
+                if enabled:
+                    self.assertNotIn('GGML_CUDA_DISABLE_GRAPHS', actual)
+                else:
+                    self.assertEqual(actual['GGML_CUDA_DISABLE_GRAPHS'], '1')
+                proc.send_signal.assert_called_once()
+        bad = deepcopy(self.d)
+        bad['runtime']['cuda_graphs'] = 'false'
+        with self.assertRaises(ValueError):
+            runtime.validate(bad)
+
     def test_request_exception_still_stops_owned_process(self):
         proc = Mock(pid=12345, returncode=0)
         proc.poll.return_value = None

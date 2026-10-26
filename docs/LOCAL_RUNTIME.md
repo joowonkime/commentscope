@@ -23,6 +23,8 @@ deployment에는 `version`, `model`, `server`, `runtime`, `startup`, `resource_p
 - 실행 중 기존 보호선 유지: RAM 여유 1536MiB·commit 여유 1GiB·호스트 디스크 여유 6GiB
 - 유한 기동·호출 timeout, 전송 재시도 0, 자신이 시작한 서버만 정리
 
+`runtime.cuda_graphs`는 선택적 boolean이며 생략하면 기존 그래프 캡처를 사용한다. `false`이면 실행기 자식 프로세스에만 `GGML_CUDA_DISABLE_GRAPHS=1`을 적용한다. 상속된 같은 환경변수는 덮어쓰며, 실제 설정을 `runtime-environment.json`에 남긴다. 메모리 사용과 속도에 영향을 주는 실행 설정이므로 변경 시 새 계획에서 자원·품질 검증을 진행한다.
+
 이것은 측정 전 시작 프로필이며 성능 보장이 아니다. 기존 8B 시작 기준은 수정하지 않는다. 가중치 크기는 KV·버퍼를 포함한 총 메모리와 다르다. WSL 내부 여유와 Windows 호스트 디스크 여유도 별도다. 실제 모델이 자원 보호와 품질 기준을 모두 통과해야 채택한다.
 
 ## 단계별 실행
@@ -31,12 +33,16 @@ deployment에는 `version`, `model`, `server`, `runtime`, `startup`, `resource_p
 
 ```bash
 python -m experiments.minimal_factory_pipeline prepare runs/new-model-g1 \
-  --gate G1 --membership-mode raw \
+  --gate G1 --discovery-mode literal --membership-mode raw \
   --deployment-file runs/new-model/deployment.json
 python -m experiments.minimal_factory_pipeline run runs/new-model-g1
 ```
 
-실행 완료는 품질 통과가 아니다. `minimal_factory_review prepare`로 packet을 만들고 전체 검토를 채운 뒤 `evaluate`로 평가한다. 고정 사실40건·Agent별3질문 기준을 유지하며 검토 라벨은 모델 입력에 넣지 않는다.
+`literal`은 원문 구문 노드에서 입장을 선택하며 모델이 새 입장 문장을 작성하지 않는다. 이유와 양보는 작성자의 원문 그래프에 별도로 보존하고, 필수 조건은 입장에 유지한다. 대명사 치환은 원문·부모의 정확한 구간을 증거로 남긴다. 모델이 고른 구간이나 역할 자체가 의미 검증을 통과했다는 뜻은 아니다.
+
+새 raw 검증 계약은 이유·양보가 섞인 복합 후보를 지지 집계 전에 보류한다. 입장만 동의한 작성자에게 후보의 추가 이유까지 부여하지 않기 위한 경계다. 작성자가 직접 제시한 이유의 귀속은 별도로 유지하며, 경험적 주장은 기존 사실 검증을 계속 거친다. 과거 검증 계약과 실행 기록은 그대로 재현할 수 있다.
+
+실행 완료는 품질 통과가 아니다. `minimal_factory_review prepare`로 packet을 만들고 전체 검토를 채운 뒤 `evaluate`로 평가한다. 고정 사실40건·Agent별3질문 기준을 유지하며 검토 라벨은 모델 입력에 넣지 않는다. 개발 중 합성 G1 실행은 12개 입력 처리를 완료했으나 잘못 집계된 지지 3건과 Agent 0개로 실패했다. 위 경로의 합성 검사와 제한된 모델 진단만으로 이 품질 실패가 해결됐다고 보고하지 않는다.
 
 G1·자원 검증 후 G2(24개/의미19개 중 후보 보존12 이상), G3(96개/의미74개 중45 이상)를 진행한다. G4 999개에는 G1·G2·G3 통과가 모두 필요하다. 다음 단계의 `--admission-file`에 검토 경로를 제공한다.
 

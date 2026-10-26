@@ -59,7 +59,9 @@ def validate(deployment):
                 'call_seconds', 'startup_seconds', 'thinking'}
     ranges = {'threads': (1, 64), 'gpu_layers': (1, 999), 'port': (1024, 65535),
               'batch_size': (32, 512), 'ubatch_size': (32, 128)}
-    if (set(runtime) != expected or type(runtime['context']) is not int
+    if (set(runtime) not in (expected, expected | {'cuda_graphs'})
+            or type(runtime.get('cuda_graphs', True)) is not bool
+            or type(runtime['context']) is not int
             or runtime['context'] != 8192 or runtime['thinking'] is not False):
         raise ValueError('8192 context and thinking off required')
     for field, (low, high) in ranges.items():
@@ -165,6 +167,13 @@ def owned_server(deployment, directory, observe, check_quota):
     argv = command(d); write(directory/'deployment.json', d)
     env = {k: v for k, v in os.environ.items() if not k.startswith('LLAMA_ARG_')}
     env['LD_LIBRARY_PATH'] = d['server']['libraries']
+    # Graph capture changes memory use and must follow the frozen deployment,
+    # including when the caller inherited a different graph setting.
+    env.pop('GGML_CUDA_DISABLE_GRAPHS', None)
+    if not d['runtime'].get('cuda_graphs', True):
+        env['GGML_CUDA_DISABLE_GRAPHS'] = '1'
+    write(directory/'runtime-environment.json', {
+        'GGML_CUDA_DISABLE_GRAPHS': env.get('GGML_CUDA_DISABLE_GRAPHS')})
     client = Client(d)
     with (directory/'server.log').open('x') as log:
         proc = subprocess.Popen(argv, env=env, stdout=log, stderr=subprocess.STDOUT)

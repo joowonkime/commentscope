@@ -104,7 +104,7 @@ def check_admission(gate, deployment, manifest_path, discovery_mode='free', memb
                 or not result['requirements'] or any(v is not True for v in result['requirements'].values())
                 or prior['deployment'] != deployment or prior['code_sha256'] != current_code
                 or prior['discovery_mode'] != discovery_mode or prior['membership_mode'] != membership_mode
-                or prior['verification_contract'] != raw_membership_verification.ALIGNED
+                or prior['verification_contract'] != raw_membership_verification.FULL_SCOPE
                 or completed['execution_complete'] is not True
                 or completed['plan_sha256'] != sha(Path(row['run'])/'plan.json')
                 or packet['plan_sha256'] != completed['plan_sha256']
@@ -132,7 +132,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
     private(directory)
     if directory.exists(): raise ValueError('New run required; frozen plans are never overwritten')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
-    if discovery_mode not in ('free','contextual'):raise ValueError('Unknown Factory discovery mode')
+    if discovery_mode not in ('free','literal','contextual'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership mode')
     profile = acceptance.validate(read_json(ACCEPTANCE), acceptance.R5_DIGEST)
     settings = read_json(CYCLE); cycle_check(settings)
@@ -175,7 +175,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
             'goal_revision': profile['goal_revision'], 'acceptance_profile': deepcopy(profile),
             'acceptance_profile_sha256': digest(profile),
             'discovery_mode':discovery_mode, 'membership_mode':membership_mode,
-            'verification_contract':raw_membership_verification.ALIGNED,
+            'verification_contract':raw_membership_verification.FULL_SCOPE,
             'representative_policy':candidate_consolidation.REPRESENTATIVE_POLICY if discovery_mode=='contextual' else None,
             'dependency_capacity_policy':contextual_dependencies.CAPACITY_POLICY if discovery_mode=='contextual' else None,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
@@ -209,9 +209,9 @@ def validate(plan):
     portable = plan['deployment'].get('version') == llama_runtime.VERSION
     if acceptance.from_plan(plan) is None: raise ValueError('New executions require r5 acceptance')
     if (plan['artifact_kind'] != VERSION or plan['design_version'] != DESIGN or plan['autonomy_version'] != AUTONOMY
-            or plan['discovery_mode'] not in ('free','contextual')
+            or plan['discovery_mode'] not in ('free','literal','contextual')
             or plan['membership_mode'] not in ('scoped','raw')
-            or plan['verification_contract'] != raw_membership_verification.ALIGNED
+            or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['representative_policy'] != (candidate_consolidation.REPRESENTATIVE_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['dependency_capacity_policy'] != (contextual_dependencies.CAPACITY_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['schedule'] != minimal_pipeline.SCHEDULE
@@ -372,7 +372,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     sub = parser.add_subparsers(dest='action', required=True)
     p = sub.add_parser('prepare'); p.add_argument('directory', type=Path); p.add_argument('--gate', choices=['G1','G2','G3','G4'], required=True)
-    p.add_argument('--discovery-mode',choices=['free','contextual'],default='free')
+    p.add_argument('--discovery-mode',choices=['free','literal','contextual'],default='free')
     p.add_argument('--membership-mode',choices=['scoped','raw'],default='scoped')
     p.add_argument('--hypothesis-file',type=Path)
     p.add_argument('--deployment-file',type=Path)

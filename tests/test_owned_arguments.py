@@ -15,9 +15,15 @@ class OwnedArgumentTests(unittest.TestCase):
         self.members=[membership([self.source],self.candidates,[{'source_id':'s','candidate_id':self.cid}])]
 
     def metadata(self,**changes):
-        return [oa.bind_metadata(self.graph,n,{'output':{'authorship':'asserted_or_endorsed','kind':'value',
-            'entity':'P','time_ids':[a['id'] for a in oa.temporal_anchors(n['span']['text'])],
-            'source_language':'en',**changes}}) for n in self.graph['nodes']]
+        result=[]
+        for node in self.graph['nodes']:
+            values={'authorship':'asserted_or_endorsed','kind':'value','entity':'P',
+                    'time_ids':[a['id'] for a in oa.temporal_anchors(node['span']['text'])],
+                    'source_language':'en',**changes}
+            req=oa.metadata_request(self.graph,node)
+            result.append(oa.bind_metadata(self.graph,node,{'output':{
+                key:values[key] for key in req['schema']['properties']}}))
+        return result
 
     def alignment(self,node,relation):
         quals=[]
@@ -71,9 +77,16 @@ class OwnedArgumentTests(unittest.TestCase):
         record=self.record()
         with self.assertRaises(ValueError):oa.declare(self.graph,self.candidates,self.members,self.metadata()[:-1],record['alignments'])
         with self.assertRaises(ValueError):oa.declare(self.graph,self.candidates,self.members,self.metadata(),record['alignments'][:-1])
-        meta=self.metadata();meta[-1]=oa.bind_metadata(self.graph,self.graph['nodes'][-1],{'output':{**meta[-1]['output'],'authorship':'unclear'}})
-        held=oa.declare(self.graph,self.candidates,self.members,meta,record['alignments'])
+        meta=self.metadata()
+        with self.assertRaises(ValueError):
+            oa.bind_metadata(self.graph,self.graph['nodes'][-1],{'output':{**meta[-1]['output'],'authorship':'unclear'}})
+        # A linked ground must not turn an unresolved parent into an own claim.
+        index=next(i for i,n in enumerate(self.graph['nodes']) if n['id']==self.graph['edges'][0]['parent_id'])
+        meta[index]=oa.bind_metadata(self.graph,self.graph['nodes'][index],{'output':{**meta[index]['output'],'authorship':'unclear'}})
+        alignments=[a for a in record['alignments'] if a['node_id']!=self.graph['nodes'][index]['id']]
+        held=oa.declare(self.graph,self.candidates,self.members,meta,alignments)
         self.assertEqual(held['status'],'unresolved')
+        self.assertEqual(held['units'][-1]['authorship'],'unclear')
 
     def test_factual_type_preserved_and_compound_core_held_without_reclassification(self):
         meta=self.metadata(kind='fact');record=self.record()
