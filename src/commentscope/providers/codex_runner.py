@@ -9,7 +9,6 @@ import math
 import os
 from pathlib import Path
 import re
-import shutil
 import signal
 import subprocess
 import tempfile
@@ -21,6 +20,24 @@ from commentscope.file_integrity import file_sha256
 from commentscope.storage import write_json_exclusive as write
 
 VERSION = 'codex-subscription-baseline-0.1'
+HOST_POLICY = {'version':'codex-cloud-cli-host-0.1', 'minimum_available_mb':1536,
+               'minimum_commit_headroom_bytes':1024**3, 'minimum_disk_free_bytes':1024**3}
+
+
+def resource_reasons(observation):
+    # No GGUF, KV cache, embedding model or GPU allocation in this backend.
+    result=[]
+    for name in ('available_mb','committed_bytes','commit_limit','disk_free_bytes'):
+        value=observation[name]
+        if type(value) not in (int,float) or not math.isfinite(value) or value < 0:
+            raise ValueError('Valid Codex host resource observation required')
+    if observation['available_mb'] < HOST_POLICY['minimum_available_mb']:
+        result.append('low_host_available_memory')
+    if observation['commit_limit']-observation['committed_bytes'] < HOST_POLICY['minimum_commit_headroom_bytes']:
+        result.append('low_host_commit_headroom')
+    if observation['disk_free_bytes'] < HOST_POLICY['minimum_disk_free_bytes']:
+        result.append('low_host_disk')
+    return result
 
 
 def validate(deployment):
@@ -51,6 +68,7 @@ def command(deployment, root):
             '-c', 'model_reasoning_effort=' + json.dumps(d['reasoning_effort']),
             '-c', 'approval_policy="never"', '-c', 'web_search="disabled"',
             '-c', 'features.skip_host_skill_discovery=true',
+            '-c', 'suppress_unstable_features_warning=true',
             '--disable', 'shell_tool', '--disable', 'unified_exec',
             '--disable', 'multi_agent', '--disable', 'remote_plugin',
             '--output-schema', str(root/'schema.json'),
@@ -79,11 +97,12 @@ def parse_events(path):
 
 
 def stop_owned(process):
+    # The root may have exited while its same-session helpers are finishing.
+    try:
+        os.killpg(process.pid, signal.SIGTERM)
+    except ProcessLookupError:
+        pass
     if process.poll() is None:
-        try:
-            os.killpg(process.pid, signal.SIGTERM)
-        except ProcessLookupError:
-            return
         try:
             process.wait(timeout=3)
         except subprocess.TimeoutExpired:
@@ -198,11 +217,18 @@ class CodexRunner:
                     stop_owned(proc)
                     write(root/'stopped.json', {'pid': proc.pid, 'returncode': proc.returncode})
             finally:
-                link.unlink(missing_ok=True)
-                shutil.rmtree(home)
-                if workspace is not None:
-                    workspace.cleanup()
-                if call_id is not None:
-                    self.budget.finish(call_id, time.monotonic()-started, state,
-                                       response if state == 'ok' else None,
-                                       None if state == 'ok' else 'codex_call_incomplete')
+                try:
+                    link.unlink(missing_ok=True)
+                    # CLI cache publication may finish asynchronously. Remove
+                    # authentication, but do not race recursive cache deletion.
+                    try:
+                        home.rmdir()
+                    except OSError:
+                        pass
+                    if workspace is not None:
+                        workspace.cleanup()
+                finally:
+                    if call_id is not None:
+                        self.budget.finish(call_id, time.monotonic()-started, state,
+                                           response if state == 'ok' else None,
+                                           None if state == 'ok' else 'codex_call_incomplete')

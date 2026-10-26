@@ -15,10 +15,12 @@ from experiments.compare_local_codex import request_pack
 
 
 FAKE = '''#!/usr/bin/env python3
-import json,sys,time
+import json,sys,time,os
 from pathlib import Path
 MODE = %r
 if MODE == 'sleep': time.sleep(60)
+if MODE == 'cache':
+    cache=Path(os.environ['CODEX_HOME'])/'plugins';cache.mkdir();(cache/'index.json').write_text('{}')
 print(json.dumps({'type':'turn.started'}),flush=True)
 if MODE == 'tool': print(json.dumps({'type':'item.completed','item':{'type':'command_execution'}}))
 Path(sys.argv[sys.argv.index('--output-last-message')+1]).write_text('{"ok":true}')
@@ -27,6 +29,15 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':50,'output_tok
 
 
 class CodexContractTests(unittest.TestCase):
+    def test_cloud_guard_does_not_require_local_weight_disk_or_gpu_reserves(self):
+        sample={'available_mb':2048,'committed_bytes':2*1024**3,'commit_limit':4*1024**3,
+                'disk_free_bytes':2*1024**3,'gpu_free_mb':0}
+        self.assertFalse(cr.resource_reasons(sample))
+        from commentscope.providers import host_resources
+        self.assertIn('low_host_disk',host_resources.reasons(sample,host_resources.POLICY))
+        sample['disk_free_bytes']=512*1024**2
+        self.assertIn('low_host_disk',cr.resource_reasons(sample))
+
     def test_legacy_mock_runner_does_not_invent_a_provider_identity(self):
         with tempfile.TemporaryDirectory() as tmp:
             base=Mock(directory=Path(tmp),plan_sha='a'*64)
@@ -120,6 +131,14 @@ class CodexOwnedProcessTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'Tool-using'):self.runner().call('case',self.request)
         self.assertEqual(self.states(),[('error',)])
         self.assertFalse(list((self.run/'codex').glob('*/home/auth.json')))
+
+    def test_cli_cache_does_not_break_completion_or_leave_authentication(self):
+        self.exe.write_text(FAKE % 'cache');self.plan['deployment']['sha256']=cr.file_sha256(self.exe)
+        (self.run/'plan.json').write_text(json.dumps(self.plan))
+        self.assertEqual(self.runner().call('case',self.request)['output'],{'ok':True})
+        self.assertEqual(self.states(),[('ok',)])
+        self.assertFalse(list((self.run/'codex').glob('*/home/auth.json')))
+        self.assertTrue(list((self.run/'codex').glob('*/home/plugins/index.json')))
 
     def test_api_auth_and_changed_executable_are_rejected_before_dispatch(self):
         (self.auth/'auth.json').write_text(json.dumps({'auth_mode':'apikey','OPENAI_API_KEY':'synthetic'}))

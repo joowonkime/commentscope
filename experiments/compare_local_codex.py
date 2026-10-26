@@ -4,6 +4,7 @@ This development comparison never grants G1/G2/G3/G4 admission. It preserves
 first outputs; equality between providers does not establish semantic truth.
 """
 import argparse
+from contextlib import nullcontext
 from copy import deepcopy
 import json
 import os
@@ -26,7 +27,7 @@ from experiments.framed_corpus_pipeline import experiment_lock
 from experiments.minimal_factory_pipeline import portable_host_observation, private
 from experiments.scoped_discovery_probe import code_hashes
 
-VERSION = 'codex-local-development-comparison-0.1'
+VERSION = 'codex-local-development-comparison-0.2'
 
 
 def request_pack():
@@ -74,6 +75,7 @@ def prepare(directory, qwen_deployment, model, effort, ledger, cycle_id):
             'qwen': llama_runtime.validate(read_json(qwen_deployment))},
         'budget': {'ledger': str(ledger.resolve()), 'cycle_id': cycle_id},
         'resource_policy': deepcopy(host_resources.POLICY),
+        'codex_resource_policy': deepcopy(codex_runner.HOST_POLICY),
         'limits': {'call_seconds': 600, 'analysis_seconds': None},
         'runtime': {'context': 8192, 'reasoning': 'off', 'reasoning_budget': 0},
         'codex_output_budget': 'advisory only; native usage includes harness and reasoning',
@@ -90,6 +92,7 @@ def validate(directory):
     private(directory)
     plan = read_json(directory/'plan.json')
     if (plan['artifact_kind'] != VERSION or plan['resource_policy'] != host_resources.POLICY
+            or plan['codex_resource_policy'] != codex_runner.HOST_POLICY
             or sha(directory/'requests.json') != plan['request_pack_sha256']
             or plan['code_sha256'] != code_hashes()):
         raise ValueError('Frozen comparison inputs or code changed')
@@ -101,7 +104,8 @@ def run(directory, backend):
     plan = validate(directory)
     with experiment_lock(directory), quota_watch():
         observation = portable_host_observation()
-        reasons = host_resources.reasons(observation, plan['resource_policy'])
+        reasons = (codex_runner.resource_reasons(observation) if backend == 'codex' else
+                   host_resources.reasons(observation, plan['resource_policy']))
         if backend == 'qwen':
             reasons += llama_runtime.startup_reasons(observation, plan['backends']['qwen'])
         if reasons:
@@ -121,8 +125,15 @@ def run(directory, backend):
             return read_json(root/'completed.json')
         budget = InferenceBudget(Path(plan['budget']['ledger']), plan['budget']['cycle_id'], limit_seconds=None)
 
+        last_resource_check = [time.monotonic()]
         def guard():
             check_quota(wait_for_fresh=False)
+            if backend == 'codex' and time.monotonic()-last_resource_check[0] >= 10:
+                sample = portable_host_observation()
+                write(root/'resources'/f'{time.time_ns()}.json', sample)
+                last_resource_check[0] = time.monotonic()
+                if codex_runner.resource_reasons(sample):
+                    raise RuntimeError('Codex CLI host resource protection requested stop')
 
         def execute(base):
             checkpoint = CheckpointRunner(base, plan['runtime'])
@@ -145,7 +156,9 @@ def run(directory, backend):
             write(root/'completed.json', completed)
             return completed
 
-        with host_resources.watch(root/'resources'/str(time.time_ns()), plan['resource_policy'], portable_host_observation):
+        watcher = (nullcontext() if backend == 'codex' else host_resources.watch(
+            root/'resources'/str(time.time_ns()), plan['resource_policy'], portable_host_observation))
+        with watcher:
             if backend == 'codex':
                 return execute(codex_runner.CodexRunner(root, subplan, budget, guard))
             with llama_runtime.owned_server(plan['backends']['qwen'], root/'server'/str(time.time_ns()),
