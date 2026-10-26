@@ -113,6 +113,34 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertEqual(len(output['arguments']),6)
         self.assertEqual(len(runtime_probe(output['agent_inputs']['bundle'],runner)['turns']),6)
 
+    def test_rejected_reference_does_not_erase_other_positions_or_their_owned_reasons(self):
+        from commentscope.factory import source_scope as ss, scope_reference_review as sr
+        class Runner(ScriptedRunner):
+            def call(self,stage,req):
+                if req['system'].startswith(ss.SYSTEM):
+                    chosen=next(c[0] for c in req['data']['WITNESS_CHOICES'] if c[2]=='matters')
+                    value={'R1':chosen}
+                elif req['system'].startswith(sr.SYSTEM):
+                    value={'R1':'not_nominal'}
+                else:
+                    return super().call(stage,req)
+                self.calls.append((stage,req))
+                return {'output':value,'raw':'scripted_test_only','errors':[]}
+        self.snapshot=replace(self.snapshot,comments=tuple(
+            replace(c,text_original=c.text_original+' The process should be transparent.')
+            for c in self.snapshot.comments))
+        runner=Runner();output=self.process(runner,discovery_mode='literal')
+        self.assertFalse(output['errors'])
+        self.assertTrue(all(r['status']=='partial' and len(r['claims'])==1 and r['holds']
+                            for r in output['extractions']))
+        self.assertTrue(all(r['retained_ground_ids'] for r in output['extractions']))
+        self.assertEqual(output['unextracted_source_ids'],[])
+        self.assertEqual(len(output['agent_inputs']['compiled']['profiles']),2)
+        self.assertEqual(len(output['arguments']),6)
+        self.assertEqual(len(runtime_probe(output['agent_inputs']['bundle'],runner)['turns']),6)
+        self.assertEqual(sum(req['system'].startswith(sr.SYSTEM) for _,req in runner.calls),6)
+        self.assertFalse(output['quality_gate_passed'])
+
     def test_subset_does_not_shrink_map_denominator(self):
         output = self.process(ScriptedRunner(), scope_ids=['0','1','2'])
         mapped = output['agent_inputs']['map']['opinion_map']

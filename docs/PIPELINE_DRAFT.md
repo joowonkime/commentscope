@@ -62,7 +62,15 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 정확한 호출 예시는 [test_minimal_pipeline.py](../tests/test_minimal_pipeline.py)의 `ScriptedRunner`와 `MinimalPipelineTests.process`에 있다. 이 runner는 테스트용이며 실제 모델 어댑터가 아니다.
 
-현재 전체 Factory 검증에서 선택한 설정은 `discovery_mode='free'`, `membership_mode='raw'`, `verification_contract=raw_membership_verification.ALIGNED`다. 함수 기본값과 다르므로 명시해야 한다. `contextual`·`shared`는 별도 실험 경로이며, 실험을 구분해서 기록한다.
+이전 전체 G1 검증은 `free/raw/ALIGNED`에서 실패했다. 현재 새 실행기는 `FULL_SCOPE` 검증 계약을 요구하며, 공유 입장과 작성자 이유를 분리하는 `discovery_mode='literal'`도 연결했다. 새 코드의 실제 모델 품질은 fresh G1부터 다시 검증해야 한다. 명령의 기본 추출 방식은 여전히 `free`이므로 literal 실험에서는 `--discovery-mode literal`을 명시한다. `contextual`·`shared`는 별도 실험 경로이며, 이전 계획과 새 계약을 섞지 않는다.
+
+### 원문 참조 치환의 경계
+
+literal v5는 `source_scope.py`의 원문 span 선택 뒤 `scope_reference_review.py`로 원문·부모 문맥·원래 문장·치환문을 대조한다. 예를 들어 “다리를 수리하라. 그 절차는 투명해야 한다”에서 “그 절차”를 “다리”나 “다리를 수리하라”로 바꾸는 것은 다른 의미 또는 잘못된 문법 역할이다. 원문에 등장한 문자열이라는 사실만으로 후보를 승인하지 않는다.
+
+검증 결과가 같은 명사적 지시 대상일 때만 해당 치환문을 후보에 사용한다. 다른 대상·비명사·불확실·응답 누락은 해당 문장을 보류하고 원문·이유·다른 유효한 입장을 유지한다. 해석기가 처음부터 미해결로 남긴 참조에는 추가 검증 호출을 하지 않는다. 판단과 그 원문·선택 결과·요청 hash를 산출물에 묶으며, 바뀐 원문이나 다른 선택의 판단을 재사용하지 않는다. 이 검증도 모델의 제안이므로 독립 의미 검토와 실제 모델 G1~G4 검증을 대신하지 않는다.
+
+과거 literal v4 산출물은 기존 계약으로 재현할 수 있다. 새 실행의 v5 검증을 통과한 것으로 바꿔 표시하지 않는다. 합성 회귀 검사에서는 잘못된 참조를 보류한 뒤에도 유효한 두 입장·각3지지·6질문 경로가 유지되는지 확인한다.
 
 [experiments/minimal_factory_pipeline.py](../experiments/minimal_factory_pipeline.py)는 작성자 환경의 고정 실행 계획·ledger·모델 경로를 사용하는 연구 실행기다. 필요한 `runs/`와 실제 자료는 공개 저장소에 없으므로 clone 직후 실행할 수 있는 명령으로 취급하지 않는다. 조원이 실제 모델을 붙이려면 위 콜백의 어댑터와 비공개 입력을 별도로 준비해야 한다.
 
