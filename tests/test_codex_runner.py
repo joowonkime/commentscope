@@ -37,19 +37,20 @@ class CodexContractTests(unittest.TestCase):
             self.assertEqual(intent['provider'],'local_llama')
 
     def test_command_and_environment_do_not_use_paid_key_or_prior_context(self):
-        d = {'version':cr.VERSION,'executable':'/bin/codex','sha256':'a'*64,
+        root=Path(tempfile.gettempdir()).resolve()
+        d = {'version':cr.VERSION,'executable':str(root/'codex'),'sha256':'a'*64,
              'cli_version':'test','model':'test-model','reasoning_effort':'low',
-             'auth_home':'/private/auth','call_seconds':600}
-        argv = cr.command(d,Path('/private/new-run'))
+             'auth_home':str(root/'auth'),'call_seconds':600}
+        argv = cr.command(d,root/'new-run')
         for flag in ('--ignore-user-config','--ignore-rules','--ephemeral','--skip-git-repo-check','--output-schema'):
             self.assertIn(flag,argv)
         self.assertNotIn('resume',argv);self.assertNotIn('fork',argv)
         self.assertIn('read-only',argv)
         with patch.dict(os.environ,{'OPENROUTER_API_KEY':'not-a-real-key','OPENAI_API_KEY':'not-a-real-key',
                                    'CODEX_API_KEY':'not-a-real-key','OPENAI_BASE_URL':'https://example.invalid'}):
-            env = cr.isolated_environment(Path('/new/home'),Path('/new/work'))
+            env = cr.isolated_environment(root/'new-home',root/'new-work')
         self.assertFalse(any(k.endswith('_API_KEY') for k in env))
-        self.assertNotIn('OPENAI_BASE_URL',env);self.assertEqual(env['CODEX_HOME'],'/new/home')
+        self.assertNotIn('OPENAI_BASE_URL',env);self.assertEqual(env['CODEX_HOME'],str(root/'new-home'))
 
     def test_pack_contains_fixed_requests_without_expected_answers(self):
         pack = request_pack()
