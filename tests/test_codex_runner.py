@@ -5,7 +5,7 @@ from pathlib import Path
 import sqlite3
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import patch, Mock
 
 from commentscope.providers import codex_runner as cr
 from commentscope.providers.budget import InferenceBudget
@@ -27,6 +27,15 @@ print(json.dumps({'type':'turn.completed','usage':{'input_tokens':50,'output_tok
 
 
 class CodexContractTests(unittest.TestCase):
+    def test_legacy_mock_runner_does_not_invent_a_provider_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base=Mock(directory=Path(tmp),plan_sha='a'*64)
+            base.call.return_value={'output':{'ok':True},'errors':[]}
+            cached=CheckpointRunner(base,{'context':8192,'reasoning':'off','reasoning_budget':0})
+            cached.call('case',{'system':'Synthetic','data':{},'schema':{},'max_tokens':64})
+            intent=json.loads(next((Path(tmp)/'checkpoints').glob('*.intent.json')).read_text())
+            self.assertEqual(intent['provider'],'local_llama')
+
     def test_command_and_environment_do_not_use_paid_key_or_prior_context(self):
         d = {'version':cr.VERSION,'executable':'/bin/codex','sha256':'a'*64,
              'cli_version':'test','model':'test-model','reasoning_effort':'low',

@@ -33,7 +33,7 @@ class CheckpointRunner:
         actual = allocate(req, self.runtime) if provider is None else deepcopy(req)
         identity = {'artifact_kind': VERSION, 'plan_sha256': self.base.plan_sha, 'stage': stage,
                     'request_sha256': digest(actual),
-                    'provider': getattr(self.base, 'provider_identity', 'local_llama') if provider is None
+                    'provider': getattr(type(self.base), 'provider_identity', 'local_llama') if provider is None
                     else provider.__module__ + ':' + provider.__qualname__}
         key = digest(identity); intent = self.directory/(key + '.intent.json'); done = self.directory/(key + '.result.json')
         if done.exists():
