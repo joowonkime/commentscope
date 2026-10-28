@@ -113,9 +113,10 @@ class InferenceBudget:
         encoded = json.dumps(request, ensure_ascii=False, allow_nan=False)
         reserve = timeout_seconds + SHUTDOWN_RESERVATION_SECONDS
         with self.transaction() as db:
-            charged = db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
-            if self.limit is not None and charged + reserve > self.limit:
-                raise BudgetExhausted('Cycle inference budget cannot cover another bounded call')
+            if self.limit is not None:
+                charged = db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
+                if charged + reserve > self.limit:
+                    raise BudgetExhausted('Cycle inference budget cannot cover another bounded call')
             cursor = db.execute('INSERT INTO calls(plan_sha,request_sha,request_json,started_at,reserved,charged,state) VALUES (?,?,?,?,?,?,?)',
                 (plan_sha, digest(request), encoded, datetime.now(timezone.utc).isoformat(), reserve, reserve, 'reserved'))
             return cursor.lastrowid

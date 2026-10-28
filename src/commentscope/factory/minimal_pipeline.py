@@ -18,7 +18,7 @@ SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs':
 
 
 def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False):
-    if discovery_mode not in ('free','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
+    if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     if discovery_mode=='shared' and membership_mode!='raw':
         raise ValueError('Shared proposals require independent original membership')
@@ -107,6 +107,9 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         from commentscope.factory.contextual_engine import Engine
         engine=Engine(sources,runner,inspect,save=lambda name,value:save('contextual/'+name,value),raw_membership=membership_mode=='raw',verification_contract=verification_contract)
         engine.discover();records=engine.records
+    elif discovery_mode=='literal':
+        from commentscope.factory import literal_discovery
+        records=literal_discovery.discover(sources,work,save)
     elif discovery_mode=='shared':
         if shared_records is not None:
             shared_discovery=shared_claims.for_scope(shared_records,sources)

@@ -18,8 +18,11 @@ class OwnedNodeEntailmentTests(unittest.TestCase):
         self.metadata=[self.meta(self.graph,n) for n in self.graph['nodes']]
         self.job={'graph':self.graph,'node':self.root,'candidate':self.candidate,'metadata':self.metadata[0]}
     def meta(self,graph,node,**changes):
-        return oa.bind_metadata(graph,node,{'output':{'authorship':'asserted_or_endorsed','kind':'value',
-            'entity':'Policy P','time_ids':[],'source_language':'en',**changes}})
+        values={'authorship':'asserted_or_endorsed','kind':'value',
+            'entity':'Policy P','time_ids':[],'source_language':'en',**changes}
+        request=oa.metadata_request(graph,node)
+        return oa.bind_metadata(graph,node,{'output':{
+            key:values[key] for key in request['schema']['properties']}})
     def proof(self):
         request=node_nli.invocation([self.job]);return node_nli.records([self.job],nli_response(request))[0]
 

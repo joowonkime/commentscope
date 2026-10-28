@@ -5,6 +5,7 @@ import unittest
 from commentscope.factory import minimal_pipeline, minimal_claims as mc, minimal_membership as mm
 from commentscope.factory import candidate_consolidation as cc, source_arguments as sa, proposition_requirements as pr
 from commentscope.factory import owned_arguments as oa
+from commentscope.factory import literal_discovery as ld
 from commentscope.factory.automatic_contract import digest
 from commentscope.ingestion import load_snapshot
 from commentscope.agents.grounded_runtime import SYSTEM as RUNTIME_SYSTEM
@@ -24,9 +25,11 @@ class ScriptedRunner:
                      'claims': [proposition(s['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.')+'.')]} for s in data['ORIGINALS']]
             if self.fail_extraction or any(r['source_id'] == self.fail_source for r in rows): rows.pop()
             value = {'sources': rows}
+        elif system.startswith(ld.SYSTEM):
+            value={target['id']:{'role':'topic_position','speaker':'comment_author'} for target in data['TARGETS']}
         elif system.startswith(mm.SYSTEM):
             value = {'decisions': [{'pair_id': p['pair_id'],
-                'relation': 'supported' if p['ORIGINAL']['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.')+'.' == p['CANDIDATE']['text'] else 'opposed',
+                'relation': 'supported' if p['ORIGINAL']['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.') == p['CANDIDATE']['text'].rstrip('.') else 'opposed',
                 'authorship': 'asserted_or_endorsed', 'scope_preserved': 'yes', 'evidence_segment_ids': ['S000']} for p in data['PAIRS']]}
         elif system.startswith(pr.SHAPE):
             value={'status':'complete','qualifications':[]}
@@ -36,6 +39,7 @@ class ScriptedRunner:
             value={'kind':'value','entity':'P','time_ids':[]}
         elif system.startswith(oa.META):
             value={'authorship':'asserted_or_endorsed','kind':'value','entity':'P','time_ids':[],'source_language':'en'}
+            value={key:value[key] for key in req['schema']['properties']}
         elif system.startswith(oa.ALIGN):
             value={'relation':'equivalent' if data['SOURCE_POSITION'].rstrip('.')==data['CANDIDATE'].rstrip('.') else 'different'}
         elif system.startswith(sa.CORE):
@@ -88,6 +92,7 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertFalse(output['errors']); self.assertFalse(output['capacity_holds'])
         runtime = runtime_probe(output['agent_inputs']['bundle'], runner)
         self.assertEqual(len(runtime['turns']), 6)
+
         self.assertTrue(all(t['other_histories_unchanged'] for t in runtime['turns']))
         self.assertTrue(all(t['turn']['status'] == ('abstain' if t['question_id'] == 'missing' else 'answered') for t in runtime['turns']))
         self.assertFalse(output['quality_gate_passed'])
@@ -98,6 +103,43 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertTrue(output['argument_ownership_enforced'])
         self.assertTrue(all(r['extraction_record']['artifact_kind']==oa.VERSION for r in output['arguments']))
         self.assertTrue(all('expected' not in str(req['data']) for _,req in runner.calls))
+
+    def test_literal_positions_compile_without_promoting_because_grounds_to_shared_cores(self):
+        runner=ScriptedRunner();output=self.process(runner,discovery_mode='literal')
+        self.assertFalse(output['errors'])
+        self.assertEqual(len(output['agent_inputs']['compiled']['profiles']),2)
+        self.assertTrue(all('because' not in candidate['text'] for candidate in output['candidates']))
+        self.assertTrue(all(record['retained_ground_ids'] for record in output['extractions']))
+        self.assertEqual(len(output['arguments']),6)
+        self.assertEqual(len(runtime_probe(output['agent_inputs']['bundle'],runner)['turns']),6)
+
+    def test_rejected_reference_does_not_erase_other_positions_or_their_owned_reasons(self):
+        from commentscope.factory import source_scope as ss, scope_reference_review as sr
+        class Runner(ScriptedRunner):
+            def call(self,stage,req):
+                if req['system'].startswith(ss.SYSTEM):
+                    chosen=next(c[0] for c in req['data']['WITNESS_CHOICES'] if c[2]=='matters')
+                    value={'R1':chosen}
+                elif req['system'].startswith(sr.SYSTEM):
+                    value={'R1':'not_nominal'}
+                else:
+                    return super().call(stage,req)
+                self.calls.append((stage,req))
+                return {'output':value,'raw':'scripted_test_only','errors':[]}
+        self.snapshot=replace(self.snapshot,comments=tuple(
+            replace(c,text_original=c.text_original+' The process should be transparent.')
+            for c in self.snapshot.comments))
+        runner=Runner();output=self.process(runner,discovery_mode='literal')
+        self.assertFalse(output['errors'])
+        self.assertTrue(all(r['status']=='partial' and len(r['claims'])==1 and r['holds']
+                            for r in output['extractions']))
+        self.assertTrue(all(r['retained_ground_ids'] for r in output['extractions']))
+        self.assertEqual(output['unextracted_source_ids'],[])
+        self.assertEqual(len(output['agent_inputs']['compiled']['profiles']),2)
+        self.assertEqual(len(output['arguments']),6)
+        self.assertEqual(len(runtime_probe(output['agent_inputs']['bundle'],runner)['turns']),6)
+        self.assertEqual(sum(req['system'].startswith(sr.SYSTEM) for _,req in runner.calls),6)
+        self.assertFalse(output['quality_gate_passed'])
 
     def test_subset_does_not_shrink_map_denominator(self):
         output = self.process(ScriptedRunner(), scope_ids=['0','1','2'])

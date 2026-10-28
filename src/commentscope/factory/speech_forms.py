@@ -51,6 +51,15 @@ def interpret(graph,node,discourse_context=None):
             binding={'rule':'copular_epistemic_modal','kind':'prediction',
                 'authorship':'linked_to_parent' if edge else 'asserted_or_endorsed',
                 'assertion_mode':'assertion','parent_id':edge['parent_id'] if edge else None}
+        elif (edge and edge['relation'] in ('reason','concession') and
+                not any(q['start'] < node['span']['end'] and q['end'] > node['span']['start']
+                        for q in graph['quotation_ranges'])):
+            # Ownership follows this same-source explicit edge, not truth.
+            # declare() still resolves the parent's actual attribution; a
+            # conditional antecedent and reported/quoted speech stay guarded.
+            binding={'rule':'literal_ground_parent_attribution','kind':None,
+                'authorship':'linked_to_parent','parent_id':edge['parent_id'],
+                'assertion_mode':'assertion'}
         elif node['kind']=='statement' and (FIRST_PERSON.search(body) or KOREAN_DIRECT.search(body)):
             binding={'rule':'direct_speech_form','kind':None,'authorship':'asserted_or_endorsed',
                 'assertion_mode':'assertion','parent_id':None}

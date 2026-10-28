@@ -23,7 +23,9 @@ R5_VERSION = 'minimal-factory-offline-review-20261017-v3'
 EXECUTORS = ('minimal-factory-executor-20261016-v1', 'minimal-factory-executor-20261017-v2',
              'minimal-factory-executor-20261017-v3','minimal-factory-executor-20261017-v4',
              'minimal-factory-executor-20261017-v5','minimal-factory-executor-20261017-v6',
-             'minimal-factory-executor-20261017-v7','minimal-factory-executor-20261018-v8','minimal-factory-executor-20261018-v9')
+             'minimal-factory-executor-20261017-v7','minimal-factory-executor-20261018-v8','minimal-factory-executor-20261018-v9',
+             'minimal-factory-executor-20261018-v13', 'minimal-factory-executor-20261024-v14',
+             'minimal-factory-executor-20261025-v15')
 
 
 def private(path):

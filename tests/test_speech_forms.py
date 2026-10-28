@@ -6,6 +6,27 @@ from commentscope.factory import source_discourse as sd
 
 
 class SpeechFormTests(unittest.TestCase):
+    def test_literal_causal_ground_links_parent_without_approving_empirical_truth(self):
+        graph=self.graph('I prefer cycling because traffic is loud.')
+        node=next(n for n in graph['nodes'] if n['kind']=='ground')
+        proof=sf.interpret(graph,node)
+        self.assertEqual(proof['binding']['authorship'],'linked_to_parent')
+        self.assertEqual(proof['binding']['parent_id'],graph['edges'][0]['parent_id'])
+        self.assertIsNone(proof['binding']['kind'])
+        record=self.meta(graph,node,kind='fact')
+        self.assertEqual(record['output']['kind'],'fact')
+        self.assertEqual(record['output']['authorship'],'linked_to_parent')
+        self.assertFalse(proof['semantic_truth_verified'])
+        self.assertFalse(record['semantic_approval'])
+
+    def test_quoted_or_reported_ground_does_not_inherit_unconditional_authorship(self):
+        for text in ['I prefer cycling because "traffic is quiet".',
+                     'They claim cycling is best because traffic is loud.']:
+            graph=self.graph(text)
+            node=next(n for n in graph['nodes'] if 'because' in n['span']['text'])
+            self.assertIsNone(sf.interpret(graph,node)['binding'])
+            self.assertIn('authorship',oa.metadata_request(graph,node)['schema']['properties'])
+
     def consequence(self,body,parent='I hope P is adopted.'):
         graph=self.graph(parent+' '+body);node=graph['nodes'][1]
         record=sd.bind(graph,{'output':{'decisions':[{'pair_id':'L1','relation':'reason',
