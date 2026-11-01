@@ -27,6 +27,24 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 전체 연결 진입점은 [minimal_pipeline.process](../src/commentscope/factory/minimal_pipeline.py)다. 질문마다 Factory를 재실행하지 않고, 생성된 bundle을 대화 런타임에 넘긴다.
 
+`process()`는 입력 범위를 검사하고 다음 네 단계를 순서대로 연결한다.
+[pipeline_stages.py](../src/commentscope/factory/pipeline_stages.py)에 각 단계의 입출력을 나누었다.
+
+| 단계 함수 | 받는 것 → 반환하는 내부 기록 |
+| --- | --- |
+| `discover` | 원문·embedding·추출 설정 → 원문별 후보·공유 제안·해석 엔진 |
+| `memberships` | 초기 후보·원문·embedding → 최종 후보·지지 판정·통합 근거 |
+| `arguments` | 최종 후보·지지·불변 원문 구조 → 출처 소유 논거·핵심 입장·검사 기록 |
+| `compile_agents` | 지지·논거·입장·사실 검사 콜백 → bundle/profiles·사실 검사 기록 |
+
+[pipeline_work.py](../src/commentscope/factory/pipeline_work.py)의 `PipelineWork`는 한 번의 실행에 속한
+모델 작업·문맥 용량·오류/보류·검증 캐시를 관리한다. 서버 기동·장부·checkpoint는 호출자가 제공하는
+기존 runner의 책임이다. 단계별 처리는 위 네 함수에서 기존 도메인 모듈을 사용한다.
+
+단계 분리는 기존 요청 내용·순서·stage 이름·저장 산출물·원문 ID·최종 반환 계약을 유지한다.
+`free/literal/contextual/shared` 경로와 실패·보류 기록도 유지한다. 코드 hash가 달라진 뒤의 실제 모델
+검증에는 새 실행 계획이 필요하며, 이 리팩토링을 실제 품질 통과로 해석하지 않는다.
+
 | 단계 | 입력 → 출력 | 주로 수정할 파일 |
 | --- | --- | --- |
 | 원문 등록 | snapshot → canonical 출처·부모 문맥 | `ingestion/`, `factory/framed_corpus.py` |
