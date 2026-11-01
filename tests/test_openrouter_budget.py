@@ -77,6 +77,29 @@ class SpendLedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.summary()['uncertain_calls'], 1)
         with self.assertRaises(BudgetExhausted): self.reserve(plan='c'*64)
 
+    def test_manual_conservative_resolution_never_refunds_unknown_charge(self):
+        call = self.reserve(); self.ledger.finish(call, None)
+        self.ledger.resolve_conservatively(call, plan_sha256=PLAN, request_sha256='b'*64,
+            evidence_sha256='d'*64, reason='Audited terminal failure; retain full worst-case charge.')
+        summary = self.ledger.summary()
+        self.assertEqual(summary['charged_usd'], '0.3')
+        self.assertEqual(summary['confirmed_usd'], '0.1')
+        self.assertEqual(summary['conservative_usd'], '0.2')
+        self.assertEqual(summary['conservative_calls'], 1)
+        self.assertEqual(summary['uncertain_calls'], 0)
+        with self.assertRaises(ValueError): self.ledger.finish(call, '0')
+        self.reserve(plan='c'*64)
+
+    def test_conservative_resolution_cannot_touch_an_active_or_different_request(self):
+        call = self.reserve()
+        args = {'plan_sha256': PLAN, 'request_sha256': 'b'*64,
+                'evidence_sha256': 'd'*64, 'reason': 'Authored audit.'}
+        with self.assertRaises(ValueError): self.ledger.resolve_conservatively(call, **args)
+        self.ledger.finish(call, None)
+        args['request_sha256'] = 'c'*64
+        with self.assertRaises(ValueError): self.ledger.resolve_conservatively(call, **args)
+        self.assertEqual(self.ledger.summary()['uncertain_calls'], 1)
+
     def test_over_ceiling_charge_is_retained_and_holds_new_calls(self):
         call = self.reserve()
         with self.assertRaises(BudgetExhausted): self.ledger.finish(call, '0.21')
