@@ -9,6 +9,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
     "test_scope_reference_review",
+    "test_reference_kind_guard",
+    "test_membership_evidence_basis",
     "test_minimal_pipeline",
     "test_minimal_agents",
     "test_equivalence_assertion_boundary",

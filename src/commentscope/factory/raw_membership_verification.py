@@ -25,6 +25,7 @@ AUTHORED = 'raw-membership-verification-20261018-v9'
 REFERENCED = 'raw-membership-verification-20261018-v10'
 ACYCLIC = 'raw-membership-verification-20261018-v11'
 FULL_SCOPE = 'raw-membership-verification-20261026-v12'
+EXPLAINED = 'full-scope-evidence-basis-20261102-v1'
 AUTHORED_CONTRACTS = (AUTHORED, REFERENCED, ACYCLIC)
 NORMALIZED_TARGETS = (TARGETED_NORMALIZED, *AUTHORED_CONTRACTS)
 TARGETED_CONTRACTS = (TARGETED, *NORMALIZED_TARGETS)
@@ -326,7 +327,9 @@ def independent_candidate_view(record, candidate_scope=None):
     return view, guards
 
 
-def evidence_request(record, version=VERSION, *, candidate_scope=None):
+def evidence_request(record, version=VERSION, *, candidate_scope=None, protocol=None):
+    if protocol not in (None, EXPLAINED) or protocol and version != FULL_SCOPE:
+        raise ValueError('Explained evidence requires its exact full-scope contract')
     if version not in VERSIONS: raise ValueError('Unknown evidence contract')
     raw.validate(record)
     if not record['passed']: raise ValueError('Evidence verification follows a positive raw proposal')
@@ -362,15 +365,27 @@ def evidence_request(record, version=VERSION, *, candidate_scope=None):
             **properties}
         system = (FULL_SCOPE_EVIDENCE if version == FULL_SCOPE else
                   ALIGNED_EVIDENCE if version in ALIGNED_CONTRACTS else GROUNDED_EVIDENCE)
-    return mc.request(system, data, obj(properties), 256)
+    if protocol:
+        properties['basis'] = {'type': 'string', 'minLength': 1, 'maxLength': 240}
+        system += '''
+basis briefly names the selected own evidence or the exact candidate assertion
+that was added/changed or remains unresolved. Do not invent motives or rewrite.
+A source can endorse a reason-free stance despite a concession. An even-though
+consideration is not an only-if condition. If the candidate itself asserts a
+concession, that assertion must also be preserved. Explain the declared verdict
+without deliberation; all source, scope, authorship and uncertainty checks remain.
+'''
+    return mc.request(system, data, obj(properties), 512 if protocol else 256)
 
 
-def bind_evidence(record, result, version=VERSION, *, candidate_scope=None):
-    req = evidence_request(record, version, candidate_scope=candidate_scope)
+def bind_evidence(record, result, version=VERSION, *, candidate_scope=None, protocol=None):
+    req = evidence_request(record, version, candidate_scope=candidate_scope, protocol=protocol)
     if result.get('errors'): raise ValueError('Failed own-evidence comparison')
     value = result.get('output'); fields(value, ' '.join(req['schema']['properties']))
     for key, schema in req['schema']['properties'].items():
-        if value[key] not in schema['enum']: raise ValueError('Unknown own-evidence verdict')
+        if 'enum' in schema and value[key] not in schema['enum']: raise ValueError('Unknown own-evidence verdict')
+    if protocol and (not isinstance(value['basis'], str) or not value['basis'].strip() or len(value['basis']) > 240):
+        raise ValueError('A bounded evidence or candidate mismatch basis is required')
     guards = []
     text = ' '.join(p['text'] for p in record['evidence']); target = record['candidate']['text']
     if version in (CLAUSE_SCOPE, *INDEPENDENT):
@@ -420,6 +435,7 @@ def bind_evidence(record, result, version=VERSION, *, candidate_scope=None):
             'passed': not guards and value['verdict'] == 'fully_stated'
                 and value['source_basis'] in ('own_assertion', 'explicit_parent_endorsement')}
     if version in INDEPENDENT: bound['candidate_scope'] = deepcopy(candidate_scope)
+    if protocol: bound.update(protocol=protocol, output_sha256=digest(value))
     return bound
 
 
@@ -431,7 +447,8 @@ def assessment(record, route=None, evidence=None, *, version=VERSION):
                                       version=route_version, target_check=route.get('target_check'),
                                       proposition_proof=route.get('proposition_proof')) != route:
         raise ValueError('Candidate routing provenance changed')
-    if evidence is not None and bind_evidence(record, {'output': evidence['output']}, evidence['artifact_kind'].removesuffix('-evidence'), candidate_scope=evidence.get('candidate_scope')) != evidence:
+    if evidence is not None and bind_evidence(record, {'output': evidence['output']}, evidence['artifact_kind'].removesuffix('-evidence'),
+                                             candidate_scope=evidence.get('candidate_scope'), protocol=evidence.get('protocol')) != evidence:
         raise ValueError('Own-evidence provenance changed')
     if version == VERSION and evidence is not None and evidence['artifact_kind'] != VERSION+'-evidence':
         raise ValueError('New verification requires the parent-free own-evidence contract')

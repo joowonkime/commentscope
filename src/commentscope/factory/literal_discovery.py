@@ -195,13 +195,15 @@ def discover(sources, work, save=None):
                        lambda group:source_scope.request(graph,node),
                        lambda group,result:source_scope.bind(graph,node,result),1)
             if bound:
-                certificate=bound[0];req=scope_reference_review.request(graph,node,certificate)
+                certificate=bound[0];req=scope_reference_review.request(graph,node,certificate,
+                                                                      protocol=scope_reference_review.TYPED)
                 if req is None:
-                    review=scope_reference_review.bind(graph,node,certificate)
+                    review=scope_reference_review.bind(graph,node,certificate,protocol=scope_reference_review.TYPED)
                 else:
                     checked=work('scope-reference-fidelity',[{'id':source['id'],'node_id':node['id']}],
-                        lambda group:scope_reference_review.request(graph,node,certificate),
-                        lambda group,result:scope_reference_review.bind(graph,node,certificate,result),1)
+                        lambda group:scope_reference_review.request(graph,node,certificate,protocol=scope_reference_review.TYPED),
+                        lambda group,result:scope_reference_review.bind(graph,node,certificate,result,
+                                                                         protocol=scope_reference_review.TYPED),1)
                     review=checked[0] if checked else None
                 scope_records.append({'node_id':node['id'],'certificate':certificate,'review':review})
         records.append(assemble(graph,batches,scope_records))
