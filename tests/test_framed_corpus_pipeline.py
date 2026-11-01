@@ -33,8 +33,11 @@ class FakeBase:
         if stage == 'runtime':
             core = req['data']['PERSPECTIVE']['core_claim_id']
             missing = 'exact annual' in req['data']['QUESTION']
-            return {'errors': [], 'output': {'answerability': 'not_in_evidence' if missing else 'grounded',
-                'claim_ids': [] if missing else [core], 'limitation': 'missing_evidence' if missing else 'none'}}
+            allowed = [entry['claim_id'] for entry in req['data']['PERSPECTIVE']['allowed_entries']]
+            # A reason-only allowlist cannot be answered with its excluded core.
+            selected = [] if missing else [core] if core in allowed else allowed[:1]
+            return {'errors': [], 'output': {'answerability': 'grounded' if selected else 'not_in_evidence',
+                'claim_ids': selected, 'limitation': 'none' if selected else 'missing_evidence'}}
         return self.pipeline.call(stage, req)
 
 
@@ -73,6 +76,8 @@ class FramedCorpusPipelineTests(unittest.TestCase):
         self.assertEqual(report['runtime_turns'], 3); self.assertTrue(report['execution_complete'])
         self.assertFalse(report['quality_gate_passed']); self.assertIsNone(report['correct_comment_utilization'])
         self.assertEqual(read_json(self.directory/'plan.json')['reference']['sha256'], digest(self.reference))
+        self.assertTrue(all(row['turn']['status'] in ('answered', 'abstain')
+                            for row in read_json(self.directory/'artifacts/runtime.json')['turns']))
         before = len(FakeBase.executed); p.run(self.directory)
         self.assertEqual(len(FakeBase.executed), before)
 

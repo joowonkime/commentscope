@@ -34,7 +34,8 @@ class R5ReviewTests(TestCase):
             write(root/'review.json', {'artifact_kind': version+'-review', 'packet_sha256': digest(packet),
                                       'evaluator': 'synthetic test', 'rows': rows})
             loaded = (plan, {'binding_errors': 0, 'output_sha256': 'o', 'runtime_sha256': 'r'}, None,
-                      {'agent_inputs': {'map': {'opinion_map': {}}}}, {})
+                      {'agent_inputs': {'map': {'opinion_map': {}}, 'compiled': {'profiles': []}}},
+                      {'all_compiled_candidate_ids': [], 'turns': []})
             read, sha = review.read_json, review.sha
             def fixture_read(path):
                 if Path(path) == Path('runs/design-freeze-20261016/samples.json'):
@@ -43,7 +44,10 @@ class R5ReviewTests(TestCase):
                     return {'rows': [{'source_id': f's{i}' if i < meaningful else f'outside{i}',
                                       'eligibility': 'meaningful'} for i in range(755)]}
                 return read(path)
-            with patch.object(review, 'load_run', return_value=loaded), patch.object(review, 'read_json', side_effect=fixture_read), \
+            # These cases isolate preservation thresholds; real artifact binding has separate tests.
+            with patch.object(review, 'load_run', return_value=loaded), \
+                    patch.object(review, '_packet_for_run', return_value=packet), \
+                    patch.object(review, 'read_json', side_effect=fixture_read), \
                     patch.object(review, 'sha', side_effect=lambda p: 'fixed' if str(p) == 'synthetic-reference' else sha(p)):
                 return review.evaluate(root, root/'review.json', root/'result.json')
 

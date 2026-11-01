@@ -46,6 +46,7 @@ class ReviewPacketBindingTests(unittest.TestCase):
                 'gate': 'G1', 'goal_revision': acceptance.R5,
                 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
                 'snapshot': str(snapshot), 'snapshot_sha256': sha(snapshot),
+                'questions': deepcopy(review.QUESTIONS),
                 'scope_ids': sorted(texts), 'reference_runtime_input': False,
                 'cross_run_response_reuse': False}
         write(self.run/'plan.json', plan)
@@ -124,6 +125,31 @@ class ReviewPacketBindingTests(unittest.TestCase):
         self.packet['runtime_input'] = 0
         with self.assertRaisesRegex(ValueError, 'immutable run'):
             self.evaluate()
+
+    def test_consistent_hashes_and_pass_verdicts_cannot_approve_invalid_runtime(self):
+        baseline = read_json(self.run/'artifacts/runtime.json')
+        mutations = {
+            'history': lambda r: r['turns'][0].update(other_histories_unchanged=False),
+            'owner': lambda r: r['turns'][0]['turn'].update(candidate_id='another-agent'),
+            'question': lambda r: r['turns'][0]['turn'].update(question='A different question'),
+            'status': lambda r: r['turns'][0]['turn'].update(status='error'),
+        }
+        for label, mutate in mutations.items():
+            with self.subTest(label=label):
+                runtime = deepcopy(baseline); mutate(runtime)
+                (self.run/'artifacts/runtime.json').write_text(json.dumps(runtime))
+                completed = read_json(self.run/'completed.json')
+                completed['runtime_sha256'] = sha(self.run/'artifacts/runtime.json')
+                (self.run/'completed.json').write_text(json.dumps(completed))
+                self.directory = self.root/('review-'+label)
+                review.prepare(self.directory, self.run)
+                self.packet = read_json(self.directory/'packet.json')
+                result = self.evaluate()
+                self.assertFalse(result['requirements']['all_runtime_turns_valid'])
+                self.assertFalse(result['gate_passed'])
+                self.assertTrue(result['runtime_contract_errors'])
+                self.assertTrue(all(value for key, value in result['requirements'].items()
+                                    if key != 'all_runtime_turns_valid'))
 
 
 if __name__ == '__main__':

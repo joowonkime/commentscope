@@ -29,8 +29,14 @@ class ReviewGateTests(unittest.TestCase):
                        'output_sha256':'output','runtime_sha256':'runtime','tasks':tasks,'fact_benchmark':{'passed':True}}
         self.rows = [{'id':t['id'],'verdict':'pass','reason':'Authored synthetic review only.', 'omissions':[],
                       'label':t['data'].get('label')} for t in tasks]
+        compiled = {'profiles': [{'candidate_id': cid} for cid in ('one', 'two')]}
+        runtime = {'all_compiled_candidate_ids': ['one', 'two'], 'turns': [
+            {'candidate_id': cid, 'question_id': q['id'], 'other_histories_unchanged': True,
+             'turn': {'candidate_id': cid, 'question': q['text'], 'status': 'answered',
+                      'compiled_sha256': digest(compiled)}}
+            for cid in ('one', 'two') for q in review.QUESTIONS]}
         self.loaded = ({'gate':'G1'}, {'binding_errors':0,'output_sha256':'output','runtime_sha256':'runtime'},
-                       None, {'agent_inputs':{'map':{'opinion_map':{}}}}, {})
+                       None, {'agent_inputs':{'map':{'opinion_map':{}}, 'compiled': compiled}}, runtime)
 
     def evaluate(self, *, rows=None, packet_hash=None):
         write(self.root/'packet.json', self.packet)

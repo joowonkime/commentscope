@@ -16,7 +16,7 @@ from commentscope.factory.review_packets import build_packet
 from commentscope.ingestion import load_snapshot
 from commentscope.providers.checkpoint_calls import run_origin
 from commentscope.storage import write_json_exclusive as write
-from commentscope.agents.runtime_probe import QUESTIONS
+from commentscope.agents.runtime_probe import QUESTIONS, runtime_check
 from experiments.sequential_mvp_readiness import replay_benchmark
 
 VERSION = 'minimal-factory-offline-review-20261016-v2'
@@ -114,6 +114,14 @@ def evaluate(directory, review_path, output_path):
     def passed(kind):
         return all(reviewed.get(t['id'], {}).get('verdict') == 'pass' for t in tasks.values() if t['kind'] == kind)
     def rows(kind): return [t for t in tasks.values() if t['kind'] == kind]
+    runtime_errors = []
+    try:
+        runtime_check(runtime, output['agent_inputs']['compiled'],
+                      questions=plan.get('questions', QUESTIONS))
+        runtime_valid = True
+    except (ValueError, KeyError, TypeError) as exc:
+        runtime_valid = False
+        runtime_errors.append(str(exc))
     gates = {'execution_no_binding_failures': completion['binding_errors'] == 0,
              'all_counted_support_valid': bool(rows('support')) and passed('support'),
              'all_candidates_reviewed_coherent': passed('candidate'),
@@ -122,7 +130,8 @@ def evaluate(directory, review_path, output_path):
              'all_equivalence_decisions_reviewed': all(t['id'] in reviewed for t in rows('equivalence')),
              'all_extractions_reviewed': all(t['id'] in reviewed for t in rows('source')),
              'all_arguments_reviewed': all(t['id'] in reviewed for t in rows('argument')),
-             'all_exposed_agents_valid': passed('agent'), 'all_runtime_turns_valid': passed('runtime'),
+             'all_exposed_agents_valid': passed('agent'),
+             'all_runtime_turns_valid': passed('runtime') and runtime_valid,
              'fixed_fact_benchmark': packet['fact_benchmark']['passed']}
     if profile is not None:
         # Incorrect proposals that received no votes remain visible for review,
@@ -196,6 +205,8 @@ def evaluate(directory, review_path, output_path):
               'factory_complete': plan['gate'] == 'G4' and all(gates.values())}
     if profile is not None:
         result.update(goal_revision=profile['goal_revision'], acceptance_profile_sha256=digest(profile))
+    if runtime_errors:
+        result['runtime_contract_errors'] = runtime_errors
     write(output_path, result); return result
 
 

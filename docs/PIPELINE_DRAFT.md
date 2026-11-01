@@ -129,6 +129,13 @@ literal v5는 `source_scope.py`의 원문 span 선택 뒤 `scope_reference_revie
 `packet.json`을 고쳐 검토 대상을 줄이지 않는다. 이 무결성 검사는 검토 판단 자체의 의미 정확성을
 보장하지 않으며, 유효한 과거 검토 결과와 기존 품질 기준을 유지한다.
 
+Factory의 고정 질문 실행 기록은 바깥 Agent/질문 ID뿐 아니라 실제 응답의 Agent ID·질문 원문·
+이력 분리 확인·응답 상태를 함께 검사한다. `answered`와 적절한 `abstain`을 허용하고,
+다른 Agent 이력의 변경·미확인, 다른 질문/Agent 응답, 실행 오류는 승인하지 않는다.
+사후 검토의 통과 표시도 이 조건을 덮어쓸 수 없으며 원인은 `runtime_contract_errors`에 남긴다.
+과거 실행은 해당 계획에 고정된 질문을 사용한다. 이는 Factory 검증용이며 사용자 API의 질문을
+세 고정 문장으로 제한하는 기능이 아니다.
+
 ## 조원이 수정하는 방법
 
 최신 `main`에서 개인 작업 브랜치를 만든다. 코딩 에이전트는 [AGENTS.md](../AGENTS.md)와 [조원 시작 안내](TEAM_START.md)의 절차를 따른다.

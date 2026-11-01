@@ -257,8 +257,8 @@ def run(directory):
                 runtime = None
                 if admission['stop_reason'] == 'downstream_compiled_distinct_agents_ready':
                     runtime = runtime_probe(last_factory['agent_inputs']['bundle'], runner)
-                    runtime_check(runtime, last_factory['agent_inputs']['compiled'])
                     save('runtime', runtime)
+                    runtime_check(runtime, last_factory['agent_inputs']['compiled'])
                 output = {'admission': admission, 'factory_attempts': factories, 'last_factory': last_factory,
                           'distinct_checks': distinct_checks, 'runtime': runtime, 'quality_gate_passed': False}
                 save('output', output)

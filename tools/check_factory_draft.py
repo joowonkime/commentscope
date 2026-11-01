@@ -13,8 +13,10 @@ MODULES = (
     "test_minimal_agents",
     "test_comment_utilization",
     "test_acceptance_r5",
+    "test_factory_review_r5",
     "test_minimal_factory_review",
     "test_review_packet_binding",
+    "test_runtime_artifact_contract",
 )
 
 

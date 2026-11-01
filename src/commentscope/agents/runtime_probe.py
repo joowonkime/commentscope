@@ -39,10 +39,21 @@ def runtime_probe(bundle, runner, *, save_turn=None):
             'quality_gate_passed': False, 'requires_semantic_review': True}
 
 
-def runtime_check(runtime, compiled):
+def runtime_check(runtime, compiled, *, questions=QUESTIONS):
     ids = [p['candidate_id'] for p in compiled['profiles']]
-    expected = {(cid, q['id']) for cid in ids for q in QUESTIONS}
+    expected = {(cid, q['id']) for cid in ids for q in questions}
     actual = {(r['candidate_id'], r['question_id']) for r in runtime['turns']}
     if (runtime['all_compiled_candidate_ids'] != ids or actual != expected or len(runtime['turns']) != len(expected)
             or any(r['turn']['compiled_sha256'] != digest(compiled) for r in runtime['turns'])):
         raise ValueError('Same-plan runtime artifact changed')
+    question_text = {q['id']: q['text'] for q in questions}
+    for row in runtime['turns']:
+        turn = row['turn']
+        if row.get('other_histories_unchanged') is not True:
+            raise ValueError('Other Agent history changed or was not verified')
+        if turn.get('candidate_id') != row['candidate_id']:
+            raise ValueError('Runtime Agent identity changed')
+        if turn.get('question') != question_text[row['question_id']]:
+            raise ValueError('Runtime fixed question text changed')
+        if turn.get('status') not in ('answered', 'abstain'):
+            raise ValueError('Runtime answer status is not a valid execution')

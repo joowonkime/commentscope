@@ -157,7 +157,7 @@ def run(directory):
                                 distinct.append(bound);save('distinct/'+digest(pairs),bound)
                     if profiles:
                         runtime=runtime_probe(factory['agent_inputs']['bundle'],runner)
-                        runtime_check(runtime,factory['agent_inputs']['compiled']);save('runtime',runtime)
+                        save('runtime',runtime);runtime_check(runtime,factory['agent_inputs']['compiled'])
                 output={'admission':admission,'last_factory':factory,'distinct_checks':distinct,'runtime':runtime,'quality_gate_passed':False}
                 save('output',output)
             report={'artifact_kind':VERSION,'plan_sha256':sha(directory/'plan.json'),

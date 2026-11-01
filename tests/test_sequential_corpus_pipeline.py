@@ -92,6 +92,8 @@ class SequentialCorpusTests(unittest.TestCase):
         self.assertEqual(report['membership_judgments'], 5)
         self.assertTrue(report['execution_complete']); self.assertFalse(report['quality_gate_passed'])
         self.assertIsNone(report['correct_comment_utilization']); self.assertIsNone(self.active)
+        self.assertTrue(all(row['turn']['status'] in ('answered', 'abstain')
+                            for row in read_json(self.directory/'artifacts/runtime.json')['turns']))
         self.assertEqual(report['model_lifetime'], {'server_starts': 3, 'server_stops': 3, 'auxiliary_calls': 3})
         self.assertEqual(self.admission.call_count, 3)
         self.assertEqual(self.events, ['llm-open', 'llm-close', 'aux-open', 'aux-close',
@@ -115,6 +117,21 @@ class SequentialCorpusTests(unittest.TestCase):
         self.assertEqual(self.events, ['llm-open', 'llm-close']); self.assertEqual(self.admission.call_count, 1)
         self.assertGreater(report['same_plan_reused_calls_this_attempt'], 0)
         self.assertEqual(report['model_lifetime']['auxiliary_calls'], 0)
+
+    def test_runtime_contract_failure_keeps_the_turn_and_closes_owned_models(self):
+        self.prepare()
+        original = p.runtime_probe
+        def changed(bundle, runner):
+            runtime = original(bundle, runner)
+            runtime['turns'][0]['other_histories_unchanged'] = False
+            return runtime
+        with patch.object(p, 'runtime_probe', side_effect=changed):
+            with self.assertRaisesRegex(ValueError, 'history'):
+                p.run(self.directory)
+        saved = read_json(self.directory/'artifacts/runtime.json')
+        self.assertIs(saved['turns'][0]['other_histories_unchanged'], False)
+        self.assertIsNone(self.active)
+        self.assertFalse((self.directory/'completed.json').exists())
 
     def test_interruption_does_not_retry_pending_or_leave_owned_server(self):
         self.prepare(); self.interrupt_stage = 'frame-'
