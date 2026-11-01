@@ -1,0 +1,240 @@
+"""Fresh whole G1 Factory on OpenRouter with pinned local embedding/NLI.
+
+Execution completion is never semantic admission. All outputs, charges and
+failed turns remain private. G2/G3/G4 require separate qualification support.
+"""
+import argparse
+from copy import deepcopy
+from datetime import datetime, timezone
+from decimal import Decimal
+import json
+from pathlib import Path
+import shutil
+import time
+from urllib.parse import quote
+from urllib.request import build_opener, ProxyHandler
+
+from commentscope.agents.runtime_probe import QUESTIONS, runtime_probe, runtime_check
+from commentscope.factory import acceptance, fact_checks, minimal_pipeline, raw_membership_verification
+from commentscope.factory.automatic_contract import digest
+from commentscope.factory.claim_clusters import read_json, sha
+from commentscope.factory.framed_corpus import sources
+from commentscope.file_integrity import source_code_hashes as code_hashes
+from commentscope.ingestion import load_snapshot
+from commentscope.providers import evidence_nli, framed_embedding, host_resources, openrouter
+from commentscope.providers.budget import InferenceBudget, BudgetExhausted
+from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
+from commentscope.providers.execution_lock import experiment_lock
+from commentscope.providers.local_llama import NoRedirect
+from commentscope.providers.openrouter_budget import PaidBudget, SpendLedger, units
+from commentscope.storage import write_json_exclusive as write
+from experiments.compare_backend_discovery import check_quota, quota_watch
+from experiments.minimal_factory_pipeline import synthetic12
+from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
+
+VERSION = 'minimal-factory-openrouter-executor-20261102-v1'
+
+
+def provider_preflight(deployment):
+    selected = deployment.get('provider', {}).get('only', [])
+    if len(selected) != 1 or not deployment['provider'].get('max_price'):
+        raise ValueError('One pinned provider and finite price ceilings required')
+    url = 'https://openrouter.ai/api/v1/models/'+quote(deployment['model'], safe='/')+'/endpoints'
+    with build_opener(ProxyHandler({}), NoRedirect()).open(url, timeout=30) as response:
+        endpoints = json.load(response)['data']['endpoints']
+    matches = [e for e in endpoints if e['tag'] == selected[0]]
+    if len(matches) != 1: raise ValueError('Pinned provider endpoint unavailable')
+    endpoint = matches[0]; caps = deployment['provider']['max_price']
+    if (endpoint.get('status') != 0 or endpoint['context_length'] != deployment['context']
+            or not {'structured_outputs', 'response_format', 'temperature', 'max_tokens'} <= set(endpoint['supported_parameters'])
+            or any(Decimal(str(endpoint['pricing'].get(k, 0))) > Decimal(str(caps[k]))/(1 if k == 'request' else 1_000_000)
+                   for k in ('prompt', 'completion', 'request'))):
+        raise ValueError('Provider context, availability, parameters or price changed')
+    return {k: endpoint[k] for k in ('tag', 'provider_name', 'context_length', 'pricing', 'supported_parameters')}
+
+
+def archive_sources(directory, manifest):
+    for path, expected in manifest.items():
+        if sha(path) != expected: raise ValueError('Code changed while freezing remote plan')
+        target = directory/'frozen-code'/path
+        target.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(path, target)
+
+
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd):
+    private(directory); private(materials_file)
+    if directory.exists(): raise ValueError('New remote Factory directory required')
+    deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
+    if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
+    provider = provider_preflight(deployment); materials = read_json(materials_file)
+    if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
+        raise ValueError('Pinned classifier, model files and evidence required')
+    snapshot = synthetic12(); scope = sorted(sources(snapshot))
+    if scope != list('ABCDEFGHIJKL'): raise ValueError('Original twelve-source G1 required')
+    fact_checks.live(snapshot.usage.expires_at)
+    for document in materials['documents']: fact_checks.live(document['expires_at'])
+    if any(sha(p) != h for p, h in materials['model_files'].items()): raise ValueError('Auxiliary model changed')
+    profile = acceptance.validate(read_json('tests/fixtures/factory-acceptance-r5.json'), acceptance.R5_DIGEST)
+    acceptance.check_scope(profile, 'G1', len(scope), None)
+    write(directory/'snapshot.json', snapshot.to_dict())
+    plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': 'G1',
+            'goal_revision': acceptance.R5, 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
+            'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
+            'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': 'literal', 'membership_mode': 'raw',
+            'verification_contract': raw_membership_verification.FULL_SCOPE,
+            'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
+            'snapshot': str(directory/'snapshot.json'), 'snapshot_sha256': sha(directory/'snapshot.json'),
+            'scope_ids': scope, 'expires_at': snapshot.usage.expires_at,
+            'inputs': {str(materials_file): sha(materials_file)}, 'code_sha256': code_hashes(),
+            **deepcopy(materials), 'questions': deepcopy(QUESTIONS), 'schedule': deepcopy(minimal_pipeline.SCHEDULE),
+            'resource_policy': deepcopy(host_resources.POLICY),
+            'limits': {'analysis_seconds': None, 'call_seconds': deployment['call_seconds'],
+                       'embedding_seconds': 900, 'fact_batch_seconds': 600},
+            'reference_runtime_input': False, 'cross_run_response_reuse': False, 'quality_gate_passed': False}
+    write(directory/'plan.json', plan)
+    write(directory/'frozen.json', {'plan_sha256': sha(directory/'plan.json')})
+    archive_sources(directory, plan['code_sha256'])
+    return plan
+
+
+def validate(directory, plan):
+    run_origin(plan, directory, attempt=1)
+    if read_json(directory/'frozen.json') != {'plan_sha256': sha(directory/'plan.json')}:
+        raise ValueError('Frozen remote plan changed')
+    deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
+    profile = acceptance.from_plan(plan)
+    if (plan['artifact_kind'] != VERSION or plan['gate'] != 'G1' or profile is None
+            or plan['scope_ids'] != list('ABCDEFGHIJKL')
+            or plan['discovery_mode'] != 'literal' or plan['membership_mode'] != 'raw'
+            or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
+            or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
+            or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE
+            or plan['resource_policy'] != host_resources.POLICY or units(plan['maximum_cost_usd']) <= 0
+            or plan['reference_runtime_input'] is not False or plan['cross_run_response_reuse'] is not False
+            or plan['quality_gate_passed'] is not False
+            or plan['limits'] != {'analysis_seconds': None, 'call_seconds': deployment['call_seconds'],
+                                  'embedding_seconds': 900, 'fact_batch_seconds': 600}):
+        raise ValueError('Frozen remote G1 execution contract changed')
+    acceptance.check_scope(profile, 'G1', len(plan['scope_ids']), None)
+    if (plan['code_sha256'] != code_hashes()
+            or any(sha(p) != h for group in ('inputs', 'model_files') for p, h in plan[group].items())):
+        raise ValueError('Frozen remote code, input or model changed')
+    if Path(plan['snapshot']).resolve() != (directory/'snapshot.json').resolve(): raise ValueError('Snapshot location changed')
+    loaded = load_snapshot(Path(plan['snapshot']))
+    if loaded.sha256 != plan['snapshot_sha256'] or digest(loaded.snapshot.to_dict()) != digest(synthetic12().to_dict()):
+        raise ValueError('Original synthetic G1 snapshot changed')
+    fact_checks.live(plan['expires_at'])
+    for document in plan['documents']: fact_checks.live(document['expires_at'])
+    return loaded.snapshot
+
+
+def run(directory):
+    private(directory); check_quota(); started = time.monotonic()
+    with experiment_lock(directory), quota_watch():
+        plan = read_json(directory/'plan.json'); snapshot = validate(directory, plan)
+        plan_sha = sha(directory/'plan.json')
+        if (directory/'completed.json').exists():
+            report = read_json(directory/'completed.json')
+            if (report['plan_sha256'] != plan_sha
+                    or report['output_sha256'] != sha(directory/'artifacts/output.json')
+                    or report['runtime_sha256'] != sha(directory/'artifacts/runtime.json')):
+                raise ValueError('Completed remote artifacts changed')
+            return report
+        pending = [p for p in (directory/'checkpoints').glob('*.intent.json')
+                   if not p.with_name(p.name.replace('.intent.json', '.result.json')).exists()]
+        if pending: raise RuntimeError('Pending requests require process and ledger reconciliation')
+        policy = plan['spend_policy']
+        spending = SpendLedger(Path(policy['ledger']), policy['account_id'], maximum_usd=policy['maximum_usd'],
+                               opening_charge_usd=policy['opening_charge_usd'])
+        status = spending.summary()
+        if status['reserved_calls'] or status['uncertain_calls']:
+            raise BudgetExhausted('Shared API charge requires reconciliation before model work')
+        time_budget = InferenceBudget(directory/'inference.sqlite', VERSION, limit_seconds=None)
+        client = openrouter.Client(plan['deployment'])
+        paid_budget = PaidBudget(time_budget, spending, plan_sha256=plan_sha, deployment=plan['deployment'],
+                                 maximum_run_usd=plan['maximum_cost_usd'], paid_provider=client.generate,
+                                 key_metadata=key_metadata,
+                                 local_providers=(framed_embedding.generate, evidence_nli.generate))
+        checkpoint = CheckpointRunner(openrouter.Runner(directory, plan, paid_budget, client),
+                                     {'context': plan['deployment']['context'], 'reasoning': 'off', 'reasoning_budget': 0})
+        attempt = len(list((directory/'attempts').glob('*.started.json')))+1
+        origin = run_origin(plan, directory, attempt=attempt)
+        write(directory/'attempts'/f'{attempt:04}.started.json', {
+            'at': datetime.now(timezone.utc).isoformat(), 'plan_sha256': plan_sha,
+            'spending_before': spending.summary(), **origin})
+        def save(name, value):
+            path = directory/'artifacts'/(name+'.json')
+            if not path.resolve().is_relative_to((directory/'artifacts').resolve()):
+                raise ValueError('Artifact path left its private run')
+            if path.exists():
+                if digest(read_json(path)) != digest(value): raise ValueError('Same-plan artifact changed: '+name)
+            else: write(path, value)
+        def inspect(request):
+            check_quota(); return client.measure(request)
+        class CheckedRunner:
+            def call(self, stage, request):
+                measured = inspect(request)
+                if not measured['fits']: raise ValueError('Unsplit remote request exceeds its context bound')
+                result = checkpoint.call(stage, request); check_quota()
+                if not result.get('errors'):
+                    count = (result.get('usage') or {}).get('prompt_tokens')
+                    if type(count) is not int or not 0 <= count <= measured['input_upper_bound_tokens']+measured['provider_margin']:
+                        raise ValueError('Actual API prompt usage exceeded or omitted its declared bound')
+                return result
+        def embed(stage, texts):
+            check_quota(); path = directory/'artifacts'/('embedding-'+stage+'.json')
+            request = {'system': framed_embedding.VERSION, 'data': {'texts': texts, 'output': str(path)},
+                       'schema': {}, 'max_tokens': 1}
+            result = checkpoint.call('embed-'+stage, request, provider=framed_embedding.generate,
+                                     maximum=plan['limits']['embedding_seconds'])
+            if result['output'] != str(path) or result['sha256'] != sha(path): raise ValueError('Embedding artifact changed')
+            artifact = read_json(path)
+            if (artifact['texts_sha256'] != digest(texts) or artifact['model'] != framed_embedding.MODEL
+                    or artifact['revision'] != framed_embedding.REVISION or artifact['local_files_only'] is not True):
+                raise ValueError('Embedding provenance changed')
+            return artifact['vectors']
+        def facts(request):
+            check_quota()
+            return checkpoint.call('facts-'+digest(request)[:20], request, provider=evidence_nli.generate,
+                                   maximum=plan['limits']['fact_batch_seconds'])
+        try:
+            provider = provider_preflight(plan['deployment'])
+            write(directory/'attempts'/f'{attempt:04}.provider.json', provider)
+            with host_resources.watch(directory/'resources'/f'{attempt:04}', plan['resource_policy'], host_resources.observe_wsl_host):
+                output = minimal_pipeline.process(snapshot, CheckedRunner(), embed, inspect, facts,
+                    model=plan['classifier'], documents=plan['documents'], selections=plan['selections'],
+                    scope_ids=plan['scope_ids'], save=save, discovery_mode=plan['discovery_mode'],
+                    membership_mode=plan['membership_mode'], verification_contract=plan['verification_contract'])
+                save('output', output)
+                runtime = runtime_probe(output['agent_inputs']['bundle'], CheckedRunner(),
+                    save_turn=lambda row: save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'], row))
+                save('runtime', runtime); runtime_check(runtime, output['agent_inputs']['compiled'], questions=plan['questions'])
+            report = {'artifact_kind': VERSION, 'gate': 'G1', 'plan_sha256': plan_sha, 'execution_complete': True,
+                      'candidates': len(output['candidates']), 'compiled_agents': len(output['agent_inputs']['compiled']['profiles']),
+                      'runtime_turns': len(runtime['turns']), 'binding_errors': len(output['errors']),
+                      'capacity_holds': len(output['capacity_holds']), 'unextracted': len(output['unextracted_source_ids']),
+                      'output_sha256': sha(directory/'artifacts/output.json'), 'runtime_sha256': sha(directory/'artifacts/runtime.json'),
+                      'attempt_seconds': time.monotonic()-started, 'same_plan_reused_calls': checkpoint.reused,
+                      'spending': spending.summary(), 'run_spending': spending.summary(plan_sha256=plan_sha),
+                      'semantic_review_required': True, 'quality_gate_passed': False, 'local_llm_started': False, **origin}
+            write(directory/'completed.json', report); return report
+        except BaseException as exc:
+            write(directory/'attempts'/f'{attempt:04}.failed.json', {
+                'exception': type(exc).__name__, 'elapsed_seconds': time.monotonic()-started,
+                'spending': spending.summary(), 'budget_after': time_budget.summary()})
+            raise
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(description=__doc__); commands = parser.add_subparsers(dest='action', required=True)
+    p = commands.add_parser('prepare'); p.add_argument('directory', type=Path)
+    p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
+    p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
+    p = commands.add_parser('run'); p.add_argument('directory', type=Path)
+    args = parser.parse_args()
+    if args.action == 'prepare':
+        plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
+                       read_json(args.spend_policy), args.maximum_cost_usd)
+        result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
+                  'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
+    else: result = run(args.directory)
+    print(json.dumps(result, ensure_ascii=False))

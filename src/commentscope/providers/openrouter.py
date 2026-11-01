@@ -12,9 +12,12 @@ from urllib.request import Request, build_opener, ProxyHandler
 
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.runtime_runner import RuntimeRunner
+from commentscope.factory.automatic_contract import digest
 
 VERSION = 'openrouter-chat-completions-0.1'
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
+CAPACITY_VERSION = 'openrouter-utf8-context-bound-0.1'
+PROVIDER_MARGIN = 8192
 
 
 def validate(deployment):
@@ -54,12 +57,9 @@ class Client:
     def __init__(self, deployment):
         self.deployment = validate(deployment)
 
-    def generate(self, system, data, schema, max_tokens=3000):
+    def payload(self, system, data, schema, max_tokens):
         if type(max_tokens) is not int or not 0 < max_tokens < self.deployment['context']:
             raise ValueError('Bounded output allocation required')
-        key = os.environ.get('OPENROUTER_API_KEY', '').strip()
-        if not key:
-            raise ValueError('OPENROUTER_API_KEY is not configured')
         payload = {'model': self.deployment['model'], 'temperature': 0,
                    'max_tokens': max_tokens, 'stream': False,
                    'provider': {**self.deployment.get('provider', {}),
@@ -70,6 +70,24 @@ class Client:
                                 {'role': 'user', 'content': json.dumps(data, ensure_ascii=False)}]}
         if 'reasoning' in self.deployment and self.deployment['reasoning'] is not None:
             payload['reasoning'] = deepcopy(self.deployment['reasoning'])
+        return payload
+
+    def measure(self, request):
+        if set(request) != {'system', 'data', 'schema', 'max_tokens'}:
+            raise ValueError('Complete logical request required')
+        payload = self.payload(request['system'], request['data'], request['schema'], request['max_tokens'])
+        size = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode('utf-8'))
+        return {'artifact_kind': CAPACITY_VERSION, 'request_sha256': digest(request),
+                'input_upper_bound_tokens': size, 'provider_margin': PROVIDER_MARGIN,
+                'output_reservation': request['max_tokens'], 'context': self.deployment['context'],
+                'native_tokenization': False,
+                'fits': size+request['max_tokens']+PROVIDER_MARGIN <= self.deployment['context']}
+
+    def generate(self, system, data, schema, max_tokens=3000):
+        payload = self.payload(system, data, schema, max_tokens)
+        key = os.environ.get('OPENROUTER_API_KEY', '').strip()
+        if not key:
+            raise ValueError('OPENROUTER_API_KEY is not configured')
         req = Request(ENDPOINT, data=json.dumps(payload, ensure_ascii=False, allow_nan=False).encode('utf-8'),
                       headers={'Content-Type': 'application/json', 'Authorization': 'Bearer '+key})
         opener = build_opener(ProxyHandler({}), NoRedirect())

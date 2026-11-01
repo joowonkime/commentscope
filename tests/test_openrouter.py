@@ -92,6 +92,19 @@ class OpenRouterTests(unittest.TestCase):
         with self.assertRaises(HTTPError): remote.Client(deployment()).generate('s', {}, {}, 12)
         self.assertEqual(self.opener.open.call_count, 1)
 
+    def test_capacity_bound_includes_schema_and_unicode_without_network_or_key(self):
+        d = deployment(); d['context'] = 32768
+        client = remote.Client(d)
+        request = {'system': 's', 'data': {'text': '한국어'}, 'schema': {}, 'max_tokens': 100}
+        with patch.dict(remote.os.environ, {'OPENROUTER_API_KEY': ''}):
+            small = client.measure(request)
+            request['schema'] = {'enum': ['A'*40000]}
+            large = client.measure(request)
+        self.assertTrue(small['fits']); self.assertFalse(large['fits'])
+        self.assertFalse(small['native_tokenization'])
+        self.assertGreater(large['input_upper_bound_tokens'], small['input_upper_bound_tokens'])
+        self.opener.open.assert_not_called()
+
     def test_full_pipeline_and_agent_turns_use_remote_shape_without_a_local_server(self):
         temporary = tempfile.TemporaryDirectory(); self.addCleanup(temporary.cleanup)
         root = Path(temporary.name)

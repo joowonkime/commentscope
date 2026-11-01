@@ -97,12 +97,17 @@ class SpendLedger:
                        (row[0] if actual is None else actual, state, call_id))
         if exceeded: raise BudgetExhausted('Actual API charge exceeded its ceiling; evidence retained')
 
-    def summary(self):
+    def summary(self, *, plan_sha256=None):
+        if plan_sha256 is not None: identity(plan_sha256)
         with self.transaction() as db:
-            charged = self.opening + db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
-            counts = dict(db.execute('SELECT state,count(*) FROM calls GROUP BY state').fetchall())
-        return {'maximum_usd': dollars(self.maximum), 'charged_usd': dollars(charged),
-                'remaining_usd': dollars(max(0, self.maximum-charged)), 'calls': sum(counts.values()),
+            clause, args = ('', ()) if plan_sha256 is None else (' WHERE plan_sha=?', (plan_sha256,))
+            opening = self.opening if plan_sha256 is None else 0
+            row = None if plan_sha256 is None else db.execute('SELECT maximum FROM plans WHERE sha=?', (plan_sha256,)).fetchone()
+            maximum = self.maximum if plan_sha256 is None else row[0] if row else 0
+            charged = opening + db.execute('SELECT COALESCE(SUM(charged),0) FROM calls'+clause, args).fetchone()[0]
+            counts = dict(db.execute('SELECT state,count(*) FROM calls'+clause+' GROUP BY state', args).fetchall())
+        return {'maximum_usd': dollars(maximum), 'charged_usd': dollars(charged),
+                'remaining_usd': dollars(max(0, maximum-charged)), 'calls': sum(counts.values()),
                 'reserved_calls': counts.get('reserved', 0),
                 'uncertain_calls': counts.get('unknown', 0)+counts.get('over_ceiling', 0)}
 

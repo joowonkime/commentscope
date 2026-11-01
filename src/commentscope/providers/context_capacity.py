@@ -48,7 +48,7 @@ def measure(request, *, transport=post, context=8192, margin=256):
 
 
 def partition(items, build_request, inspect, *, minimum=1):
-    """Deterministic contiguous bisection; inspect must use the loaded template.
+    """Deterministic bisection; inspect must bound the complete provider input.
 
     Only oversized requests are split. Errors are not retried or repaired. Every
     original task appears exactly once in fitted work or explicit capacity holds.

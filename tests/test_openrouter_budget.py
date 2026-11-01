@@ -31,6 +31,13 @@ class SpendLedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.summary()['reserved_calls'], 0)
         self.reserve(amount='0.4')
 
+    def test_plan_summary_excludes_opening_balance_and_other_runs(self):
+        call = self.reserve(); self.ledger.finish(call, '0.01')
+        other = self.reserve(plan='c'*64); self.ledger.finish(other, '0.02')
+        own = self.ledger.summary(plan_sha256=PLAN)
+        self.assertEqual(own['charged_usd'], '0.01'); self.assertEqual(own['calls'], 1)
+        self.assertEqual(self.ledger.summary()['charged_usd'], '0.13')
+
     def test_finite_total_budget_refuses_before_a_call(self):
         with self.assertRaises(BudgetExhausted): self.reserve(amount='0.91', limit='1')
         self.assertEqual(self.ledger.summary()['calls'], 0)
