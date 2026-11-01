@@ -17,6 +17,7 @@ from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.local_llama import NoRedirect
+from commentscope.providers.openrouter_budget import SpendLedger, PaidBudget, units
 from commentscope.storage import write_json_exclusive as write
 from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.compare_local_codex import request_pack
@@ -53,7 +54,19 @@ def key_metadata():
     return {k: data.get(k) for k in ('limit', 'limit_remaining', 'usage')}
 
 
-def prepare(directory, deployment, maximum_cost_usd):
+def validate_spend_policy(policy):
+    if (not isinstance(policy, dict)
+            or set(policy) != {'account_id', 'ledger', 'maximum_usd', 'opening_charge_usd'}
+            or not isinstance(policy['account_id'], str) or not policy['account_id'].strip()
+            or not isinstance(policy['ledger'], str)):
+        raise ValueError('Complete shared API spending policy required')
+    private(Path(policy['ledger']))
+    if units(policy['maximum_usd']) <= 0 or units(policy['opening_charge_usd']) > units(policy['maximum_usd']):
+        raise ValueError('Valid shared API limit and opening charge required')
+    return dict(policy)
+
+
+def prepare(directory, deployment, maximum_cost_usd, *, spend_policy=None):
     private(directory)
     deployment = openrouter.validate(deployment); pack = request_pack()
     ceiling = charge_ceiling(deployment, pack)
@@ -67,6 +80,8 @@ def prepare(directory, deployment, maximum_cost_usd):
             'reserved_charge_ceiling_usd': ceiling, 'cross_run_response_reuse': False,
             'limits': {'call_seconds': deployment['call_seconds'], 'analysis_seconds': None},
             'quality_gate_passed': False, 'source_kind': 'synthetic'}
+    if spend_policy is not None:
+        plan['spend_policy'] = validate_spend_policy(spend_policy)
     write(directory/'plan.json', plan)
     return {'prepared': str(directory), 'cases': len(pack['cases']),
             'reserved_charge_ceiling_usd': ceiling, 'inference_calls': 0}
@@ -76,6 +91,7 @@ def validate(directory):
     private(directory); plan = read_json(directory/'plan.json'); pack = read_json(directory/'requests.json')
     run_origin(plan, directory, attempt=1)
     deployment = openrouter.validate(plan['deployment'])
+    if plan.get('spend_policy') is not None: validate_spend_policy(plan['spend_policy'])
     if (plan['artifact_kind'] != VERSION or plan['source_kind'] != 'synthetic'
             or plan['quality_gate_passed'] is not False
             or plan['request_pack_sha256'] != sha(directory/'requests.json')
@@ -107,7 +123,15 @@ def run(directory):
         attempt = len(list((directory/'preflight').glob('*.json')))+1
         write(directory/'preflight'/f'{attempt:04}.json', metadata)
         budget = InferenceBudget(directory/'inference.sqlite', VERSION, limit_seconds=None)
-        base = openrouter.Runner(directory, plan, budget, openrouter.Client(plan['deployment']))
+        client = openrouter.Client(plan['deployment']); spending = None
+        if plan.get('spend_policy') is not None:
+            policy = validate_spend_policy(plan['spend_policy'])
+            spending = SpendLedger(Path(policy['ledger']), policy['account_id'],
+                                   maximum_usd=policy['maximum_usd'], opening_charge_usd=policy['opening_charge_usd'])
+            budget = PaidBudget(budget, spending, plan_sha256=sha(directory/'plan.json'),
+                                deployment=plan['deployment'], maximum_run_usd=plan['maximum_cost_usd'],
+                                paid_provider=client.generate, key_metadata=key_metadata)
+        base = openrouter.Runner(directory, plan, budget, client)
         runner = CheckpointRunner(base, {'context': plan['deployment']['context'],
                                         'reasoning': 'off', 'reasoning_budget': 0})
         outputs = []; cost = 0
@@ -129,6 +153,7 @@ def run(directory):
                   'cost_usd': cost, 'key_after': key_metadata(), 'same_plan_reused_calls': runner.reused,
                   'quality_gate_passed': False, 'semantic_review_required': True,
                   'source_kind': 'synthetic', 'local_model_started': False}
+        if spending is not None: report['spending'] = spending.summary()
         write(directory/'completed.json', report)
         return report
 
@@ -137,8 +162,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__); actions = parser.add_subparsers(dest='action', required=True)
     p = actions.add_parser('prepare'); p.add_argument('directory', type=Path)
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
+    p.add_argument('--spend-policy', type=Path)
     p = actions.add_parser('run'); p.add_argument('directory', type=Path)
     args = parser.parse_args()
-    result = (prepare(args.directory, read_json(args.deployment_file), args.maximum_cost_usd)
+    result = (prepare(args.directory, read_json(args.deployment_file), args.maximum_cost_usd,
+                      spend_policy=read_json(args.spend_policy) if args.spend_policy is not None else None)
               if args.action == 'prepare' else run(args.directory))
     print(json.dumps(result, ensure_ascii=False))

@@ -19,6 +19,7 @@ MODULES = (
     "test_runtime_artifact_contract",
     "test_openrouter",
     "test_openrouter_factory_probe",
+    "test_openrouter_budget",
 )
 
 
