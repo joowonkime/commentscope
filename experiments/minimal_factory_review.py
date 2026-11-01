@@ -12,11 +12,11 @@ from commentscope.factory import minimal_membership as mm, comment_utilization a
 from commentscope.factory import acceptance
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
-from commentscope.factory.position_frames import source_packet
+from commentscope.factory.review_packets import build_packet
 from commentscope.ingestion import load_snapshot
 from commentscope.providers.checkpoint_calls import run_origin
 from commentscope.storage import write_json_exclusive as write
-from experiments.framed_agent_probe import QUESTIONS
+from commentscope.agents.runtime_probe import QUESTIONS
 from experiments.sequential_mvp_readiness import replay_benchmark
 
 VERSION = 'minimal-factory-offline-review-20261016-v2'
@@ -56,54 +56,30 @@ def load_run(run):
     return plan, completion, snapshot.snapshot, output, runtime
 
 
+def _packet_for_run(run, plan, completion, snapshot, output, runtime):
+    """Rebuild evidence from the run, including replayed fixed-fact results."""
+    profile = acceptance.from_plan(plan)
+    version = R5_VERSION if profile is not None else VERSION
+    checks = output['agent_inputs']['bundle']['checks']
+    facts = replay_benchmark(Path('runs/fact-nli-40-20261013'), plan, checks)
+    initial = (read_json(run/'artifacts/initial-candidates.json')
+               if any(record['relations'] for record in output['equivalences']) else [])
+    return build_packet(run, plan, completion, snapshot, output, runtime,
+                        version=version, fact_report=facts, initial_candidates=initial)
+
+
 def prepare(directory, run):
     private(directory)
     if directory.exists(): raise ValueError('Never overwrite review evidence')
-    plan, completion, snapshot, output, runtime = load_run(run)
-    profile = acceptance.from_plan(plan)
-    version = R5_VERSION if profile is not None else VERSION
-    opinion = output['agent_inputs']['map']['opinion_map']; lookup = {p['id']: p for p in opinion['perspectives']}
-    original = {sid: source_packet(snapshot, sid) for sid in plan['scope_ids']}
-    checks = output['agent_inputs']['bundle']['checks']
-    fact_report = replay_benchmark(Path('runs/fact-nli-40-20261013'), plan, checks)
-    rows = []
-    def task(kind, key, data):
-        rows.append({'id': kind+':'+digest(key), 'kind': kind, 'key': key, 'data': data})
-    for sid in plan['scope_ids']:
-        record = next((r for r in output['extractions'] if r['source']['id'] == sid), None)
-        data = {'original': original[sid], 'extraction': record}
-        if profile is not None:
-            data['retained_memberships'] = [p for p in opinion['perspectives'] if sid in p['supported_canonical_ids']]
-        task('source', sid, data)
-    for p in opinion['perspectives']:
-        task('candidate', p['id'], p)
-    for r in opinion['assessments']:
-        if r['relation'] == 'supported':
-            sid, cid = r['canonical_source_id'], r['perspective_id']
-            task('support', [cid, sid], {'original': original[sid], 'claim': lookup[cid]['claim'], 'assessment': r})
-    for eq in output['equivalences']:
-        for r in eq['relations']:
-            task('equivalence', [r['a'], r['b']], {'a': next(c for c in read_json(run/'artifacts/initial-candidates.json') if c['id'] == r['a']),
-                 'b': next(c for c in read_json(run/'artifacts/initial-candidates.json') if c['id'] == r['b']), 'decision': r})
-    for record in output['arguments']:
-        task('argument', record['source']['id'], record)
-    for profile in output['agent_inputs']['compiled']['profiles']:
-        task('agent', profile['candidate_id'], profile)
-    for row in runtime['turns']:
-        task('runtime', [row['candidate_id'], row['question_id']], row)
-    packet = {'artifact_kind': version+'-packet', 'run': str(run), 'plan_sha256': sha(run/'plan.json'),
-              'output_sha256': completion['output_sha256'], 'runtime_sha256': completion['runtime_sha256'],
-              'tasks': rows, 'fact_benchmark': fact_report, 'runtime_input': False, 'independent_gold': False,
-              'rubric': 'Every source/candidate/support/equivalence/argument/agent/turn. Review stance, author, conditions, reason ownership, facts and citations. '
-                        'source pass requires at least one substantive faithfully retained proposition; report other omissions separately. '
-                        'All counted support must pass; a correct edge never cancels an incorrect edge. '
-                        'candidate pass means coherent full stance; equivalence pass means the recorded relation preserves full essential scope. '
-                        'Agent pass includes core and all major arguments and external fact scope. Runtime pass requires question relevance, own citations, appropriate abstention and history isolation.'}
+    loaded = load_run(run)
+    packet = _packet_for_run(run, *loaded)
+    version = packet['artifact_kind'].removesuffix('-packet')
+    rows = packet['tasks']
     write(directory/'packet.json', packet)
     write(directory/'template.json', {'artifact_kind': version+'-review', 'packet_sha256': digest(packet),
           'evaluator': 'assistant_offline_not_independent_human_gold', 'rows': [
               {'id': r['id'], 'verdict': None, 'reason': '', 'omissions': [], 'label': None} for r in rows]})
-    return {'tasks': dict(Counter(r['kind'] for r in rows)), 'fact_benchmark_passed': fact_report['passed']}
+    return {'tasks': dict(Counter(r['kind'] for r in rows)), 'fact_benchmark_passed': packet['fact_benchmark']['passed']}
 
 
 def evaluate(directory, review_path, output_path):
@@ -114,6 +90,9 @@ def evaluate(directory, review_path, output_path):
             or not isinstance(review.get('evaluator'), str) or not review['evaluator'].strip()):
         raise ValueError('Review must bind to the exact full packet')
     plan, completion, snapshot, output, runtime = load_run(Path(packet['run']))
+    expected = _packet_for_run(Path(packet['run']), plan, completion, snapshot, output, runtime)
+    if digest(packet) != digest(expected):
+        raise ValueError('Review packet differs from immutable run artifacts')
     profile = acceptance.from_plan(plan)
     if (version == R5_VERSION) != (profile is not None):
         raise ValueError('Review and run acceptance contracts differ')

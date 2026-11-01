@@ -37,7 +37,9 @@ class ReviewGateTests(unittest.TestCase):
         write(self.root/'review.json', {'artifact_kind':review.VERSION+'-review',
             'packet_sha256':packet_hash or digest(self.packet),'evaluator':'synthetic fixture',
             'rows':self.rows if rows is None else rows})
-        with patch.object(review,'load_run',return_value=self.loaded):
+        # These unit cases isolate verdict rules; full artifact binding is tested separately.
+        with patch.object(review,'load_run',return_value=self.loaded), \
+             patch.object(review,'_packet_for_run',return_value=self.packet):
             return review.evaluate(self.root,self.root/'review.json',self.root/'result.json')
 
     def test_complete_authored_g1_contract_pass_is_not_factory_complete(self):

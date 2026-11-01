@@ -122,6 +122,13 @@ literal v5는 `source_scope.py`의 원문 span 선택 뒤 `scope_reference_revie
 
 평가 계약은 [factory-acceptance-r5.json](../tests/fixtures/factory-acceptance-r5.json)과 [acceptance.py](../src/commentscope/factory/acceptance.py)를 따른다. 합성 검사 결과를 실제 활용률로 보고하지 않는다. 모델 판정도 독립 정답으로 간주하지 않으며 실제 원문·부모·후보 대조가 필요하다.
 
+검토 목록은 [review_packets.py](../src/commentscope/factory/review_packets.py)의 같은 함수로 생성·재구성한다.
+평가 시 실행 산출물 전체에서 원문·후보·집계 지지·동치·논거·Agent·질문 목록을 다시 만들고,
+고정 사실 검사 요약도 저장 기록에서 재계산한다. 목록의 해시만 다시 맞춰서는 지지 삭제·내용 치환·
+중복 과제·질문 누락·사실 요약 변경을 승인할 수 없다. 검토 의견은 별도 `review.json`에 기록하고
+`packet.json`을 고쳐 검토 대상을 줄이지 않는다. 이 무결성 검사는 검토 판단 자체의 의미 정확성을
+보장하지 않으며, 유효한 과거 검토 결과와 기존 품질 기준을 유지한다.
+
 ## 조원이 수정하는 방법
 
 최신 `main`에서 개인 작업 브랜치를 만든다. 코딩 에이전트는 [AGENTS.md](../AGENTS.md)와 [조원 시작 안내](TEAM_START.md)의 절차를 따른다.
