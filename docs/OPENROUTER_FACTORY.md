@@ -5,10 +5,9 @@
 형식을 사용하며, 원문·프롬프트·JSON schema를 유지한다. API 키는
 `OPENROUTER_API_KEY` 환경변수에서만 읽고 계획이나 호출 파일에 저장하지 않는다.
 
-현재 명령은 **기존 합성 요청 8개를 실행하는 개발 검사**다. G1~G4 실행기의
-backend 옵션이나 전체 Factory 품질 승인을 제공하는 명령은 아니다.
-관점 생성부터 Agent 생성·고정 질문까지의 연결은 모의 HTTP 응답으로 검사한다.
-원격 모델을 전체 운영 경로로 채택하려면 해당 모델로 새 G1~G4 검증이 필요하다.
+`openrouter_factory_probe`는 **기존 합성 요청 8개를 실행하는 개발 검사**다.
+`openrouter_factory_pipeline`은 별도 계획으로 **전체 G1 관점→Agent→고정 질문**을
+실행한다. 실행 완료는 의미 품질 승인이 아니며, 해당 원격 모델로 새 G1~G4 검증이 필요하다.
 
 ## 비용을 계산하고 실행하기
 
@@ -93,3 +92,39 @@ python tools/check_factory_draft.py
 비용·잔여액 부족 거부, 중단/재개, 관점→Agent→대화 연결을 확인하는 검사가 포함된다.
 이 명령은 네트워크·실제 API 키·유료 추론을 사용하지 않는다.
 실제 8건의 JSON 응답 성공도 의미 품질 전체 통과를 뜻하지 않는다.
+
+## 전체 G1 파이프라인
+
+공유 비용 장부와 고정된 로컬 임베딩·NLI 자료가 필요하다. 로컬 Qwen 서버는 기동하지 않는다.
+자료 JSON은 `classifier`, `model_files`, `documents`, `selections`를 포함한다.
+기존의 고정 모델 이름·revision·가중치/실행 코드 hash와 문서·선택 구절을 사용하며,
+과거의 생성 응답이나 검토 정답을 넣지 않는다. 모델 파일을 자동 다운로드하지 않는다.
+
+```bash
+python -m experiments.openrouter_factory_pipeline prepare \
+  runs/openrouter-G1-example \
+  --deployment-file runs/openrouter-assets/deployment.json \
+  --materials-file runs/openrouter-assets/materials.json \
+  --spend-policy runs/openrouter-account/policy.json \
+  --maximum-cost-usd 0.25
+
+python -m experiments.openrouter_factory_pipeline run runs/openrouter-G1-example
+
+python -m experiments.minimal_factory_review prepare \
+  runs/openrouter-G1-example-review --run runs/openrouter-G1-example
+```
+
+기존 합성12원문, literal 발견·raw 지지 판정·FULL_SCOPE 검증, 같은 사실 확인·
+Agent 조립·고정 질문을 사용한다. 제공자 한 곳의 상태·지원 매개변수·context·가격을
+확인하고, 코드·자료·계획 hash를 고정한다. 계획 파일을 수정해 예산이나 gate를 바꾸면 거부한다.
+현재 이 명령은 G1만 지원하며 G2/G3/G4는 새 통과 증거와 후속 실행기 지원이 필요하다.
+
+OpenRouter는 로컬 서버의 `/tokenize`를 제공하지 않으므로 전체 요청의 UTF-8 크기와
+명시한 제공자 여유분으로 보수적인 context 경계를 계산한다. 이는 native 토큰 측정이
+아니며 각 완료 응답의 실제 `prompt_tokens`가 그 경계 안인지도 확인한다.
+기존 문장 임베딩과 NLI는 CPU의 별도 제한된 작업자로 실행하고 API 비용과 분리한다.
+자원·주간 사용량 보호는 유지한다.
+
+`completed.json`은 실행 완료와 사용 비용을 기록한다. 품질 판정에는 모든 원문·후보·
+집계 지지·논거·Agent·질문의 검토가 필요하며 빈 검토 항목은 성공이 아니다.
+실패 응답·개별 질문·중단 시점도 보존한다. 전체 의미 품질과 MVP 완료는 기존 기준을 따른다.

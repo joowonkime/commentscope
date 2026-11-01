@@ -20,6 +20,7 @@ MODULES = (
     "test_openrouter",
     "test_openrouter_factory_probe",
     "test_openrouter_budget",
+    "test_openrouter_factory_pipeline",
 )
 
 
