@@ -17,6 +17,8 @@ MODULES = (
     "test_minimal_factory_review",
     "test_review_packet_binding",
     "test_runtime_artifact_contract",
+    "test_openrouter",
+    "test_openrouter_factory_probe",
 )
 
 

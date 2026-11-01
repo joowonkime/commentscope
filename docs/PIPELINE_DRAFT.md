@@ -138,6 +138,10 @@ Factory의 고정 질문 실행 기록은 바깥 Agent/질문 ID뿐 아니라 �
 
 ## 조원이 수정하는 방법
 
+OpenRouter로 기존 합성 요청을 검사하려면 [원격 개발 검사](OPENROUTER_FACTORY.md)를 따른다.
+원격 Client/Runner는 같은 처리 모듈에 주입할 수 있으며 모델·제공자·비용 기록은 별도 계획에 고정한다.
+현재 개발 검사와 기존 G1~G4 실행기의 로컬 모델 계약은 구분한다.
+
 최신 `main`에서 개인 작업 브랜치를 만든다. 코딩 에이전트는 [AGENTS.md](../AGENTS.md)와 [조원 시작 안내](TEAM_START.md)의 절차를 따른다.
 
 ```bash

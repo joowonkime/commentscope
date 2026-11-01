@@ -79,7 +79,7 @@ flowchart TD
 - 새 본 실험: `discovery_mode='literal'`, `membership_mode='raw'`, `verification_contract=FULL_SCOPE`.
 - 명령 기본값은 `free/scoped`다. portable 실행은 raw 외 방식을 거부하므로 두 모드를 명시하고 생성한 plan을 먼저 검사한다. 기본값을 보고 선택 경로를 추정하지 않는다.
 - Codex는 개발 진단·구현·검토에 사용한다. Codex의 통과가 운영 Qwen의 통과가 되지는 않는다.
-- OpenRouter·다른 유료 API는 사용하지 않는다. 단건 기본 지시문 교체 실험은 운영 설정으로 채택하지 않았다.
+- 기존 로컬 Qwen 동결 실험은 OpenRouter·다른 유료 API를 사용하지 않는다. 별도 [OpenRouter 개발 검사](OPENROUTER_FACTORY.md)는 새 계획·모델·장부로 구분한다. 단건 기본 지시문 교체 실험은 운영 설정으로 채택하지 않았다.
 
 ### 변경하지 않는 의미 규칙
 
