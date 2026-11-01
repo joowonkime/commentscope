@@ -25,7 +25,7 @@ from commentscope.providers import framed_embedding, evidence_nli, host_resource
 from commentscope.providers import llama_runtime
 from commentscope.providers.runtime_runner import RuntimeRunner
 from commentscope.providers.budget import InferenceBudget
-from commentscope.providers.checkpoint_calls import CheckpointRunner
+from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.exclusive_models import ExclusiveModels
 from commentscope.storage import write_json_exclusive as write
 from experiments.audit_model_compare import owned_server, file_hash, command
@@ -38,7 +38,7 @@ from experiments.fresh_grounded_pipeline import Runner
 from experiments.scoped_discovery_probe import code_hashes
 from experiments.sequential_corpus_pipeline import SequentialRunner, runtime_check, cycle_check
 
-VERSION = 'minimal-factory-executor-20261025-v15'
+VERSION = 'minimal-factory-executor-20261102-v16'
 DESIGN = 'factory-implementation-20261016-v1'
 AUTONOMY = 'factory-autonomy-20261016-v1'
 LIMITS = {'analysis_seconds': None, 'call_seconds': 600, 'embedding_seconds': 900,
@@ -172,6 +172,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
         private(admission_file)
         paths.append(admission_file)
     plan = {'artifact_kind': VERSION, 'design_version': DESIGN, 'autonomy_version': AUTONOMY, 'gate': gate,
+            'run_directory': str(directory),
             'goal_revision': profile['goal_revision'], 'acceptance_profile': deepcopy(profile),
             'acceptance_profile_sha256': digest(profile),
             'discovery_mode':discovery_mode, 'membership_mode':membership_mode,
@@ -277,14 +278,16 @@ def run(directory):
     check_quota()
     private(directory); started = time.monotonic(); at = datetime.now(timezone.utc).isoformat()
     with experiment_lock(directory), quota_watch():
-        plan = read_json(directory/'plan.json'); snapshot = validate(plan); plan_hash = sha(directory/'plan.json')
+        plan = read_json(directory/'plan.json')
+        attempt = len(list((directory/'preflight').glob('*.json')))+1
+        origin = run_origin(plan, directory, attempt=attempt)
+        snapshot = validate(plan); plan_hash = sha(directory/'plan.json')
         if (directory/'completed.json').exists():
             report = read_json(directory/'completed.json')
             if (report['plan_sha256'] != plan_hash or report['output_sha256'] != sha(directory/'artifacts/output.json')
                     or report['runtime_sha256'] != sha(directory/'artifacts/runtime.json')):
                 raise ValueError('Completed artifacts changed')
             return report
-        attempt = len(list((directory/'preflight').glob('*.json')))+1
         # Starting with ambiguous pending requests is forbidden even if other
         # calls are reusable. No implicit retry after interruption.
         pending = [p for p in (directory/'checkpoints').glob('*.intent.json')
@@ -355,7 +358,7 @@ def run(directory):
                       'runtime_turns': len(runtime['turns']), 'binding_errors': len(output['errors']),
                       'capacity_holds': len(output['capacity_holds']), 'unextracted': len(output['unextracted_source_ids']),
                       'analysis_seconds': analysis_seconds, 'attempt_seconds': time.monotonic()-started,
-                      'same_plan_reused_calls': checkpoint.reused, 'fresh_run': attempt == 1,
+                      'same_plan_reused_calls': checkpoint.reused, **origin,
                       'output_sha256': sha(directory/'artifacts/output.json'), 'runtime_sha256': sha(directory/'artifacts/runtime.json'),
                       'semantic_review_required': True, 'quality_gate_passed': False, 'budget_after': budget.summary(),
                       'server_starts': models.server_starts, 'server_stops': models.server_stops, 'auxiliary_calls': models.auxiliary_calls}

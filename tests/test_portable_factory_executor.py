@@ -1,4 +1,4 @@
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -31,6 +31,27 @@ class PortableExecutorTests(TestCase):
         for gate in ('G2', 'G3', 'G4'):
             with self.subTest(gate=gate), self.assertRaises(ValueError):
                 executor.check_admission(gate, self.d, None)
+
+    def test_copied_v16_execution_is_rejected_before_validation_or_model_start(self):
+        copied = self.root/'copied'
+        write(copied/'plan.json', {'artifact_kind': executor.VERSION,
+              'run_directory': str(self.root/'original'), 'cross_run_response_reuse': False})
+        with patch('experiments.compare_backend_discovery.check_quota'), \
+             patch('experiments.compare_backend_discovery.quota_watch', return_value=nullcontext()), \
+             patch.object(executor, 'validate') as validate, \
+             patch.object(executor, 'lifetimes') as lifetimes:
+            with self.assertRaisesRegex(ValueError, 'original plan directory'):
+                executor.run(copied)
+        validate.assert_not_called()
+        lifetimes.assert_not_called()
+
+    def test_copied_v16_review_is_rejected_before_artifact_approval(self):
+        copied = self.root/'copied-review'
+        write(copied/'plan.json', {'artifact_kind': executor.VERSION,
+              'run_directory': str(self.root/'original'), 'cross_run_response_reuse': False})
+        write(copied/'completed.json', {})
+        with self.assertRaisesRegex(ValueError, 'original plan directory'):
+            review.load_run(copied)
 
     def qualification(self):
         run = self.root/'g1'; packet_dir = self.root/'review'

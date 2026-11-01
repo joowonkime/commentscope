@@ -14,6 +14,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.position_frames import source_packet
 from commentscope.ingestion import load_snapshot
+from commentscope.providers.checkpoint_calls import run_origin
 from commentscope.storage import write_json_exclusive as write
 from experiments.framed_agent_probe import QUESTIONS
 from experiments.sequential_mvp_readiness import replay_benchmark
@@ -25,7 +26,7 @@ EXECUTORS = ('minimal-factory-executor-20261016-v1', 'minimal-factory-executor-2
              'minimal-factory-executor-20261017-v5','minimal-factory-executor-20261017-v6',
              'minimal-factory-executor-20261017-v7','minimal-factory-executor-20261018-v8','minimal-factory-executor-20261018-v9',
              'minimal-factory-executor-20261018-v13', 'minimal-factory-executor-20261024-v14',
-             'minimal-factory-executor-20261025-v15')
+             'minimal-factory-executor-20261025-v15', 'minimal-factory-executor-20261102-v16')
 
 
 def private(path):
@@ -34,6 +35,8 @@ def private(path):
 
 def load_run(run):
     private(run); plan = read_json(run/'plan.json'); completion = read_json(run/'completed.json')
+    if plan.get('artifact_kind') == 'minimal-factory-executor-20261102-v16':
+        run_origin(plan, run, attempt=1)
     if (plan['artifact_kind'] not in EXECUTORS
             or completion['execution_complete'] is not True or completion['plan_sha256'] != sha(run/'plan.json')
             or plan['reference_runtime_input'] is not False or plan['cross_run_response_reuse'] is not False

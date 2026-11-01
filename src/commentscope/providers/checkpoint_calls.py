@@ -16,6 +16,24 @@ from commentscope.storage import write_json_exclusive as write
 VERSION = 'same-plan-model-call-checkpoint-0.1'
 
 
+def run_origin(plan, directory, *, attempt):
+    """A fresh analysis may resume its own directory, never another run's calls.
+
+    New plans pin their directory into their hash. Copying a plan and its cached
+    responses elsewhere therefore cannot become a newly admitted fresh run.
+    CheckpointRunner separately binds each response to the exact plan/request.
+    """
+    expected = plan.get('run_directory')
+    if (not isinstance(expected, str) or not expected
+            or Path(expected).resolve() != Path(directory).resolve()):
+        raise ValueError('Execution must use the original plan directory')
+    if plan.get('cross_run_response_reuse') is not False:
+        raise ValueError('Fresh execution forbids cross-run response reuse')
+    if type(attempt) is not int or attempt < 1:
+        raise ValueError('Positive execution attempt required')
+    return {'fresh_run': True, 'same_plan_resume': attempt > 1}
+
+
 class PendingCallError(RuntimeError):
     pass
 

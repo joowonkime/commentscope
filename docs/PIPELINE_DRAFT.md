@@ -45,6 +45,11 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 `free/literal/contextual/shared` 경로와 실패·보류 기록도 유지한다. 코드 hash가 달라진 뒤의 실제 모델
 검증에는 새 실행 계획이 필요하며, 이 리팩토링을 실제 품질 통과로 해석하지 않는다.
 
+실행기 v16부터 새 계획은 `run_directory`를 계획 hash에 포함한다. 같은 계획을 원래 경로에서
+재개하면 완료 응답을 다시 호출하지 않고 이어가며 `fresh_run=True`, `same_plan_resume=True`로
+구분한다. 계획·응답을 다른 실행 경로로 복사하거나 cross-run 재사용을 허용한 경우에는 실행과
+사후 검토를 거부한다. 과거 v15 이하 기록은 당시 계약으로 검토하고 바꾸지 않는다.
+
 | 단계 | 입력 → 출력 | 주로 수정할 파일 |
 | --- | --- | --- |
 | 원문 등록 | snapshot → canonical 출처·부모 문맥 | `ingestion/`, `factory/framed_corpus.py` |
