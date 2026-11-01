@@ -76,6 +76,22 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 `process()`는 모델 서버를 직접 띄우지 않는다. 호출자가 다음 콜백을 제공한다.
 
+공통 실행 기능은 아래 제품 모듈에서 관리한다. 이전 실험 파일도 같은 함수를 가져다 쓰므로
+기존 import 이름과 실행 기록을 유지한다.
+
+| 실행 기능 | 공통 모듈 |
+| --- | --- |
+| 중복 실행 잠금 | `providers/execution_lock.py` |
+| 코드·파일 hash | `file_integrity.py` |
+| 호스트 자원 관측·보호 | `providers/host_resources.py` |
+| LLM·보조 모델 전환과 호출 기록 | `providers/sequential_runner.py`, `exclusive_models.py` |
+| 고정 질문 실행·이력 분리·결과 검증 | `agents/runtime_probe.py` |
+| 기존 무제한 ledger cycle 검사 | `factory/acceptance.py`의 `cycle_check` |
+
+현재 Factory 실행기는 import 시 과거 실험 모듈을 함께 불러오지 않는다. G1 합성 자료나 기존
+8B 경로가 실제로 필요할 때만 해당 실험 코드를 불러온다. 고정 질문·요청·산출물·잠금·자원 기준은
+유지하며, 공통 모듈로 옮겼다는 사실을 실제 모델 품질 통과로 취급하지 않는다.
+
 | 경계 | 역할 |
 | --- | --- |
 | `runner.call(stage, request)` | system·data·schema·max_tokens 요청 실행; output·raw·errors 등 실제 응답 반환 |

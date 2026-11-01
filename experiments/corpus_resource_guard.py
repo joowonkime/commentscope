@@ -18,6 +18,7 @@ import time
 
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.storage import write_json_exclusive as write
+from commentscope.providers.host_resources import observe_wsl_host as host_observation
 
 PRIVATE_ROOT = Path('runs')
 LIMITS = {'minimum_available_mb': 1024, 'maximum_commit_percent': 92,
@@ -25,17 +26,6 @@ LIMITS = {'minimum_available_mb': 1024, 'maximum_commit_percent': 92,
           'maximum_observation_failures': 2}
 
 
-def host_observation():
-    result = subprocess.run([
-        'powershell.exe', '-NoProfile', '-Command',
-        'Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory | '
-        'Select-Object AvailableMBytes,CommittedBytes,CommitLimit,PercentCommittedBytesInUse | '
-        'ConvertTo-Json -Compress'], capture_output=True, text=True, timeout=20, check=True)
-    memory = json.loads(result.stdout)
-    return {'available_mb': memory['AvailableMBytes'],
-            'commit_percent': memory['PercentCommittedBytesInUse'],
-            'committed_bytes': memory['CommittedBytes'], 'commit_limit': memory['CommitLimit'],
-            'disk_free_bytes': shutil.disk_usage('/mnt/c').free}
 
 
 def unsafe_reasons(observation):

@@ -28,15 +28,12 @@ from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.exclusive_models import ExclusiveModels
 from commentscope.storage import write_json_exclusive as write
-from experiments.audit_model_compare import owned_server, file_hash, command
-from experiments.corpus_resource_guard import host_observation
-from experiments.framed_corpus_pipeline import experiment_lock
-from experiments.framed_cluster_controls import synthetic_snapshot
-from experiments.framed_agent_probe import runtime_probe, QUESTIONS
-from experiments.model_selection_20261016 import TRANSFER, PREFLIGHT, observe
-from experiments.fresh_grounded_pipeline import Runner
-from experiments.scoped_discovery_probe import code_hashes
-from experiments.sequential_corpus_pipeline import SequentialRunner, runtime_check, cycle_check
+from commentscope.file_integrity import file_sha256 as file_hash, source_code_hashes as code_hashes
+from commentscope.providers.host_resources import observe_wsl_host as host_observation
+from commentscope.providers.execution_lock import experiment_lock
+from commentscope.providers.sequential_runner import SequentialRunner
+from commentscope.agents.runtime_probe import runtime_probe, runtime_check, QUESTIONS
+from commentscope.factory.acceptance import cycle_check
 
 VERSION = 'minimal-factory-executor-20261102-v16'
 DESIGN = 'factory-implementation-20261016-v1'
@@ -51,12 +48,24 @@ CYCLE = Path('runs/mvp-factory-20261014/cycle.json')
 ACCEPTANCE = Path('runs/goal-reset-20261017-r5/acceptance-profile.json')
 
 
+def _legacy_preflight():
+    from experiments.model_selection_20261016 import PREFLIGHT
+    return PREFLIGHT
+
+
+def _legacy_observe():
+    from experiments.model_selection_20261016 import observe
+    return observe()
+
+
 def private(directory):
     if not directory.resolve().is_relative_to(Path('runs').resolve()):
         raise ValueError('Private runs directory required')
 
 
 def synthetic12():
+    from experiments.framed_cluster_controls import synthetic_snapshot
+    from experiments.model_selection_20261016 import TRANSFER
     base = synthetic_snapshot()
     extra = tuple(replace(base.comments[0], comment_id=sid, text_original=text, parent_id=None) for sid, text, _ in TRANSFER)
     return replace(base, snapshot_id=VERSION+'-G1', comments=base.comments+extra)
@@ -66,6 +75,7 @@ def deployment_check(deployment):
     if deployment.get('version') == llama_runtime.VERSION:
         llama_runtime.validate(deployment)
         return
+    from experiments.audit_model_compare import command
     runtime = deployment['runtime']
     expected = read_json(BASE)['deployment']
     if deployment != expected or runtime['reasoning'] != 'off' or runtime['gpu_layers'] != 99:
@@ -164,7 +174,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
     paths = [deployment_file or BASE, AUXILIARY, FACTS, SAMPLES, CYCLE, snapshot_path, ACCEPTANCE,
              Path(samples['meaning_reference']),
              Path('docs/MVP_EXECUTION_SPEC.md'), Path('docs/MVP_GOAL.md'), Path('docs/MVP_PRODUCT_POLICY.md'),
-             Path('docs/MVP_HANDOFF_2026-10-16.md'), Path('experiments/framed_agent_probe.py')]
+             Path('docs/MVP_HANDOFF_2026-10-16.md'), Path('src/commentscope/agents/runtime_probe.py')]
     if hypothesis_file is not None:
         private(hypothesis_file)
         paths.append(hypothesis_file)
@@ -187,7 +197,7 @@ def prepare(directory, gate, discovery_mode='free', membership_mode='scoped', hy
             'classifier': deepcopy(auxiliary['classifier']), 'documents': documents, 'selections': selections,
             'document_sha256': {d['id']: digest(d) for d in documents},
             'cycle': str(CYCLE), 'budget': {k: settings[k] for k in ('cycle_id', 'ledger')},
-            'limits': deepcopy(LIMITS), 'preflight': deepcopy(llama_runtime.STARTUP if portable else PREFLIGHT),
+            'limits': deepcopy(LIMITS), 'preflight': deepcopy(llama_runtime.STARTUP if portable else _legacy_preflight()),
             'schedule': deepcopy(minimal_pipeline.SCHEDULE),
             'resource_policy': deepcopy(host_resources.POLICY), 'questions': deepcopy(QUESTIONS),
             'sample_manifest_sha256': sha(SAMPLES), 'reference_runtime_input': False,
@@ -216,7 +226,7 @@ def validate(plan):
             or plan['representative_policy'] != (candidate_consolidation.REPRESENTATIVE_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['dependency_capacity_policy'] != (contextual_dependencies.CAPACITY_POLICY if plan['discovery_mode']=='contextual' else None)
             or plan['schedule'] != minimal_pipeline.SCHEDULE
-            or plan['limits'] != LIMITS or plan['preflight'] != (llama_runtime.STARTUP if portable else PREFLIGHT) or plan['questions'] != QUESTIONS
+            or plan['limits'] != LIMITS or plan['preflight'] != (llama_runtime.STARTUP if portable else _legacy_preflight()) or plan['questions'] != QUESTIONS
             or plan['resource_policy'] != host_resources.POLICY or plan['reference_runtime_input'] is not False
             or plan['cross_run_response_reuse'] is not False or plan['quality_gate_passed'] is not False):
         raise ValueError('Frozen Factory execution contract changed')
@@ -256,9 +266,10 @@ def lifetimes(directory, plan, attempt):
             if read_json(target/'server/resources/finished.json')['observer_stopped'] is not True:
                 raise RuntimeError('Portable resource observer shutdown not confirmed')
             return
-        observation = observe()
+        observation = _legacy_observe()
         write(target/'preflight.json', observation)
         if observation['refusal_reasons']: raise RuntimeError('GPU deployment start refused by resource policy')
+        from experiments.audit_model_compare import owned_server
         with owned_server(plan['deployment'], 'baseline', target/'server') as process:
             yield process
         if (read_json(target/'server/stopped.json')['returncode'] != 0
@@ -298,7 +309,7 @@ def run(directory):
             host = portable_host_observation()
             observation = {'host': host, 'refusal_reasons': llama_runtime.startup_reasons(host, plan['deployment'])}
         else:
-            observation = observe()
+            observation = _legacy_observe()
         write(directory/'preflight'/f'{attempt:04}.json', observation)
         if observation['refusal_reasons']: raise RuntimeError('Factory startup resource policy refused')
         budget = InferenceBudget(Path(plan['budget']['ledger']), plan['budget']['cycle_id'], limit_seconds=None)
@@ -312,7 +323,11 @@ def run(directory):
         try:
             with lifetimes(directory, plan, attempt) as models:
                 client = llama_runtime.Client(plan['deployment']) if portable else None
-                base = RuntimeRunner(directory, plan, budget, client) if portable else Runner(directory, plan, budget)
+                if portable:
+                    base = RuntimeRunner(directory, plan, budget, client)
+                else:
+                    from experiments.fresh_grounded_pipeline import Runner
+                    base = Runner(directory, plan, budget)
                 sequential = SequentialRunner(base, models, directory/'transitions'/f'{attempt:04}')
                 allocation = ({'context': 8192, 'reasoning': 'off', 'reasoning_budget': 0}
                               if portable else plan['deployment']['runtime'])

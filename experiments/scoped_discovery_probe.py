@@ -12,14 +12,13 @@ from commentscope.factory import scoped_discovery as core
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.fact_checks import live
+from commentscope.file_integrity import source_code_hashes as code_hashes
 from commentscope.providers.budget import InferenceBudget
 from commentscope.storage import write_json_exclusive as write
 from experiments import fact_evidence_probe as base
 from experiments.audit_model_compare import owned_server, file_hash
 
 
-def code_hashes():
-    return {str(p): sha(p) for root in ['src/commentscope','experiments'] for p in sorted(Path(root).rglob('*.py'))}
 
 
 def validate(plan):

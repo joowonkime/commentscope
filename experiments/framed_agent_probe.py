@@ -14,7 +14,7 @@ from commentscope.factory import position_frames as frames, framed_clusters as c
 from commentscope.factory import stance_membership as stance, framed_agents as agents
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
-from commentscope.agents.grounded_runtime import GroundedSession
+from commentscope.agents.runtime_probe import runtime_probe, QUESTIONS
 from commentscope.providers.budget import InferenceBudget
 from commentscope.storage import write_json_exclusive as write
 from experiments.framed_cluster_controls import AllocatedRunner, synthetic_snapshot, CASES, TARGET
@@ -24,10 +24,6 @@ from experiments.scoped_discovery_probe import code_hashes
 VERSION = 'framed-agent-synthetic-integration-0.1'
 EXPECTED_RELATIONS = dict(A='supported', B='supported', C='supported',
                           D='conditional', E='opposed', F='unrelated')
-QUESTIONS = [
-    {'id': 'position', 'text': 'What is the central position represented here?'},
-    {'id': 'reasons', 'text': 'What reasons and conditions are actually available for this position?'},
-    {'id': 'missing', 'text': 'What are the exact annual implementation cost and measured percentage reduction in accidents?'}]
 
 
 def prepare(directory, source, cycle):
@@ -71,29 +67,6 @@ def prepare(directory, source, cycle):
            'new_model_calls': 0, 'analysis_seconds': None}, flush=True)
 
 
-def runtime_probe(bundle, runner, *, save_turn=None):
-    from commentscope.agents.grounded_inputs import compile_inputs
-    profiles = compile_inputs(bundle)['profiles']; sessions = {}; rows = []
-    def provider(system, data, schema, *, max_tokens):
-        result = runner.call('runtime', {'system': system, 'data': data, 'schema': schema, 'max_tokens': max_tokens})
-        if result.get('errors'): raise ValueError('Bounded runtime inference failed')
-        return {'choices': [{'message': {'content': json.dumps(result['output'])}, 'finish_reason': 'stop'}]}
-    for p in profiles:
-        cid = p['candidate_id']; sessions[cid] = GroundedSession(bundle, cid, provider=provider)
-    for cid, session in sessions.items():
-        for question in QUESTIONS:
-            before = {other: digest(s.history) for other, s in sessions.items() if other != cid}
-            turn = session.ask(question['text'])
-            isolated = all(digest(sessions[other].history) == h for other, h in before.items())
-            row={'candidate_id': cid, 'question_id': question['id'], 'turn': turn,
-                 'other_histories_unchanged': isolated}
-            rows.append(row)
-            if save_turn is not None:
-                save_turn(row)
-                if turn['status']=='error':
-                    raise ValueError('Actual runtime turn failed; exact turn persisted: '+cid+'/'+question['id'])
-    return {'all_compiled_candidate_ids': list(sessions), 'turns': rows,
-            'quality_gate_passed': False, 'requires_semantic_review': True}
 
 
 def run(directory):
