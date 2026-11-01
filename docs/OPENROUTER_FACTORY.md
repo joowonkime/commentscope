@@ -51,6 +51,34 @@ python -m experiments.openrouter_factory_probe run runs/openrouter-probe-example
 API 키 잔여액도 실행 전에 확인하고, 비용 정보가 없는 응답은 추가 호출 전에 중단한다.
 키 사용액 집계에는 지연이 있을 수 있어 각 응답의 `usage.cost`도 따로 보존한다.
 
+여러 계획을 실행할 때는 공유 비용 정책 JSON을 `--spend-policy`로 함께 전달한다.
+
+```json
+{
+  "account_id": "commentscope-development",
+  "ledger": "runs/openrouter-account/spend.sqlite",
+  "maximum_usd": "50",
+  "opening_charge_usd": "0.0007901"
+}
+```
+
+장부를 처음 만들 때 `opening_charge_usd`에 그 시점까지 이미 사용한 금액을 넣는다.
+위 금액은 앞서 완료한8건의 예시다. 생성 후에는 총한도와 시작 사용액을 바꾸지 않는다.
+각 새 계획에 같은 정책을 전달하면 실제 비용과 미확정 비용을 함께 집계한다.
+
+```bash
+python -m experiments.openrouter_factory_probe prepare \
+  runs/openrouter-probe-with-shared-budget \
+  --deployment-file runs/openrouter-assets/deployment.json \
+  --maximum-cost-usd 0.25 \
+  --spend-policy runs/openrouter-account/policy.json
+```
+
+`providers/openrouter_budget.py`는 요청 전에 금액을 예약하고 첫 응답의 비용으로
+정산한다. 응답 유실·비용 누락은 예약을 유지하며 다음 유료 요청을 막는다.
+상한보다 큰 실제 비용도 장부에 남긴다. 한도와 잔액은 내림, 비용은 올림해 계산한다.
+명시한 로컬 NLI 등은 API 비용과 분리한다.
+
 계획·요청·코드 hash·원래 실행 경로가 일치할 때만 같은 계획을 재개한다.
 완료 응답은 재사용하고 미확정 호출은 장부 대조 없이 재전송하지 않는다.
 로컬 Qwen의 기존 동결 실험·응답·장부는 원격 검사와 별도로 유지한다.

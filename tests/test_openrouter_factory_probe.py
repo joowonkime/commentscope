@@ -65,5 +65,18 @@ class OpenRouterProbeTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, 'Frozen'): probe.run(self.directory)
         self.budget.call.assert_not_called()
 
+    def test_shared_money_ledger_counts_new_plans_and_completed_reuse(self):
+        policy = {'account_id': 'authored-account', 'ledger': str(self.directory.parent/'spend.sqlite'),
+                  'maximum_usd': '1', 'opening_charge_usd': '0.1'}
+        probe.prepare(self.directory, deployment(), 0.25, spend_policy=policy)
+        first = probe.run(self.directory)
+        self.assertEqual(first['spending']['charged_usd'], '0.10008')
+        self.assertEqual(probe.run(self.directory), first)
+        other = self.directory.with_name('second-probe')
+        probe.prepare(other, deployment(), 0.25, spend_policy=policy)
+        second = probe.run(other)
+        self.assertEqual(second['spending']['charged_usd'], '0.10016')
+        self.assertEqual(self.budget.call.call_count, 16)
+
 
 if __name__ == '__main__': unittest.main()
