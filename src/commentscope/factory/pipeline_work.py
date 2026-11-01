@@ -114,8 +114,10 @@ class PipelineWork:
                             self.raw_routes[target_key]=rows[0] if rows else None
                         route=self.raw_routes[target_key]
                         if route and route['passed']:
-                            rows=self.work('raw-own-evidence',[proof],lambda group:verification.evidence_request(group[0],self.verification_contract),
-                                lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract),1)
+                            protocol = verification.EXPLAINED if self.verification_contract == verification.FULL_SCOPE else None
+                            rows=self.work('raw-own-evidence',[proof],
+                                lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
+                                lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)
                             evidence=rows[0] if rows else None
                     verified=verification.assessment(proof,route,evidence,version=self.verification_contract)
                     results.append(verification.batch([source],[target],[verified],version=self.verification_contract))

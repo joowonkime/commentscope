@@ -126,8 +126,9 @@ class MinimalPipelineTests(unittest.TestCase):
                 if req['system'].startswith(ss.SYSTEM):
                     chosen=next(c[0] for c in req['data']['WITNESS_CHOICES'] if c[2]=='matters')
                     value={'R1':chosen}
-                elif req['system'].startswith(sr.SYSTEM):
-                    value={'R1':'not_nominal'}
+                elif req['system'].startswith((sr.SYSTEM, sr.TYPED_SYSTEM)):
+                    value={'R1': {'reference_kind': 'activity_or_process', 'replacement_kind': 'uncertain',
+                                  'relation': 'not_nominal', 'basis': 'Authored synthetic nonnominal witness.'}}
                 else:
                     return super().call(stage,req)
                 self.calls.append((stage,req))
@@ -144,7 +145,7 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertEqual(len(output['agent_inputs']['compiled']['profiles']),2)
         self.assertEqual(len(output['arguments']),6)
         self.assertEqual(len(runtime_probe(output['agent_inputs']['bundle'],runner)['turns']),6)
-        self.assertEqual(sum(req['system'].startswith(sr.SYSTEM) for _,req in runner.calls),6)
+        self.assertEqual(sum(req['system'].startswith(sr.TYPED_SYSTEM) for _,req in runner.calls),6)
         self.assertFalse(output['quality_gate_passed'])
 
     def test_subset_does_not_shrink_map_denominator(self):
@@ -173,7 +174,7 @@ class MinimalPipelineTests(unittest.TestCase):
                              **{k: 'yes' for k in shared_owned_positions.CHECKS}, 'conditions': []}
                 elif system.startswith(raw.SYSTEM):
                     text = data['ORIGINAL']['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.')+'.'
-                    value = decision(relation='supported' if text == data['CANDIDATE']['text'] else 'opposed')
+                    value = decision(relation='supported' if text.rstrip('.') == data['CANDIDATE']['text'].rstrip('.') else 'opposed')
                 elif system.startswith(verification.ROUTE): value = {'role': 'subject_position'}
                 elif system.startswith((verification.OWN_ONLY,verification.EVIDENCE)): value = {'source_basis': 'own_assertion', 'verdict': 'fully_stated'}
                 elif system.startswith(verification.FOCUS):
@@ -186,10 +187,13 @@ class MinimalPipelineTests(unittest.TestCase):
                     value = {'speech_use': 'literal_assertion', 'reference_basis': 'self_contained',
                              'target_alignment': 'aligned', 'source_basis': 'own_assertion', 'verdict': 'fully_stated'}
                 else: return super().call(stage, req)
+                if 'basis' in req['schema'].get('properties', {}):
+                    value['basis'] = 'Authored synthetic own-evidence declaration.'
                 self.calls.append((stage, req))
                 return {'output': value, 'raw': 'authored fixture only', 'errors': []}
         configurations = [('free', c) for c in (verification.LEGACY, verification.FOCUSED, verification.GROUNDED, verification.ALIGNED)]
         configurations.append(('shared', verification.ALIGNED))
+        configurations.append(('literal', verification.FULL_SCOPE))
         for mode, contract in configurations:
             with self.subTest(mode=mode, contract=contract):
                 self.saved = {}; self.embeddings = []
@@ -198,6 +202,11 @@ class MinimalPipelineTests(unittest.TestCase):
                 self.assertEqual(len(result['arguments']), 6)
                 self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
                 self.assertTrue(all(b['artifact_kind'] == contract+'-batch' for b in result['memberships']))
+                if contract == verification.FULL_SCOPE:
+                    evidence = [a['evidence_check'] for b in result['memberships']
+                                for a in b['verified_assessments'] if a['evidence_check'] is not None]
+                    self.assertTrue(evidence)
+                    self.assertTrue(all(e['protocol'] == verification.EXPLAINED and e['output']['basis'] for e in evidence))
                 runtime = runtime_probe(result['agent_inputs']['bundle'], runner)
                 self.assertEqual(len(runtime['turns']), 6)
                 self.assertTrue(all(t['other_histories_unchanged'] for t in runtime['turns']))
