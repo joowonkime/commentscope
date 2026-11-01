@@ -209,8 +209,10 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     arguments = sorted([*(sa.bind_links(r) for r in no_facts), *linked], key=lambda r:r['source']['id'])
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
-    audits = work('argument-audit', tasks, lambda group: sa.audit_request(arguments, cores, group),
-                  lambda group, result: sa.bind_audit(arguments, cores, group, result), 1)
+    audits = work('argument-audit', tasks,
+                  lambda group: sa.audit_request(arguments, cores, group, protocol=sa.ADDRESSED_AUDIT),
+                  lambda group, result: sa.bind_audit(arguments, cores, group, result,
+                                                     protocol=sa.ADDRESSED_AUDIT), 1)
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 

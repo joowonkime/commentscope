@@ -9,8 +9,10 @@ from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc, minimal_membership as mm
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
+from commentscope.factory import argument_audit_wire
 
 VERSION = 'source-arguments-20261016-v4'
+ADDRESSED_AUDIT = argument_audit_wire.VERSION
 KINDS = ('fact', 'value', 'prediction', 'uncertain')
 ROLES = ('reason', 'essential_condition', 'factual_premise', 'concession', 'additional_position')
 SYSTEM = '''Extract source-owned arguments linked to the supplied supported CANDIDATES.
@@ -322,7 +324,9 @@ def audit_tasks(records, cores):
     return tasks
 
 
-def audit_request(records, cores, tasks):
+def audit_request(records, cores, tasks, *, protocol=None):
+    if protocol not in (None, ADDRESSED_AUDIT):
+        raise ValueError('Unknown argument audit protocol')
     available = {t['task_id']: t for t in audit_tasks(records, cores)}
     if (not 1 <= len(tasks) <= 8 or len({t['task_id'] for t in tasks}) != len(tasks)
             or any(available.get(t['task_id']) != t for t in tasks)):
@@ -334,10 +338,17 @@ def audit_request(records, cores, tasks):
                                                   **c['output']} for c in cores if c['candidate']['id'] in r['candidate_ids']]}
                for r in records if r['source']['id'] in used]
     wire_tasks = audit_wire_tasks(records, tasks)
-    schema = obj({'decisions': array(obj({'task_id': {'type': 'string', 'enum': [t['task_id'] for t in wire_tasks]},
-                                         'verdict': {'type': 'string', 'enum': ['supported', 'unsupported', 'uncertain']}}),
+    if protocol == ADDRESSED_AUDIT:
+        payload, wire_tasks = argument_audit_wire.project(payload, tasks)
+    properties = {'task_id': {'type': 'string', 'enum': [t['task_id'] for t in wire_tasks]},
+                  'verdict': {'type': 'string', 'enum': ['supported', 'unsupported', 'uncertain']}}
+    if protocol == ADDRESSED_AUDIT:
+        properties['basis'] = {'type': 'string', 'minLength': 1, 'maxLength': 240}
+    schema = obj({'decisions': array(obj(properties),
                                     minimum=len(tasks), maximum=len(tasks))})
-    return mc.request(AUDIT, {'SOURCES': payload, 'TASKS': wire_tasks}, schema, 128+128*len(tasks))
+    return mc.request(AUDIT + (argument_audit_wire.INSTRUCTIONS if protocol else ''),
+                      {'SOURCES': payload, 'TASKS': wire_tasks}, schema,
+                      128+(256 if protocol else 128)*len(tasks))
 
 
 def audit_wire_tasks(records, tasks):
@@ -351,23 +362,28 @@ def audit_wire_tasks(records, tasks):
     return result
 
 
-def bind_audit(records, cores, tasks, result):
-    req = audit_request(records, cores, tasks)
+def bind_audit(records, cores, tasks, result, *, protocol=None):
+    req = audit_request(records, cores, tasks, protocol=protocol)
     if result.get('errors'): raise ValueError('Failed argument audit')
     value = result.get('output'); fields(value, 'decisions'); rows = value['decisions']
     if not isinstance(rows, list) or len(rows) != len(tasks): raise ValueError('Incomplete argument audit')
-    wire_tasks=audit_wire_tasks(records,tasks)
+    wire_tasks=req['data']['TASKS']
     aliases={wire['task_id']:task['task_id'] for wire,task in zip(wire_tasks,tasks,strict=True)}
     expected = set(aliases); seen = set()
     for row in rows:
-        fields(row, 'task_id verdict')
+        fields(row, 'task_id verdict basis' if protocol else 'task_id verdict')
+        if protocol and (not isinstance(row['basis'], str) or not row['basis'].strip() or len(row['basis']) > 240):
+            raise ValueError('A concise source evidence or mismatch basis is required')
         if row['task_id'] not in expected or row['task_id'] in seen or row['verdict'] not in ('supported', 'unsupported', 'uncertain'):
             raise ValueError('Unknown/duplicate audit task or verdict')
         seen.add(row['task_id'])
-    return {'artifact_kind': VERSION+'-audit', 'records_sha256': digest(records), 'cores_sha256': digest(cores),
+    audit = {'artifact_kind': VERSION+'-audit', 'records_sha256': digest(records), 'cores_sha256': digest(cores),
             'request_sha256': digest(req), 'tasks': deepcopy(tasks), 'response':deepcopy(value),
             'output':{'decisions':[{**row,'task_id':aliases[row['task_id']]} for row in rows]},
             'output_sha256': digest(value)}
+    if protocol:
+        audit['protocol'] = protocol
+    return audit
 
 
 def audit_verdicts(records, cores, audits):
@@ -381,7 +397,8 @@ def audit_verdicts(records, cores, audits):
             scoped_records=[r for r in records if r['source']['id'] in source_ids]
             candidate_ids={cid for r in scoped_records for cid in r['candidate_ids']}
             scoped_cores=[c for c in cores if c['candidate']['id'] in candidate_ids]
-        if bind_audit(scoped_records, scoped_cores, audit['tasks'], {'output': audit['response']}) != audit:
+        if bind_audit(scoped_records, scoped_cores, audit['tasks'], {'output': audit['response']},
+                      protocol=audit.get('protocol')) != audit:
             raise ValueError('Argument audit binding changed')
         for row in audit['output']['decisions']:
             if row['task_id'] in verdicts: raise ValueError('Duplicate argument audit')
