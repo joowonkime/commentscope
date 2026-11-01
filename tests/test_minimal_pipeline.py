@@ -107,6 +107,8 @@ class MinimalPipelineTests(unittest.TestCase):
     def test_literal_positions_compile_without_promoting_because_grounds_to_shared_cores(self):
         runner=ScriptedRunner();output=self.process(runner,discovery_mode='literal')
         self.assertFalse(output['errors'])
+        self.assertTrue(output['equivalences'])
+        self.assertTrue(all(e['protocol'] == cc.ASSERTION_ONLY for e in output['equivalences']))
         self.assertEqual(len(output['agent_inputs']['compiled']['profiles']),2)
         self.assertTrue(all('because' not in candidate['text'] for candidate in output['candidates']))
         self.assertTrue(all(record['retained_ground_ids'] for record in output['extractions']))

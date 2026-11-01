@@ -11,6 +11,7 @@ MODULES = (
     "test_scope_reference_review",
     "test_minimal_pipeline",
     "test_minimal_agents",
+    "test_equivalence_assertion_boundary",
     "test_comment_utilization",
     "test_acceptance_r5",
     "test_factory_review_r5",
