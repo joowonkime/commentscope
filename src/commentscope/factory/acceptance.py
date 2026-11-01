@@ -48,3 +48,11 @@ def check_scope(profile, gate, source_count, meaningful_count):
     if (source_count != spec.get('sources', spec.get('synthetic_sources'))
             or gate != 'G1' and meaningful_count != spec['meaningful_denominator']):
         raise ValueError('Fixed r5 source scope or meaningful denominator changed')
+
+
+def cycle_check(settings):
+    """Preserve the original uncapped ledger identity, separate from r5 scoring."""
+    if (settings['goal_revision'] != 'factory-goal-20261014-r4'
+            or settings['cycle_id'] != 'mvp-factory-20261014'
+            or settings['limit_seconds'] is not None or settings['analysis_seconds'] is not None):
+        raise ValueError('Current uncapped Factory cycle required')

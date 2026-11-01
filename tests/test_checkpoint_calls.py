@@ -3,7 +3,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
-from commentscope.providers.checkpoint_calls import CheckpointRunner, PendingCallError
+from commentscope.providers.checkpoint_calls import CheckpointRunner, PendingCallError, run_origin
 from commentscope.storage import write_json_exclusive as write
 
 
@@ -63,6 +63,33 @@ class CheckpointCallTests(unittest.TestCase):
         runner = CheckpointRunner(self.base, self.runtime); runner.call('source-a', self.req)
         second = runner.call('source-a', self.req); second['output']['kind'] = 'fact'
         self.assertEqual(runner.call('source-a', self.req)['output']['kind'], 'value')
+
+    def test_interrupted_fresh_run_resumes_without_becoming_cross_run_reuse(self):
+        plan = {'run_directory': str(self.base.directory), 'cross_run_response_reuse': False}
+        self.assertEqual(run_origin(plan, self.base.directory, attempt=1),
+                         {'fresh_run': True, 'same_plan_resume': False})
+        runner = CheckpointRunner(self.base, self.runtime)
+        first = runner.call('source-a', self.req)
+        resumed = CheckpointRunner(self.base, self.runtime)
+        self.assertEqual(resumed.call('source-a', self.req), first)
+        self.assertEqual(self.base.call.call_count, 1)
+        self.assertEqual(run_origin(plan, self.base.directory.resolve(), attempt=2),
+                         {'fresh_run': True, 'same_plan_resume': True})
+
+    def test_copied_plan_or_authorized_cross_run_reuse_cannot_claim_fresh_origin(self):
+        plan = {'run_directory': str(self.base.directory), 'cross_run_response_reuse': False}
+        with self.assertRaises(ValueError):
+            run_origin(plan, self.base.directory/'copied-run', attempt=1)
+        with self.assertRaises(ValueError):
+            run_origin({**plan, 'cross_run_response_reuse': True}, self.base.directory, attempt=1)
+        with self.assertRaises(ValueError):
+            run_origin({'cross_run_response_reuse': False}, self.base.directory, attempt=1)
+
+    def test_invalid_attempt_cannot_produce_fresh_execution_metadata(self):
+        plan = {'run_directory': str(self.base.directory), 'cross_run_response_reuse': False}
+        for attempt in (0, -1, True, 1.0):
+            with self.subTest(attempt=attempt), self.assertRaises(ValueError):
+                run_origin(plan, self.base.directory, attempt=attempt)
 
 
 if __name__ == '__main__': unittest.main()

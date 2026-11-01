@@ -27,6 +27,29 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 전체 연결 진입점은 [minimal_pipeline.process](../src/commentscope/factory/minimal_pipeline.py)다. 질문마다 Factory를 재실행하지 않고, 생성된 bundle을 대화 런타임에 넘긴다.
 
+`process()`는 입력 범위를 검사하고 다음 네 단계를 순서대로 연결한다.
+[pipeline_stages.py](../src/commentscope/factory/pipeline_stages.py)에 각 단계의 입출력을 나누었다.
+
+| 단계 함수 | 받는 것 → 반환하는 내부 기록 |
+| --- | --- |
+| `discover` | 원문·embedding·추출 설정 → 원문별 후보·공유 제안·해석 엔진 |
+| `memberships` | 초기 후보·원문·embedding → 최종 후보·지지 판정·통합 근거 |
+| `arguments` | 최종 후보·지지·불변 원문 구조 → 출처 소유 논거·핵심 입장·검사 기록 |
+| `compile_agents` | 지지·논거·입장·사실 검사 콜백 → bundle/profiles·사실 검사 기록 |
+
+[pipeline_work.py](../src/commentscope/factory/pipeline_work.py)의 `PipelineWork`는 한 번의 실행에 속한
+모델 작업·문맥 용량·오류/보류·검증 캐시를 관리한다. 서버 기동·장부·checkpoint는 호출자가 제공하는
+기존 runner의 책임이다. 단계별 처리는 위 네 함수에서 기존 도메인 모듈을 사용한다.
+
+단계 분리는 기존 요청 내용·순서·stage 이름·저장 산출물·원문 ID·최종 반환 계약을 유지한다.
+`free/literal/contextual/shared` 경로와 실패·보류 기록도 유지한다. 코드 hash가 달라진 뒤의 실제 모델
+검증에는 새 실행 계획이 필요하며, 이 리팩토링을 실제 품질 통과로 해석하지 않는다.
+
+실행기 v16부터 새 계획은 `run_directory`를 계획 hash에 포함한다. 같은 계획을 원래 경로에서
+재개하면 완료 응답을 다시 호출하지 않고 이어가며 `fresh_run=True`, `same_plan_resume=True`로
+구분한다. 계획·응답을 다른 실행 경로로 복사하거나 cross-run 재사용을 허용한 경우에는 실행과
+사후 검토를 거부한다. 과거 v15 이하 기록은 당시 계약으로 검토하고 바꾸지 않는다.
+
 | 단계 | 입력 → 출력 | 주로 수정할 파일 |
 | --- | --- | --- |
 | 원문 등록 | snapshot → canonical 출처·부모 문맥 | `ingestion/`, `factory/framed_corpus.py` |
@@ -53,6 +76,22 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 `process()`는 모델 서버를 직접 띄우지 않는다. 호출자가 다음 콜백을 제공한다.
 
+공통 실행 기능은 아래 제품 모듈에서 관리한다. 이전 실험 파일도 같은 함수를 가져다 쓰므로
+기존 import 이름과 실행 기록을 유지한다.
+
+| 실행 기능 | 공통 모듈 |
+| --- | --- |
+| 중복 실행 잠금 | `providers/execution_lock.py` |
+| 코드·파일 hash | `file_integrity.py` |
+| 호스트 자원 관측·보호 | `providers/host_resources.py` |
+| LLM·보조 모델 전환과 호출 기록 | `providers/sequential_runner.py`, `exclusive_models.py` |
+| 고정 질문 실행·이력 분리·결과 검증 | `agents/runtime_probe.py` |
+| 기존 무제한 ledger cycle 검사 | `factory/acceptance.py`의 `cycle_check` |
+
+현재 Factory 실행기는 import 시 과거 실험 모듈을 함께 불러오지 않는다. G1 합성 자료나 기존
+8B 경로가 실제로 필요할 때만 해당 실험 코드를 불러온다. 고정 질문·요청·산출물·잠금·자원 기준은
+유지하며, 공통 모듈로 옮겼다는 사실을 실제 모델 품질 통과로 취급하지 않는다.
+
 | 경계 | 역할 |
 | --- | --- |
 | `runner.call(stage, request)` | system·data·schema·max_tokens 요청 실행; output·raw·errors 등 실제 응답 반환 |
@@ -62,7 +101,15 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 정확한 호출 예시는 [test_minimal_pipeline.py](../tests/test_minimal_pipeline.py)의 `ScriptedRunner`와 `MinimalPipelineTests.process`에 있다. 이 runner는 테스트용이며 실제 모델 어댑터가 아니다.
 
-현재 전체 Factory 검증에서 선택한 설정은 `discovery_mode='free'`, `membership_mode='raw'`, `verification_contract=raw_membership_verification.ALIGNED`다. 함수 기본값과 다르므로 명시해야 한다. `contextual`·`shared`는 별도 실험 경로이며, 실험을 구분해서 기록한다.
+이전 전체 G1 검증은 `free/raw/ALIGNED`에서 실패했다. 현재 새 실행기는 `FULL_SCOPE` 검증 계약을 요구하며, 공유 입장과 작성자 이유를 분리하는 `discovery_mode='literal'`도 연결했다. 새 코드의 실제 모델 품질은 fresh G1부터 다시 검증해야 한다. 명령의 기본 추출 방식은 여전히 `free`이므로 literal 실험에서는 `--discovery-mode literal`을 명시한다. `contextual`·`shared`는 별도 실험 경로이며, 이전 계획과 새 계약을 섞지 않는다.
+
+### 원문 참조 치환의 경계
+
+literal v5는 `source_scope.py`의 원문 span 선택 뒤 `scope_reference_review.py`로 원문·부모 문맥·원래 문장·치환문을 대조한다. 예를 들어 “다리를 수리하라. 그 절차는 투명해야 한다”에서 “그 절차”를 “다리”나 “다리를 수리하라”로 바꾸는 것은 다른 의미 또는 잘못된 문법 역할이다. 원문에 등장한 문자열이라는 사실만으로 후보를 승인하지 않는다.
+
+검증 결과가 같은 명사적 지시 대상일 때만 해당 치환문을 후보에 사용한다. 다른 대상·비명사·불확실·응답 누락은 해당 문장을 보류하고 원문·이유·다른 유효한 입장을 유지한다. 해석기가 처음부터 미해결로 남긴 참조에는 추가 검증 호출을 하지 않는다. 판단과 그 원문·선택 결과·요청 hash를 산출물에 묶으며, 바뀐 원문이나 다른 선택의 판단을 재사용하지 않는다. 이 검증도 모델의 제안이므로 독립 의미 검토와 실제 모델 G1~G4 검증을 대신하지 않는다.
+
+과거 literal v4 산출물은 기존 계약으로 재현할 수 있다. 새 실행의 v5 검증을 통과한 것으로 바꿔 표시하지 않는다. 합성 회귀 검사에서는 잘못된 참조를 보류한 뒤에도 유효한 두 입장·각3지지·6질문 경로가 유지되는지 확인한다.
 
 [experiments/minimal_factory_pipeline.py](../experiments/minimal_factory_pipeline.py)는 작성자 환경의 고정 실행 계획·ledger·모델 경로를 사용하는 연구 실행기다. 필요한 `runs/`와 실제 자료는 공개 저장소에 없으므로 clone 직후 실행할 수 있는 명령으로 취급하지 않는다. 조원이 실제 모델을 붙이려면 위 콜백의 어댑터와 비공개 입력을 별도로 준비해야 한다.
 
@@ -75,7 +122,25 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 평가 계약은 [factory-acceptance-r5.json](../tests/fixtures/factory-acceptance-r5.json)과 [acceptance.py](../src/commentscope/factory/acceptance.py)를 따른다. 합성 검사 결과를 실제 활용률로 보고하지 않는다. 모델 판정도 독립 정답으로 간주하지 않으며 실제 원문·부모·후보 대조가 필요하다.
 
+검토 목록은 [review_packets.py](../src/commentscope/factory/review_packets.py)의 같은 함수로 생성·재구성한다.
+평가 시 실행 산출물 전체에서 원문·후보·집계 지지·동치·논거·Agent·질문 목록을 다시 만들고,
+고정 사실 검사 요약도 저장 기록에서 재계산한다. 목록의 해시만 다시 맞춰서는 지지 삭제·내용 치환·
+중복 과제·질문 누락·사실 요약 변경을 승인할 수 없다. 검토 의견은 별도 `review.json`에 기록하고
+`packet.json`을 고쳐 검토 대상을 줄이지 않는다. 이 무결성 검사는 검토 판단 자체의 의미 정확성을
+보장하지 않으며, 유효한 과거 검토 결과와 기존 품질 기준을 유지한다.
+
+Factory의 고정 질문 실행 기록은 바깥 Agent/질문 ID뿐 아니라 실제 응답의 Agent ID·질문 원문·
+이력 분리 확인·응답 상태를 함께 검사한다. `answered`와 적절한 `abstain`을 허용하고,
+다른 Agent 이력의 변경·미확인, 다른 질문/Agent 응답, 실행 오류는 승인하지 않는다.
+사후 검토의 통과 표시도 이 조건을 덮어쓸 수 없으며 원인은 `runtime_contract_errors`에 남긴다.
+과거 실행은 해당 계획에 고정된 질문을 사용한다. 이는 Factory 검증용이며 사용자 API의 질문을
+세 고정 문장으로 제한하는 기능이 아니다.
+
 ## 조원이 수정하는 방법
+
+OpenRouter로 기존 합성 요청을 검사하려면 [원격 개발 검사](OPENROUTER_FACTORY.md)를 따른다.
+원격 Client/Runner는 같은 처리 모듈에 주입할 수 있으며 모델·제공자·비용 기록은 별도 계획에 고정한다.
+현재 개발 검사와 기존 G1~G4 실행기의 로컬 모델 계약은 구분한다.
 
 최신 `main`에서 개인 작업 브랜치를 만든다. 코딩 에이전트는 [AGENTS.md](../AGENTS.md)와 [조원 시작 안내](TEAM_START.md)의 절차를 따른다.
 

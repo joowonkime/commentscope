@@ -228,7 +228,7 @@ def validate(record):
     from commentscope.factory import literal_discovery, contextual_propositions
     if isinstance(record, dict) and record.get('artifact_kind') in contextual_propositions.VERSIONS:
         return contextual_propositions.validate(record)
-    if isinstance(record, dict) and record.get('artifact_kind') == literal_discovery.VERSION:
+    if isinstance(record, dict) and record.get('artifact_kind') in literal_discovery.VERSIONS:
         return literal_discovery.validate(record)
     if not isinstance(record, dict) or record.get('artifact_kind') not in (LEGACY, VERSION):
         raise ValueError('Unknown minimal extraction artifact')

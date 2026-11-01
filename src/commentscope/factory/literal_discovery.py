@@ -8,11 +8,13 @@ from copy import deepcopy
 import re
 
 from commentscope.contracts.perspective_draft import obj
-from commentscope.factory import minimal_claims as mc, explicit_discourse as ed, source_scope
+from commentscope.factory import minimal_claims as mc, explicit_discourse as ed, source_scope, scope_reference_review
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
-VERSION = 'literal-source-discovery-20261017-v4'
+LEGACY = 'literal-source-discovery-20261017-v4'
+VERSION = 'literal-source-discovery-20261026-v5'
+VERSIONS = (LEGACY, VERSION)
 CONTRIBUTIONS = ('substantive', 'non_substantive', 'uncertain')
 ROLES = {'topic_position':'substantive', 'topic_evidence':'substantive', 'personal_topic_experience':'substantive',
          'reported_topic_view':'substantive', 'creator_or_platform':'non_substantive',
@@ -73,7 +75,8 @@ def selection_request(graph, node_ids):
                               'SOURCE_STATEMENTS':statements}, obj(properties), 3072)
 
 
-def bind_selection(graph, node_ids, result):
+def bind_selection(graph, node_ids, result, *, version=VERSION):
+    if version not in VERSIONS: raise ValueError('Unknown literal discovery contract')
     req = selection_request(graph, node_ids)
     if result.get('errors'): raise ValueError('Failed source selection')
     value = result.get('output'); fields(value, ' '.join(t['id'] for t in req['data']['TARGETS']))
@@ -84,29 +87,33 @@ def bind_selection(graph, node_ids, result):
             raise ValueError('Unknown source role or speaker')
         selections.append({'node_id':node_id,'contribution':ROLES[row['role']],'role':row['role'],
                            'authorship':'reported' if row['role']=='reported_topic_view' else SPEAKERS[row['speaker']]})
-    return {'artifact_kind':VERSION+'-selection', 'graph_sha256':digest(graph), 'node_ids':deepcopy(node_ids),
+    return {'artifact_kind':version+'-selection', 'graph_sha256':digest(graph), 'node_ids':deepcopy(node_ids),
             'request_sha256':digest(req), 'response':deepcopy(value), 'selections':selections,
             'generated_assertion_text':False, 'semantic_approval':False}
 
 
-def assemble(graph, batches, scope_records=()):
+def assemble(graph, batches, scope_records=(), *, version=VERSION):
+    if version not in VERSIONS: raise ValueError('Unknown literal discovery contract')
     source = graph['source']; nodes = roots(graph); decisions = {}; refs = {}
     for batch in batches:
-        if bind_selection(graph, batch['node_ids'], {'output':batch['response']}) != batch:
+        if bind_selection(graph, batch['node_ids'], {'output':batch['response']}, version=version) != batch:
             raise ValueError('Source selection provenance changed')
         for row in batch['selections']:
             if row['node_id'] in decisions: raise ValueError('A source position cannot be classified twice')
             decisions[row['node_id']] = row; refs[row['node_id']] = digest(batch)
-    certificates={}
+    certificates={};reviews={}
     lookup={n['id']:n for n in nodes}
     heading=source_scope.initial_heading(graph)
     heading_node=next((n for n in nodes if n['span']==heading),None)
     framing=bool(heading_node and decisions.get(heading_node['id'],{}).get('role')=='framing_context')
     for record in scope_records:
-        fields(record,'node_id certificate');nid=record['node_id']
+        fields(record,'node_id certificate'+(' review' if version==VERSION else ''));nid=record['node_id']
         if nid not in lookup or nid in certificates: raise ValueError('Unique original scope certificate required')
         source_scope.projection(graph,lookup[nid],record['certificate'],framing)
         certificates[nid]=record['certificate']
+        if version==VERSION:
+            reviews[nid]=record['review']
+            scope_reference_review.projection(graph,lookup[nid],record['certificate'],record['review'],framing)
     claims = {}; holds = []; excluded = []; classified = []
     for node in nodes:
         row = decisions.get(node['id'])
@@ -116,7 +123,8 @@ def assemble(graph, batches, scope_records=()):
         inv=source_scope.inventory(graph,node)
         if row['contribution']=='non_substantive' or framing and inv['is_heading']:
             excluded.append(node['id']); continue
-        projection=source_scope.projection(graph,node,certificates.get(node['id']),framing)
+        projection=(scope_reference_review.projection(graph,node,certificates.get(node['id']),reviews.get(node['id']),framing)
+                    if version==VERSION else source_scope.projection(graph,node,certificates.get(node['id']),framing))
         if row['contribution'] in ('uncertain','context') or projection['holds']:
             holds.append({'node_id':node['id'], 'reason':'meaning_or_context_unresolved',
                           'selection':deepcopy(row),'scope_projection':projection}); continue
@@ -150,11 +158,11 @@ def assemble(graph, batches, scope_records=()):
         conditions=[deepcopy(node_lookup[e['ground_id']]['span']) for e in graph['edges']
                     if e['parent_id']==node['id'] and e['relation']=='necessary_condition']
         claims[cid]={'id':cid, 'text':text, 'source_id':source['id'], 'source_sha256':digest(source),
-                     'record_id':'LS'+digest([VERSION, source, provenance]), 'authorship':authorship,
+                     'record_id':'LS'+digest([version, source, provenance]), 'authorship':authorship,
                      'evidence':[deepcopy(literal)], 'essential_conditions':conditions,
                      'source_selections':[provenance], 'generated_assertion_text':False}
     status = ('partial' if claims else 'unresolved') if holds else ('covered' if claims else 'non_substantive')
-    return {'artifact_kind':VERSION, 'source':deepcopy(source), 'source_sha256':digest(source),
+    return {'artifact_kind':version, 'source':deepcopy(source), 'source_sha256':digest(source),
             'status':status, 'claims':list(claims.values()), 'additional_passes':0,
             'graph':deepcopy(graph), 'selection_batches':deepcopy(batches),
             'scope_records':deepcopy(list(scope_records)),
@@ -165,7 +173,7 @@ def assemble(graph, batches, scope_records=()):
 
 
 def validate(record):
-    if record.get('artifact_kind')!=VERSION or assemble(record['graph'],record['selection_batches'],record['scope_records'])!=record:
+    if record.get('artifact_kind') not in VERSIONS or assemble(record['graph'],record['selection_batches'],record['scope_records'],version=record['artifact_kind'])!=record:
         raise ValueError('Literal discovery source, interpretation or construction changed')
     return record
 
@@ -186,6 +194,15 @@ def discover(sources, work, save=None):
             bound=work('scope-reference',[{'id':source['id'],'node_id':node['id']}],
                        lambda group:source_scope.request(graph,node),
                        lambda group,result:source_scope.bind(graph,node,result),1)
-            if bound:scope_records.append({'node_id':node['id'],'certificate':bound[0]})
+            if bound:
+                certificate=bound[0];req=scope_reference_review.request(graph,node,certificate)
+                if req is None:
+                    review=scope_reference_review.bind(graph,node,certificate)
+                else:
+                    checked=work('scope-reference-fidelity',[{'id':source['id'],'node_id':node['id']}],
+                        lambda group:scope_reference_review.request(graph,node,certificate),
+                        lambda group,result:scope_reference_review.bind(graph,node,certificate,result),1)
+                    review=checked[0] if checked else None
+                scope_records.append({'node_id':node['id'],'certificate':certificate,'review':review})
         records.append(assemble(graph,batches,scope_records))
     return records

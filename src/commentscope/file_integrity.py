@@ -37,3 +37,7 @@ def file_sha256(path):
             except OSError:
                 pass
     return result.hexdigest()
+
+
+def source_code_hashes():
+    return {str(p): file_sha256(p) for root in ['src/commentscope','experiments'] for p in sorted(Path(root).rglob('*.py'))}

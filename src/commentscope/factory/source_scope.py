@@ -38,6 +38,12 @@ copy the parent's assertion or statistic as the reply's meaning.
 Choose unresolved for a proposition/event reference that cannot be expressed by
 a nominal phrase, unavailable or ambiguous referents, or uncertain coreference.
 Do not select the reference itself, a whole sentence, a statistic or a predicate.
+Check the complete chosen text as a replacement, including its grammatical role.
+An imperative verb is not part of a noun phrase: in 'Repair bridges. They need
+maintenance', 'bridges' can name the things; 'Repair bridges' cannot. A reference
+to a proposed rule or action is not automatically the same as its objects: in
+'Repair bridges. This plan is costly', choosing 'bridges' loses the plan. Choose
+unresolved if no supplied nominal phrase names the complete referent.
 The host replaces only the inventoried expression with the exact chosen text.
 An interpretation remains a hypothesis, never factual or membership approval.'''
 

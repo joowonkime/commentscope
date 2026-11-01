@@ -1,10 +1,13 @@
 """Plan-bound resource observation for the current owned executor only."""
 from contextlib import contextmanager
 from datetime import datetime, timezone
+import json
 import math
 import os
 from pathlib import Path
 import signal
+import shutil
+import subprocess
 import threading
 
 from commentscope.storage import write_json_exclusive as write
@@ -100,3 +103,16 @@ def watch(directory, policy, observe, *, interrupt=None):
         thread.join(25)
         write(Path(directory)/'finished.json', {'observer_stopped': not thread.is_alive(),
               'samples': observer.sequence, 'at': datetime.now(timezone.utc).isoformat()})
+
+
+def observe_wsl_host():
+    result = subprocess.run([
+        'powershell.exe', '-NoProfile', '-Command',
+        'Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory | '
+        'Select-Object AvailableMBytes,CommittedBytes,CommitLimit,PercentCommittedBytesInUse | '
+        'ConvertTo-Json -Compress'], capture_output=True, text=True, timeout=20, check=True)
+    memory = json.loads(result.stdout)
+    return {'available_mb': memory['AvailableMBytes'],
+            'commit_percent': memory['PercentCommittedBytesInUse'],
+            'committed_bytes': memory['CommittedBytes'], 'commit_limit': memory['CommitLimit'],
+            'disk_free_bytes': shutil.disk_usage('/mnt/c').free}

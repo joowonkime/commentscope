@@ -20,6 +20,9 @@ from commentscope.ingestion import load_snapshot
 from commentscope.providers import framed_embedding, evidence_nli, host_resources
 from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner
+from commentscope.providers.sequential_runner import SequentialRunner
+from commentscope.factory.acceptance import cycle_check
+from commentscope.agents.runtime_probe import runtime_check
 from commentscope.providers.exclusive_models import ExclusiveModels, VERSION as LIFETIME_VERSION
 from commentscope.storage import write_json_exclusive as write
 from experiments.audit_model_compare import owned_server, file_hash, command
@@ -43,11 +46,6 @@ def private(directory):
         raise ValueError('Research outputs must remain in the private runs tree')
 
 
-def cycle_check(settings):
-    if (settings['goal_revision'] != 'factory-goal-20261014-r4'
-            or settings['cycle_id'] != 'mvp-factory-20261014'
-            or settings['limit_seconds'] is not None or settings['analysis_seconds'] is not None):
-        raise ValueError('Current uncapped Factory cycle required')
 
 
 def deployment_check(deployment):
@@ -131,36 +129,6 @@ def validate(plan):
     return snapshot.snapshot
 
 
-class SequentialRunner:
-    """A base-call adapter; CheckpointRunner stays outside this boundary."""
-    def __init__(self, base, models, directory):
-        self.base, self.models = base, models
-        self.directory, self.plan_sha = base.directory, base.plan_sha
-        self.events = directory; self.event_sequence = 0
-
-    @property
-    def seq(self): return self.base.seq
-
-    @seq.setter
-    def seq(self, value): self.base.seq = value
-
-    def call(self, stage, req, *, provider=None, maximum=None):
-        if provider is not None and provider not in (framed_embedding.generate, evidence_nli.generate):
-            raise ValueError('Unrecognized auxiliary model provider')
-        self.event_sequence += 1
-        path = self.events/f'{self.event_sequence:05}'
-        kind = 'llm' if provider is None else 'auxiliary'
-        write(path.with_suffix('.started.json'), {'kind': kind, 'stage': stage, 'plan_sha256': self.plan_sha,
-              'request_sha256': digest(req), 'at': datetime.now(timezone.utc).isoformat()})
-        try:
-            result = self.models.invoke(kind, lambda: self.base.call(stage, req, provider=provider, maximum=maximum))
-        except BaseException as exc:
-            write(path.with_suffix('.failed.json'), {'exception_type': type(exc).__name__, 'stage': stage})
-            raise
-        write(path.with_suffix('.finished.json'), {'stage': stage, 'at': datetime.now(timezone.utc).isoformat(),
-              'server_starts': self.models.server_starts, 'server_stops': self.models.server_stops,
-              'auxiliary_calls': self.models.auxiliary_calls})
-        return result
 
 
 def lifetimes(directory, plan, attempt):
@@ -190,13 +158,6 @@ def lifetimes(directory, plan, attempt):
     return ExclusiveModels(server, auxiliary)
 
 
-def runtime_check(runtime, compiled):
-    ids = [p['candidate_id'] for p in compiled['profiles']]
-    expected = {(cid, q['id']) for cid in ids for q in QUESTIONS}
-    actual = {(r['candidate_id'], r['question_id']) for r in runtime['turns']}
-    if (runtime['all_compiled_candidate_ids'] != ids or actual != expected or len(runtime['turns']) != len(expected)
-            or any(r['turn']['compiled_sha256'] != digest(compiled) for r in runtime['turns'])):
-        raise ValueError('Same-plan runtime artifact changed')
 
 
 def run(directory):

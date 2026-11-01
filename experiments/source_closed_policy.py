@@ -167,7 +167,7 @@ def run(directory):
                     bound=cc.bind(record['sources'],factory['candidates'],memberships,pairs,runner.call('distinct-compiled-policies',req))
                     distinct.append(bound);save('distinct',bound)
                     runtime=runtime_probe(factory['agent_inputs']['bundle'],runner)
-                    runtime_check(runtime,factory['agent_inputs']['compiled']);save('runtime',runtime)
+                    save('runtime',runtime);runtime_check(runtime,factory['agent_inputs']['compiled'])
                 save('output',{'admission':factory,'last_factory':factory,'distinct_checks':distinct,
                     'runtime':runtime,'quality_gate_passed':False})
             report={'artifact_kind':VERSION,'plan_sha256':sha(directory/'plan.json'),'output_sha256':sha(directory/'artifacts/output.json'),

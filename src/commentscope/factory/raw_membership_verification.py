@@ -24,10 +24,11 @@ TARGETED_NORMALIZED = 'raw-membership-verification-20261018-v8'
 AUTHORED = 'raw-membership-verification-20261018-v9'
 REFERENCED = 'raw-membership-verification-20261018-v10'
 ACYCLIC = 'raw-membership-verification-20261018-v11'
+FULL_SCOPE = 'raw-membership-verification-20261026-v12'
 AUTHORED_CONTRACTS = (AUTHORED, REFERENCED, ACYCLIC)
 NORMALIZED_TARGETS = (TARGETED_NORMALIZED, *AUTHORED_CONTRACTS)
 TARGETED_CONTRACTS = (TARGETED, *NORMALIZED_TARGETS)
-ALIGNED_CONTRACTS = (ALIGNED, *TARGETED_CONTRACTS)
+ALIGNED_CONTRACTS = (ALIGNED, FULL_SCOPE, *TARGETED_CONTRACTS)
 GROUNDED_CONTRACTS = (GROUNDED, *ALIGNED_CONTRACTS)
 INDEPENDENT = (FOCUSED, *GROUNDED_CONTRACTS)
 VERSIONS = (LEGACY, VERSION, CLAUSE_SCOPE, *INDEPENDENT)
@@ -170,6 +171,19 @@ ALIGNED_EVIDENCE = GROUNDED_EVIDENCE.replace(
     'target_alignment checks' + SPEECH.split('Next target_alignment checks', 1)[1].split('Finally perform', 1)[0])
 
 
+FULL_SCOPE_EVIDENCE = ALIGNED_EVIDENCE + '''
+Check the WHOLE published CANDIDATE, not just its policy conclusion. When it
+says a proposal is supported because of a particular reason, both the proposal
+and that reason must be this author's own stated content. Agreement with only
+the proposal is extra_assertion for such a target. Do not borrow another
+author's motive or treat a concession or separate request as that motive.
+Conversely, a source with its own extra reason can support a reason-free
+proposal without transferring the reason to anyone else. Preserve all only-if
+conditions, attribution and uncertainty. Normative reasons are asserted content
+even though they are not externally verified empirical facts.
+'''
+
+
 def focus_tokens(candidate):
     return [{'id': f'T{i}', 'start': m.start(), 'end': m.end(), 'text': m.group()}
             for i, m in enumerate(re.finditer(r"\w+(?:['’\-]\w+)*", candidate['text']), 1)]
@@ -238,6 +252,9 @@ def bind_route(candidate, result, origin=None, *, version=None, target_check=Non
     if version in GROUNDED_CONTRACTS:
         from commentscope.factory import membership_reference_guards as references
         record['guards'] = references.candidate_guards(candidate, origin)
+        if version == FULL_SCOPE:
+            from commentscope.factory import core_shape
+            record['guards'] = sorted(set(record['guards'] + core_shape.candidate_holds(candidate)))
         record['passed'] = passed and not record['guards']
     return record
 
@@ -343,7 +360,8 @@ def evidence_request(record, version=VERSION, *, candidate_scope=None):
             'reference_basis': {'type': 'string', 'enum': ['self_contained', 'supplied_context', 'missing_or_ambiguous']},
             'target_alignment': {'type': 'string', 'enum': ['aligned', 'different_target', 'unresolved']},
             **properties}
-        system = ALIGNED_EVIDENCE if version in ALIGNED_CONTRACTS else GROUNDED_EVIDENCE
+        system = (FULL_SCOPE_EVIDENCE if version == FULL_SCOPE else
+                  ALIGNED_EVIDENCE if version in ALIGNED_CONTRACTS else GROUNDED_EVIDENCE)
     return mc.request(system, data, obj(properties), 256)
 
 

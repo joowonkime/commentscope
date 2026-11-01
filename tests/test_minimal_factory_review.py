@@ -29,15 +29,23 @@ class ReviewGateTests(unittest.TestCase):
                        'output_sha256':'output','runtime_sha256':'runtime','tasks':tasks,'fact_benchmark':{'passed':True}}
         self.rows = [{'id':t['id'],'verdict':'pass','reason':'Authored synthetic review only.', 'omissions':[],
                       'label':t['data'].get('label')} for t in tasks]
+        compiled = {'profiles': [{'candidate_id': cid} for cid in ('one', 'two')]}
+        runtime = {'all_compiled_candidate_ids': ['one', 'two'], 'turns': [
+            {'candidate_id': cid, 'question_id': q['id'], 'other_histories_unchanged': True,
+             'turn': {'candidate_id': cid, 'question': q['text'], 'status': 'answered',
+                      'compiled_sha256': digest(compiled)}}
+            for cid in ('one', 'two') for q in review.QUESTIONS]}
         self.loaded = ({'gate':'G1'}, {'binding_errors':0,'output_sha256':'output','runtime_sha256':'runtime'},
-                       None, {'agent_inputs':{'map':{'opinion_map':{}}}}, {})
+                       None, {'agent_inputs':{'map':{'opinion_map':{}}, 'compiled': compiled}}, runtime)
 
     def evaluate(self, *, rows=None, packet_hash=None):
         write(self.root/'packet.json', self.packet)
         write(self.root/'review.json', {'artifact_kind':review.VERSION+'-review',
             'packet_sha256':packet_hash or digest(self.packet),'evaluator':'synthetic fixture',
             'rows':self.rows if rows is None else rows})
-        with patch.object(review,'load_run',return_value=self.loaded):
+        # These unit cases isolate verdict rules; full artifact binding is tested separately.
+        with patch.object(review,'load_run',return_value=self.loaded), \
+             patch.object(review,'_packet_for_run',return_value=self.packet):
             return review.evaluate(self.root,self.root/'review.json',self.root/'result.json')
 
     def test_complete_authored_g1_contract_pass_is_not_factory_complete(self):

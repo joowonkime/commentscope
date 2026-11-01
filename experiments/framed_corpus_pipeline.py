@@ -5,14 +5,8 @@ never passed into runtime scheduling or requests. Completion here is execution,
 not utilization/Agent quality approval; output review remains required.
 """
 import argparse
-from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
-try:
-    import fcntl
-except ImportError:
-    fcntl = None
-    import msvcrt
 import os
 from pathlib import Path
 import time
@@ -25,6 +19,7 @@ from commentscope.ingestion import load_snapshot
 from commentscope.providers import framed_embedding, evidence_nli
 from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner
+from commentscope.providers.execution_lock import experiment_lock
 from commentscope.storage import write_json_exclusive as write
 from experiments.audit_model_compare import owned_server, file_hash
 from experiments.fresh_grounded_pipeline import Runner
@@ -76,30 +71,6 @@ def prepare(directory, snapshot_path, reference_path, deployment_source, cycle):
            'reference_frozen': True, 'analysis_seconds': None, 'new_model_calls': 0}, flush=True)
 
 
-@contextmanager
-def experiment_lock(directory):
-    # Existence is not liveness. The OS advisory lock, not this empty file, owns
-    # a running attempt; opening a stale file after a crash is safe.
-    with (directory/'execution.lock').open('a+b') as stream:
-        if fcntl is None and os.fstat(stream.fileno()).st_size == 0:
-            stream.write(b'\0'); stream.flush()
-        stream.seek(0)
-        try:
-            if fcntl is not None:
-                fcntl.flock(stream, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            else:
-                msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
-        except OSError as exc:
-            import errno
-            if exc.errno not in (errno.EACCES, errno.EAGAIN, errno.EDEADLK): raise
-            raise RuntimeError('This experiment already has a live executor') from None
-        try: yield
-        finally:
-            if fcntl is not None:
-                fcntl.flock(stream, fcntl.LOCK_UN)
-            else:
-                stream.seek(0)
-                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
 
 
 def validate(plan):

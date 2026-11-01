@@ -8,10 +8,17 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_scope_reference_review",
     "test_minimal_pipeline",
     "test_minimal_agents",
     "test_comment_utilization",
     "test_acceptance_r5",
+    "test_factory_review_r5",
+    "test_minimal_factory_review",
+    "test_review_packet_binding",
+    "test_runtime_artifact_contract",
+    "test_openrouter",
+    "test_openrouter_factory_probe",
 )
 
 
