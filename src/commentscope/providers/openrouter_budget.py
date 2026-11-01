@@ -5,6 +5,7 @@ Neither reopening a ledger nor resuming a plan can increase its spending limit.
 """
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR
+from datetime import datetime, timezone
 import json
 from pathlib import Path
 import sqlite3
@@ -49,6 +50,7 @@ class SpendLedger:
             db.execute('CREATE TABLE IF NOT EXISTS policy (id INTEGER PRIMARY KEY CHECK(id=1), version TEXT, account TEXT, maximum INTEGER, opening INTEGER)')
             db.execute('CREATE TABLE IF NOT EXISTS plans (sha TEXT PRIMARY KEY, maximum INTEGER)')
             db.execute('CREATE TABLE IF NOT EXISTS calls (id INTEGER PRIMARY KEY, plan_sha TEXT, request_sha TEXT, reserved INTEGER, charged INTEGER, state TEXT)')
+            db.execute('CREATE TABLE IF NOT EXISTS resolutions (call_id INTEGER PRIMARY KEY, evidence_sha TEXT, reason TEXT, resolved_at TEXT)')
             expected = (VERSION, account_id, maximum, opening)
             row = db.execute('SELECT version,account,maximum,opening FROM policy WHERE id=1').fetchone()
             if row is None: db.execute('INSERT INTO policy VALUES (1,?,?,?,?)', expected)
@@ -76,7 +78,7 @@ class SpendLedger:
             row = db.execute('SELECT maximum FROM plans WHERE sha=?', (plan_sha,)).fetchone()
             if row is not None and row[0] != limit: raise ValueError('Frozen run spending limit changed')
             if row is None: db.execute('INSERT INTO plans VALUES (?,?)', (plan_sha, limit))
-            if db.execute("SELECT 1 FROM calls WHERE state!='complete' LIMIT 1").fetchone():
+            if db.execute("SELECT 1 FROM calls WHERE state NOT IN ('complete','conservative') LIMIT 1").fetchone():
                 raise BudgetExhausted('Active or uncertain API charge requires reconciliation')
             charged = self.opening + db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
             run_charged = db.execute('SELECT COALESCE(SUM(charged),0) FROM calls WHERE plan_sha=?', (plan_sha,)).fetchone()[0]
@@ -97,6 +99,18 @@ class SpendLedger:
                        (row[0] if actual is None else actual, state, call_id))
         if exceeded: raise BudgetExhausted('Actual API charge exceeded its ceiling; evidence retained')
 
+    def resolve_conservatively(self, call_id, *, plan_sha256, request_sha256, evidence_sha256, reason):
+        """Explicit audited release of a hold; never refund its reserved money."""
+        for value in (plan_sha256, request_sha256, evidence_sha256): identity(value)
+        if not isinstance(reason, str) or not reason.strip(): raise ValueError('Explained audit evidence required')
+        with self.transaction() as db:
+            row = db.execute('SELECT plan_sha,request_sha,reserved,charged,state FROM calls WHERE id=?', (call_id,)).fetchone()
+            if row is None or row[:2] != (plan_sha256, request_sha256) or row[4] != 'unknown':
+                raise ValueError('Only the exact terminal unknown charge may be resolved')
+            db.execute("UPDATE calls SET charged=?,state='conservative' WHERE id=?", (max(row[2], row[3]), call_id))
+            db.execute('INSERT INTO resolutions VALUES (?,?,?,?)',
+                       (call_id, evidence_sha256, reason, datetime.now(timezone.utc).isoformat()))
+
     def summary(self, *, plan_sha256=None):
         if plan_sha256 is not None: identity(plan_sha256)
         with self.transaction() as db:
@@ -106,7 +120,12 @@ class SpendLedger:
             maximum = self.maximum if plan_sha256 is None else row[0] if row else 0
             charged = opening + db.execute('SELECT COALESCE(SUM(charged),0) FROM calls'+clause, args).fetchone()[0]
             counts = dict(db.execute('SELECT state,count(*) FROM calls'+clause+' GROUP BY state', args).fetchall())
+            suffix = '' if plan_sha256 is None else ' AND plan_sha=?'
+            confirmed = opening + db.execute("SELECT COALESCE(SUM(charged),0) FROM calls WHERE state IN ('complete','over_ceiling')"+suffix, args).fetchone()[0]
+            conservative = db.execute("SELECT COALESCE(SUM(charged),0) FROM calls WHERE state='conservative'"+suffix, args).fetchone()[0]
         return {'maximum_usd': dollars(maximum), 'charged_usd': dollars(charged),
+                'confirmed_usd': dollars(confirmed), 'conservative_usd': dollars(conservative),
+                'conservative_calls': counts.get('conservative', 0),
                 'remaining_usd': dollars(max(0, maximum-charged)), 'calls': sum(counts.values()),
                 'reserved_calls': counts.get('reserved', 0),
                 'uncertain_calls': counts.get('unknown', 0)+counts.get('over_ceiling', 0)}

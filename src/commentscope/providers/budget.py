@@ -12,9 +12,12 @@ from functools import partial
 import json
 import math
 import multiprocessing
+import os
 from pathlib import Path
+import re
 import sqlite3
 import time
+from urllib.error import HTTPError
 
 from commentscope.factory.automatic_contract import digest
 from commentscope.providers.local_llama import generate
@@ -24,6 +27,22 @@ LEGACY_VERSION = 'local-inference-budget-0.1'
 _UNSET = object()
 MAX_RESPONSE_BYTES = 2_000_000
 SHUTDOWN_RESERVATION_SECONDS = 3
+
+
+def http_diagnostic(error):
+    try: raw = error.read(16384)
+    except Exception: raw = b''
+    finally: error.close()
+    body = raw.decode('utf-8', errors='replace') if isinstance(raw, bytes) else str(raw)
+    for name, value in os.environ.items():
+        if name.endswith('_API_KEY') and value: body = body.replace(value, '[REDACTED]')
+    body = re.sub(r'\bsk-[A-Za-z0-9_-]+', '[REDACTED]', body)
+    body = re.sub(r'(?i)(Bearer\s+)[A-Za-z0-9._~+/-]+', r'\1[REDACTED]', body)
+    record = {'type': 'HTTPError', 'http_status': error.code, 'body': body,
+              'body_truncated': len(raw) >= 16384}
+    retry = str((error.headers or {}).get('Retry-After', ''))
+    if retry.isdecimal(): record['retry_after'] = retry[:16]
+    return json.dumps(record, ensure_ascii=False)
 
 
 class BudgetExhausted(RuntimeError):
@@ -57,8 +76,9 @@ def worker(pipe, provider, request):
             raise ValueError('Response size limit')
         pipe.send(('ok', raw))
     except BaseException as exc:
-        # Exception messages may contain user data or credentials.
-        pipe.send(('error', type(exc).__name__))
+        # Generic exception messages stay private. HTTP response diagnostics
+        # are bounded/redacted and retained only in the private ledger.
+        pipe.send(('error', http_diagnostic(exc) if isinstance(exc, HTTPError) else type(exc).__name__))
     finally:
         pipe.close()
 
@@ -185,7 +205,11 @@ class InferenceBudget:
         if caught is not None:
             raise caught
         if state != 'ok':
-            raise RuntimeError('Bounded local inference failed: '+str(error))
+            label = error
+            if isinstance(error, str) and error.startswith('{'):
+                try: label = json.loads(error).get('type', 'worker_error')
+                except (ValueError, AttributeError): label = 'worker_error'
+            raise RuntimeError('Bounded local inference failed: '+str(label))
         return response
 
     def provider(self, plan_sha, *, timeout_seconds=180, implementation=generate):

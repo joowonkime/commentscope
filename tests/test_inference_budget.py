@@ -1,9 +1,13 @@
 import json
 import math
+import os
+from io import BytesIO
 from pathlib import Path
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
+from urllib.error import HTTPError
 
 from commentscope.providers.budget import InferenceBudget, BudgetExhausted, remaining_allowance, LEGACY_VERSION
 
@@ -21,6 +25,18 @@ def fail(system, data, schema, max_tokens):
 
 def stall(system, data, schema, max_tokens):
     time.sleep(10)
+
+
+def reject_http(system, data, schema, max_tokens):
+    key = os.environ.get('OPENROUTER_API_KEY', '')
+    body = json.dumps({'error': {'code': 429, 'message': 'rate limited', 'debug': key}}).encode()
+    raise HTTPError('https://example.invalid', 429, 'private reason must stay private',
+                    {'Retry-After': '60', 'Authorization': key}, BytesIO(body))
+
+
+def reject_large_http(system, data, schema, max_tokens):
+    body = b'x'*16370+b' sk-or-v1-partial-secret-that-crosses-the-read-boundary'+b'x'*20000
+    raise HTTPError('https://example.invalid', 503, 'unused', {}, BytesIO(body))
 
 
 class InferenceBudgetTests(unittest.TestCase):
@@ -45,6 +61,28 @@ class InferenceBudgetTests(unittest.TestCase):
         self.assertEqual(summary['calls'][0]['state'],'error')
         self.assertGreater(summary['charged_seconds'],0)
         self.assertNotIn('private value',json.dumps(summary))
+
+    def test_http_error_records_bounded_redacted_diagnostics_without_retry(self):
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'authored-secret-api-key'}):
+            with self.assertRaises(RuntimeError) as raised:
+                self.budget.call(REQUEST, PLAN, timeout_seconds=10, provider=reject_http)
+        summary = self.budget.summary()
+        error = json.loads(summary['calls'][0]['error'])
+        self.assertEqual(error['http_status'], 429)
+        self.assertEqual(error['retry_after'], '60')
+        self.assertIn('rate limited', error['body'])
+        self.assertNotIn('authored-secret-api-key', json.dumps(summary))
+        self.assertNotIn('private reason', json.dumps(summary))
+        self.assertNotIn('rate limited', str(raised.exception))
+        self.assertEqual(len(summary['calls']), 1)
+
+    def test_large_http_error_does_not_leak_a_key_prefix_at_the_read_boundary(self):
+        with self.assertRaises(RuntimeError):
+            self.budget.call(REQUEST, PLAN, timeout_seconds=10, provider=reject_large_http)
+        error = json.loads(self.budget.summary()['calls'][0]['error'])
+        self.assertTrue(error['body_truncated'])
+        self.assertLessEqual(len(error['body']), 16384)
+        self.assertNotIn('sk-or-v1', error['body'])
 
     def test_hard_deadline_terminates_worker(self):
         start = time.monotonic()

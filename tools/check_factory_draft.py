@@ -21,6 +21,7 @@ MODULES = (
     "test_openrouter_factory_probe",
     "test_openrouter_budget",
     "test_openrouter_factory_pipeline",
+    "test_inference_budget",
 )
 
 
