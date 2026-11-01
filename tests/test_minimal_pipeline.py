@@ -51,7 +51,10 @@ class ScriptedRunner:
                  'candidate_ids': s['candidate_ids'], 'evidence_segment_ids': ['S001']}]}
                 for s in data['ORIGINALS']]}
         elif system.startswith(sa.AUDIT):
-            value = {'decisions': [{'task_id': t['task_id'], 'verdict': 'supported'} for t in data['TASKS']]}
+            addressed = 'basis' in req['schema']['properties']['decisions']['items']['properties']
+            value = {'decisions': [{'task_id': t['task_id'], 'verdict': 'supported',
+                                   **({'basis': 'Authored synthetic source fixture.'} if addressed else {})}
+                                  for t in data['TASKS']]}
         elif system.startswith(RUNTIME_SYSTEM):
             if 'exact annual' in data['QUESTION']:
                 value = {'answerability': 'not_in_evidence', 'claim_ids': [], 'limitation': 'missing_evidence'}
@@ -90,6 +93,9 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertEqual(len(output['arguments']), 6)
         self.assertEqual(self.embeddings, ['sources', 'candidates'])
         self.assertFalse(output['errors']); self.assertFalse(output['capacity_holds'])
+        self.assertTrue(output['audits'])
+        self.assertTrue(all(a['protocol'] == sa.ADDRESSED_AUDIT for a in output['audits']))
+        self.assertTrue(all(row['basis'] for a in output['audits'] for row in a['output']['decisions']))
         runtime = runtime_probe(output['agent_inputs']['bundle'], runner)
         self.assertEqual(len(runtime['turns']), 6)
 
