@@ -99,9 +99,12 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         # Shared discovery already proposes common positions. Keep exact-text
         # unions only; do not run the old full-proposition equivalence stage.
         pairs = cc.nearest_pairs({cid: candidate_vectors[cid] for cid in confirmed}) if confirmed and discovery_mode!='shared' else []
+        equivalence_protocol = cc.ASSERTION_ONLY if discovery_mode == 'literal' else None
         equivalences = [] if engine is not None else work('equivalence', pairs,
-                            lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group),
-                            lambda group, result: cc.bind(sources, candidates, nomination_batches, group, result), SCHEDULE['equivalence_pairs'])
+                            lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group,
+                                                                  protocol=equivalence_protocol),
+                            lambda group, result: cc.bind(sources, candidates, nomination_batches, group, result,
+                                                          protocol=equivalence_protocol), SCHEDULE['equivalence_pairs'])
         index={c['id']:c for c in candidates};qualified_equivalences=[]
         for record in equivalences:
             qualifications=[]
@@ -112,7 +115,8 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
                     assessment=qualify(source,index[right])
                     if assessment is not None:qualifications.append({'from_candidate_id':left,
                         'to_candidate_id':right,'assessment':assessment})
-            bound=cc.bind(sources,candidates,nomination_batches,record['pairs'],{'output':record['output']},qualifications)
+            bound=cc.bind(sources,candidates,nomination_batches,record['pairs'],{'output':record['output']},qualifications,
+                          protocol=record.get('protocol'))
             qualified_equivalences.append(bound);save('bound/equivalence-qualified-'+digest(bound)[:20],bound)
         equivalences=engine.equivalences(pairs) if engine is not None else qualified_equivalences
         representative_scopes = ({c['id']:contextual_runtime.bind(c,engine.scope(c)) for c in candidates
