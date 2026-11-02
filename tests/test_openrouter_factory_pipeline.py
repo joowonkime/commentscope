@@ -77,6 +77,14 @@ class OpenRouterExecutorTests(unittest.TestCase):
         self.assertTrue((self.run_dir/'frozen-code/src/commentscope/providers/openrouter.py').exists())
         self.time_budget.call.assert_not_called()
 
+    def test_explicit_free_mode_pins_compact_extraction_without_dispatch(self):
+        plan = executor.prepare(self.run_dir, self.deployment, self.materials, self.policy, 0.25,
+                                discovery_mode='free')
+        self.assertEqual(plan['discovery_mode'], 'free')
+        self.assertEqual(plan['extraction_protocol'], executor.compact_claims.VERSION)
+        self.assertEqual(executor.validate(self.run_dir, plan).to_dict(), self.snapshot.to_dict())
+        self.time_budget.call.assert_not_called()
+
     def test_complete_agent_execution_is_not_a_quality_pass_and_reuses_completed_run(self):
         self.prepare(); result = executor.run(self.run_dir)
         self.assertEqual(result['compiled_agents'], 2); self.assertEqual(result['runtime_turns'], 6)

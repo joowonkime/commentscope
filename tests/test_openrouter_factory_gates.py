@@ -119,6 +119,8 @@ class RemoteGateTests(unittest.TestCase):
         changed=deepcopy(self.deployment);changed['model']='different/model'
         with patch.object(prior,'code_hashes',return_value=plan['code_sha256']):
             with self.assertRaises(ValueError):executor.check_admission('G2',changed,admission,materials,self.policy)
+            with self.assertRaises(ValueError):
+                executor.check_admission('G2',self.deployment,admission,materials,self.policy,discovery_mode='free')
         with patch.object(prior,'code_hashes',return_value={'changed':'code'}):
             with self.assertRaises(ValueError):executor.check_admission('G2',self.deployment,admission,materials,self.policy)
         self.time_budget.call.assert_not_called()
