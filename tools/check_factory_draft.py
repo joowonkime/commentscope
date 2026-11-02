@@ -15,6 +15,7 @@ MODULES = (
     "test_minimal_pipeline",
     "test_minimal_agents",
     "test_equivalence_assertion_boundary",
+    "test_assertion_counterexamples",
     "test_argument_audit_wire",
     "test_argument_audit_subjects",
     "test_argument_observations",
