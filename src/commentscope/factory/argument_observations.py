@@ -53,6 +53,10 @@ Infer actual_authorship: asserted_or_endorsed, not_asserted for reported/rejecte
 Infer actual_function: position, reason, concession, essential_condition, factual_premise, scope_annotation, or uncertain.
 A because-ground is a reason for its own OWNER_POSITION. A concession is accepted DESPITE that position;
 it need not restate or justify the candidate. A separate request remains a position, even when not linked to a core.
+An author's own concession endorses its content at the stated modal strength.
+A may/could concession accepts a possibility, without asserting certainty.
+Modal uncertainty alone is not reported/rejected speech. Still mark someone else's
+quoted or rejected concession not_asserted; a concession marker alone does not establish authorship.
 Use time_ids only for supplied anchors that restrict SOURCE_TARGET. Preserve immediate and dated restrictions.
 entity_fidelity checks DECLARED_ENTITY against the actual subject/referent; a phrase or full assertion containing
 that subject is allowed, but a substituted different subject fails. conditions_fidelity checks the declared conditions.
