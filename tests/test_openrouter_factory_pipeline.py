@@ -77,6 +77,16 @@ class OpenRouterExecutorTests(unittest.TestCase):
         self.assertTrue((self.run_dir/'frozen-code/src/commentscope/providers/openrouter.py').exists())
         self.time_budget.call.assert_not_called()
 
+    def test_missing_response_persists_diagnostic_without_publishing_completion(self):
+        self.prepare()
+        failure = executor.ModelResponseUnavailable('extract', 'a'*64, 'b'*64)
+        self.process.side_effect = failure
+        with self.assertRaises(executor.ModelResponseUnavailable): executor.run(self.run_dir)
+        report = json.loads((self.run_dir/'attempts/0001.failed.json').read_text())
+        self.assertEqual(report['diagnostic'], failure.diagnostic)
+        self.assertFalse((self.run_dir/'completed.json').exists())
+        self.time_budget.call.assert_not_called()
+
     def test_explicit_free_mode_pins_compact_extraction_without_dispatch(self):
         plan = executor.prepare(self.run_dir, self.deployment, self.materials, self.policy, 0.25,
                                 discovery_mode='free')

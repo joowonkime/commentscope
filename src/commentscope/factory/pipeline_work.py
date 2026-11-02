@@ -12,6 +12,15 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.providers.context_capacity import partition
 
 
+class ModelResponseUnavailable(RuntimeError):
+    """A recorded missing response halts dispatch; it never authorizes a retry."""
+
+    def __init__(self, stage, request_sha256, task_sha256):
+        self.diagnostic = {'stage': stage, 'request_sha256': request_sha256,
+                           'task_sha256': task_sha256, 'automatic_retry': False}
+        super().__init__('No completed model response; inspect process, checkpoint and ledger')
+
+
 class PipelineWork:
     """Keep all mutable model-work state scoped to one Factory invocation."""
 
@@ -53,6 +62,13 @@ class PipelineWork:
                     self.holds.append({'stage':stage,'task_sha256':digest(task['items']),
                         'request_sha256':digest(req),'reason':'prior_request_unavailable_no_retry'})
                     continue
+                if not isinstance(result, dict):
+                    error = {'stage': stage, 'task_sha256': digest(task['items']),
+                             'request_sha256': digest(req), 'exception': 'InvalidResponseEnvelope',
+                             'message': 'Model result must be an object', 'result': deepcopy(result),
+                             'items': deepcopy(task['items'])}
+                    self.errors.append(error); self.save('errors/'+binding_key, error)
+                    raise ModelResponseUnavailable(stage, digest(req), digest(task['items']))
                 try:
                     bound = bind(task['items'], result)
                 except (ValueError, KeyError, TypeError) as exc:
@@ -61,7 +77,7 @@ class PipelineWork:
                              'message': str(exc), 'result': deepcopy(result), 'items': deepcopy(task['items'])}
                     self.errors.append(error); self.save('errors/'+binding_key, error)
                     if result.get('raw') is None and result.get('errors'):
-                        raise RuntimeError('No completed model response; inspect process and ledger')
+                        raise ModelResponseUnavailable(stage, digest(req), digest(task['items']))
                     continue
                 results.append(bound); self.save('bound/'+binding_key, bound)
         return results
