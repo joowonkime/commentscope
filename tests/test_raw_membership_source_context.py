@@ -131,6 +131,9 @@ class SourceContextMembershipTests(TestCase):
     def test_segmented_pipeline_retains_independent_context_veto_and_cache(self):
         self.assert_compact_source_veto(compact_claims.SEGMENTED)
 
+    def test_unified_pipeline_retains_independent_context_veto_and_cache(self):
+        self.assert_compact_source_veto(compact_claims.UNIFIED)
+
     def assert_compact_source_veto(self, protocol):
         from commentscope.factory import statement_worlds as worlds
         calls = []
@@ -149,7 +152,7 @@ class SourceContextMembershipTests(TestCase):
                             membership_mode='raw', verification_contract='raw-membership-verification-20261026-v12',
                             schedule={}, extraction_protocol=protocol)
         batches = work.judge('membership', [{'source_id': 'example', 'candidate_id': self.target['id']}], [self.target])
-        self.assertEqual(len(calls), 3 if protocol == compact_claims.SEGMENTED else 2)
+        self.assertEqual(len(calls), 3 if protocol in compact_claims.WORLD_CONTEXT_PROTOCOLS else 2)
         self.assertNotIn('CANDIDATE', calls[0][1]['data'])
         self.assertIn('source_use', calls[-1][1]['schema']['properties'])
         self.assertNotEqual(batches[0]['memberships'][0]['relation'], 'supported')
