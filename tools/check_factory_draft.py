@@ -29,6 +29,7 @@ MODULES = (
     "test_openrouter_factory_pipeline",
     "test_openrouter_factory_gates",
     "test_compact_claims",
+    "test_compact_condition_selections",
     "test_inference_budget",
 )
 

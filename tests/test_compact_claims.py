@@ -108,6 +108,13 @@ class CompactPipelineTests(unittest.TestCase):
                     source = req['data']['ORIGINALS'][0]
                     text = source['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.')+'.'
                     result = output(text)
+                    if req['schema']['properties']['c']['items']['properties']['e']['type'] == 'object':
+                        ids = [s['id'] for s in source['ORIGINAL_SEGMENTS']]
+                        result['output']['c'][0].update(e={sid: sid == 'S000' for sid in ids},
+                                                       k={sid: False for sid in ids})
+                    elif 'pattern' in req['schema']['properties']['c']['items']['properties']['e']:
+                        count = len(source['ORIGINAL_SEGMENTS'])
+                        result['output']['c'][0].update(e='1'+'0'*(count-1), k='0'*count)
                     if source['source_id'] == self.fail_source: result['output']['c'] = []
                     return result
                 return super().call(stage, req)
@@ -133,6 +140,24 @@ class CompactPipelineTests(unittest.TestCase):
         attempted = [r for _,r in runner.calls if r['system'].startswith(compact.PREFIX)
                      and r['data']['ORIGINALS'][0]['source_id'] == '0']
         self.assertEqual(len(attempted), 1)
+
+    def test_masked_contract_reaches_agents_with_independent_assertion_only_checks(self):
+        from commentscope.factory import candidate_consolidation as cc
+        helper, Runner = self.fixture(); runner = Runner()
+        result = helper.process(runner, extraction_protocol=compact.MASKED)
+        self.assertFalse(result['errors'])
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
+        self.assertTrue(all(r['artifact_kind'] == compact.MASKED for r in result['extractions']))
+        self.assertTrue(all(r['protocol'] == cc.ASSERTION_ONLY for r in result['equivalences']))
+        self.assertFalse(result['quality_gate_passed'])
+
+    def test_indexed_contract_reaches_agents_without_changing_the_default(self):
+        helper, Runner = self.fixture(); runner = Runner()
+        result = helper.process(runner, extraction_protocol=compact.INDEXED)
+        self.assertFalse(result['errors'])
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
+        self.assertTrue(all(r['artifact_kind'] == compact.INDEXED for r in result['extractions']))
+        self.assertFalse(result['quality_gate_passed'])
 
     def test_protocol_is_explicit_and_cannot_change_a_literal_or_unknown_path(self):
         helper, Runner = self.fixture(); runner = Runner()

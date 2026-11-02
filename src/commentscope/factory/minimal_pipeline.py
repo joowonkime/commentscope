@@ -18,7 +18,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     from commentscope.factory import compact_claims
-    if extraction_protocol is not None and (discovery_mode != 'free' or extraction_protocol != compact_claims.VERSION):
+    if extraction_protocol is not None and (discovery_mode != 'free' or extraction_protocol not in compact_claims.VERSIONS):
         raise ValueError('Compact extraction requires its explicit free-discovery protocol')
     if discovery_mode=='shared' and membership_mode!='raw':
         raise ValueError('Shared proposals require independent original membership')
