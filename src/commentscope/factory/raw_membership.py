@@ -9,13 +9,16 @@ from copy import deepcopy
 from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc
 from commentscope.factory import source_context_observations as contexts
+from commentscope.factory import statement_worlds as worlds
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
 VERSION = 'raw-source-membership-20261017-v1'
 CANDIDATE_CONTEXT = 'raw-source-membership-20261103-v2'
 SOURCE_CONTEXT = 'raw-source-membership-20261103-v3'
-VERSIONS = (VERSION, CANDIDATE_CONTEXT, SOURCE_CONTEXT)
+WORLD_CONTEXT = 'raw-source-membership-20261103-v4'
+INDEPENDENT_CONTEXT = (SOURCE_CONTEXT, WORLD_CONTEXT)
+VERSIONS = (VERSION, CANDIDATE_CONTEXT, *INDEPENDENT_CONTEXT)
 SUBSTANTIVE_USES = contexts.SUBSTANTIVE_USES
 SOURCE_USES = contexts.SOURCE_USES
 RELATIONS = ('supported', 'conditional', 'opposed', 'unrelated', 'uncertain')
@@ -80,7 +83,7 @@ Do not call an explicitly reported description adopted merely because it quotes
 the label. Preserve reported attribution as well as the author's own predicate.'''
 
 
-def request(source, candidate, *, version=VERSION, source_context=None):
+def request(source, candidate, *, version=VERSION, source_context=None, source_world=None, candidate_world=None):
     if version not in VERSIONS: raise ValueError('Unknown raw membership protocol')
     parts = mc.validate_source(source); mc.validate_candidate(candidate)
     target = {'text': candidate['text']}
@@ -90,7 +93,7 @@ def request(source, candidate, *, version=VERSION, source_context=None):
         target['ASSERTION_SPAN'] = deepcopy(context['assertion'])
     data = {'ORIGINAL': mc.packet(source), 'CANDIDATE': target}
     descriptor_schema = {}
-    if version == SOURCE_CONTEXT:
+    if version in INDEPENDENT_CONTEXT:
         if source_context is None: raise ValueError('Independent source context required')
         contexts.validate(source_context)
         if source_context['source'] != source: raise ValueError('Source context belongs to another original')
@@ -102,13 +105,26 @@ def request(source, candidate, *, version=VERSION, source_context=None):
             'use': {'type': 'string', 'enum': ['not_used', 'explicit_report', 'adopted_report', 'unclear']}}),
             minimum=len(labels), maximum=len(labels))}
     elif source_context is not None: raise ValueError('Source context requires the independent protocol')
+    if version == WORLD_CONTEXT:
+        if source_world is None or candidate_world is None: raise ValueError('Both independent world observations required')
+        worlds.validate(source_world); worlds.validate(candidate_world)
+        parent = source['parent']['text'] if source.get('parent') else None
+        if (source_world['text'] != source['text'] or source_world['parent'] != parent
+                or candidate_world['text'] != candidate['text'] or candidate_world['parent'] is not None):
+            raise ValueError('World observations must bind exact original/parent and an independently read candidate')
+        data['SOURCE_WORLD_OBSERVATION'] = deepcopy(source_world['output'])
+        data['CANDIDATE_WORLD_OBSERVATION'] = deepcopy(candidate_world['output'])
+    elif source_world is not None or candidate_world is not None:
+        raise ValueError('World observations require the world-aware protocol')
     observations = ({'source_use': {'type': 'string', 'enum': list(SOURCE_USES)},
                      'population_scope': {'type': 'string', 'enum': ['preserved', 'changed', 'unclear']},
                      'predicate_scope': {'type': 'string', 'enum': ['preserved', 'inferred', 'unclear']},
                      'descriptor_attribution': {'type': 'string', 'enum': ['preserved', 'adopted_report', 'unclear']}}
-                    if version in (CANDIDATE_CONTEXT, SOURCE_CONTEXT) else {})
-    system = (INDEPENDENT_CONTEXT_SYSTEM if version == SOURCE_CONTEXT else
+                    if version in (CANDIDATE_CONTEXT, *INDEPENDENT_CONTEXT) else {})
+    system = (INDEPENDENT_CONTEXT_SYSTEM if version in INDEPENDENT_CONTEXT else
               SOURCE_CONTEXT_SYSTEM if version == CANDIDATE_CONTEXT else SYSTEM)
+    if version == WORLD_CONTEXT:
+        system += '\nWorld observations were made separately. They cannot approve support. Never move a fictional/imagined event into an unqualified real-world assertion or a different named world.'
     return mc.request(system, data,
         obj({**observations, **descriptor_schema, 'relation': {'type': 'string', 'enum': list(RELATIONS)},
              'authorship': {'type': 'string', 'enum': ['asserted_or_endorsed', 'not_asserted', 'unclear']},
@@ -119,8 +135,9 @@ def request(source, candidate, *, version=VERSION, source_context=None):
                                             maximum=min(24, len(parts)))}), 384)
 
 
-def bind(source, candidate, result, *, version=VERSION, source_context=None):
-    req = request(source, candidate, version=version, source_context=source_context)
+def bind(source, candidate, result, *, version=VERSION, source_context=None, source_world=None, candidate_world=None):
+    req = request(source, candidate, version=version, source_context=source_context,
+                  source_world=source_world, candidate_world=candidate_world)
     if result.get('errors'): raise ValueError('Failed raw source comparison')
     value = result.get('output')
     fields(value, ' '.join(req['schema']['properties']))
@@ -129,7 +146,7 @@ def bind(source, candidate, result, *, version=VERSION, source_context=None):
             raise ValueError('Unknown raw comparison decision')
     evidence = mc.spans(source, value['evidence_segment_ids'], minimum=0)
     guards = []
-    if version == SOURCE_CONTEXT:
+    if version in INDEPENDENT_CONTEXT:
         uses = value['reported_descriptor_uses']
         if not isinstance(uses, list): raise ValueError('Descriptor-use list required')
         seen = set()
@@ -142,20 +159,24 @@ def bind(source, candidate, result, *, version=VERSION, source_context=None):
         if seen != {r['id'] for r in source_context['reported_descriptors']}:
             raise ValueError('Every observed descriptor needs one use check')
     if value['relation'] == 'supported':
-        if version in (CANDIDATE_CONTEXT, SOURCE_CONTEXT):
+        if version in (CANDIDATE_CONTEXT, *INDEPENDENT_CONTEXT):
             if value['source_use'] not in SUBSTANTIVE_USES: guards.append('whole_source_use_unapproved')
             for key in ('population_scope', 'predicate_scope', 'descriptor_attribution'):
                 if value[key] != 'preserved': guards.append(key+'_unapproved')
-        if version == SOURCE_CONTEXT:
+        if version in INDEPENDENT_CONTEXT:
             if not source_context['passed']: guards.append('independent_source_use_unapproved')
             if any(r['use'] not in ('not_used', 'explicit_report') for r in uses):
                 guards.append('independent_descriptor_attribution_unapproved')
+        if version == WORLD_CONTEXT and not worlds.compatible(source_world, candidate_world):
+            guards.append('independent_world_scope_unapproved')
         for key, expected in [('authorship', 'asserted_or_endorsed'), ('candidate_interpretation', 'clear'),
                               ('scope_preserved', 'yes'), ('contribution', 'substantive')]:
             if value[key] != expected: guards.append(key + '_unapproved')
         if not evidence: guards.append('own_evidence_missing')
     return {'artifact_kind': version, 'source': deepcopy(source), 'candidate': deepcopy(candidate),
-            **({'source_context': deepcopy(source_context)} if version == SOURCE_CONTEXT else {}),
+            **({'source_context': deepcopy(source_context)} if version in INDEPENDENT_CONTEXT else {}),
+            **({'source_world': deepcopy(source_world), 'candidate_world': deepcopy(candidate_world)}
+               if version == WORLD_CONTEXT else {}),
             'request_sha256': digest(req), 'output': deepcopy(value),
             'relation': 'uncertain' if guards else value['relation'], 'guards': guards,
             'evidence': evidence, 'passed': value['relation'] == 'supported' and not guards,
@@ -165,7 +186,8 @@ def bind(source, candidate, result, *, version=VERSION, source_context=None):
 def validate(record):
     version = record.get('artifact_kind')
     if version not in VERSIONS or bind(record['source'], record['candidate'], {'output': record['output']},
-                                      version=version, source_context=record.get('source_context')) != record:
+                                      version=version, source_context=record.get('source_context'),
+                                      source_world=record.get('source_world'), candidate_world=record.get('candidate_world')) != record:
         raise ValueError('Raw original/parent/candidate provenance changed')
     return record
 

@@ -18,6 +18,7 @@ from commentscope.agents.runtime_probe import QUESTIONS, runtime_probe, runtime_
 from commentscope.factory import acceptance, fact_checks, minimal_pipeline, raw_membership_verification
 from commentscope.factory import compact_claims, raw_membership, source_context_observations
 from commentscope.factory import candidate_consolidation
+from commentscope.factory import statement_worlds
 from commentscope.factory.pipeline_work import ModelResponseUnavailable
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -35,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261103-v7'
+VERSION = 'minimal-factory-openrouter-executor-20261103-v8'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -74,8 +75,9 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
                 or previous['extraction_protocol'] != (compact_claims.SEGMENTED if discovery_mode == 'free' else None)
                 or previous.get('assertion_equivalence_protocol') != (candidate_consolidation.BILATERAL if discovery_mode == 'free' else None)
-                or previous.get('membership_observation_protocol') != (raw_membership.SOURCE_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
+                or previous.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
                 or previous.get('source_context_protocol') != (source_context_observations.VERSION if discovery_mode == 'free' else None)
+                or previous.get('world_observation_protocol') != (statement_worlds.VERSION if discovery_mode == 'free' else None)
                 or any(previous[k] != materials[k] for k in ('classifier', 'model_files', 'documents', 'selections'))):
             raise ValueError('Qualification uses another remote executor, auxiliary model, evidence or shared budget')
 
@@ -129,8 +131,9 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
             'extraction_protocol': compact_claims.SEGMENTED if discovery_mode == 'free' else None,
             'assertion_equivalence_protocol': candidate_consolidation.BILATERAL if discovery_mode == 'free' else None,
-            'membership_observation_protocol': raw_membership.SOURCE_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
+            'membership_observation_protocol': raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
             'source_context_protocol': source_context_observations.VERSION if discovery_mode == 'free' else None,
+            'world_observation_protocol': statement_worlds.VERSION if discovery_mode == 'free' else None,
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
@@ -160,8 +163,9 @@ def validate(directory, plan):
             or plan['discovery_mode'] not in ('literal', 'free') or plan['membership_mode'] != 'raw'
             or plan['extraction_protocol'] != (compact_claims.SEGMENTED if plan['discovery_mode'] == 'free' else None)
             or plan.get('assertion_equivalence_protocol') != (candidate_consolidation.BILATERAL if plan['discovery_mode'] == 'free' else None)
-            or plan.get('membership_observation_protocol') != (raw_membership.SOURCE_CONTEXT if plan['discovery_mode'] == 'free' else raw_membership.VERSION)
+            or plan.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if plan['discovery_mode'] == 'free' else raw_membership.VERSION)
             or plan.get('source_context_protocol') != (source_context_observations.VERSION if plan['discovery_mode'] == 'free' else None)
+            or plan.get('world_observation_protocol') != (statement_worlds.VERSION if plan['discovery_mode'] == 'free' else None)
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE

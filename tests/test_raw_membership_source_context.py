@@ -132,6 +132,7 @@ class SourceContextMembershipTests(TestCase):
         self.assert_compact_source_veto(compact_claims.SEGMENTED)
 
     def assert_compact_source_veto(self, protocol):
+        from commentscope.factory import statement_worlds as worlds
         calls = []
         class Runner:
             def call(_, stage, request):
@@ -139,6 +140,8 @@ class SourceContextMembershipTests(TestCase):
                 if stage.startswith('source-context'):
                     return {'output': {'source_use': 'promotion_or_referral', 'reported_descriptors': []},
                             'raw': 'authored', 'errors': []}
+                if request['system'].startswith(worlds.SYSTEM):
+                    return {'output': {'world': 'real_world', 'anchor': ''}, 'raw': 'authored', 'errors': []}
                 output = observation(); output['source_use'] = 'promotion_or_referral'
                 return {'output': output, 'raw': 'authored', 'errors': []}
         work = PipelineWork(Runner(), lambda req: {'fits': True, 'request_sha256': digest(req)},
@@ -146,9 +149,9 @@ class SourceContextMembershipTests(TestCase):
                             membership_mode='raw', verification_contract='raw-membership-verification-20261026-v12',
                             schedule={}, extraction_protocol=protocol)
         batches = work.judge('membership', [{'source_id': 'example', 'candidate_id': self.target['id']}], [self.target])
-        self.assertEqual(len(calls), 2)
+        self.assertEqual(len(calls), 3 if protocol == compact_claims.SEGMENTED else 2)
         self.assertNotIn('CANDIDATE', calls[0][1]['data'])
-        self.assertIn('source_use', calls[1][1]['schema']['properties'])
+        self.assertIn('source_use', calls[-1][1]['schema']['properties'])
         self.assertNotEqual(batches[0]['memberships'][0]['relation'], 'supported')
         work.judge('other-stage', [{'source_id': 'example', 'candidate_id': self.target['id']}], [self.target])
         self.assertEqual(sum(stage.startswith('source-context') for stage, _ in calls), 1)

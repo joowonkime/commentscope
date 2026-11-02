@@ -42,6 +42,7 @@ class PipelineWork:
         self.assessment_cache = {}
         self.raw_routes = {}
         self.source_contexts = {}
+        self.statement_worlds = {}
 
     def work(self, stage, items, build, bind, size, *, minimum=1):
         results = []
@@ -106,6 +107,16 @@ class PipelineWork:
         return self.assessment_cache[key]
 
 
+    def observe_world(self, text, parent, stage):
+        from commentscope.factory import statement_worlds as worlds
+        key = digest([worlds.VERSION, text, parent])
+        if key not in self.statement_worlds:
+            rows = self.work(stage, [{'text': text, 'parent': parent}],
+                lambda group: worlds.request(group[0]['text'], parent=group[0]['parent']),
+                lambda group, result: worlds.bind(group[0]['text'], result, parent=group[0]['parent']), 1)
+            self.statement_worlds[key] = rows[0] if rows else None
+        return self.statement_worlds[key]
+
     def judge(self, stage, pairs, targets):
         if self.engine is not None:return self.engine.judge(pairs,targets)
         target_lookup = {c['id']: c for c in targets}
@@ -115,11 +126,12 @@ class PipelineWork:
             from commentscope.factory import compact_claims
             from commentscope.factory import source_context_observations as contexts
             raw_protocol = raw.SOURCE_CONTEXT if self.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT else raw.VERSION
+            if self.extraction_protocol == compact_claims.SEGMENTED: raw_protocol = raw.WORLD_CONTEXT
             results=[]
             for pair in pairs:
                 source,target=self.registry[pair['source_id']],target_lookup[pair['candidate_id']]
                 context = None
-                if raw_protocol == raw.SOURCE_CONTEXT:
+                if raw_protocol in raw.INDEPENDENT_CONTEXT:
                     source_key = digest(source)
                     if source_key not in self.source_contexts:
                         rows = self.work('source-context', [source], lambda group: contexts.request(group[0]),
@@ -129,8 +141,18 @@ class PipelineWork:
                     if context is None:
                         self.holds.append({'stage': stage, **pair, 'reason': 'source_context_unavailable'})
                         continue
-                proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target,version=raw_protocol,source_context=context),
-                            lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context),1)
+                source_world = candidate_world = None
+                if raw_protocol == raw.WORLD_CONTEXT:
+                    parent = source['parent']['text'] if source.get('parent') else None
+                    source_world = self.observe_world(source['text'], parent, 'source-world')
+                    candidate_world = self.observe_world(target['text'], None, 'candidate-world')
+                    if source_world is None or candidate_world is None:
+                        self.holds.append({'stage': stage, **pair, 'reason': 'world_observation_unavailable'})
+                        continue
+                proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target,version=raw_protocol,source_context=context,
+                                source_world=source_world,candidate_world=candidate_world),
+                            lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context,
+                                source_world=source_world,candidate_world=candidate_world),1)
                 for proof in proofs:
                     route=None;evidence=None
                     if proof['passed']:
