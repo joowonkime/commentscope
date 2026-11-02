@@ -115,6 +115,9 @@ class CompactPipelineTests(unittest.TestCase):
                     elif 'pattern' in req['schema']['properties']['c']['items']['properties']['e']:
                         count = len(source['ORIGINAL_SEGMENTS'])
                         result['output']['c'][0].update(e='1'+'0'*(count-1), k='0'*count)
+                    elif req['schema']['properties']['c']['items']['properties']['e']['type'] == 'array':
+                        result['output']['v'] = []
+                        result['output']['c'][0].update(e=['S000'], k=[])
                     if source['source_id'] == self.fail_source: result['output']['c'] = []
                     return result
                 return super().call(stage, req)
@@ -175,6 +178,16 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertEqual(len(profiles), 1)
         self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
         self.assertTrue(any(not c['passed'] for a in result['audits'] for c in a['owner_checks']))
+        self.assertFalse(result['quality_gate_passed'])
+
+    def test_segmented_pipeline_retains_owner_audits(self):
+        from commentscope.factory import source_arguments as sa
+        helper, Runner = self.fixture(); runner = Runner()
+        result = helper.process(runner, extraction_protocol=compact.SEGMENTED)
+        self.assertFalse(result['errors'])
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
+        self.assertTrue(all(r['artifact_kind'] == compact.SEGMENTED for r in result['extractions']))
+        self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
         self.assertFalse(result['quality_gate_passed'])
 
     def test_independent_audits_close_one_original_without_changing_the_model_request(self):

@@ -13,7 +13,11 @@ from commentscope.factory.position_frames import fields
 VERSION = 'compact-source-claims-20261102-v1'
 MASKED = 'compact-source-claims-20261102-v2'
 INDEXED = 'compact-source-claims-20261102-v3'
-VERSIONS = (VERSION, MASKED, INDEXED)
+SEGMENTED_BOUNDED = 'compact-source-claims-20261103-v4'
+SEGMENTED = 'compact-source-claims-20261103-v5'
+SEGMENTED_VERSIONS = (SEGMENTED_BOUNDED, SEGMENTED)
+VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS)
+INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS)
 PREFIX = 'Extract one fixed original through a compact source transport.\n'
 FIDELITY = '''
 Authorship identifies the speaker inside the original, not the analyst reading it.
@@ -72,6 +76,24 @@ INDEXED_WIRE = MASKED_WIRE.replace(
     '1 selects that segment and 0 excludes it. For example, 101 selects the first '
     'and third segments in a three-segment original. Include every position exactly '
     'once. Never put prose or segment IDs in a mask. An all-zero k means no condition.')
+SEGMENTED_WIRE = '''
+Return s=status, c=rewritten claims, v=verbatim selections, and l only when the
+required schema contains it. Select actual original segment IDs in e and k.
+e identifies the author's words expressing the proposition, not proof that it is
+true. Every proposition needs nonempty e, even when false, ironic or reported.
+k contains essential conditions only, not answers, explanations or background.
+For a self-contained complete proposition prefer v: select consecutive segments
+in original order and the host copies their complete text. Do not select a bare
+fragment, unresolved reference or a conclusion missing its setting/condition.
+If a reference clearly needs resolving, use c and write t as a complete proposition
+preserving the original scope, voice and world. Prefer full words over contractions
+in rewritten text. Never add a parent's assertion or certify an inference as fact.
+Classify each complete LOCKED_CONDITIONAL in l, or omitted. Never use its segments
+in c or v, even if l says omitted. Select omitted for a locked claim already in
+PREVIOUS; supplements cannot repeat or reclassify existing propositions.
+At most16 total propositions,600 characters per text,24 unique IDs per list.
+Authorship and selections are proposals, never semantic approval or support.
+'''
 
 
 def conditional_selections(source):
@@ -105,6 +127,14 @@ def indexed_addresses(mask, ids):
     return [sid for sid, selected in zip(ids, mask) if selected == '1']
 
 
+def segment_addresses(value, ids, *, minimum=0):
+    if (not isinstance(value, list) or not minimum <= len(value) <= 24
+            or any(not isinstance(sid, str) or sid not in ids for sid in value)
+            or len(set(value)) != len(value)):
+        raise ValueError('Unique supplied original segment IDs required')
+    return value
+
+
 def request(source, *, previous=None, protocol=VERSION):
     if protocol not in VERSIONS: raise ValueError('Unknown compact transport')
     prior = []
@@ -118,7 +148,7 @@ def request(source, *, previous=None, protocol=VERSION):
     schema = obj({'s': {'type': 'string', 'enum': list(mc.STATUSES)},
                   'c': array(claim, minimum=0, maximum=16)})
     wire = WIRE
-    if protocol in (MASKED, INDEXED):
+    if protocol in (MASKED, INDEXED, *SEGMENTED_VERSIONS):
         ids = [s['id'] for s in mc.packet(source)['ORIGINAL_SEGMENTS']]
         mask = obj({sid: {'type': 'boolean'} for sid in ids})
         if protocol == INDEXED:
@@ -131,12 +161,30 @@ def request(source, *, previous=None, protocol=VERSION):
         canonical['data']['LOCKED_CONDITIONALS'] = locked
         properties = {'s': {'type': 'string', 'enum': list(mc.STATUSES)},
                       'c': array(claim, minimum=0, maximum=16)}
+        if protocol in SEGMENTED_VERSIONS:
+            evidence = array({'type': 'string', 'enum': ids}, minimum=1, maximum=min(24, len(ids)))
+            evidence['description'] = 'Own original segments expressing this proposition; never empty.'
+            conditions = array({'type': 'string', 'enum': ids}, minimum=0, maximum=min(24, len(ids)))
+            conditions['description'] = 'Essential conditions embodied in the proposition; otherwise empty.'
+            # Nested maxItems multiply provider decoder states. The host retains
+            # every original capacity check, independently of schema enforcement.
+            if protocol == SEGMENTED:
+                evidence.pop('maxItems'); conditions.pop('maxItems')
+            selection = {'e': evidence, 'k': conditions,
+                         'a': {'type': 'string', 'enum': list(mc.AUTHORSHIP)}}
+            properties['c'] = array(obj({**selection, 't': {'type': 'string',
+                'description': 'Complete rewritten proposition, at most600 characters; preserve scope and attribution.'}}),
+                minimum=0, maximum=16)
+            properties['v'] = array(obj(selection), minimum=0, maximum=16)
+            properties['v']['description'] = 'Complete literal propositions, each using consecutive original segments in order.'
+            if protocol == SEGMENTED:
+                properties['c'].pop('maxItems'); properties['v'].pop('maxItems')
         if locked:
             properties['l'] = obj({row['id']: {'type': 'string',
                 'enum': ['omitted'] if mc.claim_id(row['text']) in previous_ids else [*mc.AUTHORSHIP, 'omitted']}
                 for row in locked})
         schema = obj(properties)
-        wire = INDEXED_WIRE if protocol == INDEXED else MASKED_WIRE
+        wire = SEGMENTED_WIRE if protocol in SEGMENTED_VERSIONS else INDEXED_WIRE if protocol == INDEXED else MASKED_WIRE
     system = mc.SUPPLEMENT_SYSTEM if previous is not None else mc.SYSTEM
     return mc.request(PREFIX+system+FIDELITY+wire, canonical['data'], schema, 3072)
 
@@ -145,12 +193,15 @@ def bind(source, result, *, previous=None, protocol=VERSION):
     req = request(source, previous=previous, protocol=protocol)
     if not isinstance(result, dict) or result.get('errors'):
         raise ValueError('Completed compact source extraction required')
-    value = result.get('output'); fields(value, 's c l' if 'l' in req['schema']['properties'] else 's c')
+    value = result.get('output')
+    fields(value, ' '.join(req['schema']['properties']))
     if not isinstance(value['c'], list) or len(value['c']) > 16:
         raise ValueError('Original sixteen-proposition capacity required')
     claims = []
     locked = req['data'].get('LOCKED_CONDITIONALS', [])
     locked_ids = {sid for row in locked for sid in row['evidence_segment_ids']}
+    segments = mc.packet(source)['ORIGINAL_SEGMENTS'] if protocol in SEGMENTED_VERSIONS else []
+    ids = [s['id'] for s in segments]
     if locked:
         fields(value['l'], ' '.join(row['id'] for row in locked))
         for row in locked:
@@ -162,12 +213,33 @@ def bind(source, result, *, previous=None, protocol=VERSION):
                 claims.append({k: deepcopy(row[k]) for k in
                                ('text', 'evidence_segment_ids', 'essential_condition_segment_ids')})
                 claims[-1]['authorship'] = author
+    if protocol in SEGMENTED_VERSIONS:
+        if not isinstance(value['v'], list) or len(value['v']) + len(value['c']) + len(claims) > 16:
+            raise ValueError('Original sixteen-proposition capacity required')
+        for row in value['v']:
+            fields(row, 'e k a')
+            evidence = segment_addresses(row['e'], ids, minimum=1)
+            conditions = segment_addresses(row['k'], ids)
+            positions = [ids.index(sid) for sid in evidence]
+            if positions != list(range(positions[0], positions[0]+len(positions))):
+                raise ValueError('Verbatim selection requires consecutive original segments in order')
+            if not set(conditions) <= set(evidence):
+                raise ValueError('Verbatim text must include its essential conditions')
+            if locked_ids.intersection(evidence):
+                raise ValueError('Complete locked conditional must be selected, never split into verbatim claims')
+            start, end = segments[positions[0]]['start'], segments[positions[-1]]['end']
+            claims.append({'text': source['text'][start:end].strip(), 'authorship': row['a'],
+                           'evidence_segment_ids': evidence, 'essential_condition_segment_ids': conditions})
     for row in value['c']:
         fields(row, 't e k a')
-        if protocol in (MASKED, INDEXED):
+        if protocol in (MASKED, INDEXED, *SEGMENTED_VERSIONS):
             ids = [s['id'] for s in mc.packet(source)['ORIGINAL_SEGMENTS']]
-            decode = indexed_addresses if protocol == INDEXED else addresses
-            evidence, conditions = decode(row['e'], ids), decode(row['k'], ids)
+            if protocol in SEGMENTED_VERSIONS:
+                evidence = segment_addresses(row['e'], ids, minimum=1)
+                conditions = segment_addresses(row['k'], ids)
+            else:
+                decode = indexed_addresses if protocol == INDEXED else addresses
+                evidence, conditions = decode(row['e'], ids), decode(row['k'], ids)
             if locked_ids.intersection(evidence + conditions):
                 raise ValueError('Complete locked conditional must be selected, never split into free claims')
         else:

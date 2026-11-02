@@ -114,7 +114,7 @@ class PipelineWork:
             from commentscope.factory import raw_membership_verification as verification
             from commentscope.factory import compact_claims
             from commentscope.factory import source_context_observations as contexts
-            raw_protocol = raw.SOURCE_CONTEXT if self.extraction_protocol == compact_claims.INDEXED else raw.VERSION
+            raw_protocol = raw.SOURCE_CONTEXT if self.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT else raw.VERSION
             results=[]
             for pair in pairs:
                 source,target=self.registry[pair['source_id']],target_lookup[pair['candidate_id']]
