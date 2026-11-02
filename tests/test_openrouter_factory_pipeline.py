@@ -93,8 +93,9 @@ class OpenRouterExecutorTests(unittest.TestCase):
         self.assertEqual(plan['discovery_mode'], 'free')
         self.assertEqual(plan['extraction_protocol'], executor.compact_claims.SEGMENTED)
         self.assertEqual(plan['assertion_equivalence_protocol'], executor.candidate_consolidation.BILATERAL)
-        self.assertEqual(plan['membership_observation_protocol'], executor.raw_membership.SOURCE_CONTEXT)
+        self.assertEqual(plan['membership_observation_protocol'], executor.raw_membership.WORLD_CONTEXT)
         self.assertEqual(plan['source_context_protocol'], executor.source_context_observations.VERSION)
+        self.assertEqual(plan['world_observation_protocol'], executor.statement_worlds.VERSION)
         self.assertEqual(executor.validate(self.run_dir, plan).to_dict(), self.snapshot.to_dict())
         self.time_budget.call.assert_not_called()
 
