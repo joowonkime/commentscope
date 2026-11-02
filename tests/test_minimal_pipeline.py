@@ -94,7 +94,7 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertEqual(self.embeddings, ['sources', 'candidates'])
         self.assertFalse(output['errors']); self.assertFalse(output['capacity_holds'])
         self.assertTrue(output['audits'])
-        self.assertTrue(all(a['protocol'] == sa.ADDRESSED_AUDIT for a in output['audits']))
+        self.assertTrue(all(a['protocol'] == sa.SUBJECT_AUDIT for a in output['audits']))
         self.assertTrue(all(row['basis'] for a in output['audits'] for row in a['output']['decisions']))
         runtime = runtime_probe(output['agent_inputs']['bundle'], runner)
         self.assertEqual(len(runtime['turns']), 6)

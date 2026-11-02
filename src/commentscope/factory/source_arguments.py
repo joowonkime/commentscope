@@ -13,6 +13,7 @@ from commentscope.factory import argument_audit_wire
 
 VERSION = 'source-arguments-20261016-v4'
 ADDRESSED_AUDIT = argument_audit_wire.VERSION
+SUBJECT_AUDIT = argument_audit_wire.SUBJECT_SCOPED
 KINDS = ('fact', 'value', 'prediction', 'uncertain')
 ROLES = ('reason', 'essential_condition', 'factual_premise', 'concession', 'additional_position')
 SYSTEM = '''Extract source-owned arguments linked to the supplied supported CANDIDATES.
@@ -325,7 +326,7 @@ def audit_tasks(records, cores):
 
 
 def audit_request(records, cores, tasks, *, protocol=None):
-    if protocol not in (None, ADDRESSED_AUDIT):
+    if protocol not in (None, ADDRESSED_AUDIT, SUBJECT_AUDIT):
         raise ValueError('Unknown argument audit protocol')
     available = {t['task_id']: t for t in audit_tasks(records, cores)}
     if (not 1 <= len(tasks) <= 8 or len({t['task_id'] for t in tasks}) != len(tasks)
@@ -338,15 +339,19 @@ def audit_request(records, cores, tasks, *, protocol=None):
                                                   **c['output']} for c in cores if c['candidate']['id'] in r['candidate_ids']]}
                for r in records if r['source']['id'] in used]
     wire_tasks = audit_wire_tasks(records, tasks)
-    if protocol == ADDRESSED_AUDIT:
+    if protocol:
         payload, wire_tasks = argument_audit_wire.project(payload, tasks)
+    if protocol == SUBJECT_AUDIT:
+        payload, wire_tasks = argument_audit_wire.subjects(payload, wire_tasks)
     properties = {'task_id': {'type': 'string', 'enum': [t['task_id'] for t in wire_tasks]},
                   'verdict': {'type': 'string', 'enum': ['supported', 'unsupported', 'uncertain']}}
-    if protocol == ADDRESSED_AUDIT:
+    if protocol:
         properties['basis'] = {'type': 'string', 'minLength': 1, 'maxLength': 240}
     schema = obj({'decisions': array(obj(properties),
                                     minimum=len(tasks), maximum=len(tasks))})
-    return mc.request(AUDIT + (argument_audit_wire.INSTRUCTIONS if protocol else ''),
+    instructions = (argument_audit_wire.SUBJECT_INSTRUCTIONS if protocol == SUBJECT_AUDIT else
+                    argument_audit_wire.INSTRUCTIONS if protocol else '')
+    return mc.request(AUDIT + instructions,
                       {'SOURCES': payload, 'TASKS': wire_tasks}, schema,
                       128+(256 if protocol else 128)*len(tasks))
 

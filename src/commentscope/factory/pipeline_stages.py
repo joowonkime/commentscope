@@ -214,9 +214,9 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
     audits = work('argument-audit', tasks,
-                  lambda group: sa.audit_request(arguments, cores, group, protocol=sa.ADDRESSED_AUDIT),
+                  lambda group: sa.audit_request(arguments, cores, group, protocol=sa.SUBJECT_AUDIT),
                   lambda group, result: sa.bind_audit(arguments, cores, group, result,
-                                                     protocol=sa.ADDRESSED_AUDIT), 1)
+                                                     protocol=sa.SUBJECT_AUDIT), 1)
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 

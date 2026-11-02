@@ -137,13 +137,16 @@ class OpenRouterTests(unittest.TestCase):
         self.assertNotIn('synthetic-test-key', raw)
         self.assertIn('"cost": 0.0001', raw)
         # Reuse the original stored logical request, not a new HTTP operation.
-        stored = read_json(next((root/'calls').glob('*.request.json')))['request']
+        request_path = sorted((root/'calls').glob('*.request.json'))[0]
+        stored_call = read_json(request_path)
+        stored = stored_call['request']
         before = self.opener.open.call_count
-        original_stage = next((root/'calls').glob('*.request.json')).name.split('-', 1)[1].removesuffix('.request.json')
+        original_stage = request_path.name.split('-', 1)[1].removesuffix('.request.json')
         runner.call(original_stage, stored)
         self.assertEqual(self.opener.open.call_count, before)
         intent = next(p for p in (root/'checkpoints').glob('*.intent.json')
-                      if read_json(p)['stage'] == original_stage)
+                      if read_json(p)['stage'] == original_stage
+                      and read_json(p)['request_sha256'] == stored_call['request_sha256'])
         intent.with_name(intent.name.replace('.intent.json', '.result.json')).unlink()
         with self.assertRaises(PendingCallError): runner.call(original_stage, stored)
         self.assertEqual(self.opener.open.call_count, before)
