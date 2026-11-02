@@ -16,7 +16,7 @@ from urllib.request import build_opener, ProxyHandler
 
 from commentscope.agents.runtime_probe import QUESTIONS, runtime_probe, runtime_check
 from commentscope.factory import acceptance, fact_checks, minimal_pipeline, raw_membership_verification
-from commentscope.factory import compact_claims
+from commentscope.factory import compact_claims, raw_membership, source_context_observations
 from commentscope.factory.pipeline_work import ModelResponseUnavailable
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -34,7 +34,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261102-v4'
+VERSION = 'minimal-factory-openrouter-executor-20261103-v5'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -72,6 +72,8 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
         previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
                 or previous['extraction_protocol'] != (compact_claims.INDEXED if discovery_mode == 'free' else None)
+                or previous.get('membership_observation_protocol') != (raw_membership.SOURCE_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
+                or previous.get('source_context_protocol') != (source_context_observations.VERSION if discovery_mode == 'free' else None)
                 or any(previous[k] != materials[k] for k in ('classifier', 'model_files', 'documents', 'selections'))):
             raise ValueError('Qualification uses another remote executor, auxiliary model, evidence or shared budget')
 
@@ -124,6 +126,8 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
             'extraction_protocol': compact_claims.INDEXED if discovery_mode == 'free' else None,
+            'membership_observation_protocol': raw_membership.SOURCE_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
+            'source_context_protocol': source_context_observations.VERSION if discovery_mode == 'free' else None,
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
@@ -152,6 +156,8 @@ def validate(directory, plan):
     if (plan['artifact_kind'] != VERSION or plan['gate'] not in ('G1', 'G2', 'G3', 'G4') or profile is None
             or plan['discovery_mode'] not in ('literal', 'free') or plan['membership_mode'] != 'raw'
             or plan['extraction_protocol'] != (compact_claims.INDEXED if plan['discovery_mode'] == 'free' else None)
+            or plan.get('membership_observation_protocol') != (raw_membership.SOURCE_CONTEXT if plan['discovery_mode'] == 'free' else raw_membership.VERSION)
+            or plan.get('source_context_protocol') != (source_context_observations.VERSION if plan['discovery_mode'] == 'free' else None)
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE

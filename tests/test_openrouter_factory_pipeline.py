@@ -92,7 +92,18 @@ class OpenRouterExecutorTests(unittest.TestCase):
                                 discovery_mode='free')
         self.assertEqual(plan['discovery_mode'], 'free')
         self.assertEqual(plan['extraction_protocol'], executor.compact_claims.INDEXED)
+        self.assertEqual(plan['membership_observation_protocol'], executor.raw_membership.SOURCE_CONTEXT)
+        self.assertEqual(plan['source_context_protocol'], executor.source_context_observations.VERSION)
         self.assertEqual(executor.validate(self.run_dir, plan).to_dict(), self.snapshot.to_dict())
+        self.time_budget.call.assert_not_called()
+
+    def test_rewritten_membership_protocol_is_rejected_even_with_rehashed_plan(self):
+        plan = executor.prepare(self.run_dir, self.deployment, self.materials, self.policy, 0.25,
+                                discovery_mode='free')
+        plan['membership_observation_protocol'] = executor.raw_membership.VERSION
+        path = self.run_dir/'plan.json'; path.write_text(json.dumps(plan))
+        (self.run_dir/'frozen.json').write_text(json.dumps({'plan_sha256': sha(path)}))
+        with self.assertRaisesRegex(ValueError, 'contract changed'): executor.run(self.run_dir)
         self.time_budget.call.assert_not_called()
 
     def test_complete_agent_execution_is_not_a_quality_pass_and_reuses_completed_run(self):
