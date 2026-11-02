@@ -190,6 +190,30 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
         self.assertFalse(result['quality_gate_passed'])
 
+    def test_segmented_pipeline_vetoes_primary_equivalence_when_independent_check_finds_a_counterexample(self):
+        from commentscope.factory import candidate_consolidation as cc, assertion_counterexamples as counter
+        helper, Runner = self.fixture()
+        class FalseMergeRunner(Runner):
+            def call(self, stage, req):
+                if req['system'].startswith(cc.SYSTEM):
+                    self.calls.append((stage, req))
+                    return {'output': {'decisions': [{'pair_id': p['pair_id'], 'relation': 'equivalent'}
+                                                     for p in req['data']['PAIRS']]}}
+                if req['system'].startswith(counter.SYSTEM):
+                    self.calls.append((stage, req))
+                    return {'output': {'a_scenario': 'Distinct asserted policy.', 'a_without_b': 'possible',
+                                       'b_scenario': 'Different asserted policy.', 'b_without_a': 'possible'}}
+                return super().call(stage, req)
+        runner = FalseMergeRunner(); result = helper.process(runner, extraction_protocol=compact.SEGMENTED)
+        self.assertFalse(result['errors'])
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
+        self.assertTrue(any(req['system'].startswith(counter.SYSTEM) for _, req in runner.calls))
+        for record in result['equivalences']:
+            self.assertEqual(record['protocol'], cc.BILATERAL)
+            self.assertTrue(record['assertion_checks'])
+            self.assertTrue(all(r['model_relation'] == 'equivalent' and r['relation'] == 'uncertain'
+                                for r in record['relations']))
+
     def test_independent_audits_close_one_original_without_changing_the_model_request(self):
         from commentscope.factory import source_arguments as sa
         from commentscope.factory.automatic_contract import digest

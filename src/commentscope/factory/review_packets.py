@@ -33,8 +33,11 @@ def build_packet(run, plan, completion, snapshot, output, runtime, *, version,
             task('support', [cid, sid], {'original': original[sid], 'claim': lookup[cid]['claim'], 'assessment': r})
     for eq in output['equivalences']:
         for r in eq['relations']:
-            task('equivalence', [r['a'], r['b']], {'a': initial[r['a']],
-                 'b': initial[r['b']], 'decision': r})
+            data = {'a': initial[r['a']], 'b': initial[r['b']], 'decision': r}
+            if 'assertion_checks' in eq:
+                data['assertion_checks'] = [c for c in eq['assertion_checks']
+                    if (c['a'], c['b']) == (r['a'], r['b'])]
+            task('equivalence', [r['a'], r['b']], data)
     for record in output['arguments']:
         task('argument', record['source']['id'], record)
     for agent in output['agent_inputs']['compiled']['profiles']:

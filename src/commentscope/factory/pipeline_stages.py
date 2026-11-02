@@ -15,6 +15,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory import argument_observations
 from commentscope.factory import compact_claims
 from commentscope.factory import owner_observations
+from commentscope.factory import assertion_counterexamples
 
 
 @dataclass
@@ -106,6 +107,8 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         pairs = cc.nearest_pairs({cid: candidate_vectors[cid] for cid in confirmed}) if confirmed and discovery_mode!='shared' else []
         equivalence_protocol = (cc.ASSERTION_ONLY if discovery_mode == 'literal'
             or getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS else None)
+        bilateral = getattr(execution, 'extraction_protocol', None) == compact_claims.SEGMENTED
+        if bilateral: equivalence_protocol = cc.BILATERAL
         equivalences = [] if engine is not None else work('equivalence', pairs,
                             lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group,
                                                                   protocol=equivalence_protocol),
@@ -113,7 +116,7 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
                                                           protocol=equivalence_protocol), SCHEDULE['equivalence_pairs'])
         index={c['id']:c for c in candidates};qualified_equivalences=[]
         for record in equivalences:
-            qualifications=[]
+            qualifications=[]; assertion_checks=[]
             for row in record['relations']:
                 if row['model_relation']!='equivalent':continue
                 for left,right in ((row['a'],row['b']),(row['b'],row['a'])):
@@ -121,8 +124,14 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
                     assessment=qualify(source,index[right])
                     if assessment is not None:qualifications.append({'from_candidate_id':left,
                         'to_candidate_id':right,'assessment':assessment})
+                matching = [q for q in qualifications if {q['from_candidate_id'], q['to_candidate_id']} == {row['a'], row['b']}]
+                if bilateral and len(matching) == 2 and all(q['assessment']['passed'] for q in matching):
+                    assertion_checks.extend(work('assertion-counterexample', [{'a': row['a'], 'b': row['b']}],
+                        lambda group: assertion_counterexamples.request(index[group[0]['a']]['text'], index[group[0]['b']]['text']),
+                        lambda group, result: {**group[0], 'check': assertion_counterexamples.bind(
+                            index[group[0]['a']]['text'], index[group[0]['b']]['text'], result)}, 1))
             bound=cc.bind(sources,candidates,nomination_batches,record['pairs'],{'output':record['output']},qualifications,
-                          protocol=record.get('protocol'))
+                          protocol=record.get('protocol'), assertion_checks=assertion_checks)
             qualified_equivalences.append(bound);save('bound/equivalence-qualified-'+digest(bound)[:20],bound)
         equivalences=engine.equivalences(pairs) if engine is not None else qualified_equivalences
         representative_scopes = ({c['id']:contextual_runtime.bind(c,engine.scope(c)) for c in candidates
