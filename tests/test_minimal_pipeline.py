@@ -7,6 +7,7 @@ from commentscope.factory import candidate_consolidation as cc, source_arguments
 from commentscope.factory import owned_arguments as oa
 from commentscope.factory import literal_discovery as ld
 from commentscope.factory import argument_observations as observations
+from commentscope.factory import owner_observations
 from commentscope.factory.automatic_contract import digest
 from commentscope.ingestion import load_snapshot
 from commentscope.agents.grounded_runtime import SYSTEM as RUNTIME_SYSTEM
@@ -39,6 +40,11 @@ class ScriptedRunner:
         elif system.startswith(observations.CORE_SYSTEM):
             value = {'observations': [{'actual_kind': 'value', 'time_ids': [],
                 'entity_fidelity': 'yes', 'conditions_fidelity': 'yes', 'basis': 'Authored normative toy candidate.'}]}
+            schema = req['schema']['properties']['observations']['items']['properties']['basis']
+            if 'enum' in schema: value['observations'][0]['basis'] = 'normative_assertion'
+        elif system.startswith(owner_observations.SYSTEM):
+            value = {'relation': 'equivalent', 'basis': 'same_assertion',
+                     'owner_world': 'real_world', 'candidate_world': 'real_world'}
         elif system.startswith(observations.SOURCE_SYSTEM):
             rows = []
             for task in data['TASKS']:
@@ -50,7 +56,10 @@ class ScriptedRunner:
                     row.update(actual_kind='value', time_ids=[a['id'] for a in target['TIME_ANCHORS']],
                         entity_fidelity='yes', conditions_fidelity='yes', actual_authorship='asserted_or_endorsed',
                         actual_function='reason' if target['text'].startswith('because ') else 'position',
-                        owner_relations=[{'candidate_id': c['id'], 'relation': 'equivalent'} for c in task['LINK_TARGETS']])
+                        **({'owner_relations': [{'candidate_id': c['id'], 'relation': 'equivalent'} for c in task['LINK_TARGETS']]}
+                           if 'LINK_TARGETS' in task else {}))
+                if 'enum' in req['schema']['properties']['observations']['items']['anyOf'][len(rows)]['properties']['basis']:
+                    row['basis'] = 'coverage_agrees' if task['kind'] == 'coverage' else 'normative_assertion'
                 rows.append(row)
             value = {'observations': rows}
         elif system.startswith(oa.CORE):

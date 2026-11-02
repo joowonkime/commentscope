@@ -9,7 +9,17 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
 VERSION = 'source-argument-observations-20261102-v3'
+SPLIT = 'source-argument-observations-20261102-v5'
 CORE_VERSION = 'core-fidelity-observations-20261102-v1'
+CORE_CODED = 'core-fidelity-observations-20261102-v2'
+BASIS_CODES = ('normative_assertion', 'empirical_assertion', 'modal_possibility',
+               'mixed_or_uncertain', 'reported_or_rejected', 'scope_agrees', 'scope_differs',
+               'dependency_agrees', 'dependency_differs', 'coverage_agrees', 'coverage_missing',
+               'unresolved_reference')
+CODED_BASIS = '''\nThe basis field is a closed evidence category, not prose. Select exactly one
+supplied basis code describing the source of this observation. Keep every kind,
+authorship, function, condition, entity, time and dependency check independent.
+A code does not approve any declaration or replace those checks.\n'''
 SOURCE_SYSTEM = """Independently observe source declarations.
 Write each basis as one sentence of at most 120 characters. Do not quote or translate whole source sentences.
 Interpret ONLY TARGET, a literal source fragment whose boundaries are fixed.
@@ -149,7 +159,8 @@ def typed_props(t):
             'entity_fidelity':deepcopy(FID),'conditions_fidelity':deepcopy(FID)}
 
 
-def request(sources, tasks):
+def request(sources, tasks, *, protocol=VERSION):
+    if protocol not in (VERSION, SPLIT): raise ValueError('Unknown source observation protocol')
     old = {"data": {"SOURCES": sources, "TASKS": tasks}}
     sources=[{'ORIGINAL':deepcopy(s['ORIGINAL']), 'UNIT_INVENTORY':[span(u) for u in s['UNITS']]} for s in old['data']['SOURCES']]
     tasks=[];branches=[]
@@ -173,20 +184,31 @@ def request(sources, tasks):
                          source_coverage=enum(('complete','incomplete','uncertain')),
                          dependency_fidelity=deepcopy(FID))
         props['basis']={'type':'string','minLength':1,'maxLength':240}
+        if protocol == SPLIT:
+            t.pop('LINK_TARGETS', None); props.pop('owner_relations', None)
+            props['basis'] = enum(BASIS_CODES)
         tasks.append(t);branches.append(obj(props))
-    return {'system':SOURCE_SYSTEM,'data':{'SOURCES':sources,'TASKS':tasks},
+    system = SOURCE_SYSTEM
+    if protocol == SPLIT:
+        system += CODED_BASIS + '''Observe source declarations and coverage only.
+OWNER_POSITION establishes the ground's own parent for function/ownership.
+Candidate equivalence is checked in a separate request; no candidate target or
+owner_relations is supplied here. Do not perform that comparison in this task.'''
+    return {'system':system,'data':{'SOURCES':sources,'TASKS':tasks},
             'schema':obj({'observations':arr({'anyOf':branches},len(tasks),len(tasks))}),
             'max_tokens':512+512*len(tasks)}
 
 
-def core_request(core):
+def core_request(core, *, protocol=CORE_VERSION):
+    if protocol not in (CORE_VERSION, CORE_CODED): raise ValueError('Unknown core observation protocol')
     from commentscope.factory import source_arguments as sa
     sa.validate_core(core)
     if 'meaning_context' in core['candidate']:
         raise ValueError('Contextual cores require their scoped verifier')
     t = target(core['candidate']['text'], core['output']['scope'], core['candidate']['id'])
     props = {**typed_props(t), 'basis': {'type': 'string', 'minLength': 1, 'maxLength': 240}}
-    return {'system': CORE_SYSTEM, 'data': {'CORE_TARGET': t},
+    if protocol == CORE_CODED: props['basis'] = enum(BASIS_CODES)
+    return {'system': CORE_SYSTEM + (CODED_BASIS if protocol == CORE_CODED else ''), 'data': {'CORE_TARGET': t},
             'schema': obj({'observations': arr(obj(props), 1, 1)}), 'max_tokens': 1024}
 
 
@@ -205,9 +227,10 @@ def observations(result, count):
     return rows
 
 
-def basis(row):
+def basis(row, *, coded=False):
     if not isinstance(row['basis'], str) or not row['basis'].strip() or len(row['basis']) > 240:
         raise ValueError('A bounded source basis is required')
+    if coded and row['basis'] not in BASIS_CODES: raise ValueError('Supplied evidence category required')
 
 
 def fidelity(row, keys):
@@ -233,11 +256,11 @@ def scope_guards(row, text, kind, scope):
     return guards
 
 
-def bind_core(core, result):
-    req = core_request(core); row = observations(result, 1)[0]
-    fields(row, 'actual_kind time_ids entity_fidelity conditions_fidelity basis'); basis(row)
+def bind_core(core, result, *, protocol=CORE_VERSION):
+    req = core_request(core, protocol=protocol); row = observations(result, 1)[0]
+    fields(row, 'actual_kind time_ids entity_fidelity conditions_fidelity basis'); basis(row, coded=protocol==CORE_CODED)
     guards = scope_guards(row, core['candidate']['text'], core['output']['kind'], core['output']['scope'])
-    return {'artifact_kind': CORE_VERSION, 'core_id': core['candidate']['id'],
+    return {'artifact_kind': protocol, 'core_id': core['candidate']['id'],
             'core_sha256': digest(core), 'request_sha256': digest(req),
             'response': deepcopy(result['output']), 'output_sha256': digest(result['output']),
             'guards': sorted(set(guards)), 'passed': not guards, 'semantic_approval': False}
@@ -254,7 +277,7 @@ def select_checks(records, cores, tasks, checks):
         cid = check.get('core_id')
         if cid not in lookup or cid in verified:
             raise ValueError('Unique current core checks required')
-        if bind_core(lookup[cid], {'output': check.get('response')}) != check:
+        if bind_core(lookup[cid], {'output': check.get('response')}, protocol=check.get('artifact_kind')) != check:
             raise ValueError('Core observation binding changed')
         verified[cid] = check
     used = {t['source_id'] for t in tasks}
@@ -268,8 +291,12 @@ FUNCTIONS = {'core_restatement': 'position', 'additional_position': 'position',
              'factual_premise': 'factual_premise', 'conditional_antecedent': 'scope_annotation'}
 
 
-def bind_source(records, cores, tasks, req, result, checks):
+def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION, owner_checks=()):
     from commentscope.factory import source_arguments as sa
+    from commentscope.factory import owner_observations as owners
+    if protocol not in (VERSION, SPLIT): raise ValueError('Unknown source observation protocol')
+    if protocol != SPLIT and owner_checks: raise ValueError('Separate owners require the split protocol')
+    selected_owners = owners.select(records, cores, tasks, owner_checks) if protocol == SPLIT else []
     relevant = select_checks(records, cores, tasks, checks)
     lookup = {r['source']['id']: r for r in records}
     wire = {w['task_id']: (t, w) for t, w in zip(tasks, req['data']['TASKS'], strict=True)}
@@ -280,7 +307,7 @@ def bind_source(records, cores, tasks, req, result, checks):
         seen.add(row['task_id']); task, address = wire[row['task_id']]
         record = lookup[task['source_id']]
         if task['kind'] == 'coverage':
-            fields(row, 'task_id actual_source_language source_coverage dependency_fidelity basis'); basis(row)
+            fields(row, 'task_id actual_source_language source_coverage dependency_fidelity basis'); basis(row, coded=protocol==SPLIT)
             if row['actual_source_language'] not in ('en', 'other', 'uncertain') or row['source_coverage'] not in ('complete', 'incomplete', 'uncertain'):
                 raise ValueError('Unknown source coverage/language observation')
             guards = fidelity(row, ('dependency_fidelity',))
@@ -292,8 +319,8 @@ def bind_source(records, cores, tasks, req, result, checks):
             decisions.append({'task_id': task['task_id'], 'verdict': 'unsupported' if guards else 'supported',
                               'guards': sorted(set(guards)), 'basis': row['basis']})
             continue
-        fields(row, 'task_id actual_kind time_ids entity_fidelity conditions_fidelity actual_authorship actual_function dependency_fidelity owner_relations basis')
-        basis(row)
+        fields(row, 'task_id actual_kind time_ids entity_fidelity conditions_fidelity actual_authorship actual_function dependency_fidelity basis'+(' owner_relations' if protocol == VERSION else ''))
+        basis(row, coded=protocol==SPLIT)
         unit = next(u for u in record['units'] if u['id'] == task['task_id'])
         if row['actual_authorship'] not in ('asserted_or_endorsed', 'not_asserted', 'unclear') or row['actual_function'] not in (*set(FUNCTIONS.values()), 'uncertain'):
             raise ValueError('Unknown source authorship/function observation')
@@ -305,17 +332,20 @@ def bind_source(records, cores, tasks, req, result, checks):
         if row['actual_authorship'] == 'unclear' or row['actual_authorship'] != declared_authorship:
             guards.append('source_authorship_unverified')
         if row['actual_function'] != FUNCTIONS[unit['role']]: guards.append('source_function_unverified')
-        aliases = {a['id']: cid for a, cid in zip(address['LINK_TARGETS'], unit['candidate_ids'], strict=True)}
-        relations = row['owner_relations']; linked = {}
-        if not isinstance(relations, list) or len(relations) != len(aliases):
-            raise ValueError('Every declared candidate link requires an observation')
-        for link in relations:
-            fields(link, 'candidate_id relation')
-            if link['candidate_id'] not in aliases or link['candidate_id'] in linked or link['relation'] not in ('equivalent', 'different', 'uncertain'):
-                raise ValueError('Unique bound candidate link observations required')
-            linked[link['candidate_id']] = link['relation']
-        candidate_guards = {aliases[a]: ([] if relation == 'equivalent' else ['owner_position_not_equivalent'])
-                            for a, relation in linked.items()}
+        if protocol == SPLIT:
+            candidate_guards = {cid: owners.guards(record, unit, cid, selected_owners) for cid in unit['candidate_ids']}
+        else:
+            aliases = {a['id']: cid for a, cid in zip(address['LINK_TARGETS'], unit['candidate_ids'], strict=True)}
+            relations = row['owner_relations']; linked = {}
+            if not isinstance(relations, list) or len(relations) != len(aliases):
+                raise ValueError('Every declared candidate link requires an observation')
+            for link in relations:
+                fields(link, 'candidate_id relation')
+                if link['candidate_id'] not in aliases or link['candidate_id'] in linked or link['relation'] not in ('equivalent', 'different', 'uncertain'):
+                    raise ValueError('Unique bound candidate link observations required')
+                linked[link['candidate_id']] = link['relation']
+            candidate_guards = {aliases[a]: ([] if relation == 'equivalent' else ['owner_position_not_equivalent'])
+                                for a, relation in linked.items()}
         owner = next((u for u in record['units'] if u.get('source_node_id') == unit.get('ownership_family')), None)
         core_kinds = {c['candidate']['id']: c['output']['kind'] for c in cores}
         if owner is not None and owner.get('authorship') != 'linked_to_parent':
@@ -330,6 +360,7 @@ def bind_source(records, cores, tasks, req, result, checks):
             'candidate_verdicts': candidate_verdicts, 'guards': sorted(set(guards)),
             'candidate_guards': candidate_guards, 'basis': row['basis']})
     return {'artifact_kind': sa.VERSION+'-audit', 'records_sha256': digest(records), 'cores_sha256': digest(cores),
-            'request_sha256': digest(req), 'tasks': deepcopy(tasks), 'protocol': VERSION,
+            'request_sha256': digest(req), 'tasks': deepcopy(tasks), 'protocol': protocol,
             'response': deepcopy(result['output']), 'output_sha256': digest(result['output']),
-            'core_checks': relevant, 'output': {'decisions': decisions}}
+            'core_checks': relevant, 'output': {'decisions': decisions},
+            **({'owner_checks': selected_owners} if protocol == SPLIT else {})}

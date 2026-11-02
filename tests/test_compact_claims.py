@@ -159,6 +159,24 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertTrue(all(r['artifact_kind'] == compact.INDEXED for r in result['extractions']))
         self.assertFalse(result['quality_gate_passed'])
 
+    def test_owner_refusal_remains_a_veto_in_the_indexed_pipeline(self):
+        from commentscope.factory import owner_observations as owners, source_arguments as sa
+        helper, Runner = self.fixture()
+        class RefusingRunner(Runner):
+            def call(self, stage, req):
+                if req['system'].startswith(owners.SYSTEM) and req['data']['CANDIDATE']['text'] == 'Adopt P.':
+                    self.calls.append((stage, req))
+                    return {'output': {'relation': 'different', 'basis': 'different_scope',
+                                       'owner_world': 'real_world', 'candidate_world': 'real_world'}}
+                return super().call(stage, req)
+        result = helper.process(RefusingRunner(), extraction_protocol=compact.INDEXED)
+        self.assertFalse(result['errors'])
+        profiles = result['agent_inputs']['compiled']['profiles']
+        self.assertEqual(len(profiles), 1)
+        self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
+        self.assertTrue(any(not c['passed'] for a in result['audits'] for c in a['owner_checks']))
+        self.assertFalse(result['quality_gate_passed'])
+
     def test_protocol_is_explicit_and_cannot_change_a_literal_or_unknown_path(self):
         helper, Runner = self.fixture(); runner = Runner()
         for mode, protocol in [('literal', compact.VERSION), ('free', 'unknown')]:
