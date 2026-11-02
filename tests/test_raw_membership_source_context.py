@@ -126,6 +126,12 @@ class SourceContextMembershipTests(TestCase):
         with self.assertRaises(ValueError): raw.validate(changed)
 
     def test_compact_pipeline_applies_whole_source_veto_before_route_calls(self):
+        self.assert_compact_source_veto(compact_claims.INDEXED)
+
+    def test_segmented_pipeline_retains_independent_context_veto_and_cache(self):
+        self.assert_compact_source_veto(compact_claims.SEGMENTED)
+
+    def assert_compact_source_veto(self, protocol):
         calls = []
         class Runner:
             def call(_, stage, request):
@@ -138,7 +144,7 @@ class SourceContextMembershipTests(TestCase):
         work = PipelineWork(Runner(), lambda req: {'fits': True, 'request_sha256': digest(req)},
                             lambda *args: None, registry={'example': self.source},
                             membership_mode='raw', verification_contract='raw-membership-verification-20261026-v12',
-                            schedule={}, extraction_protocol=compact_claims.INDEXED)
+                            schedule={}, extraction_protocol=protocol)
         batches = work.judge('membership', [{'source_id': 'example', 'candidate_id': self.target['id']}], [self.target])
         self.assertEqual(len(calls), 2)
         self.assertNotIn('CANDIDATE', calls[0][1]['data'])

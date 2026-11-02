@@ -167,7 +167,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     eligible = [c for c in eligible if c['id'] in adaptable_ids]
     eligible_ids = adaptable_ids
     observed = all('meaning_context' not in c['candidate'] for c in cores)
-    split = observed and execution.extraction_protocol == compact_claims.INDEXED
+    split = observed and execution.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT
     core_protocol = argument_observations.CORE_CODED if split else argument_observations.CORE_VERSION
     core_checks = (work('core-fidelity', [c for c in cores if c['candidate']['id'] in adaptable_ids],
                        lambda group: argument_observations.core_request(group[0], protocol=core_protocol),

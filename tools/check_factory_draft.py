@@ -33,6 +33,7 @@ MODULES = (
     "test_openrouter_grounded_web",
     "test_compact_claims",
     "test_compact_condition_selections",
+    "test_compact_segment_selections",
     "test_inference_budget",
     "test_factory_operational_failures",
     "test_grounded_web_failures",
