@@ -35,7 +35,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     membership_lookup = {(r['candidate_id'], r['source_id']): r for r in membership_rows}
     cs = {c['id']: c for c in candidates}; rr = {}; cr = {}
     verdicts = sa.audit_verdicts(records, cores, audits)
-    observed = any(a.get('protocol') == sa.OBSERVED_AUDIT for a in audits)
+    observed = any(a.get('protocol') in sa.OBSERVED_PROTOCOLS for a in audits)
     for record in records:
         sa.validate(record); sid = record['source']['id']
         validate_snapshot_source(snapshot, record['source'])

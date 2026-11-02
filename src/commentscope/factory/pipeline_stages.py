@@ -14,6 +14,7 @@ from commentscope.factory import shared_claims, shared_owned_positions, contextu
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory import argument_observations
 from commentscope.factory import compact_claims
+from commentscope.factory import owner_observations
 
 
 @dataclass
@@ -166,9 +167,11 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     eligible = [c for c in eligible if c['id'] in adaptable_ids]
     eligible_ids = adaptable_ids
     observed = all('meaning_context' not in c['candidate'] for c in cores)
+    split = observed and execution.extraction_protocol == compact_claims.INDEXED
+    core_protocol = argument_observations.CORE_CODED if split else argument_observations.CORE_VERSION
     core_checks = (work('core-fidelity', [c for c in cores if c['candidate']['id'] in adaptable_ids],
-                       lambda group: argument_observations.core_request(group[0]),
-                       lambda group, result: argument_observations.bind_core(group[0], result), 1)
+                       lambda group: argument_observations.core_request(group[0], protocol=core_protocol),
+                       lambda group, result: argument_observations.bind_core(group[0], result, protocol=core_protocol), 1)
                    if observed else [])
     save('core-fidelity-checks', core_checks)
     supporting = sorted({sid for cid in eligible_ids for sid in members[cid]})
@@ -224,11 +227,31 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     arguments = sorted([*(sa.bind_links(r) for r in no_facts), *linked], key=lambda r:r['source']['id'])
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
-    protocol = sa.OBSERVED_AUDIT if observed else sa.ADDRESSED_AUDIT
-    audits = work('argument-audit', tasks,
-                  lambda group: sa.audit_request(arguments, cores, group, protocol=protocol, core_checks=core_checks),
-                  lambda group, result: sa.bind_audit(arguments, cores, group, result,
-                                                     protocol=protocol, core_checks=core_checks), 1)
+    owner_checks = work('argument-owner', owner_observations.tasks(arguments, cores, tasks),
+                        lambda group: owner_observations.request(group[0]),
+                        lambda group, result: owner_observations.bind(group[0], result), 1) if split else []
+    if split: save('argument-owner-checks', owner_checks)
+    protocol = sa.SPLIT_AUDIT if split else sa.OBSERVED_AUDIT if observed else sa.ADDRESSED_AUDIT
+    audit_groups = [(arguments, cores, tasks, core_checks, owner_checks)]
+    if split:
+        # Close each original before hashing/replaying its audit. Rebuilding
+        # every author's declarations per unit grows quadratically with corpus
+        # size. Model input already contains only this original: keep its exact
+        # request while binding just the current source and its relevant cores.
+        audit_groups = []
+        for record in arguments:
+            sid = record['source']['id']; cids = set(record['candidate_ids'])
+            audit_groups.append(([record], [c for c in cores if c['candidate']['id'] in cids],
+                [t for t in tasks if t['source_id'] == sid],
+                [c for c in core_checks if c['core_id'] in cids],
+                [c for c in owner_checks if c['task']['source']['id'] == sid]))
+    audits = []
+    for scoped_records, scoped_cores, scoped_tasks, scoped_checks, scoped_owners in audit_groups:
+        audits.extend(work('argument-audit', scoped_tasks,
+            lambda group: sa.audit_request(scoped_records, scoped_cores, group,
+                                          protocol=protocol, core_checks=scoped_checks),
+            lambda group, result: sa.bind_audit(scoped_records, scoped_cores, group, result,
+                protocol=protocol, core_checks=scoped_checks, owner_checks=scoped_owners), 1))
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 

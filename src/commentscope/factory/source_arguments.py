@@ -16,6 +16,8 @@ VERSION = 'source-arguments-20261016-v4'
 ADDRESSED_AUDIT = argument_audit_wire.VERSION
 SUBJECT_AUDIT = argument_audit_wire.SUBJECT_SCOPED
 OBSERVED_AUDIT = argument_observations.VERSION
+SPLIT_AUDIT = argument_observations.SPLIT
+OBSERVED_PROTOCOLS = (OBSERVED_AUDIT, SPLIT_AUDIT)
 KINDS = ('fact', 'value', 'prediction', 'uncertain')
 ROLES = ('reason', 'essential_condition', 'factual_premise', 'concession', 'additional_position')
 SYSTEM = '''Extract source-owned arguments linked to the supplied supported CANDIDATES.
@@ -328,7 +330,7 @@ def audit_tasks(records, cores):
 
 
 def audit_request(records, cores, tasks, *, protocol=None, core_checks=()):
-    if protocol not in (None, ADDRESSED_AUDIT, SUBJECT_AUDIT, OBSERVED_AUDIT):
+    if protocol not in (None, ADDRESSED_AUDIT, SUBJECT_AUDIT, *OBSERVED_PROTOCOLS):
         raise ValueError('Unknown argument audit protocol')
     available = {t['task_id']: t for t in audit_tasks(records, cores)}
     if (not 1 <= len(tasks) <= 8 or len({t['task_id'] for t in tasks}) != len(tasks)
@@ -343,11 +345,11 @@ def audit_request(records, cores, tasks, *, protocol=None, core_checks=()):
     wire_tasks = audit_wire_tasks(records, tasks)
     if protocol:
         payload, wire_tasks = argument_audit_wire.project(payload, tasks)
-    if protocol in (SUBJECT_AUDIT, OBSERVED_AUDIT):
+    if protocol in (SUBJECT_AUDIT, *OBSERVED_PROTOCOLS):
         payload, wire_tasks = argument_audit_wire.subjects(payload, wire_tasks)
-    if protocol == OBSERVED_AUDIT:
+    if protocol in OBSERVED_PROTOCOLS:
         argument_observations.select_checks(records, cores, tasks, core_checks)
-        return argument_observations.request(payload, wire_tasks)
+        return argument_observations.request(payload, wire_tasks, protocol=protocol)
     properties = {'task_id': {'type': 'string', 'enum': [t['task_id'] for t in wire_tasks]},
                   'verdict': {'type': 'string', 'enum': ['supported', 'unsupported', 'uncertain']}}
     if protocol:
@@ -372,10 +374,12 @@ def audit_wire_tasks(records, tasks):
     return result
 
 
-def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=()):
+def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=(), owner_checks=()):
     req = audit_request(records, cores, tasks, protocol=protocol, core_checks=core_checks)
-    if protocol == OBSERVED_AUDIT:
-        return argument_observations.bind_source(records, cores, tasks, req, result, core_checks)
+    if protocol in OBSERVED_PROTOCOLS:
+        return argument_observations.bind_source(records, cores, tasks, req, result, core_checks,
+                                                 protocol=protocol, owner_checks=owner_checks)
+    if owner_checks: raise ValueError('Separate owners require the split audit protocol')
     if result.get('errors'): raise ValueError('Failed argument audit')
     value = result.get('output'); fields(value, 'decisions'); rows = value['decisions']
     if not isinstance(rows, list) or len(rows) != len(tasks): raise ValueError('Incomplete argument audit')
@@ -400,9 +404,10 @@ def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=()):
 
 def audit_verdicts(records, cores, audits):
     verdicts = {}; core_checks = {}
+    records_sha256, cores_sha256 = digest(records), digest(cores)
     for audit in audits:
         scoped_records=records;scoped_cores=cores
-        if audit['records_sha256']!=digest(records) or audit['cores_sha256']!=digest(cores):
+        if audit['records_sha256']!=records_sha256 or audit['cores_sha256']!=cores_sha256:
             # Independently closed originals keep their actual audit request;
             # never pretend they were audited in the later combined group.
             source_ids={t['source_id'] for t in audit['tasks']}
@@ -410,16 +415,17 @@ def audit_verdicts(records, cores, audits):
             candidate_ids={cid for r in scoped_records for cid in r['candidate_ids']}
             scoped_cores=[c for c in cores if c['candidate']['id'] in candidate_ids]
         if bind_audit(scoped_records, scoped_cores, audit['tasks'], {'output': audit['response']},
-                      protocol=audit.get('protocol'), core_checks=audit.get('core_checks', ())) != audit:
+                      protocol=audit.get('protocol'), core_checks=audit.get('core_checks', ()),
+                      owner_checks=audit.get('owner_checks', ())) != audit:
             raise ValueError('Argument audit binding changed')
         for row in audit['output']['decisions']:
             if row['task_id'] in verdicts: raise ValueError('Duplicate argument audit')
             verdicts[row['task_id']] = row['verdict']
-            if audit.get('protocol') == OBSERVED_AUDIT and 'source_verdict' in row:
+            if audit.get('protocol') in OBSERVED_PROTOCOLS and 'source_verdict' in row:
                 verdicts[argument_observations.source_key(row['task_id'])] = row['source_verdict']
                 for cid, verdict in row['candidate_verdicts'].items():
                     verdicts[argument_observations.candidate_key(row['task_id'], cid)] = verdict
-        if audit.get('protocol') == OBSERVED_AUDIT:
+        if audit.get('protocol') in OBSERVED_PROTOCOLS:
             for check in audit['core_checks']:
                 cid = check['core_id']
                 if cid in core_checks and core_checks[cid] != check:
