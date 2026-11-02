@@ -17,6 +17,7 @@ from urllib.request import build_opener, ProxyHandler
 from commentscope.agents.runtime_probe import QUESTIONS, runtime_probe, runtime_check
 from commentscope.factory import acceptance, fact_checks, minimal_pipeline, raw_membership_verification
 from commentscope.factory import compact_claims
+from commentscope.factory.pipeline_work import ModelResponseUnavailable
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.framed_corpus import sources
@@ -24,7 +25,7 @@ from commentscope.file_integrity import source_code_hashes as code_hashes
 from commentscope.ingestion import load_snapshot
 from commentscope.providers import evidence_nli, framed_embedding, host_resources, openrouter
 from commentscope.providers.budget import InferenceBudget, BudgetExhausted
-from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
+from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin, PendingCallError
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.openrouter_budget import PaidBudget, SpendLedger, units
@@ -277,11 +278,12 @@ def run(directory):
         except BaseException as exc:
             write(directory/'attempts'/f'{attempt:04}.failed.json', {
                 'exception': type(exc).__name__, 'elapsed_seconds': time.monotonic()-started,
+                **({'diagnostic': exc.diagnostic} if isinstance(exc, ModelResponseUnavailable) else {}),
                 'spending': spending.summary(), 'budget_after': time_budget.summary()})
             raise
 
 
-if __name__ == '__main__':
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__); commands = parser.add_subparsers(dest='action', required=True)
     p = commands.add_parser('prepare'); p.add_argument('directory', type=Path)
     p.add_argument('--gate', choices=['G1','G2','G3','G4'], default='G1'); p.add_argument('--admission-file', type=Path)
@@ -289,12 +291,29 @@ if __name__ == '__main__':
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
-    args = parser.parse_args()
-    if args.action == 'prepare':
-        plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
-                       read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
-                       admission_file=args.admission_file, discovery_mode=args.discovery_mode)
-        result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
-                  'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
-    else: result = run(args.directory)
+    args = parser.parse_args(argv)
+    try:
+        if args.action == 'prepare':
+            plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
+                           read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
+                           admission_file=args.admission_file, discovery_mode=args.discovery_mode)
+            result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
+                      'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
+        else: result = run(args.directory)
+    except (ModelResponseUnavailable, PendingCallError, BudgetExhausted, ValueError, OSError) as exc:
+        reason = ('model_response_unavailable' if isinstance(exc, ModelResponseUnavailable)
+                  else 'pending_call' if isinstance(exc, PendingCallError)
+                  else 'budget_blocked' if isinstance(exc, BudgetExhausted)
+                  else 'validation_failed' if isinstance(exc, ValueError) else 'io_unavailable')
+        print(json.dumps({'status': 'blocked', 'reason': reason, 'directory': str(args.directory),
+                          'failure_type': type(exc).__name__,
+                          'execution_complete': False, 'automatic_retry': False, 'quality_gate_passed': False,
+                          **({'diagnostic': exc.diagnostic} if isinstance(exc, ModelResponseUnavailable) else {})},
+                         ensure_ascii=False))
+        return 2
     print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
+if __name__ == '__main__':
+    raise SystemExit(main())

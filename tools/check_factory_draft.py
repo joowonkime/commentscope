@@ -32,6 +32,8 @@ MODULES = (
     "test_compact_claims",
     "test_compact_condition_selections",
     "test_inference_budget",
+    "test_factory_operational_failures",
+    "test_grounded_web_failures",
 )
 
 

@@ -109,6 +109,8 @@ class GroundedApp:
             for cid,agent in item['agents'].items():
                 self.live(); turn=agent.ask(question)
                 write(item['folder']/(rid+'.'+digest(cid)+'.json'),turn)
+                if turn['status'] == 'error':
+                    raise ValueError('Model turn failed; complete error turn persisted')
                 # Only host-rendered content, never raw model text, enters live UI.
                 turns.append({k:deepcopy(turn[k]) for k in ['candidate_id','status','answerability','limitation','points','required_premises']})
             self.live()

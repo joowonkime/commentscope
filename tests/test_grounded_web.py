@@ -12,8 +12,13 @@ from experiments.grounding_contract_demo import fixture
 
 
 def provider(system,data,schema,**kw):
+    allowed=data['PERSPECTIVE']['allowed_entries']
+    core=data['PERSPECTIVE']['core_claim_id']
+    selected=core if core in {e['claim_id'] for e in allowed} else allowed[0]['claim_id'] if allowed else None
     return {'choices':[{'finish_reason':'stop','message':{'content':json.dumps({
-        'answerability':'grounded','claim_ids':[data['PERSPECTIVE']['core_claim_id']],'limitation':'none'})}}]}
+        'answerability':'grounded' if allowed else 'not_in_evidence',
+        'claim_ids':[selected] if allowed else [],
+        'limitation':'none' if allowed else 'missing_evidence'})}}]}
 
 
 class GroundedWebTests(unittest.TestCase):
