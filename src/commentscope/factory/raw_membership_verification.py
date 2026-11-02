@@ -26,6 +26,7 @@ REFERENCED = 'raw-membership-verification-20261018-v10'
 ACYCLIC = 'raw-membership-verification-20261018-v11'
 FULL_SCOPE = 'raw-membership-verification-20261026-v12'
 EXPLAINED = 'full-scope-evidence-basis-20261102-v1'
+BRIEF = 'full-scope-evidence-basis-20261102-v2'
 AUTHORED_CONTRACTS = (AUTHORED, REFERENCED, ACYCLIC)
 NORMALIZED_TARGETS = (TARGETED_NORMALIZED, *AUTHORED_CONTRACTS)
 TARGETED_CONTRACTS = (TARGETED, *NORMALIZED_TARGETS)
@@ -328,7 +329,7 @@ def independent_candidate_view(record, candidate_scope=None):
 
 
 def evidence_request(record, version=VERSION, *, candidate_scope=None, protocol=None):
-    if protocol not in (None, EXPLAINED) or protocol and version != FULL_SCOPE:
+    if protocol not in (None, EXPLAINED, BRIEF) or protocol and version != FULL_SCOPE:
         raise ValueError('Explained evidence requires its exact full-scope contract')
     if version not in VERSIONS: raise ValueError('Unknown evidence contract')
     raw.validate(record)
@@ -375,6 +376,8 @@ consideration is not an only-if condition. If the candidate itself asserts a
 concession, that assertion must also be preserved. Explain the declared verdict
 without deliberation; all source, scope, authorship and uncertainty checks remain.
 '''
+    if protocol == BRIEF:
+        system += '\nWrite basis as one sentence of at most120 characters. Do not copy or translate a whole source sentence. A repeated predicate or substituted actor does not preserve the whole claim.\n'
     return mc.request(system, data, obj(properties), 512 if protocol else 256)
 
 

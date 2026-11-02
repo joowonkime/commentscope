@@ -16,13 +16,14 @@ class PipelineWork:
     """Keep all mutable model-work state scoped to one Factory invocation."""
 
     def __init__(self, runner, inspect, save, *, registry, membership_mode,
-                 verification_contract, schedule):
+                 verification_contract, schedule, extraction_protocol=None):
         self.runner = runner
         self.inspect = inspect
         self.save = save
         self.registry = registry
         self.membership_mode = membership_mode
         self.verification_contract = verification_contract
+        self.extraction_protocol = extraction_protocol
         self.schedule = schedule
         self.engine = None
         self.errors = []
@@ -114,7 +115,9 @@ class PipelineWork:
                             self.raw_routes[target_key]=rows[0] if rows else None
                         route=self.raw_routes[target_key]
                         if route and route['passed']:
-                            protocol = verification.EXPLAINED if self.verification_contract == verification.FULL_SCOPE else None
+                            from commentscope.factory import compact_claims
+                            protocol = (verification.BRIEF if self.extraction_protocol == compact_claims.VERSION
+                                        else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
                             rows=self.work('raw-own-evidence',[proof],
                                 lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
                                 lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)

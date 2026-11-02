@@ -13,6 +13,7 @@ from commentscope.factory import fact_checks, nli_fact_records, owned_arguments 
 from commentscope.factory import shared_claims, shared_owned_positions, contextual_runtime
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory import argument_observations
+from commentscope.factory import compact_claims
 
 
 @dataclass
@@ -63,6 +64,8 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
                     lambda rows,result:shared_claims.bind(rows,result,version=shared_claims.COMMON),
                     shared_claims.BATCH_SIZE,minimum=2))
         records=[]  # A common proposal is not a per-source extraction/completeness approval.
+    elif getattr(execution, 'extraction_protocol', None) == compact_claims.VERSION:
+        records = compact_claims.discover(sources, work)
     else:records = mc.extract_independently(sources, work)
     save('extractions', records)
     if discovery_mode=='shared':
@@ -100,7 +103,8 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         # Shared discovery already proposes common positions. Keep exact-text
         # unions only; do not run the old full-proposition equivalence stage.
         pairs = cc.nearest_pairs({cid: candidate_vectors[cid] for cid in confirmed}) if confirmed and discovery_mode!='shared' else []
-        equivalence_protocol = cc.ASSERTION_ONLY if discovery_mode == 'literal' else None
+        equivalence_protocol = (cc.ASSERTION_ONLY if discovery_mode == 'literal'
+            or getattr(execution, 'extraction_protocol', None) == compact_claims.VERSION else None)
         equivalences = [] if engine is not None else work('equivalence', pairs,
                             lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group,
                                                                   protocol=equivalence_protocol),

@@ -76,3 +76,17 @@ class MembershipEvidenceBasisTests(unittest.TestCase):
         evidence = v.bind_evidence(self.proof, {'output': value}, v.FULL_SCOPE)
         self.assertNotIn('protocol', evidence)
         self.assertTrue(evidence['passed'])
+
+    def test_brief_protocol_keeps_full_scope_vetoes_and_untruncated_response(self):
+        request = v.evidence_request(self.proof, v.FULL_SCOPE, protocol=v.BRIEF)
+        previous = v.evidence_request(self.proof, v.FULL_SCOPE, protocol=v.EXPLAINED)
+        self.assertEqual(request['data'], previous['data'])
+        self.assertEqual(request['schema'], previous['schema'])
+        self.assertNotEqual(request['system'], previous['system'])
+        record = v.bind_evidence(self.proof, {'output': self.value}, v.FULL_SCOPE, protocol=v.BRIEF)
+        self.assertTrue(record['passed'])
+        refused = v.bind_evidence(self.proof, {'output': {**self.value, 'target_alignment': 'different_target'}},
+                                  v.FULL_SCOPE, protocol=v.BRIEF)
+        self.assertFalse(refused['passed'])
+        with self.assertRaises(ValueError):
+            v.bind_evidence(self.proof, {'output': {**self.value, 'basis': 'x'*241}}, v.FULL_SCOPE, protocol=v.BRIEF)

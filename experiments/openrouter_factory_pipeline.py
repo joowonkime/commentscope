@@ -16,6 +16,7 @@ from urllib.request import build_opener, ProxyHandler
 
 from commentscope.agents.runtime_probe import QUESTIONS, runtime_probe, runtime_check
 from commentscope.factory import acceptance, fact_checks, minimal_pipeline, raw_membership_verification
+from commentscope.factory import compact_claims
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.framed_corpus import sources
@@ -32,7 +33,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261102-v2'
+VERSION = 'minimal-factory-openrouter-executor-20261102-v3'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -61,14 +62,15 @@ def archive_sources(directory, manifest):
         target.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(path, target)
 
 
-def check_admission(gate, deployment, admission_file, materials, policy):
-    prior_admission(gate, deployment, admission_file, 'literal', 'raw')
+def check_admission(gate, deployment, admission_file, materials, policy, *, discovery_mode='literal'):
+    prior_admission(gate, deployment, admission_file, discovery_mode, 'raw')
     required = {'G1': (), 'G2': ('G1',), 'G3': ('G1', 'G2'), 'G4': ('G1', 'G2', 'G3')}[gate]
     if not required: return
     manifest = read_json(admission_file)
     for stage in required:
         previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
+                or previous['extraction_protocol'] != (compact_claims.VERSION if discovery_mode == 'free' else None)
                 or any(previous[k] != materials[k] for k in ('classifier', 'model_files', 'documents', 'selections'))):
             raise ValueError('Qualification uses another remote executor, auxiliary model, evidence or shared budget')
 
@@ -91,17 +93,18 @@ def fixed_scope(gate):
     return snapshot, list(scope), path
 
 
-def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None):
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal'):
     private(directory); private(materials_file)
     if directory.exists(): raise ValueError('New remote Factory directory required')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
+    if discovery_mode not in ('literal', 'free'): raise ValueError('Unknown remote discovery mode')
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
     materials = read_json(materials_file)
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
         raise ValueError('Pinned classifier, model files and evidence required')
     if admission_file is not None: private(admission_file)
-    check_admission(gate, deployment, admission_file, materials, policy)
+    check_admission(gate, deployment, admission_file, materials, policy, discovery_mode=discovery_mode)
     snapshot, scope, original_path = fixed_scope(gate)
     provider = provider_preflight(deployment)
     fact_checks.live(snapshot.usage.expires_at)
@@ -118,7 +121,8 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': gate,
             'goal_revision': acceptance.R5, 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
-            'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': 'literal', 'membership_mode': 'raw',
+            'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
+            'extraction_protocol': compact_claims.VERSION if discovery_mode == 'free' else None,
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
@@ -145,7 +149,8 @@ def validate(directory, plan):
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
     profile = acceptance.from_plan(plan)
     if (plan['artifact_kind'] != VERSION or plan['gate'] not in ('G1', 'G2', 'G3', 'G4') or profile is None
-            or plan['discovery_mode'] != 'literal' or plan['membership_mode'] != 'raw'
+            or plan['discovery_mode'] not in ('literal', 'free') or plan['membership_mode'] != 'raw'
+            or plan['extraction_protocol'] != (compact_claims.VERSION if plan['discovery_mode'] == 'free' else None)
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE
@@ -162,7 +167,7 @@ def validate(directory, plan):
         raise ValueError('Frozen remote code, input or model changed')
     material = {k: plan[k] for k in ('classifier', 'model_files', 'documents', 'selections')}
     admission_file = Path(plan['admission_file']) if plan['admission_file'] is not None else None
-    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'])
+    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'], discovery_mode=plan['discovery_mode'])
     expected_snapshot, expected_scope, original_path = fixed_scope(plan['gate'])
     expected_path = directory/'snapshot.json' if plan['gate'] == 'G1' else original_path
     if (Path(plan['snapshot']).resolve() != expected_path.resolve()
@@ -254,7 +259,8 @@ def run(directory):
                 output = minimal_pipeline.process(snapshot, CheckedRunner(), embed, inspect, facts,
                     model=plan['classifier'], documents=plan['documents'], selections=plan['selections'],
                     scope_ids=plan['scope_ids'], save=save, discovery_mode=plan['discovery_mode'],
-                    membership_mode=plan['membership_mode'], verification_contract=plan['verification_contract'])
+                    membership_mode=plan['membership_mode'], verification_contract=plan['verification_contract'],
+                    extraction_protocol=plan['extraction_protocol'])
                 save('output', output)
                 runtime = runtime_probe(output['agent_inputs']['bundle'], CheckedRunner(),
                     save_turn=lambda row: save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'], row))
@@ -279,13 +285,15 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__); commands = parser.add_subparsers(dest='action', required=True)
     p = commands.add_parser('prepare'); p.add_argument('directory', type=Path)
     p.add_argument('--gate', choices=['G1','G2','G3','G4'], default='G1'); p.add_argument('--admission-file', type=Path)
+    p.add_argument('--discovery-mode', choices=['literal', 'free'], default='literal')
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
     args = parser.parse_args()
     if args.action == 'prepare':
         plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
-                       read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate, admission_file=args.admission_file)
+                       read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
+                       admission_file=args.admission_file, discovery_mode=args.discovery_mode)
         result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                   'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
     else: result = run(args.directory)
