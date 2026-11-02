@@ -107,7 +107,7 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         pairs = cc.nearest_pairs({cid: candidate_vectors[cid] for cid in confirmed}) if confirmed and discovery_mode!='shared' else []
         equivalence_protocol = (cc.ASSERTION_ONLY if discovery_mode == 'literal'
             or getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS else None)
-        bilateral = getattr(execution, 'extraction_protocol', None) == compact_claims.SEGMENTED
+        bilateral = getattr(execution, 'extraction_protocol', None) in compact_claims.WORLD_CONTEXT_PROTOCOLS
         if bilateral: equivalence_protocol = cc.BILATERAL
         equivalences = [] if engine is not None else work('equivalence', pairs,
                             lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group,

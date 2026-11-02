@@ -116,7 +116,8 @@ class CompactPipelineTests(unittest.TestCase):
                         count = len(source['ORIGINAL_SEGMENTS'])
                         result['output']['c'][0].update(e='1'+'0'*(count-1), k='0'*count)
                     elif req['schema']['properties']['c']['items']['properties']['e']['type'] == 'array':
-                        result['output']['v'] = []
+                        if 'v' in req['schema']['properties']: result['output']['v'] = []
+                        else: result['output']['c'][0]['l'] = ''
                         result['output']['c'][0].update(e=['S000'], k=[])
                     if source['source_id'] == self.fail_source: result['output']['c'] = []
                     return result
@@ -188,6 +189,44 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
         self.assertTrue(all(r['artifact_kind'] == compact.SEGMENTED for r in result['extractions']))
         self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
+        self.assertFalse(result['quality_gate_passed'])
+
+    def test_unified_pipeline_retains_world_bilateral_and_owner_checks(self):
+        from commentscope.factory import source_arguments as sa, candidate_consolidation as cc
+        from commentscope.factory import raw_membership as raw, raw_membership_verification as verification
+        from commentscope.factory import statement_worlds as worlds, source_context_observations as contexts
+        from test_raw_membership_source_context import observation
+        helper, Runner = self.fixture()
+        class RawRunner(Runner):
+            def call(self, stage, req):
+                system, data = req['system'], req['data']
+                if system.startswith(contexts.SYSTEM):
+                    value = {'source_use': 'substantive_assertion', 'reported_descriptors': []}
+                elif system.startswith(worlds.SYSTEM): value = {'world': 'real_world', 'anchor': ''}
+                elif system.startswith(raw.SYSTEM):
+                    text = data['ORIGINAL']['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].strip().rstrip('.')
+                    value = observation(); value.update(source_use='substantive_assertion',
+                        relation='supported' if text == data['CANDIDATE']['text'].rstrip('.') else 'opposed')
+                elif system.startswith(verification.FOCUS):
+                    value = {'focus_token': 'T1', 'focus_domain': 'substantive_issue',
+                             'role': 'subject_position', 'interpretation': 'clear'}
+                elif system.startswith((verification.GROUNDED_EVIDENCE, verification.ALIGNED_EVIDENCE)):
+                    value = {'reference_basis': 'self_contained', 'target_alignment': 'aligned',
+                             'source_basis': 'own_assertion', 'verdict': 'fully_stated',
+                             'basis': 'Authored synthetic own-evidence declaration.'}
+                else: return super().call(stage, req)
+                self.calls.append((stage, req))
+                return {'output': value, 'raw': 'authored fixture only', 'errors': []}
+        runner = RawRunner()
+        result = helper.process(runner, extraction_protocol=compact.UNIFIED, membership_mode='raw',
+                                verification_contract=verification.FULL_SCOPE)
+        self.assertFalse(result['errors'])
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
+        self.assertTrue(all(r['artifact_kind'] == compact.UNIFIED for r in result['extractions']))
+        self.assertTrue(all(r['protocol'] == cc.BILATERAL for r in result['equivalences']))
+        self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
+        self.assertTrue(all(a['raw']['artifact_kind'] == raw.WORLD_CONTEXT
+                            for b in result['memberships'] for a in b['verified_assessments']))
         self.assertFalse(result['quality_gate_passed'])
 
     def test_segmented_pipeline_vetoes_primary_equivalence_when_independent_check_finds_a_counterexample(self):

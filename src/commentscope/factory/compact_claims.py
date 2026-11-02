@@ -15,9 +15,11 @@ MASKED = 'compact-source-claims-20261102-v2'
 INDEXED = 'compact-source-claims-20261102-v3'
 SEGMENTED_BOUNDED = 'compact-source-claims-20261103-v4'
 SEGMENTED = 'compact-source-claims-20261103-v5'
+UNIFIED = 'compact-source-claims-20261103-v6'
 SEGMENTED_VERSIONS = (SEGMENTED_BOUNDED, SEGMENTED)
-VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS)
-INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS)
+VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS, UNIFIED)
+INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS, UNIFIED)
+WORLD_CONTEXT_PROTOCOLS = (SEGMENTED, UNIFIED)
 PREFIX = 'Extract one fixed original through a compact source transport.\n'
 FIDELITY = '''
 Authorship identifies the speaker inside the original, not the analyst reading it.
@@ -94,6 +96,30 @@ PREVIOUS; supplements cannot repeat or reclassify existing propositions.
 At most16 total propositions,600 characters per text,24 unique IDs per list.
 Authorship and selections are proposals, never semantic approval or support.
 '''
+UNIFIED_WIRE = '''
+Return s=status and exactly one proposition array c, with at most16 rows TOTAL.
+Each row has e=original evidence IDs, k=essential-condition IDs, a=authorship,
+t=rewritten text or the empty string, and l=locked reference or the empty string.
+Choose exactly ONE representation per proposition. Never repeat a proposition,
+including once as original wording and again as rewritten text. A repeated
+sentence in the source is not permission to repeat the same proposition.
+For a complete self-contained literal proposition, use t="" and l="", selecting
+consecutive original segments in order; all k must be included in e. The host
+copies the complete selected text. Do not select unresolved references or omit
+the setting, voice or conditions. Otherwise use l="" and a complete rewritten t,
+at most600 characters, preserving scope and attribution. Every row needs nonempty
+e from this original, not a parent. At most24 unique IDs per address list.
+For a LOCKED_CONDITIONAL, set l to its allowed ID, t="", and copy its exact e/k
+ID lists from the supplied evidence_segment_ids/essential_condition_segment_ids.
+Its complete literal text is preserved by the host. Never use its segments in
+another row or rewrite just its conclusion. To omit it, emit no row for it.
+Never repeat a proposition already in PREVIOUS, including a locked one.
+All literal, rewritten and locked propositions share the SAME16-row limit.
+When further substantive propositions remain because of that limit, use partial;
+the existing bounded supplement can nominate remaining content. Do not emit17
+rows or repeat earlier rows to claim completeness. Selection is not semantic
+approval, source support or factual verification.
+'''
 
 
 def conditional_selections(source):
@@ -135,6 +161,59 @@ def segment_addresses(value, ids, *, minimum=0):
     return value
 
 
+def unified_request(canonical, source, previous):
+    ids = [s['id'] for s in mc.packet(source)['ORIGINAL_SEGMENTS']]
+    locked = conditional_selections(source)
+    previous_ids = {c['id'] for c in previous['claims']} if previous is not None else set()
+    allowed = [row['id'] for row in locked if mc.claim_id(row['text']) not in previous_ids]
+    canonical['data']['LOCKED_CONDITIONALS'] = locked
+    canonical['data']['PROPOSITION_CAPACITY'] = 16
+    evidence = {'type': 'array', 'items': {'type': 'string', 'enum': ids}, 'minItems': 1}
+    conditions = {'type': 'array', 'items': {'type': 'string', 'enum': ids}, 'minItems': 0}
+    claim = obj({'e': evidence, 'k': conditions, 'a': {'type': 'string', 'enum': list(mc.AUTHORSHIP)},
+                 't': {'type': 'string', 'description': 'Empty for literal/locked; otherwise a complete rewrite, at most600 characters.'},
+                 'l': {'type': 'string', 'enum': ['', *allowed]}})
+    schema = obj({'s': {'type': 'string', 'enum': list(mc.STATUSES)},
+                  'c': array(claim, minimum=0, maximum=16)})
+    system = mc.SUPPLEMENT_SYSTEM if previous is not None else mc.SYSTEM
+    return mc.request(PREFIX+system+FIDELITY+UNIFIED_WIRE, canonical['data'], schema, 3072)
+
+
+def unified_claims(source, value, req):
+    segments = mc.packet(source)['ORIGINAL_SEGMENTS']; ids = [s['id'] for s in segments]
+    locked = {row['id']: row for row in req['data']['LOCKED_CONDITIONALS']}
+    locked_ids = {sid for row in locked.values() for sid in row['evidence_segment_ids']}
+    allowed = req['schema']['properties']['c']['items']['properties']['l']['enum']
+    claims = []
+    for row in value['c']:
+        fields(row, 'e k a t l')
+        evidence = segment_addresses(row['e'], ids, minimum=1)
+        conditions = segment_addresses(row['k'], ids)
+        if (not isinstance(row['t'], str) or row['t'] and not row['t'].strip()
+                or not isinstance(row['l'], str) or row['l'] not in allowed):
+            raise ValueError('Exact unified text and allowed locked reference required')
+        if row['l']:
+            selected = locked[row['l']]
+            if (row['t'] or evidence != selected['evidence_segment_ids']
+                    or conditions != selected['essential_condition_segment_ids']):
+                raise ValueError('Complete locked conditional requires its exact text selection and conditions')
+            text = selected['text']
+        else:
+            if locked_ids.intersection(evidence+conditions):
+                raise ValueError('Complete locked conditional must be selected, never split into free claims')
+            text = row['t']
+            if not text:
+                positions = [ids.index(sid) for sid in evidence]
+                if positions != list(range(positions[0], positions[0]+len(positions))):
+                    raise ValueError('Verbatim selection requires consecutive original segments in order')
+                if not set(conditions) <= set(evidence):
+                    raise ValueError('Verbatim text must include its essential conditions')
+                text = source['text'][segments[positions[0]]['start']:segments[positions[-1]]['end']].strip()
+        claims.append({'text': text, 'authorship': row['a'], 'evidence_segment_ids': evidence,
+                       'essential_condition_segment_ids': conditions})
+    return claims
+
+
 def request(source, *, previous=None, protocol=VERSION):
     if protocol not in VERSIONS: raise ValueError('Unknown compact transport')
     prior = []
@@ -143,6 +222,7 @@ def request(source, *, previous=None, protocol=VERSION):
         if previous['artifact_kind'] != protocol: raise ValueError('Compact supplement protocol changed')
         prior = [previous['canonical_record']]
     canonical = mc.extraction_request([source], prior)
+    if protocol == UNIFIED: return unified_request(canonical, source, previous)
     claim = obj({'t': {'type': 'string'}, 'e': {'type': 'string'}, 'k': {'type': 'string'},
                  'a': {'type': 'string', 'enum': list(mc.AUTHORSHIP)}})
     schema = obj({'s': {'type': 'string', 'enum': list(mc.STATUSES)},
@@ -197,6 +277,8 @@ def bind(source, result, *, previous=None, protocol=VERSION):
     fields(value, ' '.join(req['schema']['properties']))
     if not isinstance(value['c'], list) or len(value['c']) > 16:
         raise ValueError('Original sixteen-proposition capacity required')
+    if protocol == UNIFIED:
+        return canonical_record(source, value, unified_claims(source, value, req), previous, protocol, req)
     claims = []
     locked = req['data'].get('LOCKED_CONDITIONALS', [])
     locked_ids = {sid for row in locked for sid in row['evidence_segment_ids']}
@@ -249,6 +331,10 @@ def bind(source, result, *, previous=None, protocol=VERSION):
         claims.append({'text': row['t'], 'authorship': row['a'],
                        'evidence_segment_ids': evidence,
                        'essential_condition_segment_ids': conditions})
+    return canonical_record(source, value, claims, previous, protocol, req)
+
+
+def canonical_record(source, value, claims, previous, protocol, req):
     normalized = {'sources': [{'source_id': source['id'], 'status': value['s'], 'claims': claims}]}
     canonical = mc.bind_extraction([source], {'output': normalized},
         [previous['canonical_record']] if previous is not None else [])[0]

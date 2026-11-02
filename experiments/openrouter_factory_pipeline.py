@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261103-v8'
+VERSION = 'minimal-factory-openrouter-executor-20261103-v9'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -73,7 +73,7 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
     for stage in required:
         previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
-                or previous['extraction_protocol'] != (compact_claims.SEGMENTED if discovery_mode == 'free' else None)
+                or previous['extraction_protocol'] != (compact_claims.UNIFIED if discovery_mode == 'free' else None)
                 or previous.get('assertion_equivalence_protocol') != (candidate_consolidation.BILATERAL if discovery_mode == 'free' else None)
                 or previous.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
                 or previous.get('source_context_protocol') != (source_context_observations.VERSION if discovery_mode == 'free' else None)
@@ -129,7 +129,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'goal_revision': acceptance.R5, 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
-            'extraction_protocol': compact_claims.SEGMENTED if discovery_mode == 'free' else None,
+            'extraction_protocol': compact_claims.UNIFIED if discovery_mode == 'free' else None,
             'assertion_equivalence_protocol': candidate_consolidation.BILATERAL if discovery_mode == 'free' else None,
             'membership_observation_protocol': raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
             'source_context_protocol': source_context_observations.VERSION if discovery_mode == 'free' else None,
@@ -161,7 +161,7 @@ def validate(directory, plan):
     profile = acceptance.from_plan(plan)
     if (plan['artifact_kind'] != VERSION or plan['gate'] not in ('G1', 'G2', 'G3', 'G4') or profile is None
             or plan['discovery_mode'] not in ('literal', 'free') or plan['membership_mode'] != 'raw'
-            or plan['extraction_protocol'] != (compact_claims.SEGMENTED if plan['discovery_mode'] == 'free' else None)
+            or plan['extraction_protocol'] != (compact_claims.UNIFIED if plan['discovery_mode'] == 'free' else None)
             or plan.get('assertion_equivalence_protocol') != (candidate_consolidation.BILATERAL if plan['discovery_mode'] == 'free' else None)
             or plan.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if plan['discovery_mode'] == 'free' else raw_membership.VERSION)
             or plan.get('source_context_protocol') != (source_context_observations.VERSION if plan['discovery_mode'] == 'free' else None)
