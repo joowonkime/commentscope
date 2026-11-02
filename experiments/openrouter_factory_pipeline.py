@@ -300,10 +300,13 @@ def main(argv=None):
             result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                       'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
         else: result = run(args.directory)
-    except (ModelResponseUnavailable, PendingCallError, BudgetExhausted) as exc:
+    except (ModelResponseUnavailable, PendingCallError, BudgetExhausted, ValueError, OSError) as exc:
         reason = ('model_response_unavailable' if isinstance(exc, ModelResponseUnavailable)
-                  else 'pending_call' if isinstance(exc, PendingCallError) else 'budget_blocked')
+                  else 'pending_call' if isinstance(exc, PendingCallError)
+                  else 'budget_blocked' if isinstance(exc, BudgetExhausted)
+                  else 'validation_failed' if isinstance(exc, ValueError) else 'io_unavailable')
         print(json.dumps({'status': 'blocked', 'reason': reason, 'directory': str(args.directory),
+                          'failure_type': type(exc).__name__,
                           'execution_complete': False, 'automatic_retry': False, 'quality_gate_passed': False,
                           **({'diagnostic': exc.diagnostic} if isinstance(exc, ModelResponseUnavailable) else {})},
                          ensure_ascii=False))

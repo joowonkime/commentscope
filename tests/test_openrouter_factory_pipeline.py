@@ -82,7 +82,7 @@ class OpenRouterExecutorTests(unittest.TestCase):
         failure = executor.ModelResponseUnavailable('extract', 'a'*64, 'b'*64)
         self.process.side_effect = failure
         with self.assertRaises(executor.ModelResponseUnavailable): executor.run(self.run_dir)
-        report = json.loads((self.run_dir/'attempts/0001.failed.json').read_text())
+        report = json.loads((self.run_dir/'attempts/0001.failed.json').read_text(encoding='utf-8'))
         self.assertEqual(report['diagnostic'], failure.diagnostic)
         self.assertFalse((self.run_dir/'completed.json').exists())
         self.time_budget.call.assert_not_called()

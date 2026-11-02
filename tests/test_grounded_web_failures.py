@@ -25,7 +25,7 @@ class FailedRoundTests(unittest.TestCase):
         app,token,folder=self.app(lambda *a,**kw:{'choices':[{'finish_reason':'stop','message':{'content':'invalid-json'}}]})
         app.ask(token,'Position?','q1');self.assert_rolled_back(app,token,self.finish(app,token))
         turns=[p for p in folder.glob('*/q1.*.json') if not p.name.endswith(('failure.json','round.json','request.json'))]
-        self.assertEqual(len(turns),1);self.assertEqual(json.loads(turns[0].read_text())['status'],'error')
+        self.assertEqual(len(turns),1);self.assertEqual(json.loads(turns[0].read_text(encoding='utf-8'))['status'],'error')
     def test_transport_error_is_not_a_successful_abstention_round(self):
         def broken(*a,**kw):raise URLError('authored offline failure')
         app,token,_=self.app(broken);app.ask(token,'Position?','q1')

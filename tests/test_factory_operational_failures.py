@@ -64,7 +64,9 @@ class OperationalFailureTests(unittest.TestCase):
         failure = pipeline_work.ModelResponseUnavailable('extract', 'a'*64, 'b'*64)
         for error, reason in ((failure, 'model_response_unavailable'),
                               (PendingCallError('pending'), 'pending_call'),
-                              (BudgetExhausted('budget'), 'budget_blocked')):
+                              (BudgetExhausted('budget'), 'budget_blocked'),
+                              (ValueError('private validation detail'), 'validation_failed'),
+                              (FileNotFoundError('private file detail'), 'io_unavailable')):
             with self.subTest(reason=reason), patch.object(executor, 'run', side_effect=error) as run:
                 output = io.StringIO()
                 with redirect_stdout(output): code = executor.main(['run', 'runs/authored-fault-test'])
@@ -72,6 +74,8 @@ class OperationalFailureTests(unittest.TestCase):
                 self.assertNotEqual(code, 0); self.assertEqual(report['reason'], reason)
                 self.assertFalse(report['automatic_retry']); self.assertFalse(report['quality_gate_passed'])
                 self.assertFalse(report['execution_complete'])
+                self.assertEqual(report['failure_type'], type(error).__name__)
+                self.assertNotIn('private', output.getvalue())
                 run.assert_called_once()
 
 
