@@ -1,7 +1,7 @@
 """Explicit stages of candidate discovery through grounded Agent assembly.
 
-Stage results are internal records. Public artifacts and model requests keep
-exactly the existing schemas, IDs and save order. Review labels are not inputs.
+Stage results preserve source identities and versioned evidence. Independent
+review labels stay outside model inputs.
 """
 from copy import deepcopy
 from dataclasses import dataclass
@@ -12,6 +12,7 @@ from commentscope.factory import source_arguments as sa, minimal_agents as ma
 from commentscope.factory import fact_checks, nli_fact_records, owned_arguments as oa
 from commentscope.factory import shared_claims, shared_owned_positions, contextual_runtime
 from commentscope.factory.automatic_contract import digest
+from commentscope.factory import argument_observations
 
 
 @dataclass
@@ -160,6 +161,12 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     adaptable_ids = {r['candidate']['id'] for r in cores if not r.get('hold_reasons') and r['output']['kind']!='uncertain'}
     eligible = [c for c in eligible if c['id'] in adaptable_ids]
     eligible_ids = adaptable_ids
+    observed = all('meaning_context' not in c['candidate'] for c in cores)
+    core_checks = (work('core-fidelity', [c for c in cores if c['candidate']['id'] in adaptable_ids],
+                       lambda group: argument_observations.core_request(group[0]),
+                       lambda group, result: argument_observations.bind_core(group[0], result), 1)
+                   if observed else [])
+    save('core-fidelity-checks', core_checks)
     supporting = sorted({sid for cid in eligible_ids for sid in members[cid]})
     arguments = []
     for sid in supporting:
@@ -213,10 +220,11 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     arguments = sorted([*(sa.bind_links(r) for r in no_facts), *linked], key=lambda r:r['source']['id'])
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
+    protocol = sa.OBSERVED_AUDIT if observed else sa.ADDRESSED_AUDIT
     audits = work('argument-audit', tasks,
-                  lambda group: sa.audit_request(arguments, cores, group, protocol=sa.SUBJECT_AUDIT),
+                  lambda group: sa.audit_request(arguments, cores, group, protocol=protocol, core_checks=core_checks),
                   lambda group, result: sa.bind_audit(arguments, cores, group, result,
-                                                     protocol=sa.SUBJECT_AUDIT), 1)
+                                                     protocol=protocol, core_checks=core_checks), 1)
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 

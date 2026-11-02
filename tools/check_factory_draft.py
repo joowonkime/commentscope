@@ -16,6 +16,7 @@ MODULES = (
     "test_equivalence_assertion_boundary",
     "test_argument_audit_wire",
     "test_argument_audit_subjects",
+    "test_argument_observations",
     "test_comment_utilization",
     "test_acceptance_r5",
     "test_factory_review_r5",

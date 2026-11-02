@@ -6,6 +6,7 @@ from commentscope.factory import minimal_pipeline, minimal_claims as mc, minimal
 from commentscope.factory import candidate_consolidation as cc, source_arguments as sa, proposition_requirements as pr
 from commentscope.factory import owned_arguments as oa
 from commentscope.factory import literal_discovery as ld
+from commentscope.factory import argument_observations as observations
 from commentscope.factory.automatic_contract import digest
 from commentscope.ingestion import load_snapshot
 from commentscope.agents.grounded_runtime import SYSTEM as RUNTIME_SYSTEM
@@ -35,6 +36,23 @@ class ScriptedRunner:
             value={'status':'complete','qualifications':[]}
         elif system.startswith(cc.SYSTEM):
             value = {'decisions': [{'pair_id': p['pair_id'], 'relation': 'opposed'} for p in data['PAIRS']]}
+        elif system.startswith(observations.CORE_SYSTEM):
+            value = {'observations': [{'actual_kind': 'value', 'time_ids': [],
+                'entity_fidelity': 'yes', 'conditions_fidelity': 'yes', 'basis': 'Authored normative toy candidate.'}]}
+        elif system.startswith(observations.SOURCE_SYSTEM):
+            rows = []
+            for task in data['TASKS']:
+                row = {'task_id': task['task_id'], 'dependency_fidelity': 'yes', 'basis': 'Authored toy source observation.'}
+                if task['kind'] == 'coverage':
+                    row.update(actual_source_language='en', source_coverage='complete')
+                else:
+                    target = task['SOURCE_TARGET']
+                    row.update(actual_kind='value', time_ids=[a['id'] for a in target['TIME_ANCHORS']],
+                        entity_fidelity='yes', conditions_fidelity='yes', actual_authorship='asserted_or_endorsed',
+                        actual_function='reason' if target['text'].startswith('because ') else 'position',
+                        owner_relations=[{'candidate_id': c['id'], 'relation': 'equivalent'} for c in task['LINK_TARGETS']])
+                rows.append(row)
+            value = {'observations': rows}
         elif system.startswith(oa.CORE):
             value={'kind':'value','entity':'P','time_ids':[]}
         elif system.startswith(oa.META):
@@ -94,7 +112,7 @@ class MinimalPipelineTests(unittest.TestCase):
         self.assertEqual(self.embeddings, ['sources', 'candidates'])
         self.assertFalse(output['errors']); self.assertFalse(output['capacity_holds'])
         self.assertTrue(output['audits'])
-        self.assertTrue(all(a['protocol'] == sa.SUBJECT_AUDIT for a in output['audits']))
+        self.assertTrue(all(a['protocol'] == sa.OBSERVED_AUDIT for a in output['audits']))
         self.assertTrue(all(row['basis'] for a in output['audits'] for row in a['output']['decisions']))
         runtime = runtime_probe(output['agent_inputs']['bundle'], runner)
         self.assertEqual(len(runtime['turns']), 6)
