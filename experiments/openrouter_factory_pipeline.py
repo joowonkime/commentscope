@@ -1,7 +1,7 @@
-"""Fresh whole G1 Factory on OpenRouter with pinned local embedding/NLI.
+"""Frozen G1/G2/G3/G4 Factory on OpenRouter with pinned local embedding/NLI.
 
 Execution completion is never semantic admission. All outputs, charges and
-failed turns remain private. G2/G3/G4 require separate qualification support.
+failed turns remain private. Larger gates require bound, fully replayed prior qualification reviews.
 """
 import argparse
 from copy import deepcopy
@@ -29,10 +29,11 @@ from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.openrouter_budget import PaidBudget, SpendLedger, units
 from commentscope.storage import write_json_exclusive as write
 from experiments.compare_backend_discovery import check_quota, quota_watch
-from experiments.minimal_factory_pipeline import synthetic12
+from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261102-v1'
+VERSION = 'minimal-factory-openrouter-executor-20261102-v2'
+SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
 def provider_preflight(deployment):
@@ -60,31 +61,72 @@ def archive_sources(directory, manifest):
         target.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(path, target)
 
 
-def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd):
+def check_admission(gate, deployment, admission_file, materials, policy):
+    prior_admission(gate, deployment, admission_file, 'literal', 'raw')
+    required = {'G1': (), 'G2': ('G1',), 'G3': ('G1', 'G2'), 'G4': ('G1', 'G2', 'G3')}[gate]
+    if not required: return
+    manifest = read_json(admission_file)
+    for stage in required:
+        previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
+        if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
+                or any(previous[k] != materials[k] for k in ('classifier', 'model_files', 'documents', 'selections'))):
+            raise ValueError('Qualification uses another remote executor, auxiliary model, evidence or shared budget')
+
+
+def fixed_scope(gate):
+    if gate == 'G1': return synthetic12(), list('ABCDEFGHIJKL'), None
+    samples = read_json(SAMPLES); path = Path(samples['snapshot'])
+    if sha(path) != samples['snapshot_sha256']:
+        raise ValueError('Frozen sample snapshot changed')
+    snapshot = load_snapshot(path).snapshot; ids = set(sources(snapshot))
+    if len(ids) != 999 or samples['canonical_population'] != 999:
+        raise ValueError('Fixed canonical population must remain 999')
+    development = samples['development']['source_ids']; holdout = samples['holdout']['source_ids']
+    for selected, count in ((development, 24), (holdout, 96)):
+        if (not isinstance(selected, list) or len(selected) != count
+                or len(set(selected)) != count or not set(selected) <= ids):
+            raise ValueError('Fixed unique development/holdout source scope required')
+    if set(development) & set(holdout): raise ValueError('Development and holdout must be disjoint')
+    scope = sorted(ids) if gate == 'G4' else development if gate == 'G2' else holdout
+    return snapshot, list(scope), path
+
+
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None):
     private(directory); private(materials_file)
     if directory.exists(): raise ValueError('New remote Factory directory required')
+    if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
-    provider = provider_preflight(deployment); materials = read_json(materials_file)
+    materials = read_json(materials_file)
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
         raise ValueError('Pinned classifier, model files and evidence required')
-    snapshot = synthetic12(); scope = sorted(sources(snapshot))
-    if scope != list('ABCDEFGHIJKL'): raise ValueError('Original twelve-source G1 required')
+    if admission_file is not None: private(admission_file)
+    check_admission(gate, deployment, admission_file, materials, policy)
+    snapshot, scope, original_path = fixed_scope(gate)
+    provider = provider_preflight(deployment)
     fact_checks.live(snapshot.usage.expires_at)
     for document in materials['documents']: fact_checks.live(document['expires_at'])
     if any(sha(p) != h for p, h in materials['model_files'].items()): raise ValueError('Auxiliary model changed')
     profile = acceptance.validate(read_json('tests/fixtures/factory-acceptance-r5.json'), acceptance.R5_DIGEST)
-    acceptance.check_scope(profile, 'G1', len(scope), None)
-    write(directory/'snapshot.json', snapshot.to_dict())
-    plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': 'G1',
+    if gate == 'G1': acceptance.check_scope(profile, gate, len(scope), None)
+    elif len(scope) != profile['gates'][gate]['sources']: raise ValueError('Fixed r5 processing count changed')
+    if gate == 'G1': write(directory/'snapshot.json', snapshot.to_dict())
+    snapshot_path = directory/'snapshot.json' if gate == 'G1' else original_path
+    inputs = {str(materials_file): sha(materials_file)}
+    if gate != 'G1': inputs[str(SAMPLES)] = sha(SAMPLES)
+    if admission_file is not None: inputs[str(admission_file)] = sha(admission_file)
+    plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': gate,
             'goal_revision': acceptance.R5, 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': 'literal', 'membership_mode': 'raw',
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
-            'snapshot': str(directory/'snapshot.json'), 'snapshot_sha256': sha(directory/'snapshot.json'),
+            'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
+            'canonical_population': len(sources(snapshot)), 'processing_count': len(scope),
+            'sample_file': str(SAMPLES) if gate != 'G1' else None,
+            'admission_file': str(admission_file) if admission_file is not None else None,
             'scope_ids': scope, 'expires_at': snapshot.usage.expires_at,
-            'inputs': {str(materials_file): sha(materials_file)}, 'code_sha256': code_hashes(),
+            'inputs': inputs, 'code_sha256': code_hashes(),
             **deepcopy(materials), 'questions': deepcopy(QUESTIONS), 'schedule': deepcopy(minimal_pipeline.SCHEDULE),
             'resource_policy': deepcopy(host_resources.POLICY),
             'limits': {'analysis_seconds': None, 'call_seconds': deployment['call_seconds'],
@@ -102,8 +144,7 @@ def validate(directory, plan):
         raise ValueError('Frozen remote plan changed')
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
     profile = acceptance.from_plan(plan)
-    if (plan['artifact_kind'] != VERSION or plan['gate'] != 'G1' or profile is None
-            or plan['scope_ids'] != list('ABCDEFGHIJKL')
+    if (plan['artifact_kind'] != VERSION or plan['gate'] not in ('G1', 'G2', 'G3', 'G4') or profile is None
             or plan['discovery_mode'] != 'literal' or plan['membership_mode'] != 'raw'
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
@@ -113,16 +154,26 @@ def validate(directory, plan):
             or plan['quality_gate_passed'] is not False
             or plan['limits'] != {'analysis_seconds': None, 'call_seconds': deployment['call_seconds'],
                                   'embedding_seconds': 900, 'fact_batch_seconds': 600}):
-        raise ValueError('Frozen remote G1 execution contract changed')
-    acceptance.check_scope(profile, 'G1', len(plan['scope_ids']), None)
+        raise ValueError('Frozen remote execution contract changed')
+    if plan['gate'] == 'G1': acceptance.check_scope(profile, 'G1', len(plan['scope_ids']), None)
+    elif len(plan['scope_ids']) != profile['gates'][plan['gate']]['sources']: raise ValueError('Fixed r5 processing count changed')
     if (plan['code_sha256'] != code_hashes()
             or any(sha(p) != h for group in ('inputs', 'model_files') for p, h in plan[group].items())):
         raise ValueError('Frozen remote code, input or model changed')
-    if Path(plan['snapshot']).resolve() != (directory/'snapshot.json').resolve(): raise ValueError('Snapshot location changed')
+    material = {k: plan[k] for k in ('classifier', 'model_files', 'documents', 'selections')}
+    admission_file = Path(plan['admission_file']) if plan['admission_file'] is not None else None
+    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'])
+    expected_snapshot, expected_scope, original_path = fixed_scope(plan['gate'])
+    expected_path = directory/'snapshot.json' if plan['gate'] == 'G1' else original_path
+    if (Path(plan['snapshot']).resolve() != expected_path.resolve()
+            or plan['sample_file'] != (str(SAMPLES) if plan['gate'] != 'G1' else None)
+            or plan['scope_ids'] != expected_scope or plan['processing_count'] != len(expected_scope)
+            or plan['expires_at'] != expected_snapshot.usage.expires_at
+            or plan['canonical_population'] != len(sources(expected_snapshot))): raise ValueError('Fixed remote scope changed')
     loaded = load_snapshot(Path(plan['snapshot']))
-    if loaded.sha256 != plan['snapshot_sha256'] or digest(loaded.snapshot.to_dict()) != digest(synthetic12().to_dict()):
-        raise ValueError('Original synthetic G1 snapshot changed')
-    fact_checks.live(plan['expires_at'])
+    if loaded.sha256 != plan['snapshot_sha256'] or digest(loaded.snapshot.to_dict()) != digest(expected_snapshot.to_dict()):
+        raise ValueError('Original fixed snapshot changed')
+    fact_checks.live(loaded.snapshot.usage.expires_at)
     for document in plan['documents']: fact_checks.live(document['expires_at'])
     return loaded.snapshot
 
@@ -208,7 +259,7 @@ def run(directory):
                 runtime = runtime_probe(output['agent_inputs']['bundle'], CheckedRunner(),
                     save_turn=lambda row: save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'], row))
                 save('runtime', runtime); runtime_check(runtime, output['agent_inputs']['compiled'], questions=plan['questions'])
-            report = {'artifact_kind': VERSION, 'gate': 'G1', 'plan_sha256': plan_sha, 'execution_complete': True,
+            report = {'artifact_kind': VERSION, 'gate': plan['gate'], 'plan_sha256': plan_sha, 'execution_complete': True,
                       'candidates': len(output['candidates']), 'compiled_agents': len(output['agent_inputs']['compiled']['profiles']),
                       'runtime_turns': len(runtime['turns']), 'binding_errors': len(output['errors']),
                       'capacity_holds': len(output['capacity_holds']), 'unextracted': len(output['unextracted_source_ids']),
@@ -227,13 +278,14 @@ def run(directory):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__); commands = parser.add_subparsers(dest='action', required=True)
     p = commands.add_parser('prepare'); p.add_argument('directory', type=Path)
+    p.add_argument('--gate', choices=['G1','G2','G3','G4'], default='G1'); p.add_argument('--admission-file', type=Path)
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
     args = parser.parse_args()
     if args.action == 'prepare':
         plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
-                       read_json(args.spend_policy), args.maximum_cost_usd)
+                       read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate, admission_file=args.admission_file)
         result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                   'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
     else: result = run(args.directory)

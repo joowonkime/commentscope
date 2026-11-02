@@ -27,7 +27,8 @@ EXECUTORS = ('minimal-factory-executor-20261016-v1', 'minimal-factory-executor-2
              'minimal-factory-executor-20261017-v7','minimal-factory-executor-20261018-v8','minimal-factory-executor-20261018-v9',
              'minimal-factory-executor-20261018-v13', 'minimal-factory-executor-20261024-v14',
              'minimal-factory-executor-20261025-v15', 'minimal-factory-executor-20261102-v16',
-             'minimal-factory-openrouter-executor-20261102-v1')
+             'minimal-factory-openrouter-executor-20261102-v1',
+             'minimal-factory-openrouter-executor-20261102-v2')
 
 
 def private(path):
@@ -37,7 +38,8 @@ def private(path):
 def load_run(run):
     private(run); plan = read_json(run/'plan.json'); completion = read_json(run/'completed.json')
     if plan.get('artifact_kind') in ('minimal-factory-executor-20261102-v16',
-                                    'minimal-factory-openrouter-executor-20261102-v1'):
+                                    'minimal-factory-openrouter-executor-20261102-v1',
+                                    'minimal-factory-openrouter-executor-20261102-v2'):
         run_origin(plan, run, attempt=1)
     if (plan['artifact_kind'] not in EXECUTORS
             or completion['execution_complete'] is not True or completion['plan_sha256'] != sha(run/'plan.json')

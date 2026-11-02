@@ -103,7 +103,7 @@ python tools/check_factory_draft.py
 이 명령은 네트워크·실제 API 키·유료 추론을 사용하지 않는다.
 실제 8건의 JSON 응답 성공도 의미 품질 전체 통과를 뜻하지 않는다.
 
-## 전체 G1 파이프라인
+## 전체 Factory 파이프라인과 단계 승인
 
 공유 비용 장부와 고정된 로컬 임베딩·NLI 자료가 필요하다. 로컬 Qwen 서버는 기동하지 않는다.
 자료 JSON은 `classifier`, `model_files`, `documents`, `selections`를 포함한다.
@@ -127,7 +127,16 @@ python -m experiments.minimal_factory_review prepare \
 기존 합성12원문, literal 발견·raw 지지 판정·FULL_SCOPE 검증, 같은 사실 확인·
 Agent 조립·고정 질문을 사용한다. 제공자 한 곳의 상태·지원 매개변수·context·가격을
 확인하고, 코드·자료·계획 hash를 고정한다. 계획 파일을 수정해 예산이나 gate를 바꾸면 거부한다.
-현재 이 명령은 G1만 지원하며 G2/G3/G4는 새 통과 증거와 후속 실행기 지원이 필요하다.
+`--gate`의 기본값은 G1이다. G2는 고정 development24개, G3는 holdout96개,
+G4는 전체 canonical999개를 사용하며 기존 snapshot과 sample manifest의 hash를 확인한다.
+정답·의미 기준표는 모델 입력에 넣지 않는다. 원래 만료기한은 연장하지 않는다.
+
+G2부터는 `--admission-file runs/.../admission.json`이 필요하다. 이 파일의 `gates`는
+이전 단계마다 `run`, `packet`, `review`, `result` 경로를 지정한다. G2는 G1,
+G3는 G1·G2, G4는 G1·G2·G3의 전수 검토 통과가 필요하다. 실행기는 평가기를 다시
+실행하고 모델·전체 코드·출력·수용 기준·보조 모델·문서·공유 비용 정책이 같은지 확인한다.
+pass 표시만 쓰거나 코드/모델이 달라진 이전 성공을 가져오면 큰 실행을 거부한다.
+코드를 바꾸면 새 코드로 G1부터 다시 검증한다. 실행 완료와 품질 승인은 계속 별개다.
 
 literal 후보 통합에서는 후보 문장 전체를 서로 비교한다. 원문의 별도 이유나 추가
 요구를 비교 대상에 붙이지 않는다. 원문·출처는 계속 보존하며 후보의 조건·부정·시간을
