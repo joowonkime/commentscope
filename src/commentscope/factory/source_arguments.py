@@ -404,9 +404,10 @@ def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=(), 
 
 def audit_verdicts(records, cores, audits):
     verdicts = {}; core_checks = {}
+    records_sha256, cores_sha256 = digest(records), digest(cores)
     for audit in audits:
         scoped_records=records;scoped_cores=cores
-        if audit['records_sha256']!=digest(records) or audit['cores_sha256']!=digest(cores):
+        if audit['records_sha256']!=records_sha256 or audit['cores_sha256']!=cores_sha256:
             # Independently closed originals keep their actual audit request;
             # never pretend they were audited in the later combined group.
             source_ids={t['source_id'] for t in audit['tasks']}

@@ -177,6 +177,27 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertTrue(any(not c['passed'] for a in result['audits'] for c in a['owner_checks']))
         self.assertFalse(result['quality_gate_passed'])
 
+    def test_independent_audits_close_one_original_without_changing_the_model_request(self):
+        from commentscope.factory import source_arguments as sa
+        from commentscope.factory.automatic_contract import digest
+        helper, Runner = self.fixture()
+        result = helper.process(Runner(), extraction_protocol=compact.INDEXED)
+        arguments, cores = result['arguments'], result['cores']
+        checks = {c['core_id']: c for a in result['audits'] for c in a['core_checks']}
+        for audit in result['audits']:
+            ids = {t['source_id'] for t in audit['tasks']}
+            self.assertEqual(len(ids), 1)
+            scoped = [r for r in arguments if r['source']['id'] in ids]
+            self.assertEqual(audit['records_sha256'], digest(scoped))
+            global_request = sa.audit_request(arguments, cores, audit['tasks'],
+                protocol=sa.SPLIT_AUDIT, core_checks=list(checks.values()))
+            self.assertEqual(audit['request_sha256'], digest(global_request))
+            self.assertTrue(all(c['task']['source']['id'] in ids for c in audit['owner_checks']))
+        from unittest.mock import patch
+        with patch.object(sa, 'digest', wraps=digest) as hashing:
+            sa.audit_verdicts(arguments, cores, result['audits'])
+        self.assertEqual(sum(c.args[0] is arguments for c in hashing.call_args_list), 1)
+
     def test_protocol_is_explicit_and_cannot_change_a_literal_or_unknown_path(self):
         helper, Runner = self.fixture(); runner = Runner()
         for mode, protocol in [('literal', compact.VERSION), ('free', 'unknown')]:

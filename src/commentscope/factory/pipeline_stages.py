@@ -232,11 +232,26 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
                         lambda group, result: owner_observations.bind(group[0], result), 1) if split else []
     if split: save('argument-owner-checks', owner_checks)
     protocol = sa.SPLIT_AUDIT if split else sa.OBSERVED_AUDIT if observed else sa.ADDRESSED_AUDIT
-    audits = work('argument-audit', tasks,
-                  lambda group: sa.audit_request(arguments, cores, group, protocol=protocol, core_checks=core_checks),
-                  lambda group, result: sa.bind_audit(arguments, cores, group, result,
-                                                     protocol=protocol, core_checks=core_checks,
-                                                     owner_checks=owner_checks), 1)
+    audit_groups = [(arguments, cores, tasks, core_checks, owner_checks)]
+    if split:
+        # Close each original before hashing/replaying its audit. Rebuilding
+        # every author's declarations per unit grows quadratically with corpus
+        # size. Model input already contains only this original: keep its exact
+        # request while binding just the current source and its relevant cores.
+        audit_groups = []
+        for record in arguments:
+            sid = record['source']['id']; cids = set(record['candidate_ids'])
+            audit_groups.append(([record], [c for c in cores if c['candidate']['id'] in cids],
+                [t for t in tasks if t['source_id'] == sid],
+                [c for c in core_checks if c['core_id'] in cids],
+                [c for c in owner_checks if c['task']['source']['id'] == sid]))
+    audits = []
+    for scoped_records, scoped_cores, scoped_tasks, scoped_checks, scoped_owners in audit_groups:
+        audits.extend(work('argument-audit', scoped_tasks,
+            lambda group: sa.audit_request(scoped_records, scoped_cores, group,
+                                          protocol=protocol, core_checks=scoped_checks),
+            lambda group, result: sa.bind_audit(scoped_records, scoped_cores, group, result,
+                protocol=protocol, core_checks=scoped_checks, owner_checks=scoped_owners), 1))
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 
