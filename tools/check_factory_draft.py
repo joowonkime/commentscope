@@ -30,6 +30,7 @@ MODULES = (
     "test_openrouter_budget",
     "test_openrouter_factory_pipeline",
     "test_openrouter_factory_gates",
+    "test_openrouter_grounded_web",
     "test_compact_claims",
     "test_compact_condition_selections",
     "test_inference_budget",

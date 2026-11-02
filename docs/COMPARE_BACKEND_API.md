@@ -46,3 +46,33 @@ ids는0~2개, 생략하면 이용 가능한 앞2개를 선택한다. 검수된 A
 
 서버 명령은 기존 `python -m commentscope.agents.grounded_web <bundle> --experimental`이다.
 현재 검토된 실제 bundle 경로와 고정 HTTP 재현 명령은 [전달 자료](COMPARE_BACKEND_DELIVERY.md)를 따른다. 전체 UI·전체 Factory 품질 검증과는 구분한다.
+
+## OpenRouter로 로컬 웹 API 실행
+
+저장소 루트에서 `python tools/serve_openrouter_web.py`를 사용하면 같은 화면과 HTTP
+계약에 OpenRouter를 연결한다. 로컬 Qwen 서버는 필요 없다. 유효기간이 남은 bundle,
+모델·제공자·가격 상한을 고정한 deployment, [공유 비용 정책](OPENROUTER_FACTORY.md)이 필요하다.
+이 실행기는 Factory 분석을 다시 실행하거나 품질 승인을 부여하지 않는다.
+
+```bash
+python tools/serve_openrouter_web.py prepare runs/remote-web \
+  --bundle-file runs/your-inputs/bundle.json \
+  --deployment-file runs/your-inputs/deployment.json \
+  --spend-policy runs/openrouter-account/policy.json \
+  --maximum-cost-usd 0.50
+
+python tools/serve_openrouter_web.py serve runs/remote-web \
+  --experimental --port 8766 --key-file /path/to/private-key-file
+```
+
+이미 `OPENROUTER_API_KEY`를 설정했다면 `--key-file`은 생략한다. 키 값은 명령줄,
+계획 파일이나 프론트에 넣지 않는다. 실행 후 `http://127.0.0.1:8766`에서 확인한다.
+준비 단계에는 유료 추론이 없고, 질문 시 기존 공유 장부와 서버별 상한이 함께 적용된다.
+새 브라우저 세션이나 서버 재시작으로 같은 서버 계획의 비용 한도를 초기화하지 않는다.
+미완료 요청·미확정 과금이 있으면 재시작을 거부한다. Ctrl+C 시 진행 중인 제한된
+요청의 정리를 기다리고 서버 계획 잠금을 해제한다.
+
+원격 실행기의 상태에는 `remote_status: ready/budget_exhausted/reconcile_required`가
+추가된다. 비용 한도 또는 과금 확인이 필요한 상태에서는 `can_ask`가 false이며,
+동일 요청을 자동 재전송하지 않는다. 원문과 계획·구현이 바뀌면 기존 서버 계획을 거부한다.
+이 연결의 모의 HTTP 검사는 실제 댓글 품질·전체 MVP·공개 배포 완료와 구분한다.
