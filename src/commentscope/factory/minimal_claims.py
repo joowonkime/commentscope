@@ -226,7 +226,7 @@ def bind_extraction(sources, result, previous=(), *, version=VERSION):
 
 def validate(record):
     from commentscope.factory import literal_discovery, contextual_propositions, compact_claims
-    if isinstance(record, dict) and record.get('artifact_kind') == compact_claims.VERSION:
+    if isinstance(record, dict) and record.get('artifact_kind') in compact_claims.VERSIONS:
         return compact_claims.validate(record)
     if isinstance(record, dict) and record.get('artifact_kind') in contextual_propositions.VERSIONS:
         return contextual_propositions.validate(record)

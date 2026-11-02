@@ -116,7 +116,7 @@ class PipelineWork:
                         route=self.raw_routes[target_key]
                         if route and route['passed']:
                             from commentscope.factory import compact_claims
-                            protocol = (verification.BRIEF if self.extraction_protocol == compact_claims.VERSION
+                            protocol = (verification.BRIEF if self.extraction_protocol in compact_claims.VERSIONS
                                         else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
                             rows=self.work('raw-own-evidence',[proof],
                                 lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),

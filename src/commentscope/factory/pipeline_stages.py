@@ -64,8 +64,8 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
                     lambda rows,result:shared_claims.bind(rows,result,version=shared_claims.COMMON),
                     shared_claims.BATCH_SIZE,minimum=2))
         records=[]  # A common proposal is not a per-source extraction/completeness approval.
-    elif getattr(execution, 'extraction_protocol', None) == compact_claims.VERSION:
-        records = compact_claims.discover(sources, work)
+    elif getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS:
+        records = compact_claims.discover(sources, work, protocol=execution.extraction_protocol)
     else:records = mc.extract_independently(sources, work)
     save('extractions', records)
     if discovery_mode=='shared':
@@ -104,7 +104,7 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         # unions only; do not run the old full-proposition equivalence stage.
         pairs = cc.nearest_pairs({cid: candidate_vectors[cid] for cid in confirmed}) if confirmed and discovery_mode!='shared' else []
         equivalence_protocol = (cc.ASSERTION_ONLY if discovery_mode == 'literal'
-            or getattr(execution, 'extraction_protocol', None) == compact_claims.VERSION else None)
+            or getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS else None)
         equivalences = [] if engine is not None else work('equivalence', pairs,
                             lambda group: cc.equivalence_request(sources, candidates, nomination_batches, group,
                                                                   protocol=equivalence_protocol),
