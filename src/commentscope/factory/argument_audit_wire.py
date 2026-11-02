@@ -6,6 +6,7 @@ keep their full identities; prose is never searched or replaced for addresses.
 from copy import deepcopy
 
 VERSION = 'source-argument-audit-addresses-20261102-v1'
+SUBJECT_SCOPED = 'source-argument-audit-subjects-20261102-v2'
 INSTRUCTIONS = '''
 TASKS selects what to judge: TARGET is a unit address in that source's UNITS,
 or all_source_units_and_candidate_links for coverage. C1.. are candidate
@@ -21,6 +22,30 @@ policy stance as a demand; language differences alone do not change the stance.
 An unlinked additional position is allowed; it is not an invented core reason.
 basis briefly identifies the source evidence or specific mismatch supporting
 the verdict. Do not rewrite the proposal or provide deliberation.
+'''
+SUBJECT_INSTRUCTIONS = '''
+Judge each TASK's specific declaration. For a unit task TARGET is the complete
+unit to audit, OWNER_POSITION is its fixed source position, and LINKED_CANDIDATES
+contains only relationships actually claimed by TARGET, each with link_role.
+Empty LINKED_CANDIDATES asserts no candidate relationship. An unlinked original
+position need not restate any candidate. Its grounds still belong to its own
+OWNER_POSITION, not to another core mentioned elsewhere in the original.
+Check the declared role: a reason is an offered ground for its owner; a concession
+is accepted despite support and need not restate or justify the candidate.
+core_restatement denotes a source position; only its explicit candidate links
+claim a relationship to a candidate core. Do not invent links for unselected units.
+A reported unit declared not_asserted is faithful when the original reports it;
+do not require the author to endorse the quotation. Incorrect attribution fails.
+Different languages do not require a source unit to be a literal translation of
+its linked candidate. Judge the declared relationship and meaning. source_language
+describes ORIGINAL only. Check kind, scope and dependencies, not external truth.
+SOURCES keeps the complete original and ALL source units for ownership context.
+Unit tasks judge TARGET's declarations, not unrelated declarations in other units.
+Coverage tasks still check ALL units, candidate kind/scope, language, dependencies
+and completeness, using that task's full CANDIDATES. No omitted major content is
+approved by a correct individual unit. A wrong declaration remains unsupported.
+basis briefly cites source evidence or the specific mismatch. Do not rewrite or
+provide deliberation. All addresses are local to this request and source.
 '''
 
 
@@ -59,3 +84,28 @@ def project(sources, tasks):
                    else 'all_source_units_and_candidate_links'}
                   for i, t in enumerate(tasks, 1)]
     return result, wire_tasks
+
+
+def subjects(sources, tasks):
+    """Attach the target's actual owner/links; coverage retains all core checks."""
+    sources, tasks = deepcopy(sources), deepcopy(tasks)
+    lookup = {s['ORIGINAL']['source_id']: s for s in sources}
+    candidates = {sid: {c['id']: c for c in s.pop('CANDIDATES')}
+                  for sid, s in lookup.items()}
+    for task in tasks:
+        sid = task['source_id']; source = lookup[sid]
+        if task['kind'] == 'coverage':
+            task['CANDIDATES'] = list(candidates[sid].values())
+            continue
+        target = next(u for u in source['UNITS'] if u['id'] == task['TARGET'])
+        owner = next((u for u in source['UNITS']
+                      if target.get('ownership_family') is not None
+                      and u.get('source_node_id') == target['ownership_family']), None)
+        task.update(TARGET=deepcopy(target), OWNER_POSITION=deepcopy(owner),
+                    LINKED_CANDIDATES=[{**candidates[sid][cid],
+                        'link_role': target.get('candidate_roles', {}).get(cid, target['role'])}
+                        for cid in target['candidate_ids']],
+                    audit_subject=('reported_original_unit' if target.get('authorship') == 'not_asserted'
+                        else 'unlinked_original_position' if target['role'] == 'core_restatement' and not target['candidate_ids']
+                        else 'source_owned_unit'))
+    return sources, tasks

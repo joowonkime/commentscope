@@ -10,6 +10,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import validate_snapshot_source
 from commentscope.agents.grounded_inputs import compile_inputs
 from commentscope.factory import contextual_runtime
+from commentscope.factory import argument_observations
 
 VERSION = 'minimal-grounded-agents-20261017-v5'
 
@@ -34,6 +35,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     membership_lookup = {(r['candidate_id'], r['source_id']): r for r in membership_rows}
     cs = {c['id']: c for c in candidates}; rr = {}; cr = {}
     verdicts = sa.audit_verdicts(records, cores, audits)
+    observed = any(a.get('protocol') == sa.OBSERVED_AUDIT for a in audits)
     for record in records:
         sa.validate(record); sid = record['source']['id']
         validate_snapshot_source(snapshot, record['source'])
@@ -60,6 +62,8 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
         if cid not in cr: reasons.append('core_type_unassessed')
         elif cr[cid]['output']['kind'] == 'uncertain': reasons.append('core_type_uncertain')
         if cid in cr: reasons.extend(cr[cid].get('hold_reasons', []))
+        if observed and cid in cr and verdicts.get(argument_observations.core_key(cid)) != 'supported':
+            reasons.append('core_fidelity_not_verified')
         for sid in sids:
             record = rr.get(sid)
             if record is None or cid not in record['candidate_ids']:
@@ -77,7 +81,11 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
             for unit in selected: include(unit['local_id'])
             for unit in expanded.values():
                 if unit['kind'] == 'uncertain': reasons.append('argument_type_uncertain')
-                if verdicts.get(unit['id']) != 'supported': reasons.append('argument_not_verified')
+                verdict = verdicts.get(unit['id'])
+                if observed:
+                    verdict = verdicts.get(argument_observations.candidate_key(unit['id'], cid),
+                        verdicts.get(argument_observations.source_key(unit['id']), verdict))
+                if verdict != 'supported': reasons.append('argument_not_verified')
                 if unit['kind'] == 'fact' and record['source_language'] != 'en':
                     reasons.append('fact_source_language_unsupported')
                 if unit['kind']=='fact' and runtime_scope and runtime_scope['interpretation_scope']['world']!='actual':
