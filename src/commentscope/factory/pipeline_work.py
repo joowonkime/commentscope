@@ -41,6 +41,7 @@ class PipelineWork:
         self.shape_cache = {}
         self.assessment_cache = {}
         self.raw_routes = {}
+        self.source_contexts = {}
 
     def work(self, stage, items, build, bind, size, *, minimum=1):
         results = []
@@ -111,11 +112,25 @@ class PipelineWork:
         if self.membership_mode=='raw':
             from commentscope.factory import raw_membership as raw
             from commentscope.factory import raw_membership_verification as verification
+            from commentscope.factory import compact_claims
+            from commentscope.factory import source_context_observations as contexts
+            raw_protocol = raw.SOURCE_CONTEXT if self.extraction_protocol == compact_claims.INDEXED else raw.VERSION
             results=[]
             for pair in pairs:
                 source,target=self.registry[pair['source_id']],target_lookup[pair['candidate_id']]
-                proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target),
-                            lambda group,result:raw.bind(source,target,result),1)
+                context = None
+                if raw_protocol == raw.SOURCE_CONTEXT:
+                    source_key = digest(source)
+                    if source_key not in self.source_contexts:
+                        rows = self.work('source-context', [source], lambda group: contexts.request(group[0]),
+                                         lambda group, result: contexts.bind(group[0], result), 1)
+                        self.source_contexts[source_key] = rows[0] if rows else None
+                    context = self.source_contexts[source_key]
+                    if context is None:
+                        self.holds.append({'stage': stage, **pair, 'reason': 'source_context_unavailable'})
+                        continue
+                proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target,version=raw_protocol,source_context=context),
+                            lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context),1)
                 for proof in proofs:
                     route=None;evidence=None
                     if proof['passed']:
