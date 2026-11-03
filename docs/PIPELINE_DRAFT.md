@@ -307,6 +307,13 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 | 고정 질문 실행·이력 분리·결과 검증 | `agents/runtime_probe.py` |
 | 기존 무제한 ledger cycle 검사 | `factory/acceptance.py`의 `cycle_check` |
 
+OpenRouter 실행기 v12는 자원 중단 시 새 LLM·embedding·NLI 호출을 막는다.
+이미 시작한 원격 호출 한 건은 기존 worker 제한 시간 안에서 응답·비용·동일 계획
+checkpoint를 저장한 뒤 중단한다. 재개할 때 이 완료 응답을 재사용하며 다시 과금하지
+않는다. 로컬 모델 작업은 기존처럼 즉시 중단한다. 자원 기준, 원래 요청 제한 시간,
+전송 실패의 미확정 비용 처리와 전체 의미 품질 기준은 유지한다. 이전 실행의 유실
+응답을 복원하거나 다른 계획에 옮기지 않는다.
+
 현재 Factory 실행기는 import 시 과거 실험 모듈을 함께 불러오지 않는다. G1 합성 자료나 기존
 8B 경로가 실제로 필요할 때만 해당 실험 코드를 불러온다. 고정 질문·요청·산출물·잠금·자원 기준은
 유지하며, 공통 모듈로 옮겼다는 사실을 실제 모델 품질 통과로 취급하지 않는다.

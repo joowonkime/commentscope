@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261103-v11'
+VERSION = 'minimal-factory-openrouter-executor-20261104-v12'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -230,6 +230,7 @@ def run(directory):
                                  local_providers=(framed_embedding.generate, evidence_nli.generate))
         checkpoint = CheckpointRunner(openrouter.Runner(directory, plan, paid_budget, client),
                                      {'context': plan['deployment']['context'], 'reasoning': 'off', 'reasoning_budget': 0})
+        dispatch = host_resources.RemoteCallGuard()
         attempt = len(list((directory/'attempts').glob('*.started.json')))+1
         origin = run_origin(plan, directory, attempt=attempt)
         write(directory/'attempts'/f'{attempt:04}.started.json', {
@@ -243,18 +244,22 @@ def run(directory):
                 if digest(read_json(path)) != digest(value): raise ValueError('Same-plan artifact changed: '+name)
             else: write(path, value)
         def inspect(request):
+            dispatch.check()
             check_quota(); return client.measure(request)
         class CheckedRunner:
             def call(self, stage, request):
                 measured = inspect(request)
                 if not measured['fits']: raise ValueError('Unsplit remote request exceeds its context bound')
-                result = checkpoint.call(stage, request); check_quota()
+                with dispatch.remote_call():
+                    result = checkpoint.call(stage, request)
+                check_quota()
                 if not result.get('errors'):
                     count = (result.get('usage') or {}).get('prompt_tokens')
                     if type(count) is not int or not 0 <= count <= measured['input_upper_bound_tokens']+measured['provider_margin']:
                         raise ValueError('Actual API prompt usage exceeded or omitted its declared bound')
                 return result
         def embed(stage, texts):
+            dispatch.check()
             check_quota(); path = directory/'artifacts'/('embedding-'+stage+'.json')
             request = {'system': framed_embedding.VERSION, 'data': {'texts': texts, 'output': str(path)},
                        'schema': {}, 'max_tokens': 1}
@@ -267,13 +272,15 @@ def run(directory):
                 raise ValueError('Embedding provenance changed')
             return artifact['vectors']
         def facts(request):
+            dispatch.check()
             check_quota()
             return checkpoint.call('facts-'+digest(request)[:20], request, provider=evidence_nli.generate,
                                    maximum=plan['limits']['fact_batch_seconds'])
         try:
             provider = provider_preflight(plan['deployment'])
             write(directory/'attempts'/f'{attempt:04}.provider.json', provider)
-            with host_resources.watch(directory/'resources'/f'{attempt:04}', plan['resource_policy'], host_resources.observe_wsl_host):
+            with host_resources.watch(directory/'resources'/f'{attempt:04}', plan['resource_policy'],
+                                      host_resources.observe_wsl_host, interrupt=dispatch.request_stop):
                 output = minimal_pipeline.process(snapshot, CheckedRunner(), embed, inspect, facts,
                     model=plan['classifier'], documents=plan['documents'], selections=plan['selections'],
                     scope_ids=plan['scope_ids'], save=save, discovery_mode=plan['discovery_mode'],
@@ -317,10 +324,12 @@ def main(argv=None):
             result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                       'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
         else: result = run(args.directory)
-    except (ModelResponseUnavailable, PendingCallError, BudgetExhausted, ValueError, OSError) as exc:
+    except (ModelResponseUnavailable, PendingCallError, BudgetExhausted,
+            host_resources.ResourceStopRequested, ValueError, OSError) as exc:
         reason = ('model_response_unavailable' if isinstance(exc, ModelResponseUnavailable)
                   else 'pending_call' if isinstance(exc, PendingCallError)
                   else 'budget_blocked' if isinstance(exc, BudgetExhausted)
+                  else 'host_resources' if isinstance(exc, host_resources.ResourceStopRequested)
                   else 'validation_failed' if isinstance(exc, ValueError) else 'io_unavailable')
         print(json.dumps({'status': 'blocked', 'reason': reason, 'directory': str(args.directory),
                           'failure_type': type(exc).__name__,
