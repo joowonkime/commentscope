@@ -227,6 +227,9 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
         self.assertTrue(all(a['raw']['artifact_kind'] == raw.WORLD_CONTEXT
                             for b in result['memberships'] for a in b['verified_assessments']))
+        positive = [a for b in result['memberships'] for a in b['verified_assessments'] if a['passed']]
+        self.assertTrue(positive)
+        self.assertTrue(all(a['evidence_check']['protocol'] == verification.QUALIFIED for a in positive))
         self.assertFalse(result['quality_gate_passed'])
 
     def test_segmented_pipeline_vetoes_primary_equivalence_when_independent_check_finds_a_counterexample(self):
