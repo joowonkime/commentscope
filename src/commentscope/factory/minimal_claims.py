@@ -242,14 +242,22 @@ def validate(record):
     return record
 
 
-def candidates(records):
-    result = {}; seen = set()
+def candidates(records, *, allowed_extraction_refs=None):
+    if allowed_extraction_refs is not None and (not isinstance(allowed_extraction_refs, list)
+            or any(not isinstance(ref, str) or not ref for ref in allowed_extraction_refs)
+            or len(allowed_extraction_refs) != len(set(allowed_extraction_refs))):
+        raise ValueError('Unique allowed extraction references required')
+    allowed = set(allowed_extraction_refs) if allowed_extraction_refs is not None else None
+    result = {}; seen = set(); available_refs = set()
     for record in records:
         validate(record); sid = record['source']['id']
         if sid in seen:
             raise ValueError('One final extraction record per source required')
         seen.add(sid)
         for c in record['claims']:
+            available_refs.add(c['record_id'])
+            if allowed is not None and c['record_id'] not in allowed:
+                continue
             if c['authorship'] not in ('asserted', 'explicitly_endorsed'):
                 continue
             row = result.setdefault(c['id'], {'id': c['id'], 'text': c['text'], 'aliases': [c['id']],
@@ -262,6 +270,8 @@ def candidates(records):
                     row['source_interpretation'] = deepcopy(context)
             row['nominees'][sid] = c['source_sha256']
             row['extraction_refs'].append(c['record_id'])
+    if allowed is not None and not allowed <= available_refs:
+        raise ValueError('Allowed extraction reference is not in the current records')
     for row in result.values():
         row['extraction_refs'] = sorted(set(row['extraction_refs']))
     return [result[k] for k in sorted(result)]
