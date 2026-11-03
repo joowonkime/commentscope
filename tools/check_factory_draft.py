@@ -31,6 +31,7 @@ MODULES = (
     "test_runtime_artifact_contract",
     "test_openrouter",
     "test_openrouter_capabilities",
+    "test_openrouter_schema",
     "test_openrouter_factory_probe",
     "test_openrouter_budget",
     "test_openrouter_factory_pipeline",

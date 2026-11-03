@@ -38,7 +38,8 @@ EXECUTORS = ('minimal-factory-executor-20261016-v1', 'minimal-factory-executor-2
              'minimal-factory-openrouter-executor-20261103-v9',
              'minimal-factory-openrouter-executor-20261103-v10',
              'minimal-factory-openrouter-executor-20261103-v11',
-             'minimal-factory-openrouter-executor-20261104-v12')
+             'minimal-factory-openrouter-executor-20261104-v12',
+             'minimal-factory-openrouter-executor-20261104-v13')
 
 
 def private(path):
@@ -59,7 +60,8 @@ def load_run(run):
                                     'minimal-factory-openrouter-executor-20261103-v9',
                                     'minimal-factory-openrouter-executor-20261103-v10',
                                     'minimal-factory-openrouter-executor-20261103-v11',
-                                    'minimal-factory-openrouter-executor-20261104-v12'):
+                                    'minimal-factory-openrouter-executor-20261104-v12',
+                                    'minimal-factory-openrouter-executor-20261104-v13'):
         run_origin(plan, run, attempt=1)
     if (plan['artifact_kind'] not in EXECUTORS
             or completion['execution_complete'] is not True or completion['plan_sha256'] != sha(run/'plan.json')

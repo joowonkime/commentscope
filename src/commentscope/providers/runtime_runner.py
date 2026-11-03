@@ -29,6 +29,12 @@ class RuntimeRunner:
         self.started = clock()
         self.seq = 0
 
+    def adapt_response(self, request, response):
+        return response
+
+    def record_response(self, result, request, response):
+        return result
+
     def call(self, stage, req, *, provider=None, maximum=None):
         deadline = self.plan['limits']['call_seconds'] if maximum is None else maximum
         if not positive(deadline):
@@ -47,9 +53,14 @@ class RuntimeRunner:
             'request': req, 'request_sha256': digest(req),
             'plan_sha256': self.plan_sha, 'timeout_seconds': deadline})
 
+        receipt = None
         def invoke(system, data, schema):
-            return self.budget.call(req, self.plan_sha, timeout_seconds=deadline,
-                                    provider=self.client.generate if provider is None else provider)
+            nonlocal receipt
+            receipt = self.budget.call(req, self.plan_sha, timeout_seconds=deadline,
+                                       provider=self.client.generate if provider is None else provider)
+            # Provider adapters run in the host after durable raw accounting;
+            # invalid logical outputs must never lose an otherwise known cost.
+            return self.adapt_response(req, receipt) if provider is None else receipt
 
         if provider is not None:
             result = invoke(None, None, None)
@@ -61,5 +72,7 @@ class RuntimeRunner:
             except RuntimeError:
                 result = {'raw': None, 'output': None, 'errors': ['bounded_call_failed'],
                           'seconds': None, 'usage': None}
+            if receipt is not None:
+                result = self.record_response(result, req, receipt)
         write(self.directory/'calls'/(prefix+'.result.json'), result)
         return result
