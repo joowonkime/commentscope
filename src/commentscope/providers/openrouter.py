@@ -23,7 +23,7 @@ PROVIDER_MARGIN = 8192
 def validate(deployment):
     required = {'version', 'model', 'context', 'call_seconds'}
     if (not isinstance(deployment, dict) or not required <= deployment.keys()
-            or deployment.keys() - required - {'provider', 'reasoning'}
+            or deployment.keys() - required - {'provider', 'reasoning', 'temperature'}
             or deployment['version'] != VERSION
             or not isinstance(deployment['model'], str) or not deployment['model'].strip()
             or deployment['model'] != deployment['model'].strip()
@@ -44,11 +44,19 @@ def validate(deployment):
             or any(type(p) not in (int, float) or not math.isfinite(p) or p < 0
                    for p in prices.values())):
         raise ValueError('Finite nonnegative prompt/completion/request price ceilings required')
+    temperature = deployment.get('temperature', 0)
+    if temperature is not None and (type(temperature) not in (int, float)
+            or not math.isfinite(temperature) or not 0 <= temperature <= 2):
+        raise ValueError('Temperature must be finite0..2 or explicit null to omit')
     reasoning = deployment.get('reasoning')
     if reasoning is not None:
-        if (not isinstance(reasoning, dict) or set(reasoning) != {'enabled'}
-                or type(reasoning['enabled']) is not bool):
-            raise ValueError('Reasoning must be an explicit enabled flag or omitted')
+        if not isinstance(reasoning, dict):
+            raise ValueError('Explicit reasoning enabled flag or effort required')
+        enabled = set(reasoning) == {'enabled'} and type(reasoning['enabled']) is bool
+        effort = (set(reasoning) == {'effort'} and isinstance(reasoning['effort'], str)
+                  and reasoning['effort'] in ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
+        if not (enabled or effort):
+            raise ValueError('Choose one explicit reasoning enabled flag or effort')
     return deepcopy(deployment)
 
 
@@ -60,7 +68,8 @@ class Client:
     def payload(self, system, data, schema, max_tokens):
         if type(max_tokens) is not int or not 0 < max_tokens < self.deployment['context']:
             raise ValueError('Bounded output allocation required')
-        payload = {'model': self.deployment['model'], 'temperature': 0,
+        temperature = self.deployment.get('temperature', 0)
+        payload = {'model': self.deployment['model'], 'temperature': temperature,
                    'max_tokens': max_tokens, 'stream': False,
                    'provider': {**self.deployment.get('provider', {}),
                                 'require_parameters': True, 'allow_fallbacks': False},
@@ -68,6 +77,8 @@ class Client:
                        'name': 'perspective_draft', 'strict': True, 'schema': schema}},
                    'messages': [{'role': 'system', 'content': system},
                                 {'role': 'user', 'content': json.dumps(data, ensure_ascii=False)}]}
+        if temperature is None:
+            payload.pop('temperature')
         if 'reasoning' in self.deployment and self.deployment['reasoning'] is not None:
             payload['reasoning'] = deepcopy(self.deployment['reasoning'])
         return payload

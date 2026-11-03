@@ -1,5 +1,13 @@
 # OpenRouter Factory 개발 검사
 
+모델 비교용 deployment는 `temperature: null`로 sampling 인자를 명시적으로 생략하고,
+`reasoning: {"effort": "low"}`처럼 추론 수준을 고정할 수 있다. `temperature`를 생략하면
+기존처럼0을 전송한다. 기존 `reasoning: {"enabled": false}`도 그대로 지원하며
+`enabled`와 `effort`는 함께 지정하지 않는다. 해당 모델·제공자가 지원하는 설정을 먼저
+확인한다. 추론 토큰도 출력 한도와 과금에 포함되므로 `max_tokens`와 예산을 함께 잡는다.
+[OpenRouter 추론 설정](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens)을 참고한다.
+설정은 deployment와 계획 hash에 포함되며, 기존 실행의 설정을 수정해 재사용하지 않는다.
+
 로컬 LLM을 실행하지 않고 기존 Factory 요청을 OpenRouter에 전달한다.
 `providers/openrouter.py`의 Client와 Runner는 기존 요청·응답·장부·체크포인트
 형식을 사용하며, 원문·프롬프트·JSON schema를 유지한다. API 키는

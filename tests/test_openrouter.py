@@ -61,6 +61,39 @@ class OpenRouterTests(unittest.TestCase):
         remote.Client(d).generate('s', {}, {}, 12)
         self.assertEqual(json.loads(self.opener.open.call_args.args[0].data)['reasoning'], {'enabled': False})
 
+    def test_explicit_temperature_omission_and_reasoning_effort_for_other_models(self):
+        self.opener.open.return_value = BytesIO(b'{}')
+        d = deployment(); d.update(temperature=None, reasoning={'effort': 'low'})
+        remote.Client(d).generate('s', {'text': 'original'}, {}, 512)
+        payload = json.loads(self.opener.open.call_args.args[0].data)
+        self.assertNotIn('temperature', payload)
+        self.assertEqual(payload['reasoning'], {'effort': 'low'})
+        self.assertEqual(payload['max_tokens'], 512)
+        self.assertIs(payload['provider']['require_parameters'], True)
+        self.assertIs(payload['provider']['allow_fallbacks'], False)
+        self.assertEqual(payload['provider']['max_price'], d['provider']['max_price'])
+
+    def test_sampling_and_reasoning_changes_belong_to_frozen_deployment_identity(self):
+        from commentscope.factory.automatic_contract import digest
+        a = deployment(); b = {**a, 'temperature': None, 'reasoning': {'effort': 'low'}}
+        self.assertNotEqual(digest(remote.Client(a).deployment), digest(remote.Client(b).deployment))
+        request = {'system': 's', 'data': {}, 'schema': {}, 'max_tokens': 128}
+        d = {**b, 'context': 32768}
+        measured = remote.Client(d).measure(request)
+        self.assertTrue(measured['fits'])
+        self.opener.open.assert_not_called()
+
+    def test_invalid_sampling_or_conflicting_reasoning_refuses_before_network(self):
+        for key, value in [('temperature', True), ('temperature', -1), ('temperature', 3),
+                           ('temperature', float('nan')), ('temperature', '0'),
+                           ('reasoning', {'effort': 'unbounded'}),
+                           ('reasoning', {'effort': 'low', 'enabled': False}),
+                           ('reasoning', {'effort': 'low', 'max_tokens': 1000}),
+                           ('reasoning', {'enabled': 1}), ('reasoning', {})]:
+            with self.subTest(key=key, value=value), self.assertRaises(ValueError):
+                remote.Client({**deployment(), key: value}).generate('s', {}, {}, 128)
+        self.opener.open.assert_not_called()
+
     def test_client_never_serializes_the_environment_key(self):
         client = remote.Client(deployment())
         self.assertNotIn(b'synthetic-test-key', pickle.dumps(client))
