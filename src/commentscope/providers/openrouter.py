@@ -60,6 +60,17 @@ def validate(deployment):
     return deepcopy(deployment)
 
 
+def required_parameters(deployment):
+    """Endpoint capabilities required by the fields this deployment transmits."""
+    deployment = validate(deployment)
+    required = {'structured_outputs', 'response_format', 'max_tokens'}
+    if deployment.get('temperature', 0) is not None:
+        required.add('temperature')
+    if deployment.get('reasoning') is not None:
+        required.add('reasoning')
+    return required
+
+
 class Client:
     """Picklable client; supply an explicitly selected model deployment."""
     def __init__(self, deployment):

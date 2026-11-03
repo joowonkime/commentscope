@@ -7,6 +7,9 @@
 확인한다. 추론 토큰도 출력 한도와 과금에 포함되므로 `max_tokens`와 예산을 함께 잡는다.
 [OpenRouter 추론 설정](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens)을 참고한다.
 설정은 deployment와 계획 hash에 포함되며, 기존 실행의 설정을 수정해 재사용하지 않는다.
+Factory의 제공자 사전 검사는 실제 전송하는 인자의 지원을 확인한다. 명시적으로 생략한
+`temperature`의 지원은 요구하지 않고, `reasoning`을 전송하면 해당 지원을 요구한다.
+context·구조화 출력·가격·단일 제공자 고정 검사는 그대로 적용한다.
 
 로컬 LLM을 실행하지 않고 기존 Factory 요청을 OpenRouter에 전달한다.
 `providers/openrouter.py`의 Client와 Runner는 기존 요청·응답·장부·체크포인트

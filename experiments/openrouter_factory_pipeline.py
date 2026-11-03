@@ -51,7 +51,7 @@ def provider_preflight(deployment):
     if len(matches) != 1: raise ValueError('Pinned provider endpoint unavailable')
     endpoint = matches[0]; caps = deployment['provider']['max_price']
     if (endpoint.get('status') != 0 or endpoint['context_length'] != deployment['context']
-            or not {'structured_outputs', 'response_format', 'temperature', 'max_tokens'} <= set(endpoint['supported_parameters'])
+            or not openrouter.required_parameters(deployment) <= set(endpoint['supported_parameters'])
             or any(Decimal(str(endpoint['pricing'].get(k, 0))) > Decimal(str(caps[k]))/(1 if k == 'request' else 1_000_000)
                    for k in ('prompt', 'completion', 'request'))):
         raise ValueError('Provider context, availability, parameters or price changed')
