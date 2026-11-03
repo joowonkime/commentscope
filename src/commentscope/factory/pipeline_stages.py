@@ -24,6 +24,8 @@ class DiscoveryResult:
     candidates: list
     engine: object
     shared_discovery: list
+    interpretation_reviews: list | None = None
+    interpretation_admission: dict | None = None
 
 
 @dataclass
@@ -70,11 +72,21 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
         records = compact_claims.discover(sources, work, protocol=execution.extraction_protocol)
     else:records = mc.extract_independently(sources, work)
     save('extractions', records)
-    if discovery_mode=='shared':
+    reviews = None; admission = None
+    if getattr(execution, 'review_interpretations', False):
+        from commentscope.factory import source_interpretation
+        reviews = work('source-interpretation-review', source_interpretation.review_tasks(records),
+            lambda group: source_interpretation.review_request(group[0]['interpretations']),
+            lambda group, result: source_interpretation.bind_review(group[0]['interpretations'], result), 1)
+        admission = source_interpretation.nominate(records, reviews)
+        candidates = admission['candidates']
+        save('source-interpretation-reviews', reviews)
+        save('source-interpretation-admission', admission)
+    elif discovery_mode=='shared':
         candidates=shared_claims.candidates(shared_discovery);save('shared-discovery',shared_discovery)
     else:candidates = mc.candidates(records)
     save('initial-candidates', candidates)
-    return DiscoveryResult(records, candidates, engine, shared_discovery)
+    return DiscoveryResult(records, candidates, engine, shared_discovery, reviews, admission)
 
 
 def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
