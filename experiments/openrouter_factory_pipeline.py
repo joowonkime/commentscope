@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261104-v13'
+VERSION = 'minimal-factory-openrouter-executor-20261104-v14'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -107,6 +107,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
     if discovery_mode not in ('literal', 'free'): raise ValueError('Unknown remote discovery mode')
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
+    allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
     materials = read_json(materials_file)
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
@@ -138,6 +139,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'evidence_observation_protocol': raw_membership_verification.QUALIFIED if discovery_mode == 'free' else raw_membership_verification.EXPLAINED,
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
+            'generation_allocation': allocation,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
             'canonical_population': len(sources(snapshot)), 'processing_count': len(scope),
             'sample_file': str(SAMPLES) if gate != 'G1' else None,
@@ -160,6 +162,7 @@ def validate(directory, plan):
     if read_json(directory/'frozen.json') != {'plan_sha256': sha(directory/'plan.json')}:
         raise ValueError('Frozen remote plan changed')
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
+    allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     profile = acceptance.from_plan(plan)
     if (plan['artifact_kind'] != VERSION or plan['gate'] not in ('G1', 'G2', 'G3', 'G4') or profile is None
             or plan['discovery_mode'] not in ('literal', 'free') or plan['membership_mode'] != 'raw'
@@ -171,6 +174,7 @@ def validate(directory, plan):
             or plan.get('evidence_observation_protocol') != (raw_membership_verification.QUALIFIED if plan['discovery_mode'] == 'free' else raw_membership_verification.EXPLAINED)
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
+            or plan.get('generation_allocation') != allocation
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE
             or plan['resource_policy'] != host_resources.POLICY or units(plan['maximum_cost_usd']) <= 0
             or plan['reference_runtime_input'] is not False or plan['cross_run_response_reuse'] is not False
@@ -229,7 +233,7 @@ def run(directory):
                                  key_metadata=key_metadata,
                                  local_providers=(framed_embedding.generate, evidence_nli.generate))
         checkpoint = CheckpointRunner(openrouter.Runner(directory, plan, paid_budget, client),
-                                     {'context': plan['deployment']['context'], 'reasoning': 'off', 'reasoning_budget': 0})
+                                     plan['generation_allocation'])
         dispatch = host_resources.RemoteCallGuard()
         attempt = len(list((directory/'attempts').glob('*.started.json')))+1
         origin = run_origin(plan, directory, attempt=attempt)
@@ -253,10 +257,16 @@ def run(directory):
                 with dispatch.remote_call():
                     result = checkpoint.call(stage, request)
                 check_quota()
-                if not result.get('errors'):
-                    count = (result.get('usage') or {}).get('prompt_tokens')
-                    if type(count) is not int or not 0 <= count <= measured['input_upper_bound_tokens']+measured['provider_margin']:
-                        raise ValueError('Actual API prompt usage exceeded or omitted its declared bound')
+                if result.get('errors'):
+                    # The raw receipt, charge and checkpoint already exist.
+                    # Stop every Factory/runtime stage before any follow-up call.
+                    save('errors/'+stage+'-'+digest(request)[:20], {
+                        'stage': stage, 'request_sha256': digest(request),
+                        'result': result, 'automatic_retry': False})
+                    raise ModelResponseUnavailable(stage, digest(request), digest(request['data']))
+                count = (result.get('usage') or {}).get('prompt_tokens')
+                if type(count) is not int or not 0 <= count <= measured['input_upper_bound_tokens']+measured['provider_margin']:
+                    raise ValueError('Actual API prompt usage exceeded or omitted its declared bound')
                 return result
         def embed(stage, texts):
             dispatch.check()

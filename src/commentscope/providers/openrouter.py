@@ -14,18 +14,19 @@ from urllib.request import Request, build_opener, ProxyHandler
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.runtime_runner import RuntimeRunner
 from commentscope.providers import openai_schema
+from commentscope.providers.generation_limits import allocate
 from commentscope.factory.automatic_contract import digest
 
 VERSION = 'openrouter-chat-completions-0.1'
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
-CAPACITY_VERSION = 'openrouter-utf8-context-bound-0.1'
+CAPACITY_VERSION = 'openrouter-utf8-context-bound-0.2'
 PROVIDER_MARGIN = 8192
 
 
 def validate(deployment):
     required = {'version', 'model', 'context', 'call_seconds'}
     if (not isinstance(deployment, dict) or not required <= deployment.keys()
-            or deployment.keys() - required - {'provider', 'reasoning', 'temperature', 'schema_policy'}
+            or deployment.keys() - required - {'provider', 'reasoning', 'temperature', 'schema_policy', 'reasoning_output_tokens'}
             or deployment['version'] != VERSION
             or not isinstance(deployment['model'], str) or not deployment['model'].strip()
             or deployment['model'] != deployment['model'].strip()
@@ -62,7 +63,29 @@ def validate(deployment):
                   and reasoning['effort'] in ('none', 'minimal', 'low', 'medium', 'high', 'xhigh', 'max'))
         if not (enabled or effort):
             raise ValueError('Choose one explicit reasoning enabled flag or effort')
+    if 'reasoning_output_tokens' in deployment:
+        tokens = deployment['reasoning_output_tokens']
+        active = reasoning is not None and reasoning not in ({'enabled': False}, {'effort': 'none'})
+        if (type(tokens) is not int or not 0 <= tokens <= 2048
+                or (active and tokens == 0) or (not active and tokens != 0)):
+            raise ValueError('Bounded positive reasoning headroom requires explicitly active reasoning')
     return deepcopy(deployment)
+
+
+def generation_allocation(deployment, *, require_explicit=False):
+    """Host output headroom; this does not impose a provider reasoning hard cap.
+
+    Historical direct clients keep their total-output semantics. New executors
+    refuse active reasoning without an explicit, frozen output allowance.
+    """
+    deployment = validate(deployment)
+    reasoning = deployment.get('reasoning')
+    active = reasoning is not None and reasoning not in ({'enabled': False}, {'effort': 'none'})
+    if require_explicit and active and 'reasoning_output_tokens' not in deployment:
+        raise ValueError('Explicit reasoning headroom required before paid execution')
+    tokens = deployment.get('reasoning_output_tokens', 0)
+    return {'context': deployment['context'], 'reasoning': 'on' if tokens else 'off',
+            'reasoning_budget': tokens}
 
 
 def required_parameters(deployment):
@@ -110,6 +133,9 @@ class Client:
 
     def decode_response(self, request, response):
         if 'schema_policy' not in self.deployment: return response
+        # Preserve incomplete/refused provider envelopes for the common runtime
+        # diagnostic before attempting canonical JSON decoding.
+        if response['choices'][0]['finish_reason'] != 'stop': return response
         return openai_schema.decode(request['schema'], response)
 
     def transport_record(self, request, response):
@@ -121,13 +147,17 @@ class Client:
     def measure(self, request):
         if set(request) != {'system', 'data', 'schema', 'max_tokens'}:
             raise ValueError('Complete logical request required')
-        payload = self.payload(request['system'], request['data'], request['schema'], request['max_tokens'])
+        actual = allocate(request, generation_allocation(self.deployment))
+        payload = self.payload(actual['system'], actual['data'], actual['schema'], actual['max_tokens'])
         size = len(json.dumps(payload, ensure_ascii=False, allow_nan=False).encode('utf-8'))
         return {'artifact_kind': CAPACITY_VERSION, 'request_sha256': digest(request),
+                'allocated_request_sha256': digest(actual),
                 'input_upper_bound_tokens': size, 'provider_margin': PROVIDER_MARGIN,
-                'output_reservation': request['max_tokens'], 'context': self.deployment['context'],
+                'answer_tokens': request['max_tokens'],
+                'reasoning_output_tokens': actual['max_tokens']-request['max_tokens'],
+                'output_reservation': actual['max_tokens'], 'context': self.deployment['context'],
                 'native_tokenization': False,
-                'fits': size+request['max_tokens']+PROVIDER_MARGIN <= self.deployment['context']}
+                'fits': size+actual['max_tokens']+PROVIDER_MARGIN <= self.deployment['context']}
 
     def generate(self, system, data, schema, max_tokens=3000):
         payload = self.payload(system, data, schema, max_tokens)

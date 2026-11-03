@@ -77,6 +77,34 @@ class OpenRouterExecutorTests(unittest.TestCase):
         self.assertTrue((self.run_dir/'frozen-code/src/commentscope/providers/openrouter.py').exists())
         self.time_budget.call.assert_not_called()
 
+    def test_active_reasoning_without_headroom_refuses_before_provider_or_model_work(self):
+        self.deployment['reasoning'] = {'effort': 'low'}
+        with patch.object(executor, 'provider_preflight') as preflight:
+            with self.assertRaisesRegex(ValueError, 'headroom'): self.prepare()
+        preflight.assert_not_called(); self.time_budget.call.assert_not_called()
+        self.assertFalse(self.run_dir.exists())
+
+    def test_partial_generation_stops_all_followup_work_and_resume_does_not_pay_again(self):
+        self.deployment.update(reasoning={'effort': 'low'}, reasoning_output_tokens=1024)
+        self.prepare()
+        self.time_budget.call.side_effect = None
+        raw = {'choices': [{'message': {'content': '{"unfinished":'}, 'finish_reason': 'length'}],
+               'usage': {'cost': .00001, 'prompt_tokens': 12, 'completion_tokens': 1152}}
+        self.time_budget.call.return_value = raw
+        def process(snapshot, runner, *args, **kwargs):
+            from test_openrouter_generation_limits import logical
+            runner.call('first', logical())
+            self.fail('Incomplete output must stop before a second model request')
+        self.process.side_effect = process
+        for _ in range(2):
+            with self.assertRaises(executor.ModelResponseUnavailable): executor.run(self.run_dir)
+        self.assertEqual(self.time_budget.call.call_count, 1)
+        result = read_json(next((self.run_dir/'calls').glob('*.result.json')))
+        self.assertIn('incomplete_generation', result['errors'])
+        self.assertEqual(result['usage'], raw['usage'])
+        self.assertTrue(list((self.run_dir/'artifacts/errors').glob('*.json')))
+        self.assertFalse((self.run_dir/'completed.json').exists())
+
     def test_missing_response_persists_diagnostic_without_publishing_completion(self):
         self.prepare()
         failure = executor.ModelResponseUnavailable('extract', 'a'*64, 'b'*64)

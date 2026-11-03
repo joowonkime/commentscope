@@ -7,6 +7,17 @@
 확인한다. 추론 토큰도 출력 한도와 과금에 포함되므로 `max_tokens`와 예산을 함께 잡는다.
 [OpenRouter 추론 설정](https://openrouter.ai/docs/guides/best-practices/reasoning-tokens)을 참고한다.
 설정은 deployment와 계획 hash에 포함되며, 기존 실행의 설정을 수정해 재사용하지 않는다.
+새 Factory 실행기 v14, 개발 probe v0.2와 웹 실행기 v2는 추론이 켜진 deployment에
+`"reasoning_output_tokens": 1024`처럼 1~2048 범위의 추가 출력 여유를 요구한다.
+`reasoning.enabled: false` 또는 `reasoning.effort: none`에는 0만 지정할 수 있다.
+이는 호스트가 최종 답변 상한에 더하는 여유이며, 제공자의 추론 토큰을 별도로
+강제 제한하거나 최종 답변 공간을 보장하지는 않는다.
+[생성 한도는 보이지 않는 토큰도 포함한다](https://developers.openai.com/api/docs/guides/token-counting).
+용량 검사·체크포인트·전송·비용 예약은 같은 합산 한도를 사용한다. 기존 직접 Client의
+설정에 이 필드가 없으면 원래 총출력 의미를 유지하지만, 추론이 켜진 새 실행 계획은
+여유가 누락되면 유료 호출 전에 거부한다. `finish_reason`이 `stop`이 아니면 빈 응답과
+부분 JSON 모두 원본·비용을 보존하고 `incomplete_generation`으로 기록한다.
+공식 Factory 실행은 이런 실패 뒤 다음 모델 호출을 중단하며, 자동 재시도하지 않는다.
 Factory의 제공자 사전 검사는 실제 전송하는 인자의 지원을 확인한다. 명시적으로 생략한
 `temperature`의 지원은 요구하지 않고, `reasoning`을 전송하면 해당 지원을 요구한다.
 context·구조화 출력·가격·단일 제공자 고정 검사는 그대로 적용한다.

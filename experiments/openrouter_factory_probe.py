@@ -17,12 +17,13 @@ from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.local_llama import NoRedirect
+from commentscope.providers.generation_limits import allocate
 from commentscope.providers.openrouter_budget import SpendLedger, PaidBudget, units
 from commentscope.storage import write_json_exclusive as write
 from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.compare_local_codex import request_pack
 
-VERSION = 'openrouter-factory-development-probe-0.1'
+VERSION = 'openrouter-factory-development-probe-0.2'
 
 
 def private(path):
@@ -35,13 +36,14 @@ def positive(value):
 
 
 def charge_ceiling(deployment, pack):
+    allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     prices = deployment.get('provider', {}).get('max_price')
     if not prices or not deployment['provider'].get('only'):
         raise ValueError('Pinned provider and explicit price ceilings required')
     # Reserve the entire declared model context for every input, even though
     # these short synthetic prompts are much smaller. Prices are USD/million.
     return sum((deployment['context'] * prices['prompt']
-                + c['request']['max_tokens'] * prices['completion']) / 1_000_000
+                + allocate(c['request'], allocation)['max_tokens'] * prices['completion']) / 1_000_000
                + prices['request'] for c in pack['cases'])
 
 
@@ -132,8 +134,7 @@ def run(directory):
                                 deployment=plan['deployment'], maximum_run_usd=plan['maximum_cost_usd'],
                                 paid_provider=client.generate, key_metadata=key_metadata)
         base = openrouter.Runner(directory, plan, budget, client)
-        runner = CheckpointRunner(base, {'context': plan['deployment']['context'],
-                                        'reasoning': 'off', 'reasoning_budget': 0})
+        runner = CheckpointRunner(base, openrouter.generation_allocation(plan['deployment'], require_explicit=True))
         outputs = []; cost = 0
         for case in pack['cases']:
             check_quota()
