@@ -17,7 +17,9 @@ SEGMENTED_BOUNDED = 'compact-source-claims-20261103-v4'
 SEGMENTED = 'compact-source-claims-20261103-v5'
 UNIFIED = 'compact-source-claims-20261103-v6'
 PROPOSALS = 'compact-source-claims-20261103-v7'
-UNIFIED_VERSIONS = (UNIFIED, PROPOSALS)
+TRACED_PROPOSALS = 'compact-source-claims-20261104-v8'
+PROPOSAL_VERSIONS = (PROPOSALS, TRACED_PROPOSALS)
+UNIFIED_VERSIONS = (UNIFIED, *PROPOSAL_VERSIONS)
 SEGMENTED_VERSIONS = (SEGMENTED_BOUNDED, SEGMENTED)
 VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS, *UNIFIED_VERSIONS)
 INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS, *UNIFIED_VERSIONS)
@@ -191,11 +193,11 @@ def unified_request(canonical, source, previous, protocol=UNIFIED):
                  'l': {'type': 'string', 'enum': ['', *allowed]}})
     properties = {'s': {'type': 'string', 'enum': list(mc.STATUSES)},
                   'c': array(claim, minimum=0, maximum=16)}
-    if protocol == PROPOSALS:
+    if protocol in PROPOSAL_VERSIONS:
         properties = {'c': properties['c'], 'm': {'type': 'boolean'}}
     schema = obj(properties)
     system = mc.SUPPLEMENT_SYSTEM if previous is not None else mc.SYSTEM
-    wire = PROPOSALS_WIRE if protocol == PROPOSALS else UNIFIED_WIRE
+    wire = PROPOSALS_WIRE if protocol in PROPOSAL_VERSIONS else UNIFIED_WIRE
     return mc.request(PREFIX+system+FIDELITY+wire, canonical['data'], schema, 3072)
 
 
@@ -300,7 +302,7 @@ def bind(source, result, *, previous=None, protocol=VERSION):
     if protocol in UNIFIED_VERSIONS:
         claims = unified_claims(source, value, req)
         status = None
-        if protocol == PROPOSALS:
+        if protocol in PROPOSAL_VERSIONS:
             if type(value['m']) is not bool: raise ValueError('Boolean continuation hint required')
             retained = bool(claims or previous is not None and previous['claims'])
             status = ('partial' if value['m'] else 'covered') if retained else 'unresolved'
@@ -365,8 +367,13 @@ def canonical_record(source, value, claims, previous, protocol, req, *, status=N
                               'status': value['s'] if status is None else status, 'claims': claims}]}
     canonical = mc.bind_extraction([source], {'output': normalized},
         [previous['canonical_record']] if previous is not None else [])[0]
+    proposals = deepcopy(canonical['claims'])
+    if protocol == TRACED_PROPOSALS:
+        from commentscope.factory import source_interpretation
+        for proposal in proposals:
+            proposal['source_interpretation'] = source_interpretation.bind(source, deepcopy(proposal))
     return {'artifact_kind': protocol, 'source': deepcopy(source), 'source_sha256': digest(source),
-            'status': canonical['status'], 'claims': deepcopy(canonical['claims']),
+            'status': canonical['status'], 'claims': proposals,
             'additional_passes': canonical['additional_passes'], 'previous': deepcopy(previous),
             'canonical_record': canonical, 'canonical_record_is_normalization_only': True,
             'response': deepcopy(value), 'output_sha256': digest(value),

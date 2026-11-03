@@ -10,6 +10,7 @@ from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc
 from commentscope.factory import source_context_observations as contexts
 from commentscope.factory import statement_worlds as worlds
+from commentscope.factory import source_interpretation
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
@@ -92,6 +93,7 @@ def request(source, candidate, *, version=VERSION, source_context=None, source_w
         target['ORIGINAL_CONTEXT_ONLY'] = mc.packet(context['source'])
         target['ASSERTION_SPAN'] = deepcopy(context['assertion'])
     data = {'ORIGINAL': mc.packet(source), 'CANDIDATE': target}
+    data.update(source_interpretation.own_packet(source, candidate))
     descriptor_schema = {}
     if version in INDEPENDENT_CONTEXT:
         if source_context is None: raise ValueError('Independent source context required')
@@ -125,6 +127,8 @@ def request(source, candidate, *, version=VERSION, source_context=None, source_w
               SOURCE_CONTEXT_SYSTEM if version == CANDIDATE_CONTEXT else SYSTEM)
     if version == WORLD_CONTEXT:
         system += '\nWorld observations were made separately. They cannot approve support. Never move a fictional/imagined event into an unqualified real-world assertion or a different named world.'
+    if 'OWN_INTERPRETATION_PROPOSAL' in data:
+        system += source_interpretation.OWN_PROPOSAL_SYSTEM
     return mc.request(system, data,
         obj({**observations, **descriptor_schema, 'relation': {'type': 'string', 'enum': list(RELATIONS)},
              'authorship': {'type': 'string', 'enum': ['asserted_or_endorsed', 'not_asserted', 'unclear']},
@@ -207,7 +211,7 @@ def batch(sources, candidates, assessments):
                'candidate_text_sha256': digest(candidate['text']), 'proof_sha256': digest(record),
                'relation': record['relation'], 'guards': deepcopy(record['guards']),
                'evidence': deepcopy(record['evidence']), 'semantic_approval': False}
-        if 'meaning_context' in candidate: row['candidate_context_sha256'] = digest(candidate['meaning_context'])
+        row.update(mc.candidate_context_hashes(candidate))
         rows.append(row)
     return {'artifact_kind': VERSION + '-batch', 'sources': deepcopy(sources),
             'candidates': deepcopy(candidates), 'pairs': pairs, 'raw_assessments': deepcopy(assessments),

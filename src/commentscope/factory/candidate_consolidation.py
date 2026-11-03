@@ -94,7 +94,7 @@ def equivalence_request(sources, candidates, memberships, pairs, *, protocol=Non
         if protocol in (ASSERTION_ONLY, BILATERAL):
             if 'meaning_context' in cs[cid]:
                 raise ValueError('Context-bound assertions require a scoped comparison')
-            return mc.candidate_packet(cs[cid])
+            return mc.candidate_packet(cs[cid], include_source_interpretation=False)
         return {**mc.candidate_packet(cs[cid]), 'SUPPORTING_ORIGINALS': [mc.packet(ss[sid]) for sid in supported[cid][:3]]}
     return mc.request(SYSTEM, {'PAIRS': [{'pair_id': t['pair_id'], 'A': context(t['a']), 'B': context(t['b'])}
                                        for t in tasks]}, schema, 1024)

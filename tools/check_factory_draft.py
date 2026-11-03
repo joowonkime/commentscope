@@ -40,6 +40,7 @@ MODULES = (
     "test_compact_segment_selections",
     "test_compact_unified_selections",
     "test_compact_proposal_outcomes",
+    "test_source_interpretation",
     "test_inference_budget",
     "test_factory_operational_failures",
     "test_grounded_web_failures",

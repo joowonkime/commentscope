@@ -255,6 +255,11 @@ def candidates(records):
             row = result.setdefault(c['id'], {'id': c['id'], 'text': c['text'], 'aliases': [c['id']],
                                               'nominees': {}, 'extraction_refs': [], 'equivalence_refs': []})
             if 'meaning_context' in c:row['meaning_context']=deepcopy(c['meaning_context'])
+            if 'source_interpretation' in c:
+                context = c['source_interpretation']
+                previous = row.get('source_interpretation')
+                if previous is None or (sid, c['record_id']) < (previous['source']['id'], previous['proposal']['record_id']):
+                    row['source_interpretation'] = deepcopy(context)
             row['nominees'][sid] = c['source_sha256']
             row['extraction_refs'].append(c['record_id'])
     for row in result.values():
@@ -268,6 +273,7 @@ REPRESENTATIVE_POLICY = 'closed-literal-representative-20261017-v1'
 def validate_candidate(candidate):
     fields(candidate, 'id text aliases nominees extraction_refs equivalence_refs'+
            (' meaning_context' if isinstance(candidate,dict) and 'meaning_context' in candidate else '')+
+           (' source_interpretation' if isinstance(candidate,dict) and 'source_interpretation' in candidate else '')+
            (' representative_choice' if isinstance(candidate,dict) and 'representative_choice' in candidate else ''))
     expected=claim_id(candidate['text'])
     if 'meaning_context' in candidate:
@@ -306,12 +312,31 @@ def validate_candidate(candidate):
         source=candidate['meaning_context']['source']
         if candidate['nominees'].get(source['id'])!=digest(source):
             raise ValueError('Selected representative must keep its original nomination')
+    if 'source_interpretation' in candidate:
+        from commentscope.factory import source_interpretation
+        context = source_interpretation.validate(candidate['source_interpretation'])
+        proposal = context['proposal']; source = context['source']
+        if ('meaning_context' in candidate or proposal['id'] != candidate['id']
+                or proposal['text'] != candidate['text']
+                or proposal['authorship'] not in ('asserted', 'explicitly_endorsed')
+                or candidate['nominees'].get(source['id']) != digest(source)
+                or proposal['record_id'] not in candidate['extraction_refs']):
+            raise ValueError('Candidate must retain its own representative interpretation provenance')
     return candidate
 
 
-def candidate_packet(candidate):
+def candidate_context_hashes(candidate):
+    return {name: digest(candidate[key]) for key, name in (
+        ('meaning_context', 'candidate_context_sha256'),
+        ('source_interpretation', 'candidate_interpretation_sha256')) if key in candidate}
+
+
+def candidate_packet(candidate, *, include_source_interpretation=True):
     validate_candidate(candidate);value={'text':candidate['text']}
     if 'meaning_context' in candidate:
         from commentscope.factory import contextual_propositions as cp
         value['BOUND_MEANING']=cp.packet(candidate['meaning_context'])
+    if include_source_interpretation and 'source_interpretation' in candidate:
+        from commentscope.factory import source_interpretation
+        value['SOURCE_INTERPRETATION_PROPOSAL'] = source_interpretation.packet(candidate['source_interpretation'])
     return value
