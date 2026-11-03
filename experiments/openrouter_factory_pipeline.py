@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261104-v12'
+VERSION = 'minimal-factory-openrouter-executor-20261104-v13'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 

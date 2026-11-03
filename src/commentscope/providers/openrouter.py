@@ -1,6 +1,7 @@
 """OpenRouter transport for the existing Factory runner and checkpoints.
 
-Only the endpoint and authentication differ from the logical Factory request.
+Legacy deployments preserve the logical payload. An explicit schema policy may
+lower its wire format while retaining the canonical host contract and receipt.
 Keys are read in the worker, never placed in plans, checkpoints or client state.
 This module does not select models, start servers, retry calls or grant gates.
 """
@@ -12,6 +13,7 @@ from urllib.request import Request, build_opener, ProxyHandler
 
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.runtime_runner import RuntimeRunner
+from commentscope.providers import openai_schema
 from commentscope.factory.automatic_contract import digest
 
 VERSION = 'openrouter-chat-completions-0.1'
@@ -23,7 +25,7 @@ PROVIDER_MARGIN = 8192
 def validate(deployment):
     required = {'version', 'model', 'context', 'call_seconds'}
     if (not isinstance(deployment, dict) or not required <= deployment.keys()
-            or deployment.keys() - required - {'provider', 'reasoning', 'temperature'}
+            or deployment.keys() - required - {'provider', 'reasoning', 'temperature', 'schema_policy'}
             or deployment['version'] != VERSION
             or not isinstance(deployment['model'], str) or not deployment['model'].strip()
             or deployment['model'] != deployment['model'].strip()
@@ -44,6 +46,9 @@ def validate(deployment):
             or any(type(p) not in (int, float) or not math.isfinite(p) or p < 0
                    for p in prices.values())):
         raise ValueError('Finite nonnegative prompt/completion/request price ceilings required')
+    if 'schema_policy' in deployment and (deployment['schema_policy'] != openai_schema.VERSION
+            or provider.get('only') != ['openai']):
+        raise ValueError('Known schema policy and its explicitly pinned OpenAI provider required')
     temperature = deployment.get('temperature', 0)
     if temperature is not None and (type(temperature) not in (int, float)
             or not math.isfinite(temperature) or not 0 <= temperature <= 2):
@@ -80,6 +85,15 @@ class Client:
         if type(max_tokens) is not int or not 0 < max_tokens < self.deployment['context']:
             raise ValueError('Bounded output allocation required')
         temperature = self.deployment.get('temperature', 0)
+        if 'schema_policy' in self.deployment:
+            compiled = openai_schema.compile_schema(schema)
+            schema = compiled['schema']
+            if compiled['wrapped']:
+                system += '\nTransport envelope: put the requested JSON value under the sole outer key "result".'
+        elif self.deployment.get('provider', {}).get('only') == ['openai']:
+            # Never silently adapt an old frozen deployment. Detect known
+            # incompatibilities before opening HTTP or reserving paid work.
+            openai_schema.validate_wire(schema)
         payload = {'model': self.deployment['model'], 'temperature': temperature,
                    'max_tokens': max_tokens, 'stream': False,
                    'provider': {**self.deployment.get('provider', {}),
@@ -93,6 +107,16 @@ class Client:
         if 'reasoning' in self.deployment and self.deployment['reasoning'] is not None:
             payload['reasoning'] = deepcopy(self.deployment['reasoning'])
         return payload
+
+    def decode_response(self, request, response):
+        if 'schema_policy' not in self.deployment: return response
+        return openai_schema.decode(request['schema'], response)
+
+    def transport_record(self, request, response):
+        if 'schema_policy' not in self.deployment: return None
+        compiled = openai_schema.compile_schema(request['schema'])
+        return {k: v for k, v in compiled.items() if k != 'schema'} | {
+            'provider_response': deepcopy(response), 'provider_response_sha256': digest(response)}
 
     def measure(self, request):
         if set(request) != {'system', 'data', 'schema', 'max_tokens'}:
@@ -124,3 +148,11 @@ class Runner(RuntimeRunner):
     lifecycle is required by this runner. API usage/cost stays in raw results.
     """
     provider_identity = 'openrouter_chat_completions'
+
+    def adapt_response(self, request, response):
+        return self.client.decode_response(request, response)
+
+    def record_response(self, result, request, response):
+        record = self.client.transport_record(request, response)
+        if record is not None: result['transport'] = record
+        return result
