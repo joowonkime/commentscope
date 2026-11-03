@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_structured_output_audit",
     "test_scope_reference_review",
     "test_reference_kind_guard",
     "test_membership_evidence_basis",
