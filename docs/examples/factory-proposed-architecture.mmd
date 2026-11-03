@@ -1,0 +1,39 @@
+flowchart TB
+  subgraph BUILD["A. 관점과 Agent 사전 생성"]
+    direction LR
+    SOURCE["L0 원문 저장소<br/>원문 · 부모 · 출처 ID"]
+    PARSE["L1 원문 해석<br/>LLM의 의미 제안"]
+    DISCOVER["L2 관점 후보 발견<br/>검색 · 후보 생성"]
+    JUDGE["L3 의미 판정<br/>원문과 후보 · 논거 대조"]
+    AGGREGATE["L4 수용 정책과 집계<br/>코드가 규칙 적용"]
+    FACT["사실 근거 경계<br/>필요한 전제만 검사"]
+    COMPILE["L5 Agent Compiler<br/>코드로 근거와 권한 구성"]
+    BUNDLE[("버전 고정 Bundle")]
+    SOURCE --> PARSE --> DISCOVER --> JUDGE --> AGGREGATE --> FACT --> COMPILE --> BUNDLE
+    SOURCE --> JUDGE
+  end
+  subgraph CHAT["B. 질문 응답"]
+    direction LR
+    API["Frontend · API"] --> ROUTER["L6 세션 라우터"]
+    ROUTER --> CONTEXT_A["Agent A 전용 문맥"]
+    ROUTER --> CONTEXT_B["Agent B 전용 문맥"]
+    CONTEXT_A --> SELECT["근거 선택 LLM<br/>각 문맥을 별도 요청"]
+    CONTEXT_B --> SELECT
+    SELECT --> RENDER["답변 계약 검사 · 렌더러<br/>코드가 출처 연결"] --> API
+  end
+  DOCUMENTS["제공된 외부 근거 Packet"] --> FACT
+  BUNDLE --> CONTEXT_A
+  BUNDLE --> CONTEXT_B
+  API --> CITATIONS["출처 조회<br/>Bundle 권한 · 사용 기한 검사"]
+  BUNDLE -.-> CITATIONS
+  CITATIONS --> SOURCE
+  GATEWAY["C. 공통 실행 관리<br/>Job Coordinator · Model Gateway<br/>예산 · 호출 기록 · 구조 검사 · 재개"]
+  GATEWAY -.-> PARSE
+  GATEWAY -.-> DISCOVER
+  GATEWAY -.-> JUDGE
+  GATEWAY -.-> FACT
+  GATEWAY -.-> SELECT
+  EVAL["D. 오프라인 평가<br/>원문 대조 · 고정 표본 · G1부터 G4"]
+  AGGREGATE -.-> EVAL
+  COMPILE -.-> EVAL
+  RENDER -.-> EVAL
