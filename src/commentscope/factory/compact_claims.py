@@ -16,10 +16,12 @@ INDEXED = 'compact-source-claims-20261102-v3'
 SEGMENTED_BOUNDED = 'compact-source-claims-20261103-v4'
 SEGMENTED = 'compact-source-claims-20261103-v5'
 UNIFIED = 'compact-source-claims-20261103-v6'
+PROPOSALS = 'compact-source-claims-20261103-v7'
+UNIFIED_VERSIONS = (UNIFIED, PROPOSALS)
 SEGMENTED_VERSIONS = (SEGMENTED_BOUNDED, SEGMENTED)
-VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS, UNIFIED)
-INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS, UNIFIED)
-WORLD_CONTEXT_PROTOCOLS = (SEGMENTED, UNIFIED)
+VERSIONS = (VERSION, MASKED, INDEXED, *SEGMENTED_VERSIONS, *UNIFIED_VERSIONS)
+INDEPENDENT_CONTEXT = (INDEXED, *SEGMENTED_VERSIONS, *UNIFIED_VERSIONS)
+WORLD_CONTEXT_PROTOCOLS = (SEGMENTED, *UNIFIED_VERSIONS)
 PREFIX = 'Extract one fixed original through a compact source transport.\n'
 FIDELITY = '''
 Authorship identifies the speaker inside the original, not the analyst reading it.
@@ -120,6 +122,20 @@ the existing bounded supplement can nominate remaining content. Do not emit17
 rows or repeat earlier rows to claim completeness. Selection is not semantic
 approval, source support or factual verification.
 '''
+PROPOSALS_WIRE = UNIFIED_WIRE.replace(
+    'Return s=status and exactly one proposition array c, with at most16 rows TOTAL.',
+    'Return exactly c=proposition array and m=boolean continuation hint. Omit s/status. '
+    'The single c array has at most16 rows TOTAL.').replace(
+    'because of that limit, use partial;', 'because of that limit, set m=true;') + '''
+Set m=false when you have no further proposals to nominate. Do not invent a claim
+to fill c. If no complete proposition can be proposed, return c=[] and m=false.
+An empty primary response remains unresolved, never covered or non-substantive.
+The continuation hint permits at most one supplement only when some propositions
+have been retained. An empty primary stays unresolved even with m=true; it cannot
+trigger a second model request. On a supplement, c=[] preserves prior propositions;
+m=false finishes nomination and m=true leaves it partial, with no third pass.
+These are proposal collection states, never semantic coverage or source approval.
+'''
 
 
 def conditional_selections(source):
@@ -161,7 +177,7 @@ def segment_addresses(value, ids, *, minimum=0):
     return value
 
 
-def unified_request(canonical, source, previous):
+def unified_request(canonical, source, previous, protocol=UNIFIED):
     ids = [s['id'] for s in mc.packet(source)['ORIGINAL_SEGMENTS']]
     locked = conditional_selections(source)
     previous_ids = {c['id'] for c in previous['claims']} if previous is not None else set()
@@ -173,10 +189,14 @@ def unified_request(canonical, source, previous):
     claim = obj({'e': evidence, 'k': conditions, 'a': {'type': 'string', 'enum': list(mc.AUTHORSHIP)},
                  't': {'type': 'string', 'description': 'Empty for literal/locked; otherwise a complete rewrite, at most600 characters.'},
                  'l': {'type': 'string', 'enum': ['', *allowed]}})
-    schema = obj({'s': {'type': 'string', 'enum': list(mc.STATUSES)},
-                  'c': array(claim, minimum=0, maximum=16)})
+    properties = {'s': {'type': 'string', 'enum': list(mc.STATUSES)},
+                  'c': array(claim, minimum=0, maximum=16)}
+    if protocol == PROPOSALS:
+        properties = {'c': properties['c'], 'm': {'type': 'boolean'}}
+    schema = obj(properties)
     system = mc.SUPPLEMENT_SYSTEM if previous is not None else mc.SYSTEM
-    return mc.request(PREFIX+system+FIDELITY+UNIFIED_WIRE, canonical['data'], schema, 3072)
+    wire = PROPOSALS_WIRE if protocol == PROPOSALS else UNIFIED_WIRE
+    return mc.request(PREFIX+system+FIDELITY+wire, canonical['data'], schema, 3072)
 
 
 def unified_claims(source, value, req):
@@ -222,7 +242,7 @@ def request(source, *, previous=None, protocol=VERSION):
         if previous['artifact_kind'] != protocol: raise ValueError('Compact supplement protocol changed')
         prior = [previous['canonical_record']]
     canonical = mc.extraction_request([source], prior)
-    if protocol == UNIFIED: return unified_request(canonical, source, previous)
+    if protocol in UNIFIED_VERSIONS: return unified_request(canonical, source, previous, protocol)
     claim = obj({'t': {'type': 'string'}, 'e': {'type': 'string'}, 'k': {'type': 'string'},
                  'a': {'type': 'string', 'enum': list(mc.AUTHORSHIP)}})
     schema = obj({'s': {'type': 'string', 'enum': list(mc.STATUSES)},
@@ -277,8 +297,14 @@ def bind(source, result, *, previous=None, protocol=VERSION):
     fields(value, ' '.join(req['schema']['properties']))
     if not isinstance(value['c'], list) or len(value['c']) > 16:
         raise ValueError('Original sixteen-proposition capacity required')
-    if protocol == UNIFIED:
-        return canonical_record(source, value, unified_claims(source, value, req), previous, protocol, req)
+    if protocol in UNIFIED_VERSIONS:
+        claims = unified_claims(source, value, req)
+        status = None
+        if protocol == PROPOSALS:
+            if type(value['m']) is not bool: raise ValueError('Boolean continuation hint required')
+            retained = bool(claims or previous is not None and previous['claims'])
+            status = ('partial' if value['m'] else 'covered') if retained else 'unresolved'
+        return canonical_record(source, value, claims, previous, protocol, req, status=status)
     claims = []
     locked = req['data'].get('LOCKED_CONDITIONALS', [])
     locked_ids = {sid for row in locked for sid in row['evidence_segment_ids']}
@@ -334,8 +360,9 @@ def bind(source, result, *, previous=None, protocol=VERSION):
     return canonical_record(source, value, claims, previous, protocol, req)
 
 
-def canonical_record(source, value, claims, previous, protocol, req):
-    normalized = {'sources': [{'source_id': source['id'], 'status': value['s'], 'claims': claims}]}
+def canonical_record(source, value, claims, previous, protocol, req, *, status=None):
+    normalized = {'sources': [{'source_id': source['id'],
+                              'status': value['s'] if status is None else status, 'claims': claims}]}
     canonical = mc.bind_extraction([source], {'output': normalized},
         [previous['canonical_record']] if previous is not None else [])[0]
     return {'artifact_kind': protocol, 'source': deepcopy(source), 'source_sha256': digest(source),

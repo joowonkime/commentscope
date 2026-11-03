@@ -120,6 +120,8 @@ class CompactPipelineTests(unittest.TestCase):
                         else: result['output']['c'][0]['l'] = ''
                         result['output']['c'][0].update(e=['S000'], k=[])
                     if source['source_id'] == self.fail_source: result['output']['c'] = []
+                    if 'm' in req['schema']['properties']:
+                        result['output'] = {'c': result['output']['c'], 'm': False}
                     return result
                 return super().call(stage, req)
         return helper, Runner
@@ -192,6 +194,12 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertFalse(result['quality_gate_passed'])
 
     def test_unified_pipeline_retains_world_bilateral_and_owner_checks(self):
+        self.assert_unified_pipeline(compact.UNIFIED)
+
+    def test_proposal_pipeline_retains_world_bilateral_evidence_and_owner_checks(self):
+        self.assert_unified_pipeline(compact.PROPOSALS)
+
+    def assert_unified_pipeline(self, protocol):
         from commentscope.factory import source_arguments as sa, candidate_consolidation as cc
         from commentscope.factory import raw_membership as raw, raw_membership_verification as verification
         from commentscope.factory import statement_worlds as worlds, source_context_observations as contexts
@@ -218,11 +226,11 @@ class CompactPipelineTests(unittest.TestCase):
                 self.calls.append((stage, req))
                 return {'output': value, 'raw': 'authored fixture only', 'errors': []}
         runner = RawRunner()
-        result = helper.process(runner, extraction_protocol=compact.UNIFIED, membership_mode='raw',
+        result = helper.process(runner, extraction_protocol=protocol, membership_mode='raw',
                                 verification_contract=verification.FULL_SCOPE)
         self.assertFalse(result['errors'])
         self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)
-        self.assertTrue(all(r['artifact_kind'] == compact.UNIFIED for r in result['extractions']))
+        self.assertTrue(all(r['artifact_kind'] == protocol for r in result['extractions']))
         self.assertTrue(all(r['protocol'] == cc.BILATERAL for r in result['equivalences']))
         self.assertTrue(all(a['protocol'] == sa.SPLIT_AUDIT for a in result['audits']))
         self.assertTrue(all(a['raw']['artifact_kind'] == raw.WORLD_CONTEXT
@@ -231,6 +239,20 @@ class CompactPipelineTests(unittest.TestCase):
         self.assertTrue(positive)
         self.assertTrue(all(a['evidence_check']['protocol'] == verification.QUALIFIED for a in positive))
         self.assertFalse(result['quality_gate_passed'])
+
+    def test_empty_proposal_preserves_source_without_retry_or_coverage_approval(self):
+        helper, Runner = self.fixture(); runner = Runner(fail_source='0')
+        result = helper.process(runner, extraction_protocol=compact.PROPOSALS)
+        self.assertFalse(result['errors'])
+        self.assertFalse(result['unextracted_source_ids'])
+        self.assertEqual(len(result['extractions']), 6)
+        empty = next(r for r in result['extractions'] if r['source']['id'] == '0')
+        self.assertEqual(empty['status'], 'unresolved')
+        self.assertEqual(empty['claims'], [])
+        self.assertFalse(empty['semantic_approval'])
+        calls = [req for _, req in runner.calls if req['system'].startswith(compact.PREFIX)
+                 and req['data']['ORIGINALS'][0]['source_id'] == '0']
+        self.assertEqual(len(calls), 1)
 
     def test_segmented_pipeline_vetoes_primary_equivalence_when_independent_check_finds_a_counterexample(self):
         from commentscope.factory import candidate_consolidation as cc, assertion_counterexamples as counter
