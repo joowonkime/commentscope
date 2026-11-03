@@ -34,6 +34,18 @@ class OpenRouterProbeTests(unittest.TestCase):
             probe.prepare(self.directory, deployment(), 0.000001)
         self.assertFalse(self.directory.exists()); self.budget.call.assert_not_called()
 
+    def test_reasoning_headroom_is_included_in_whole_batch_cost_ceiling(self):
+        value = {**deployment(), 'reasoning': {'effort': 'low'}, 'reasoning_output_tokens': 1024}
+        pack = probe.request_pack()
+        old = probe.charge_ceiling(deployment(), pack)
+        new = probe.charge_ceiling(value, pack)
+        self.assertAlmostEqual(new-old, len(pack['cases'])*1024*.3/1_000_000)
+
+    def test_active_reasoning_without_headroom_cannot_prepare_a_paid_probe(self):
+        with self.assertRaisesRegex(ValueError, 'headroom'):
+            probe.prepare(self.directory, {**deployment(), 'reasoning': {'effort': 'low'}}, .25)
+        self.assertFalse(self.directory.exists()); self.budget.call.assert_not_called()
+
     def test_key_remaining_refusal_precedes_inference(self):
         self.prepare(); self.metadata.return_value['limit_remaining'] = 0
         with self.assertRaisesRegex(ValueError, 'cannot cover'): probe.run(self.directory)

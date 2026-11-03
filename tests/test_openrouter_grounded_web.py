@@ -10,7 +10,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from commentscope.factory.claim_clusters import sha
+from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.agents.grounded_web import GroundedServer
 from commentscope.providers.budget import BudgetExhausted
 from commentscope.providers.checkpoint_calls import PendingCallError
@@ -76,6 +76,22 @@ class OpenRouterGroundedWebTests(unittest.TestCase):
         (self.directory/'plan.json').write_text(json.dumps(plan))
         with self.assertRaises(ValueError): entry.build_app(self.directory)
         self.generate.assert_not_called()
+
+    def test_active_reasoning_needs_explicit_headroom_before_server_preflight(self):
+        self.deployment['reasoning'] = {'effort': 'low'}
+        with patch.object(entry, 'provider_preflight', return_value={'authored': True}) as preflight:
+            with self.assertRaisesRegex(ValueError, 'headroom'): self.prepare()
+        preflight.assert_not_called(); self.generate.assert_not_called()
+
+    def test_runtime_uses_the_same_allocated_output_as_its_capacity_check(self):
+        self.deployment.update(reasoning={'effort': 'low'}, reasoning_output_tokens=1024)
+        self.prepare(); app = entry.build_app(self.directory); token = app.create()['token']
+        app.ask(token, 'Your position?', 'q1')
+        self.assertEqual(self.finish(app, token)['job'], 'done')
+        stored = read_json(next((self.directory/'calls').glob('*.request.json')))['request']
+        self.assertEqual(self.generate.call_args.kwargs['max_tokens'], stored['max_tokens'])
+        self.assertEqual(stored['max_tokens'], 180+1024)
+        self.assertEqual(self.ledger().summary()['confirmed_usd'], '0.00001')
 
     def test_copied_server_plan_cannot_reset_its_origin_or_cost_limit(self):
         self.prepare(); other = self.root/'copy'; shutil.copytree(self.directory, other)

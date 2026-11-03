@@ -63,8 +63,9 @@ def request(system, data, response_schema, provider):
     started=time.perf_counter(); raw=None; output=None; errors=[]; response=None
     try:
         response=provider(system,data,response_schema)
-        choice=response['choices'][0]; raw=choice['message']['content']; output=json.loads(raw)
+        choice=response['choices'][0]; raw=choice['message']['content']
         if choice['finish_reason']!='stop': errors.append('incomplete_generation')
+        else: output=json.loads(raw)
     except (URLError,TimeoutError,OSError): errors.append('transport_error')
     except (KeyError,TypeError,ValueError,IndexError): errors.append('invalid_response')
     return {'raw':raw,'output':output,'errors':errors,'seconds':time.perf_counter()-started,

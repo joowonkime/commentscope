@@ -28,7 +28,7 @@ from commentscope.storage import write_json_exclusive as write
 from experiments.openrouter_factory_pipeline import provider_preflight
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'openrouter-grounded-web-20261103-v1'
+VERSION = 'openrouter-grounded-web-20261104-v2'
 
 
 def prepare(directory, bundle_file, deployment, spend_policy, maximum_cost_usd):
@@ -36,12 +36,14 @@ def prepare(directory, bundle_file, deployment, spend_policy, maximum_cost_usd):
     private(directory); private(bundle_file)
     if directory.exists(): raise ValueError('New private server plan directory required')
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
+    allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive server cost ceiling required')
     compile_inputs(read_json(bundle_file))
     provider = provider_preflight(deployment)
     plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()),
             'bundle': str(bundle_file.resolve()), 'bundle_sha256': sha(bundle_file),
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
+            'generation_allocation': allocation,
             'maximum_cost_usd': maximum_cost_usd, 'code_sha256': source_code_hashes(),
             'entrypoint_sha256': sha(Path(__file__)), 'cross_run_response_reuse': False,
             'limits': {'call_seconds': deployment['call_seconds'], 'analysis_seconds': None},
@@ -61,6 +63,8 @@ def validate(directory):
             or units(plan['maximum_cost_usd']) <= 0):
         raise ValueError('Frozen server plan or implementation changed')
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
+    if plan.get('generation_allocation') != openrouter.generation_allocation(deployment, require_explicit=True):
+        raise ValueError('Frozen server generation allocation changed')
     if plan['limits'] != {'call_seconds': deployment['call_seconds'], 'analysis_seconds': None}:
         raise ValueError('Frozen server deadlines changed')
     bundle_file = Path(plan['bundle']); private(bundle_file)
@@ -90,7 +94,7 @@ def build_app(directory):
                       maximum_run_usd=plan['maximum_cost_usd'], paid_provider=client.generate,
                       key_metadata=key_metadata)
     runner = CheckpointRunner(openrouter.Runner(directory, plan, paid, client),
-                              {'context': plan['deployment']['context'], 'reasoning': 'off', 'reasoning_budget': 0})
+                              plan['generation_allocation'])
     remote = {'status': 'ready'}
 
     class RemoteApp(GroundedApp):
