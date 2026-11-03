@@ -17,6 +17,53 @@ POLICY = {'version': 'host-headroom-0.1', 'minimum_available_mb': 1536,
           'poll_seconds': 10, 'maximum_observation_failures': 2}
 
 
+class ResourceStopRequested(RuntimeError):
+    """A latched resource stop prevents any further model dispatch."""
+
+
+class RemoteCallGuard:
+    """Let one bounded API call finish its accounting and durable checkpoint.
+
+    The observer still interrupts local work immediately. Only an already
+    admitted remote call defers that interrupt; its existing worker deadline
+    remains mandatory. Wrap the entire checkpoint call, including settlement
+    and writes, rather than just the network request. A stop never admits a new
+    call, and an original transport/storage exception is never replaced.
+    """
+    def __init__(self, *, interrupt=None):
+        self.interrupt = interrupt or (lambda: os.kill(os.getpid(), signal.SIGINT))
+        self.lock = threading.Lock()
+        self.stopped = False
+        self.remote_active = False
+
+    def check(self):
+        with self.lock:
+            if self.stopped:
+                raise ResourceStopRequested('Host resource stop requested; no further model work')
+
+    def request_stop(self):
+        with self.lock:
+            self.stopped = True
+            remote_active = self.remote_active
+        if not remote_active:
+            self.interrupt()
+
+    @contextmanager
+    def remote_call(self):
+        with self.lock:
+            if self.stopped:
+                raise ResourceStopRequested('Host resource stop requested; no further model work')
+            if self.remote_active:
+                raise ValueError('Only one bounded remote call may be active')
+            self.remote_active = True
+        try:
+            yield
+        finally:
+            with self.lock:
+                self.remote_active = False
+        self.check()
+
+
 def validate(policy):
     if policy != POLICY:
         raise ValueError('Unknown host resource policy; freeze changes explicitly')

@@ -142,6 +142,48 @@ class OpenRouterExecutorTests(unittest.TestCase):
         self.preflight.assert_not_called(); self.metadata.assert_not_called()
         self.time_budget.call.assert_not_called()
 
+    def test_resource_stop_preserves_paid_result_and_resumes_without_resending(self):
+        self.prepare()
+        interrupt = Mock()
+        guard = executor.host_resources.RemoteCallGuard(interrupt=interrupt)
+        respond = self.time_budget.call.side_effect
+        def stopped_response(*args, **kwargs):
+            guard.request_stop()
+            return respond(*args, **kwargs)
+        self.time_budget.call.side_effect = stopped_response
+        with patch.object(executor.host_resources, 'RemoteCallGuard', return_value=guard):
+            with self.assertRaises(executor.host_resources.ResourceStopRequested):
+                executor.run(self.run_dir)
+        interrupt.assert_not_called()
+        self.assertEqual(self.time_budget.call.call_count, 1)
+        self.assertEqual(len(list((self.run_dir/'calls').glob('*.result.json'))), 1)
+        intents = list((self.run_dir/'checkpoints').glob('*.intent.json'))
+        self.assertEqual(len(intents), 1)
+        self.assertTrue(intents[0].with_name(intents[0].name.replace('.intent.', '.result.')).exists())
+        self.assertFalse((self.run_dir/'completed.json').exists())
+        self.time_budget.call.side_effect = respond
+        report = executor.run(self.run_dir)
+        self.assertEqual(self.time_budget.call.call_count, 6)
+        self.assertEqual(report['same_plan_reused_calls'], 1)
+        self.assertEqual(report['run_spending']['uncertain_calls'], 0)
+        self.assertEqual(report['run_spending']['charged_usd'], '0.00006')
+        self.assertFalse(report['quality_gate_passed'])
+
+    def test_resource_stop_prevents_local_nli_and_checkpoint_creation(self):
+        self.prepare()
+        guard = executor.host_resources.RemoteCallGuard(interrupt=Mock())
+        def stopped(snapshot, runner, embed, inspect, facts, **kwargs):
+            guard.request_stop()
+            facts({'authored': 'must not run'})
+            self.fail('Local NLI after resource stop')
+        self.process.side_effect = stopped
+        with patch.object(executor.host_resources, 'RemoteCallGuard', return_value=guard):
+            with self.assertRaises(executor.host_resources.ResourceStopRequested):
+                executor.run(self.run_dir)
+        self.time_budget.call.assert_not_called()
+        self.metadata.assert_not_called()
+        self.assertFalse(list((self.run_dir/'checkpoints').glob('*.intent.json')))
+
     def test_rewriting_a_plan_cannot_raise_its_budget(self):
         self.prepare(); path = self.run_dir/'plan.json'; plan = read_json(path)
         plan['maximum_cost_usd'] = 0.5; path.write_text(json.dumps(plan))
