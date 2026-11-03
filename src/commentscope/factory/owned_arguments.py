@@ -80,7 +80,8 @@ def temporal_anchors(text):
 
 def runtime_target(candidate, proof):
     if proof is None:
-        return mc.candidate_packet(candidate) if 'meaning_context' in candidate else candidate['text']
+        return (mc.candidate_packet(candidate) if 'meaning_context' in candidate or 'source_interpretation' in candidate
+                else candidate['text'])
     runtime.validate(proof,candidate)
     if not proof['ready']:return mc.candidate_packet(candidate)
     return {'text':candidate['text'],'interpretation_scope':deepcopy(proof['interpretation_scope'])}

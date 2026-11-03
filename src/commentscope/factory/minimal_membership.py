@@ -3,6 +3,7 @@ from copy import deepcopy
 
 from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc, opinion_map, proposition_requirements as pr
+from commentscope.factory import source_interpretation
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields, source_packet, validate_snapshot_source
 from commentscope.ingestion import normalize_snapshot
@@ -47,11 +48,15 @@ def membership_request(sources, candidates, pairs):
                    'scope_preserved': {'type': 'string', 'enum': ['yes', 'no', 'unclear']},
                    'evidence_segment_ids': array({'type': 'string', 'enum': ids}, minimum=1, maximum=min(24,len(ids)))}))
     schema = obj({'decisions': array({'anyOf': branches}, minimum=len(ps), maximum=len(ps))})
-    return mc.request(SYSTEM, {'PAIRS': [{'pair_id': pid, 'source_id': p['source_id'],
-                                        'ORIGINAL': mc.packet(ss[p['source_id']]),
-                                        'CANDIDATE': mc.candidate_packet(cs[p['candidate_id']])}
-                                       for pid,p in ps.items()]},
-                      schema, 128 + 128 * len(ps))
+    tasks = [{'pair_id': pid, 'source_id': p['source_id'],
+              'ORIGINAL': mc.packet(ss[p['source_id']]),
+              'CANDIDATE': mc.candidate_packet(cs[p['candidate_id']], include_source_interpretation=False),
+              **source_interpretation.own_packet(ss[p['source_id']], cs[p['candidate_id']])}
+             for pid,p in ps.items()]
+    system = SYSTEM
+    if any('OWN_INTERPRETATION_PROPOSAL' in task for task in tasks):
+        system += source_interpretation.OWN_PROPOSAL_SYSTEM
+    return mc.request(system, {'PAIRS': tasks}, schema, 128 + 128 * len(ps))
 
 
 def bind(sources, candidates, pairs, result, qualifications=(), contextual_assessments=()):
@@ -108,8 +113,7 @@ def bind(sources, candidates, pairs, result, qualifications=(), contextual_asses
                 elif not assessment['passed']:guards.append('candidate_qualification_not_supported')
         bound.append({'artifact_kind': VERSION, **pair, 'source_sha256': digest(source),
                       'candidate_text_sha256': digest(candidate['text']),
-                      **({'candidate_context_sha256': digest(candidate['meaning_context'])}
-                         if 'meaning_context' in candidate else {}),
+                      **mc.candidate_context_hashes(candidate),
                       'request_sha256': digest(req), 'decision': deepcopy(row),
                       'relation': 'uncertain' if guards else row['relation'], 'guards': guards,
                       'evidence': evidence, 'semantic_approval': False})
@@ -205,6 +209,8 @@ def collect(sources, candidates, batches):
                 raise ValueError('Membership must match current original and final wording')
             if 'meaning_context' in cs[cid] and row.get('candidate_context_sha256') != digest(cs[cid]['meaning_context']):
                 raise ValueError('Membership candidate context changed')
+            if row.get('candidate_interpretation_sha256') != mc.candidate_context_hashes(cs[cid]).get('candidate_interpretation_sha256'):
+                raise ValueError('Membership source interpretation changed')
             if key in rows:
                 raise ValueError('Duplicate membership; reuse checkpoint, not votes')
             rows[key] = row
