@@ -92,7 +92,7 @@ class OpenRouterGenerationTests(unittest.TestCase):
             root = Path(tmp); client = openrouter.Client(deployment())
             plan = {'deployment': client.deployment, 'limits': {'call_seconds': 30, 'analysis_seconds': None}}
             write(root/'plan.json', plan)
-            from commentscope.factory.claim_clusters import sha
+            from commentscope.factory.claim_clusters import read_json, sha
             ph = sha(root/'plan.json'); ledger = SpendLedger(root/'spend.sqlite', 'authored', maximum_usd=1)
             base = Mock(); raw = receipt({'same': True}); raw['usage']['cost'] = .0001
             base.call.return_value = raw
@@ -104,7 +104,7 @@ class OpenRouterGenerationTests(unittest.TestCase):
             first = runner.call('owner', logical()); second = runner.call('owner', logical())
             self.assertEqual(first, second); base.call.assert_called_once()
             self.assertEqual(base.call.call_args.args[0]['max_tokens'], 1152)
-            stored = json.loads((root/'calls/0001-owner.request.json').read_text())
+            stored = read_json(root/'calls/0001-owner.request.json')
             self.assertEqual(stored['request_sha256'], client.measure(logical())['allocated_request_sha256'])
             self.assertEqual(ledger.summary()['confirmed_usd'], '0.0001')
             self.assertEqual(ledger.summary()['uncertain_calls'], 0)
