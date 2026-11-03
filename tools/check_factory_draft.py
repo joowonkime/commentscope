@@ -11,6 +11,7 @@ MODULES = (
     "test_scope_reference_review",
     "test_reference_kind_guard",
     "test_membership_evidence_basis",
+    "test_approximation_evidence_scope",
     "test_raw_membership_source_context",
     "test_statement_world_membership",
     "test_minimal_pipeline",

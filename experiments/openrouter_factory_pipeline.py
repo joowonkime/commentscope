@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261103-v9'
+VERSION = 'minimal-factory-openrouter-executor-20261103-v10'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -78,6 +78,7 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
                 or previous.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
                 or previous.get('source_context_protocol') != (source_context_observations.VERSION if discovery_mode == 'free' else None)
                 or previous.get('world_observation_protocol') != (statement_worlds.VERSION if discovery_mode == 'free' else None)
+                or previous.get('evidence_observation_protocol') != (raw_membership_verification.QUALIFIED if discovery_mode == 'free' else raw_membership_verification.EXPLAINED)
                 or any(previous[k] != materials[k] for k in ('classifier', 'model_files', 'documents', 'selections'))):
             raise ValueError('Qualification uses another remote executor, auxiliary model, evidence or shared budget')
 
@@ -134,6 +135,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'membership_observation_protocol': raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
             'source_context_protocol': source_context_observations.VERSION if discovery_mode == 'free' else None,
             'world_observation_protocol': statement_worlds.VERSION if discovery_mode == 'free' else None,
+            'evidence_observation_protocol': raw_membership_verification.QUALIFIED if discovery_mode == 'free' else raw_membership_verification.EXPLAINED,
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
@@ -166,6 +168,7 @@ def validate(directory, plan):
             or plan.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if plan['discovery_mode'] == 'free' else raw_membership.VERSION)
             or plan.get('source_context_protocol') != (source_context_observations.VERSION if plan['discovery_mode'] == 'free' else None)
             or plan.get('world_observation_protocol') != (statement_worlds.VERSION if plan['discovery_mode'] == 'free' else None)
+            or plan.get('evidence_observation_protocol') != (raw_membership_verification.QUALIFIED if plan['discovery_mode'] == 'free' else raw_membership_verification.EXPLAINED)
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE

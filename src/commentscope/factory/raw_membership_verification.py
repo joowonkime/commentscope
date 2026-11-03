@@ -27,6 +27,7 @@ ACYCLIC = 'raw-membership-verification-20261018-v11'
 FULL_SCOPE = 'raw-membership-verification-20261026-v12'
 EXPLAINED = 'full-scope-evidence-basis-20261102-v1'
 BRIEF = 'full-scope-evidence-basis-20261102-v2'
+QUALIFIED = 'full-scope-evidence-qualifiers-20261103-v3'
 AUTHORED_CONTRACTS = (AUTHORED, REFERENCED, ACYCLIC)
 NORMALIZED_TARGETS = (TARGETED_NORMALIZED, *AUTHORED_CONTRACTS)
 TARGETED_CONTRACTS = (TARGETED, *NORMALIZED_TARGETS)
@@ -329,7 +330,7 @@ def independent_candidate_view(record, candidate_scope=None):
 
 
 def evidence_request(record, version=VERSION, *, candidate_scope=None, protocol=None):
-    if protocol not in (None, EXPLAINED, BRIEF) or protocol and version != FULL_SCOPE:
+    if protocol not in (None, EXPLAINED, BRIEF, QUALIFIED) or protocol and version != FULL_SCOPE:
         raise ValueError('Explained evidence requires its exact full-scope contract')
     if version not in VERSIONS: raise ValueError('Unknown evidence contract')
     raw.validate(record)
@@ -376,8 +377,18 @@ consideration is not an only-if condition. If the candidate itself asserts a
 concession, that assertion must also be preserved. Explain the declared verdict
 without deliberation; all source, scope, authorship and uncertainty checks remain.
 '''
-    if protocol == BRIEF:
+    if protocol in (BRIEF, QUALIFIED):
         system += '\nWrite basis as one sentence of at most120 characters. Do not copy or translate a whole source sentence. A repeated predicate or substituted actor does not preserve the whole claim.\n'
+    if protocol == QUALIFIED:
+        system += '''
+Preserve approximation and analogy as well as uncertainty. A source saying that
+one system is essentially/similarly doing something does not establish an actual
+instance or implementation of a different policy/system. Do not drop an almost,
+nearly, roughly or equivalent qualification while resolving a reference. An
+approximation in an unrelated original clause or parent cannot qualify a claim
+whose selected own evidence is unqualified. Retained words alone are insufficient:
+their predicate, attachment, scope and authorship must also remain aligned.
+'''
     return mc.request(system, data, obj(properties), 512 if protocol else 256)
 
 
@@ -413,6 +424,12 @@ def bind_evidence(record, result, version=VERSION, *, candidate_scope=None, prot
     modal_texts = pieces if version in (CLAUSE_SCOPE, *INDEPENDENT) and pieces else [text]
     if any(cw.MODAL.search(p) and not cw.DIRECTIVE.search(p) for p in modal_texts) and cw.DIRECTIVE.search(target):
         guards.append('forecast_or_possibility_is_not_a_demand')
+    approximation = None
+    if protocol == QUALIFIED:
+        from commentscope.factory import qualification_guards
+        approximation = qualification_guards.approximation_loss(
+            ' '.join(p['text'] for p in record['evidence']), target)
+        if approximation['blocked']: guards.append('selected_approximation_not_preserved')
     if value['source_basis'] == 'explicit_parent_endorsement' and record['source']['parent'] is None:
         guards.append('parent_endorsement_without_parent')
     if version == VERSION and value['source_basis'] != 'own_assertion':
@@ -439,6 +456,7 @@ def bind_evidence(record, result, version=VERSION, *, candidate_scope=None, prot
                 and value['source_basis'] in ('own_assertion', 'explicit_parent_endorsement')}
     if version in INDEPENDENT: bound['candidate_scope'] = deepcopy(candidate_scope)
     if protocol: bound.update(protocol=protocol, output_sha256=digest(value))
+    if approximation is not None: bound['approximation'] = approximation
     return bound
 
 

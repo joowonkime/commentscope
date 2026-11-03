@@ -171,6 +171,9 @@ class PipelineWork:
                             from commentscope.factory import compact_claims
                             protocol = (verification.BRIEF if self.extraction_protocol in compact_claims.VERSIONS
                                         else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
+                            if (self.verification_contract == verification.FULL_SCOPE
+                                    and self.extraction_protocol == compact_claims.UNIFIED):
+                                protocol = verification.QUALIFIED
                             rows=self.work('raw-own-evidence',[proof],
                                 lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
                                 lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)
