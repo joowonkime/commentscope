@@ -49,7 +49,7 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 ## 다음에 함께 할 일
 
-1. [기존 호출·오류·비용 기준선](docs/design/BASELINE.md)과 상세 설계를 따라 TASK-003에서 후보 계약을 구현하고 품질·비용을 검증합니다.
+1. [기존 호출·오류·비용 기준선](docs/design/BASELINE.md)과 상세 설계·추적표의 현재 작업을 따라 후보 계약을 구현하고 품질·비용을 검증합니다.
 2. 기존 Figma의 의견 비교·그룹 대화·성찰 중 빠진 기능을 명세·검사와 함께 구현합니다.
 3. 팀 프론트에 연결해 세 과업을 확인합니다. Figma 원본 변경은 팀과 먼저 합의하며, 사용자 검증과 Factory 합격을 구별합니다.
 

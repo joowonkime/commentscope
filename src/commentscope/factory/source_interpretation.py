@@ -69,6 +69,8 @@ def own_packet(source, candidate):
 
 
 REVIEW = 'source-interpretation-review-20261104-v1'
+TYPED_REVIEW = 'source-interpretation-review-20261105-v2'
+REVIEW_VERSIONS = (REVIEW, TYPED_REVIEW)
 REVIEW_BATCH_SIZE = 8
 FIDELITY_CHECKS = ('reference', 'attribution', 'speech_act', 'logical_scope', 'quantities_time', 'world')
 SPEECH_ACTS = ('assertion', 'request', 'criticism', 'question', 'reported_view', 'expressed_uncertainty', 'unclear')
@@ -109,6 +111,21 @@ Check alternatives, negation, only-if, approximations, concessions and uncertain
 as well as main stance. Several days per week is not uninterrupted weeks.
 Exact words alone do not prove faithful meaning. Return every proposal ID once.
 No new source relevance filter, candidate grouping, factual truth or support approval.'''
+TYPED_REVIEW_SYSTEM = REVIEW_SYSTEM + '''
+Independently observe authorship and kind for EACH proposed proposition against
+the whole original, rather than copying the extractor's authorship proposal.
+authorship: asserted is the author's own statement, request or criticism;
+explicitly_endorsed adopts another stated position; reported belongs to another
+speaker; uncertain means attribution cannot be resolved. Parent/topic text may
+resolve a reference but cannot supply the author's own reason or endorsement.
+kind describes this complete proposition, not every sentence in its original:
+fact is empirical/descriptive, value is normative/evaluative, prediction is a
+forecast, uncertain is mixed or unresolved classification. A request or should
+statement can be value; a description of an existing rule is empirical.
+Do not relabel an empirical assertion as value because it is hard to verify.
+An author's expressed uncertainty is epistemic_status, distinct from unclear
+classification. These observations establish neither factual truth nor support.
+'''
 
 
 def _review_inputs(interpretations):
@@ -131,7 +148,9 @@ def _review_inputs(interpretations):
     return source, own, context, topic
 
 
-def review_request(interpretations):
+def review_request(interpretations, *, protocol=REVIEW):
+    if protocol not in REVIEW_VERSIONS:
+        raise ValueError('Explicit supported source review contract required')
     source, own, parent, topic = _review_inputs(interpretations)
     ids = [s['id'] for s in own]; frame_ids = ids + [s['id'] for s in parent]
     all_ids = frame_ids + [s['id'] for s in topic]
@@ -148,18 +167,25 @@ def review_request(interpretations):
         'world_frame_ids': addresses(frame_ids, 0, 4),
         'fidelity': obj({k: {'type': 'string', 'enum': ['preserved', 'changed', 'unclear']}
                          for k in FIDELITY_CHECKS})})
+    if protocol == TYPED_REVIEW:
+        from commentscope.factory.source_arguments import KINDS
+        decision = obj({**decision['properties'],
+            'authorship': {'type': 'string', 'enum': list(mc.AUTHORSHIP)},
+            'kind': {'type': 'string', 'enum': list(KINDS)}})
     proposals = [{'id': f'N{i+1}', 'text': r['proposal']['text'],
         'authorship_proposal': r['proposal']['authorship'],
         'own_evidence_segment_ids': [s['id'] for s in r['proposal']['evidence']],
         'essential_condition_segment_ids': [s['id'] for s in r['proposal']['essential_conditions']]}
         for i, r in enumerate(interpretations)]
-    return mc.request(REVIEW_SYSTEM, {'ORIGINAL': mc.packet(source),
-        'PARENT_REFERENCE_SEGMENTS': parent, 'TOPIC_REFERENCE_SEGMENTS': topic, 'PROPOSALS': proposals},
+    return mc.request(TYPED_REVIEW_SYSTEM if protocol == TYPED_REVIEW else REVIEW_SYSTEM,
+        {'ORIGINAL': mc.packet(source), 'PARENT_REFERENCE_SEGMENTS': parent,
+         'TOPIC_REFERENCE_SEGMENTS': topic, 'PROPOSALS': proposals,
+         **({'REVIEW_CONTRACT': protocol} if protocol == TYPED_REVIEW else {})},
         obj({'decisions': array(decision, minimum=len(proposals), maximum=len(proposals))}), 4096)
 
 
-def bind_review(interpretations, result):
-    request = review_request(interpretations)
+def bind_review(interpretations, result, *, protocol=REVIEW):
+    request = review_request(interpretations, protocol=protocol)
     if not isinstance(result, dict) or result.get('errors'):
         raise ValueError('Completed source interpretation review required')
     value = result.get('output'); checked = check_output(request['schema'], value)
@@ -201,19 +227,22 @@ def bind_review(interpretations, result):
         if row['reference_use'] == 'unclear': holds.append('reference_unresolved')
         if interpretation['proposal']['authorship'] not in ('asserted', 'explicitly_endorsed'):
             holds.append('extraction_not_own_nomination')
+        if protocol == TYPED_REVIEW and row['authorship'] not in ('asserted', 'explicitly_endorsed'):
+            holds.append('review_not_own_nomination')
         decisions.append({'source_interpretation_id': interpretation['id'],
             'proposal_record_id': interpretation['proposal']['record_id'], 'declaration': deepcopy(row),
             'references': references, 'scope_links': links, 'world_frames': frames,
             'holds': sorted(holds), 'nomination_eligible': not holds})
-    return {'artifact_kind': REVIEW, 'source': deepcopy(source), 'interpretations': deepcopy(interpretations),
+    return {'artifact_kind': protocol, 'source': deepcopy(source), 'interpretations': deepcopy(interpretations),
             'request_sha256': digest(request), 'response': deepcopy(value),
             'decisions': sorted(decisions, key=lambda d:d['source_interpretation_id']),
             'semantic_approval': False, 'support_approved': False, 'factual_verification': False}
 
 
 def validate_review(record):
-    if (not isinstance(record, dict) or record.get('artifact_kind') != REVIEW
-            or bind_review(record['interpretations'], {'output': record['response']}) != record):
+    if (not isinstance(record, dict) or record.get('artifact_kind') not in REVIEW_VERSIONS
+            or bind_review(record['interpretations'], {'output': record['response']},
+                           protocol=record['artifact_kind']) != record):
         raise ValueError('Semantic review inputs, declarations or admission changed')
     return record
 
@@ -242,11 +271,15 @@ def review_tasks(records):
     return tasks
 
 
-def nominate(records, reviews):
+def nominate(records, reviews, *, protocol=REVIEW):
     """Review can remove a nomination, never donate support or erase its source."""
+    if protocol not in REVIEW_VERSIONS:
+        raise ValueError('Explicit supported source review contract required')
     registry = _registry(records); decisions = {}; refs = {}
     for review in reviews:
         validate_review(review)
+        if review['artifact_kind'] != protocol:
+            raise ValueError('Source review and nomination contracts differ')
         for interpretation in review['interpretations']:
             iid = interpretation['id']
             if iid in decisions or registry.get(iid) != interpretation:
@@ -263,6 +296,6 @@ def nominate(records, reviews):
         inventory.append({'source_id': interpretation['source']['id'], 'claim_id': proposal['id'],
             'proposal_record_id': proposal['record_id'], 'source_interpretation_id': iid,
             'review_sha256': refs.get(iid), 'holds': holds, 'nomination_eligible': not holds})
-    return {'artifact_kind': REVIEW+'-admission', 'decisions': inventory,
+    return {'artifact_kind': protocol+'-admission', 'decisions': inventory,
             'candidates': mc.candidates(records, allowed_extraction_refs=admitted),
             'semantic_approval': False, 'support_approved': False}
