@@ -1,6 +1,6 @@
 """Frozen synthetic S1/S2 diagnostic; execution never grants semantic admission."""
 import argparse
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
 from decimal import Decimal
 import json
 import os
@@ -13,6 +13,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.file_integrity import source_code_hashes
 from commentscope.providers import openrouter
+from commentscope.providers.execution_cycle import CYCLE_VERSION, cycle_guard as shared_cycle_guard
 from commentscope.providers.budget import InferenceBudget
 from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.execution_lock import experiment_lock
@@ -22,7 +23,6 @@ from experiments.openrouter_factory_pipeline import provider_preflight, archive_
 from experiments.openrouter_factory_probe import private, validate_spend_policy, key_metadata
 
 VERSION = 'source-semantics-diagnostic-20261105-v1'
-CYCLE_VERSION = 'commentscope-autonomous-cycle-20261105-v1'
 FIXTURE = Path('tests/fixtures/source-semantics-diagnostic.json')
 
 
@@ -31,17 +31,8 @@ def fixture():
 
 
 def cycle_guard(cycle, *, call_seconds=0, allow_expired=False):
-    if (cycle.get('version') != CYCLE_VERSION or 'TASK-004' not in cycle.get('tasks', [])
-            or not 0 < units(cycle['maximum_additional_usd']) <= units('5')):
-        raise ValueError('Explicit bounded cycle authorization required')
-    start = datetime.fromisoformat(cycle['started_at'])
-    end = datetime.fromisoformat(cycle['deadline'])
-    now = datetime.now(timezone.utc)
-    if (start.utcoffset() is None or end.utcoffset() is None
-            or not timedelta(0) < end-start <= timedelta(hours=7)):
-        raise ValueError('At most seven hours with explicit timezone required')
-    if not allow_expired and not start <= now < end-timedelta(seconds=call_seconds+3):
-        raise TimeoutError('Cycle deadline cannot cover another bounded operation')
+    return shared_cycle_guard(cycle,call_seconds=call_seconds,allow_expired=allow_expired,
+                              observed_at=datetime.now(timezone.utc))
 
 
 def control_interpretation(case):

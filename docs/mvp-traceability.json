@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v6",
+  "spec_version": "commentscope-mvp-20261105-v7",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -22,9 +22,9 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-011",
+    "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "제품의 기존자동2Agent 개발입력과 Explore/그룹/Reflect 구현 및 제한된실제9호출을 완료했다. 새유료작업은 계획/잔여/기한 확인 후 기존동일cycle 잔여 내만 가능. 전체Factory품질/새의미구조채택은계속보류. 다음은 기존팀프론트의 API연결."
+    "hold_reason": "Cluster→Agent 실제경로G1을동일cycle에결합해준비했다. 기존최소6GiB 디스크보호규칙에현재호스트여유약2.5GiB가미달하여 모델호출0으로기동중단. 자원확보·현재장부/기한확인후같은동결G1재개. 프론트/새의미구조채택은미착수."
   },
   "requirements": [
     {
@@ -913,7 +913,7 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "todo",
+      "status": "in_progress",
       "deliverables": [
         "현행 설정의 G1 전체 산출물·원문 검토·Agent 로딩/각3질문",
         "정확한 code/model/provider/prompt/자료/평가 hash"
@@ -922,14 +922,22 @@
         "기존 합성12원문·2Agent·지지·사실·내용·runtime 기준을 통과한다.",
         "코드/설정 변경 후 과거 G1 성공을 자동 승계하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Cycle-bound Factory/host tests21 pass; required Factory482 pass including the new7. G1 frozen12-source plan prepared. All12/24/96/999 source request schemas/capacity checked without inference. Actual start stopped at existing low_host_disk guard; no checkpoint intent/model call. Not G1 quality approval.",
+          "reference": "docs/design/FACTORY_DELIVERY.md",
+          "result": "partial"
+        }
+      ],
       "required_evidence": [
         "formal_gate"
       ],
       "decisions": [],
       "design_refs": [
         "docs/design/EXECUTION.md",
-        "docs/design/FACTORY.md"
+        "docs/design/FACTORY.md",
+        "docs/design/FACTORY_DELIVERY.md"
       ]
     },
     {
@@ -1200,7 +1208,7 @@
     },
     {
       "id": "TASK-011",
-      "title": "기존 팀 프론트 통합",
+      "title": "Figma 기준 제품 프론트 구현·API 연결",
       "requirements": [
         "REQ-004",
         "REQ-005",
@@ -1215,9 +1223,9 @@
         "TASK-009",
         "TASK-010"
       ],
-      "status": "next",
+      "status": "todo",
       "deliverables": [
-        "기존 Figma의 세 과업과 실제 자동 bundle를 연결한 화면/API",
+        "기존 Figma의 세 과업을 구현한 프론트와 실제 자동 bundle/API 연결",
         "팀 언어 정책·오류/보류·대화/성찰 저장·원문 이동 결과"
       ],
       "done_when": [
@@ -1311,8 +1319,13 @@
       "date": "2026-11-05",
       "reason": "기존자동생성 합성댓글2Agent로 별도제품API/개발화면을 실제구현하고 동일cycle에서9회 실제모델을 확인했다. 알려진원문오류를해결했다고가정하지않고 기능진도를분리한다.",
       "scope": "TASK015/008/009/010 개발기능 완료, 다음011 팀프론트통합. 요구사항은 전체품질/통합미검증으로partial 유지. DEC002/003의bounded제품계약을구현범위로수락. r5/총50달러/기존5달러cycle와과거차감유지."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 프론트는아직없으며 그전에 cluster→Agent구조의완성을통해실제로작동해야한다고정정했다. 정식생성경로G1→실제댓글검증을우선한다.",
+      "scope": "TASK005진행,011미착수. Factory실행도동일승인cycle의5달러/기존차감/기한에묶는다. 알려진S1/S2후보는보류,기존기본파이프라인/현재모델/정식품질기준유지. 프론트소스부재를새설계반복의이유로삼지않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v3",
+  "design_version": "commentscope-detailed-design-20261105-v4",
   "design_document": "docs/design/README.md"
 }
