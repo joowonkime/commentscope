@@ -1,0 +1,108 @@
+'use strict';
+// Real browser product-flow check with synthetic provider responses only.
+const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
+const {spawn}=require('node:child_process');
+const WebSocket=require('ws');
+const [python,chrome,destination]=process.argv.slice(2);
+if(!python||!chrome||!destination)throw Error('Usage: node mvp_browser_check.cjs PYTHON CHROME NEW_PRIVATE_OUTPUT');
+const output=path.resolve(destination);fs.mkdirSync(output,{recursive:false});
+const profile=fs.mkdtempSync(path.join(os.tmpdir(),'commentscope-mvp-browser-'));
+const report={synthetic_only:true,paid_calls:0,semantic_quality_measured:false,checks:{},page_errors:[],external_requests:[]};
+const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
+async function until(fn,timeout=12000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(value)return value;await sleep(80);}throw Error('Browser assertion deadline');}
+let server,browser,socket;
+(async()=>{
+  let stdout='';
+  server=spawn(python,['-m','experiments.mvp_browser_fixture',path.join(output,'fixture')],{
+    stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONPATH:[path.resolve('src'),process.cwd()].join(path.delimiter)}});
+  server.stdout.on('data',chunk=>stdout+=chunk.toString());server.stderr.on('data',chunk=>fs.appendFileSync(path.join(output,'fixture.log'),chunk));
+  const origin=await until(()=>{if(server.exitCode!==null)throw Error('Fixture exited');return stdout.includes('\n')?JSON.parse(stdout.split('\n')[0]).origin:null;});
+  browser=spawn(chrome,['--headless=new','--no-sandbox','--disable-gpu','--disable-background-networking',
+    '--disable-component-update','--disable-sync','--no-first-run','--no-default-browser-check',
+    '--remote-debugging-address=127.0.0.1','--remote-debugging-port=0','--user-data-dir='+profile,'about:blank'],{stdio:['ignore','ignore','pipe']});
+  browser.stderr.on('data',chunk=>fs.appendFileSync(path.join(output,'chromium.log'),chunk));
+  const port=await until(()=>{if(browser.exitCode!==null)throw Error('Chromium exited');const file=path.join(profile,'DevToolsActivePort');return fs.existsSync(file)?Number(fs.readFileSync(file,'utf8').split('\n')[0]):null;});
+  const pages=await(await fetch(`http://127.0.0.1:${port}/json/list`)).json();
+  socket=new WebSocket(pages.find(p=>p.type==='page').webSocketDebuggerUrl);
+  await new Promise((resolve,reject)=>{socket.once('open',resolve);socket.once('error',reject);});
+  let sequence=0;const pending=new Map();
+  socket.on('message',bytes=>{const value=JSON.parse(bytes.toString());if(value.id&&pending.has(value.id)){const target=pending.get(value.id);pending.delete(value.id);clearTimeout(target.timer);value.error?target.reject(Error(value.error.message)):target.resolve(value.result);}
+    if(value.method==='Runtime.exceptionThrown')report.page_errors.push(value.params.exceptionDetails.text);
+    if(value.method==='Network.requestWillBeSent'&&/^https?:/.test(value.params.request.url)&&!value.params.request.url.startsWith(origin+'/'))report.external_requests.push(value.params.request.url);
+  });
+  const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout'));},12000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
+  const evaluate=async expression=>{const result=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error('Page expression failed: '+expression.slice(0,80));return result.result.value;};
+  const screenshot=async name=>{const result=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});fs.writeFileSync(path.join(output,name),Buffer.from(result.data,'base64'),{flag:'wx'});};
+  const submit=id=>evaluate(`document.getElementById(${JSON.stringify(id)}).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))`);
+  await command('Page.enable');await command('Runtime.enable');await command('Network.enable');
+  await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
+  await command('Page.navigate',{url:origin+'/mvp'});
+  await until(()=>evaluate("document.querySelector('#status')?.textContent.includes('먼저')"));
+  await evaluate("document.querySelector('#initial').value='<img src=x onerror=globalThis.xssExecuted=true> Safety reviews should be required.'");
+  await submit('begin');await until(()=>evaluate("!document.querySelector('#workspace').hidden&&document.querySelectorAll('.card').length===2"));
+  report.checks.session_and_two_perspectives=true;
+  await evaluate("document.querySelector('.card button').click()");
+  await until(()=>evaluate("!document.querySelector('#comparison').hidden&&document.querySelectorAll('.comparison-item').length===1"));
+  report.checks.explore_comparison=true;
+  report.checks.untrusted_text_is_text=await evaluate("!document.querySelector('#comparison-items img')&&!globalThis.xssExecuted&&document.querySelector('#comparison-items').textContent.includes('<img')");
+  await screenshot('explore.png');
+  await evaluate("document.querySelectorAll('.card input').forEach(x=>x.click());document.querySelector('#open-room').click()");
+  await until(()=>evaluate("!document.querySelector('#opening').hidden&&!document.querySelector('#converse').hidden"));
+  await submit('opening');
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length>=1"));
+  await evaluate("document.querySelector('#pause').click()");
+  await until(()=>evaluate("document.querySelector('#room-state').textContent.includes('잠시 멈췄습니다')"));
+  report.checks.pause_control=true;
+  await evaluate("document.querySelector('#resume').click()");
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
+  report.checks.group_opening_and_reply=true;
+  report.checks.peer_reply_links=await evaluate("document.querySelector('#messages').textContent.split('앞선 발언에 대한 응답').length===3");
+  await evaluate("document.querySelector('.message.agent .source-button').click()");
+  await until(()=>evaluate("document.querySelector('#source').textContent.includes('Safety reviews')"));
+  report.checks.source_lookup=true;await screenshot('conversation.png');
+  await evaluate("document.querySelector('#go-reflect').click()");
+  await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
+  await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelectorAll('#context-messages input')[1].click();document.querySelector('#analyze').click()");
+  await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
+  report.checks.reflection_four_categories=true;
+  await evaluate("document.querySelector('#suggestions button.secondary').click()");
+  await submit('save-reflection');
+  await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('저장했습니다')&&document.querySelector('#saved-reflections button')"));
+  const beforeSave=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
+  await evaluate("document.querySelector('#suggestions .source-button').click()");
+  await until(()=>evaluate("!document.querySelector('#converse').hidden"));report.checks.related_conversation_navigation=true;
+  await evaluate("document.querySelector('[data-step=reflect]').click()");
+  await until(()=>evaluate("!document.querySelector('#reflect').hidden"));
+  await evaluate("document.querySelector('#stayed').value='내가 직접 수정한 성찰입니다.'");
+  await submit('save-reflection');await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('2번째')"));
+  await screenshot('reflection.png');
+  await command('Page.reload');
+  await until(()=>evaluate("!document.querySelector('#workspace').hidden"));
+  await evaluate("document.querySelector('[data-step=reflect]').click()");
+  await until(()=>evaluate("document.querySelector('#saved-reflections button')?.textContent.includes('저장본 2')"));
+  await evaluate("document.querySelector('#saved-reflections button').click()");
+  await until(()=>evaluate("document.querySelector('#saved-view').textContent.includes('내가 직접 수정한 성찰입니다.')"));
+  report.checks.edited_reflection_survives_reload=true;
+  const afterSave=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
+  report.checks.save_reload_and_reads_do_not_generate=beforeSave===afterSave;
+  report.synthetic_provider_calls=afterSave;
+  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  report.checks.no_mobile_overflow=await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth');
+  await screenshot('mobile.png');
+  await evaluate("document.querySelector('[data-step=explore]').click();document.querySelector('.card input').click();document.querySelector('#open-room').click()");
+  await until(()=>evaluate("!document.querySelector('#opening').hidden&&!document.querySelector('#converse').hidden"));
+  await submit('opening');
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===1&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
+  await evaluate("document.querySelector('#question').value='What supports this position?'");
+  await submit('interject');
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===2&&document.querySelectorAll('.message.user').length===2"));
+  report.checks.one_to_one_and_followup=true;
+  report.synthetic_provider_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
+  report.passed=Object.values(report.checks).every(Boolean)&&report.page_errors.length===0&&report.external_requests.length===0;
+  if(!report.passed)throw Error('Product browser checks failed');
+})().catch(error=>{report.error=error.message;process.exitCode=1;}).finally(async()=>{
+  if(socket)socket.close();
+  for(const child of [browser,server])if(child&&child.exitCode===null&&child.signalCode===null){child.kill('SIGTERM');await until(()=>child.exitCode!==null||child.signalCode!==null,4000).catch(()=>child.kill('SIGKILL'));}
+  fs.writeFileSync(path.join(output,'checks.json'),JSON.stringify(report,null,2),{flag:'wx'});
+  console.log(JSON.stringify({output,...report},null,2));
+});
