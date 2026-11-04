@@ -1,6 +1,6 @@
 # Explore·Converse·Reflect 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v1`. DEC-002/003/004/006, REQ-004~009.
+설계 `commentscope-detailed-design-20261105-v2`. DEC-002/003/004/006, REQ-004~009.
 아래 `/api/v1`·저장 테이블·상태는 **미구현 후보 계약**이다. 기존 [M0 API](../COMPARE_BACKEND_API.md)는 유지한다.
 
 ## I-01. 공통 요청·권한·revision

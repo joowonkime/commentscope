@@ -75,10 +75,12 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
     reviews = None; admission = None
     if getattr(execution, 'review_interpretations', False):
         from commentscope.factory import source_interpretation
+        protocol = execution.source_review_protocol or source_interpretation.REVIEW
         reviews = work('source-interpretation-review', source_interpretation.review_tasks(records),
-            lambda group: source_interpretation.review_request(group[0]['interpretations']),
-            lambda group, result: source_interpretation.bind_review(group[0]['interpretations'], result), 1)
-        admission = source_interpretation.nominate(records, reviews)
+            lambda group: source_interpretation.review_request(group[0]['interpretations'], protocol=protocol),
+            lambda group, result: source_interpretation.bind_review(group[0]['interpretations'], result,
+                                                                   protocol=protocol), 1)
+        admission = source_interpretation.nominate(records, reviews, protocol=protocol)
         candidates = admission['candidates']
         save('source-interpretation-reviews', reviews)
         save('source-interpretation-admission', admission)

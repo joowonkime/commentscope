@@ -1,7 +1,8 @@
 # Factory 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v1`, DEC-001/006, REQ-001/002/003/008.
-모든 새 record/interface는 **미구현 후보 계약**이다. 현행 코드는 [기준선](BASELINE.md)에 있다.
+설계 `commentscope-detailed-design-20261105-v2`, DEC-001/006, REQ-001/002/003/008.
+전체 구조는 **구현 후보 계약**이다. S1/S2의 typed 검토·source record는 첫 opt-in 구현이며,
+나머지 후보/관계/논거 교체는 미구현이다. 이전 기준 코드는 [기준선](BASELINE.md)에 있다.
 기존 r5 합격 기준은 변경하지 않는다. source 해석의 재사용과 지지 승인은 별개다.
 
 ## F-01. 데이터 소유권과 공통 형식
@@ -223,3 +224,43 @@ host가 core·출처별 논거·지지 집합·의존 DAG·사실 상태·제한
 TASK-003의 첫 범위는 F-01/S1/S2 host binding과 부정 사례다. 이어 C1/E1/E2, M1/M2, A1/A2,
 compiler adapter를 순서대로 연결한다. 역할별 구현 파일을 미리 빈 틀로 만들지 않는다.
 새 기본 경로 승격은 구조·비용 비교와 동일 설정 fresh 게이트 이후다.
+
+### 첫 구현 단위의 경계
+
+S1은 기존 `compact_claims.TRACED_PROPOSALS`를 재사용한다. S2는 기존 source 검토에 독립 `authorship/kind`
+관측을 추가한 별도 protocol을 사용한다. legacy 요청/응답은 그대로 읽는다.
+`source_review_protocol`은 `review_interpretations=True`와 traced S1일 때만 명시적으로 선택할 수 있다.
+새 검토의 누락 필드를 legacy 값이나 추출자의 제안으로 채우지 않는다.
+
+source record는 `factory-semantics-0.1` header와 원문·traced extraction·typed review·제안별 보류를 결합한다.
+header의 request_sha256은 마지막 S1 요청이며 continuation lineage와 각 S2 요청은 원본 record로 보존한다.
+record_sha256은 자신을 제외한 전체 host 결합의 digest다. 검증에는 현재 snapshot hash와 현재 source를 함께 제공한다.
+원문 record는 지지·사실·품질 승인 값을 항상 false로 유지한다. source 수준 kind 관측은 core 유형 승인과 다르다.
+
+이 단계는 기존 문맥/world/후속 논거 검사를 대체하지 않고 새 기본 경로도 아니다.
+독립 지지·논거·사실 검사를 유지한 합성2Agent/6응답 경로까지 연결을 확인한다.
+TASK-004는 이 데이터 계약의 모델 진단이며 절감 채택이 아니다. 실제 대체는 TASK-013, 전체 실청구 비교는 TASK-014다.
+
+### 첫 구현의 사용 위치
+
+`source_interpretation.TYPED_REVIEW`는 `source-interpretation-review-20261105-v2`다.
+기존 `REVIEW` v1의 요청·응답은 유지하며 새 protocol의 독립 kind/authorship을 누락하면 보류한다.
+직접 `nominate`를 호출할 때도 같은 protocol을 명시해야 하며 검토 버전을 혼합하지 않는다.
+
+`minimal_pipeline.process`에 아래 세 옵션을 함께 주면 opt-in 소스 계약 경로를 선택한다.
+
+```python
+extraction_protocol=compact_claims.TRACED_PROPOSALS
+review_interpretations=True
+source_review_protocol=source_interpretation.TYPED_REVIEW
+```
+
+이 경로는 별도 `SOURCE_SEMANTICS_VERSION` artifact와 `source_records`를 저장한다.
+`source_semantics.bind/collect`는 모델 호출 없는 adapter이며, `validate(record,
+snapshot_sha256=..., source=...)`는 현재 snapshot/원문과 결합을 재확인한다.
+extractor 실패 원문은 원래 `processing_ids/unextracted_source_ids`에 남기고 가짜 source record를 만들지 않는다.
+추가 추출 이전 record와 모든 검토 요청은 그대로 보존한다.
+
+오프라인 확인 명령은 `PYTHONPATH=src:tests:. python -m unittest test_source_semantics_contract`다.
+이는 모의 응답의 계약·연결 검사이며 실제 모델 의미 품질·새 정식 gate·비용 절감 검증이 아니다.
+기존 원격 실행기/기본 설정으로 이 실험 protocol을 자동 활성화하지 않는다.

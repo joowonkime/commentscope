@@ -25,7 +25,8 @@ class PipelineWork:
     """Keep all mutable model-work state scoped to one Factory invocation."""
 
     def __init__(self, runner, inspect, save, *, registry, membership_mode,
-                 verification_contract, schedule, extraction_protocol=None, review_interpretations=False):
+                 verification_contract, schedule, extraction_protocol=None, review_interpretations=False,
+                 source_review_protocol=None):
         self.runner = runner
         self.inspect = inspect
         self.save = save
@@ -34,6 +35,7 @@ class PipelineWork:
         self.verification_contract = verification_contract
         self.extraction_protocol = extraction_protocol
         self.review_interpretations = review_interpretations
+        self.source_review_protocol = source_review_protocol
         self.schedule = schedule
         self.engine = None
         self.errors = []

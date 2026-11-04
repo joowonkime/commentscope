@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v2",
-  "baseline_commit": "4c96191c14a0cc7573179e3c26ef6c0839a4b52f",
+  "spec_version": "commentscope-mvp-20261105-v3",
+  "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -22,9 +22,9 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-003",
+    "next_task": "TASK-004",
     "paid_execution_hold": true,
-    "hold_reason": "명세 정리로 대량 유료 실행을 재개하지 않는다. 기존 예산·실행별 권한과 다음 설계/검증 조건을 먼저 확인한다."
+    "hold_reason": "S1/S2 첫코드·오프라인/CI 검증만 완료했다. source 진단의 입력·역할·요청 수·예약 가능 비용·권한을 고정하기 전 유료 호출하지 않는다. 기존 전체 유료 실행 보류와 공유 장부는 유지한다."
   },
   "requirements": [
     {
@@ -37,11 +37,14 @@
       ],
       "code": [
         "src/commentscope/factory/framed_corpus.py",
-        "src/commentscope/factory/source_arguments.py"
+        "src/commentscope/factory/source_arguments.py",
+        "src/commentscope/factory/source_interpretation.py",
+        "src/commentscope/factory/source_semantics.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
-        "tests/test_owner_observations.py"
+        "tests/test_owner_observations.py",
+        "tests/test_source_semantics_contract.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -65,12 +68,15 @@
         "src/commentscope/factory/minimal_pipeline.py",
         "src/commentscope/factory/candidate_consolidation.py",
         "src/commentscope/factory/raw_membership.py",
-        "src/commentscope/factory/comment_utilization.py"
+        "src/commentscope/factory/comment_utilization.py",
+        "src/commentscope/factory/source_interpretation.py",
+        "src/commentscope/factory/source_semantics.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
         "tests/test_acceptance_r5.py",
-        "tests/test_factory_review_r5.py"
+        "tests/test_factory_review_r5.py",
+        "tests/test_source_semantics_contract.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -558,7 +564,7 @@
     },
     {
       "id": "TASK-003",
-      "title": "후보 계약 구현·오프라인 회귀",
+      "title": "S1/S2 원문 해석 계약·adapter의 첫 오프라인 구현",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -569,11 +575,93 @@
       "depends_on": [
         "TASK-002"
       ],
+      "status": "done",
+      "deliverables": [
+        "기존 traced S1을 재사용한 원문/snapshot/요청 결합 record와 validator",
+        "귀속·유형을 독립 관측하는 opt-in S2 계약과 미검토/불일치 보류",
+        "기존 합성 전체 경로의2Agent·6응답·원문 연결 및 정상/부정 회귀"
+      ],
+      "done_when": [
+        "원문·부모·구간·조건·snapshot·요청·응답 변조와 검토 누락을 검출한다.",
+        "기존 기본/legacy검토 경로를 유지하고 typed옵트인 합성 전체경로와 필수검사/CI를 통과한다.",
+        "기존 후속검사를 아직 대체하지 않은 단계임을 밝히고 비용절감·의미품질 합격으로 보고하지 않는다."
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "New16 and related65 tests, required Factory458 tests pass. Code commit3b5aab881759d9a40b76d24fe1af591cc8a68518 passed Ubuntu/Windows full CI41897665516. Scripted2Agent/6turn linkage only; actual model semantics/cost adoption not evaluated.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/41897665516",
+          "result": "pass"
+        }
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "decisions": [
+        "DEC-001"
+      ],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/EXECUTION.md",
+        "docs/design/diagnostic-fixture.json"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "한도가 정해진 S1/S2 모델 진단·다음 계약 판단",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-003"
+      ],
       "status": "next",
       "deliverables": [
-        "관련 모듈·adapter·회귀 검사",
-        "기존 저장 실패와 정상 사례 비교 결과",
-        "현행 경로 보존과 후보 변경의 분리"
+        "고정 source 계약 사례와 fact/value/prediction/uncertain 대비 통제군·모델/provider·출력/가격 상한·중단조건·명시적 비용 한도 계획",
+        "새 귀속·유형·충실성 관측의 원문 검토와 실제 비용 기록",
+        "나머지 계약 구현을 진행할지 결정한 기록"
+      ],
+      "done_when": [
+        "기존 유료실행 보류·권한·장부와 단일요청 예약가능성을 확인한 뒤 허용범위에서만 실행한다.",
+        "정상/부정 원문 관측과 전체 연결 영향을 함께 확인하고 중대오류가 있으면 다음 구현으로 자동 확대하지 않는다.",
+        "초기adapter는 후속중복호출을 유지하므로 이번진단을 비용절감 채택으로 보고하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-001",
+        "DEC-005"
+      ],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/diagnostic-fixture.json",
+        "docs/design/BASELINE.md"
+      ]
+    },
+    {
+      "id": "TASK-013",
+      "title": "C1/E1/E2·M1/M2·A1/A2 연결과 기존 중복 호출 대체",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "후보 설명·동치·직접지지·논거 계약과 versioned adapter",
+        "교체한 기존 호출·유지한 독립 검증의 실제 실행 비교",
+        "정상/부정 회귀와 전체 합성 경로"
       ],
       "done_when": [
         "관련 검사·Factory 연결 검사·필수 CI를 통과한다.",
@@ -593,8 +681,8 @@
       ]
     },
     {
-      "id": "TASK-004",
-      "title": "한도가 정해진 모델·구조 비교",
+      "id": "TASK-014",
+      "title": "전체 후보 구조의 동결 품질·실청구 비교",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -603,7 +691,7 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-003"
+        "TASK-013"
       ],
       "status": "todo",
       "deliverables": [
@@ -639,7 +727,7 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-004"
+        "TASK-014"
       ],
       "status": "todo",
       "deliverables": [
@@ -928,8 +1016,13 @@
       "date": "2026-11-05",
       "reason": "사용자가 기준명세에 더해 세부 설계스펙 작성을 요청했다. 기존코드/호출/비용 오프라인 대조, 구체적역할/계약/API/상태/원가/32사례와 고정합성입력을 연결한다.",
       "scope": "Design candidate only. DEC001~006 proposed, not implemented or empirically adopted. No new paid calls/runtime/Figma changes."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 작은 계약 구현→합성 전체 연결→bounded 진단 후 확대하는 spec 기반 진행에 동의했다. TASK003/004를 S1/S2 첫단위와 진단으로 좁히고 TASK013/014에 나머지 계약/전체비교를 분리한다.",
+      "scope": "First slice only. No paid calls, r5/budget changes or production cost adoption."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v1",
+  "design_version": "commentscope-detailed-design-20261105-v2",
   "design_document": "docs/design/README.md"
 }

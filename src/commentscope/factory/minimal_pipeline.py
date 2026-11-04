@@ -9,12 +9,14 @@ from commentscope.factory import fact_checks, pipeline_stages
 from commentscope.factory import raw_membership_verification as raw_verification
 from commentscope.factory.framed_corpus import sources as source_registry
 from commentscope.factory.pipeline_work import PipelineWork
+from commentscope.factory.automatic_contract import digest
 
 VERSION = 'minimal-factory-pipeline-20261023-v28'
+SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v1'
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     from commentscope.factory import compact_claims
@@ -23,6 +25,11 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     if type(review_interpretations) is not bool or (review_interpretations and
             (discovery_mode != 'free' or extraction_protocol != compact_claims.TRACED_PROPOSALS)):
         raise ValueError('Semantic interpretation review requires explicit traced free discovery')
+    from commentscope.factory import source_interpretation
+    if source_review_protocol is not None and (not review_interpretations
+            or source_review_protocol not in source_interpretation.REVIEW_VERSIONS):
+        raise ValueError('Explicit supported source review requires traced interpretation review')
+    typed_source_review = source_review_protocol == source_interpretation.TYPED_REVIEW
     if discovery_mode=='shared' and membership_mode!='raw':
         raise ValueError('Shared proposals require independent original membership')
     if shared_records is not None and discovery_mode!='shared':
@@ -43,7 +50,8 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     execution = PipelineWork(runner, inspect, save, registry=registry,
                              membership_mode=membership_mode,
                              verification_contract=verification_contract, schedule=SCHEDULE,
-                             extraction_protocol=extraction_protocol, review_interpretations=review_interpretations)
+                             extraction_protocol=extraction_protocol, review_interpretations=review_interpretations,
+                             source_review_protocol=source_review_protocol)
     errors, holds, capacity = execution.errors, execution.holds, execution.capacity
     # Immutable syntax exists before any generated candidate or argument. This
     # artifact is not semantic approval. Argument text and ownership below must
@@ -59,6 +67,13 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     records, engine = discovery.records, discovery.engine
     shared_discovery = discovery.shared_discovery
     execution.engine = engine
+
+    source_records = None
+    if typed_source_review:
+        from commentscope.factory import source_semantics
+        source_records = source_semantics.collect(records, discovery.interpretation_reviews,
+                                                  snapshot_sha256=digest(snapshot.to_dict()))
+        save('source-records', source_records)
 
     support = pipeline_stages.memberships(sources, ids, discovery.candidates, records,
         vectors, embed, execution, discovery_mode=discovery_mode,
@@ -76,7 +91,10 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     if engine is not None:
         errors.extend(engine.errors);holds.extend(engine.holds);capacity.extend(engine.capacity)
         save('contextual-engine',engine.diagnostics())
-    return {'artifact_kind': VERSION, 'canonical_population': len(registry), 'processing_ids': ids,
+    return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
+            'canonical_population': len(registry), 'processing_ids': ids,
+            **({'source_review_protocol': source_review_protocol, 'source_records': source_records}
+               if typed_source_review else {}),
             **({'interpretation_review_required': True,
                 'interpretation_reviews': discovery.interpretation_reviews,
                 'interpretation_admission': discovery.interpretation_admission} if review_interpretations else {}),
