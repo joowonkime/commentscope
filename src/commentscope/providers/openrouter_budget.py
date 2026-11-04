@@ -134,14 +134,18 @@ class SpendLedger:
 class PaidBudget:
     """Adapt InferenceBudget while keeping explicitly local calls separate."""
     def __init__(self, base, ledger, *, plan_sha256, deployment, maximum_run_usd,
-                 paid_provider, key_metadata, local_providers=()):
+                 paid_provider, key_metadata, local_providers=(), spend_scope_sha256=None):
         identity(plan_sha256)
+        if spend_scope_sha256 is not None: identity(spend_scope_sha256)
         self.deployment = validate(deployment)
         self.prices = billing_prices(self.deployment)
         if not self.prices or not self.deployment['provider'].get('only') or units(maximum_run_usd) <= 0:
             raise ValueError('Frozen provider, price ceilings and positive run limit required')
         self.base, self.ledger = base, ledger
         self.plan_sha, self.run_limit = plan_sha256, maximum_run_usd
+        # Several frozen execution plans can share one explicitly frozen money
+        # owner. Request/time/checkpoint provenance still uses the actual plan.
+        self.spend_scope = plan_sha256 if spend_scope_sha256 is None else spend_scope_sha256
         self.paid_provider, self.metadata = paid_provider, key_metadata
         self.local_providers = tuple(local_providers)
 
@@ -158,7 +162,7 @@ class PaidBudget:
         p = {k: Decimal(str(v)) for k, v in self.prices.items()}
         maximum = (self.deployment['context']*p['prompt'] + request['max_tokens']*p['completion'])/1_000_000 + p['request']
         metadata = self.metadata()
-        call_id = self.ledger.reserve(plan_sha, digest(request), maximum, run_limit_usd=self.run_limit,
+        call_id = self.ledger.reserve(self.spend_scope, digest(request), maximum, run_limit_usd=self.run_limit,
                                       key_remaining_usd=metadata['limit_remaining'])
         try:
             response = self.base.call(request, plan_sha, timeout_seconds=timeout_seconds, provider=provider)

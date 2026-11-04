@@ -1,0 +1,63 @@
+# S1/S2 고정 진단 — TASK-004
+
+연결: REQ-001/002/003/008/010, DEC-001/005. 이 진단은 정식 G1이나 비용 절감 채택이 아니다.
+
+## 범위와 기대 동작
+
+`tests/fixtures/source-semantics-diagnostic.json`의 합성 원문12개와 검토 통제군8개를 고정한다.
+앞의8개 원문은 기존 상세설계 입력이며, 사실·가치·예측·혼합 주장을 추가한다.
+통제군의 제안은 작성된 검사 입력이며 모델이 추출한 결과로 보고하지 않는다.
+모델에 기대 라벨이나 다른 검사 결과를 전달하지 않는다.
+
+- 통제군4개: 사실/가치/예측/혼합(`uncertain`) 유형과 자기 귀속을 관측하고 정상 제안을 보존한다.
+- 통제군4개: 조건 삭제·부정 반전·타인 입장의 자기 귀속·부모 이유 차용을 보류한다.
+- 자동 경로: 기존 traced S1, 독립 typed S2, source record 결합/검증을 실행한다.
+  제안16개와 검토 묶음8개를 유지하며 추가 추출이 필요하면 이번 진단을 미완료로 중단한다.
+- 최대 요청은 통제군8 + 원문12 × (S1 1 + S2 최대2) =44개다. 재시도는0이다.
+
+## 비용과 실행
+
+사용자는 2026-11-05 추가 총$5·최대7시간의 조건부 사이클을 승인했다.
+TASK-004 → TASK-013 → TASK-014 → TASK-005 순서로 앞 단계가 통과한 경우에만 확대한다.
+G2/G3/G4와 제품 전체 유료 실행을 일괄 승인한 것으로 해석하지 않는다.
+
+실행 전 비공개 cycle/plan에 시작·종료시각, 공유$50 장부, 모델/provider, 전체 가격 상한,
+reasoning/output·context·timeout, 원문/코드/hash와44개 요청 상한을 동결한다.
+기존 GPT-6.1 Sol의 전체 context 예약은 장문/cache-write 입력만$5.25이므로 이번 상한으로 호출하지 않는다.
+실험은 GPT-5.2/OpenAI, context400000, reasoning low/추가1024, temperature 생략,
+입력$1.75/M·출력$14/M·요청$0 상한을 provider metadata와 대조해 고정한다.
+원문/스키마의 context 용량검사와 전체 context 가격 예약을 유지한다.
+
+`PaidBudget.spend_scope_sha256`를 명시하면 여러 실행 plan이 동일한 동결 cycle hash의
+단일$5 한도를 사용한다. 호출/시간/checkpoint에는 실제 실행 plan의 hash를 계속 남긴다.
+기본 호출자는 기존처럼 plan당 한도를 사용한다. 공유 장부·과거 청구·불명확 비용 보류는 그대로다.
+실행 plan은 cycle 파일/hash와 같은 한도를 검증하며 다른 이름의 새 plan으로 한도를 초기화하지 않는다.
+
+매 요청 전 종료시각·최대 요청 수·provider 입력 용량·공유 장부·cycle 잔여를 확인한다.
+예약 불가·형식/length/전송 불명·통제군 오류이면 다음 dispatch를 중단한다.
+원본 응답→정산→host 결합 순서를 지키며 완료 응답 재개는 신규 호출0이다.
+
+## 판단과 증거
+
+통제군 중대 오류0과 정상 보존을 확인한 뒤 자동 추출/검토를 원문과 직접 대조한다.
+모든 원문·조건·부모 귀속·제안·검토·보류와 실제 비용을 남긴다.
+개발 담당의 직접 대조이며 독립 사람 gold가 아니다. 형식 완료는 의미 검토 완료가 아니다.
+오류 시 유료 튜닝을 반복하지 않고 실패 원본과 오프라인 재현을 보존한다.
+현재 adapter는 후속 지지/논거/사실 검사를 유지하므로 이 결과로 비용 절감을 주장하지 않는다.
+
+모델 참고: [공식 GPT-5.2 문서](https://developers.openai.com/api/docs/models/gpt-5.2).
+실제 endpoint 가격·가용성은 각 실행 직전 OpenRouter metadata를 우선한다.
+
+### 원문 검토의 명시적 완료 조건
+
+실행 완료/통제군 통과와 다음 계약으로의 확대 결정을 분리한다. `assess`는 완료 artifact/hash와
+동결 코드 원본, 모든 source·proposal에 대한 개발 담당 원문 검토를 요구한다.
+실제 원문 record별 completeness와 모든 제안별 faithful/held_correctly/changed_but_admitted/unclear를 기록한다.
+누락·중복·다른 record·불명확·정상 보존 손실·잘못된 제안의 허용은 확대를 승인하지 않는다.
+성공해도 `proceed_to_next_contract_only`이며 G1이나 의미 gold의 자동 승인이 아니다.
+모델의 자체 `fidelity=preserved`가 원문 검토를 대신할 수 없다.
+
+CLI는 `python -m experiments.source_semantics_diagnostic run <directory> --key-file <private key path>`로 실행한다.
+프로세스 spawn에 필요한 실제 모듈 진입점을 사용하며 키 값은 계획·요청·출력에 넣지 않는다.
+
+첫 실제 실행의 실패·확대 보류와 비용은 [진단 결과](SOURCE_DIAGNOSTIC_RESULT.md)에 기록했다.
