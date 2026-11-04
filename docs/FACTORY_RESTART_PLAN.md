@@ -1,10 +1,18 @@
 # Factory 재개 설계와 검증 계약
 
-## 현재 실행 경로 — 2026-11-03 갱신
+## 현재 작업 기준 — 2026-11-05
+
+제품 전체 범위는 [MVP 명세](MVP_SPEC.md), 작업·미결정·다음 한 단계는
+[추적표](mvp-traceability.json), 재개 절차는 [명세 기반 개발](SPEC_WORKFLOW.md)을 따른다.
+대량 유료 실행은 보류 중이다. 문서를 읽거나 명세를 정리한 것만으로 실행을 재개하지 않는다.
+모델/provider/가격/코드는 해당 고정 deployment/plan에서 확인한다. 아래 과거 설정을 현재값으로 쓰지 않는다.
+아래 r5·G1~G4의 분모·품질 계약은 유지한다.
+
+## 원격 전환 기록 — 2026-11-03
 
 사용자 지시로 로컬 Qwen 실행을 보류하고 OpenRouter 검증으로 전환했다.
-현재 실행은 `openrouter_factory_pipeline`의 `free/raw/FULL_SCOPE` 경로이며,
-Gemini 2.5 Flash와 Google AI Studio 제공자를 별도 deployment에 고정한다.
+원격 실행기는 `openrouter_factory_pipeline`이다. 당시 `free/raw/FULL_SCOPE` 경로의
+Gemini 2.5 Flash·Google AI Studio deployment를 사용했으며, 이후 모델 변경은 각 실행 계획에 결합된다.
 팀 API 총한도는 $50이고 추가 충전은 없다. 실행별 한도와 공유 비용 장부를 함께 적용한다.
 실행 방법은 [OpenRouter 안내](OPENROUTER_FACTORY.md), 구현·자동 병합 순서는
 [MVP 테스트 기반 작업 순서](MVP_TDD.md)를 따른다.
