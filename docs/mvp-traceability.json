@@ -22,9 +22,9 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-003",
+    "next_task": "TASK-004",
     "paid_execution_hold": true,
-    "hold_reason": "명세 정리로 대량 유료 실행을 재개하지 않는다. 기존 예산·실행별 권한과 다음 설계/검증 조건을 먼저 확인한다."
+    "hold_reason": "S1/S2 첫코드·오프라인/CI 검증만 완료했다. source 진단의 입력·역할·요청 수·예약 가능 비용·권한을 고정하기 전 유료 호출하지 않는다. 기존 전체 유료 실행 보류와 공유 장부는 유지한다."
   },
   "requirements": [
     {
@@ -575,7 +575,7 @@
       "depends_on": [
         "TASK-002"
       ],
-      "status": "in_progress",
+      "status": "done",
       "deliverables": [
         "기존 traced S1을 재사용한 원문/snapshot/요청 결합 record와 validator",
         "귀속·유형을 독립 관측하는 opt-in S2 계약과 미검토/불일치 보류",
@@ -589,8 +589,8 @@
       "evidence": [
         {
           "kind": "offline",
-          "scope": "New16 contract tests and related65 tests pass;scripted2Agent/6turn path, missing/partial extraction, source/snapshot/request and JSON payload identity. No model quality or cost-adoption evidence. Required full Factory/PR CI still pending.",
-          "reference": "tests/test_source_semantics_contract.py",
+          "scope": "New16 and related65 tests, required Factory458 tests pass. Code commit3b5aab881759d9a40b76d24fe1af591cc8a68518 passed Ubuntu/Windows full CI41897665516. Scripted2Agent/6turn linkage only; actual model semantics/cost adoption not evaluated.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/41897665516",
           "result": "pass"
         }
       ],
@@ -619,9 +619,9 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "todo",
+      "status": "next",
       "deliverables": [
-        "고정 source 계약 사례·모델/provider·출력/가격 상한·중단조건과 명시적 비용 한도 계획",
+        "고정 source 계약 사례와 fact/value/prediction/uncertain 대비 통제군·모델/provider·출력/가격 상한·중단조건·명시적 비용 한도 계획",
         "새 귀속·유형·충실성 관측의 원문 검토와 실제 비용 기록",
         "나머지 계약 구현을 진행할지 결정한 기록"
       ],
