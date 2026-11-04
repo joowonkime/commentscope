@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261105-v3`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261105-v4`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~015, DEC-001~006.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -28,7 +28,7 @@ Compact 후 전체 실험 이력을 읽는 대신 해당 TASK의 `design_refs`�
 
 Before Use → Explore → Converse → Reflect. 시청자의 의견 변화는 성공 조건이 아니다.
 관점 수는 자료에 따라 달라지고 서로 반대할 필요가 없다. 그룹은 Converse의 대안 경로다.
-현재는 기존 자동 결과로 제품 기능을 구현하고 팀 프론트 연결을 진행한다. 관점/Agent 품질·비용과 최종 gate는 별도로 유지한다.
+기존 자동 결과의 제품 기능 연결은 개발 범위로 구현했다. 현재는 cluster→Agent 실제 생성·품질·비용을 확인한 후 프론트를 구현한다.
 
 ```mermaid
 flowchart LR
@@ -113,13 +113,13 @@ flowchart LR
 
 ## 7. 구현 순서
 
-TASK-001의 현행 기준선과 TASK-002의 이 상세 설계는 문서/오프라인 산출물이다.
-TASK-003은 source 계약·adapter·부정 사례와 기존 합성 전체 연결의 첫 단위다. TASK-004는 그 계약의 bounded 모델 진단이다.
-그 뒤 TASK-013에서 나머지 계약과 실제 중복 호출 대체, TASK-014에서 전체 비용/품질 비교를 한다.
-초기 adapter는 후속 검사를 그대로 두므로 비용 절감의 증거가 아니다. 모델 호출은 이 구현만으로 재개하지 않는다.
-이후 고정 G1→G2/G3→G4를 검증하고 Explore→Converse→Reflect를 연결한다.
-후속 기능의 설계를 먼저 작성했다는 이유로 그 구현 작업을 완료 처리하지 않는다.
+TASK-001/002/003은 기준선·상세 설계·첫 source adapter의 완료 이력이다.
+TASK-004/013/014의 새 의미 역할 진단/채택은 보류한다. 초기 adapter를 원가 개선으로 채택하지 않았다.
+TASK-015/008/009/010은 기존 자동 생성 결과로 제품 API/개발 화면을 연결한 범위다.
+현재는 TASK-005~007에서 **기존 기본 cluster→Agent 생성 경로의 실제 작동**을 먼저 확인한다.
+자세한 입력·정상/부정·동일cycle 실행 계약은 [Factory 실제 실행](FACTORY_DELIVERY.md)을 따른다.
+사용자가 별도 프론트는 아직 없다고 확인했다. 생성 경로 확인 후 TASK-011에서 Figma 기준 프론트를 구현한다.
+TASK-012의 전체 과업/원가/사용자 효과는 별도 검증이며 개발 화면이나 CI로 완료 처리하지 않는다.
 
-현재 구현 우선순위는 [기존 생성 결과의 제품 연결](PRODUCT_DELIVERY.md)을 따른다. 기능 개발과 최종 품질 판정의 의존성을 구별한다.
-
-제품 개발 API와 현재 확인 범위: [실행/API](../PRODUCT_API.md), [구현 결과](../PRODUCT_DELIVERY_RESULT.md).
+제품 API와 현재 확인 범위: [실행/API](../PRODUCT_API.md), [구현 결과](../PRODUCT_DELIVERY_RESULT.md),
+[기존 개발 연결의 기록](PRODUCT_DELIVERY.md).

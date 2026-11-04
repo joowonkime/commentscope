@@ -8,6 +8,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from decimal import Decimal
 import json
+import os
 from pathlib import Path
 import shutil
 import time
@@ -31,12 +32,13 @@ from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.openrouter_budget import PaidBudget, SpendLedger, units
+from commentscope.providers.execution_cycle import bind_cycle, check_cycle
 from commentscope.storage import write_json_exclusive as write
 from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261104-v17'
+VERSION = 'minimal-factory-openrouter-executor-20261105-v18'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -104,7 +106,7 @@ def fixed_scope(gate):
     return snapshot, list(scope), path
 
 
-def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal'):
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal', cycle_file=None):
     private(directory); private(materials_file)
     if directory.exists(): raise ValueError('New remote Factory directory required')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
@@ -112,6 +114,10 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
+    cycle=None
+    if cycle_file is not None:
+        private(cycle_file)
+        cycle=bind_cycle(cycle_file,deployment,policy,maximum_cost_usd)
     materials = read_json(materials_file)
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
         raise ValueError('Pinned classifier, model files and evidence required')
@@ -128,12 +134,14 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     if gate == 'G1': write(directory/'snapshot.json', snapshot.to_dict())
     snapshot_path = directory/'snapshot.json' if gate == 'G1' else original_path
     inputs = {str(materials_file): sha(materials_file)}
+    if cycle is not None:inputs[cycle['file']]=cycle['sha256']
     if gate != 'G1': inputs[str(SAMPLES)] = sha(SAMPLES)
     if admission_file is not None: inputs[str(admission_file)] = sha(admission_file)
     plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': gate,
             'goal_revision': acceptance.R5, 'acceptance_profile': profile, 'acceptance_profile_sha256': digest(profile),
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
+            'execution_cycle':cycle,
             'extraction_protocol': compact_claims.PROPOSALS if discovery_mode == 'free' else None,
             'assertion_equivalence_protocol': candidate_consolidation.BILATERAL if discovery_mode == 'free' else None,
             'membership_observation_protocol': raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
@@ -165,6 +173,7 @@ def validate(directory, plan):
     run_origin(plan, directory, attempt=1)
     if read_json(directory/'frozen.json') != {'plan_sha256': sha(directory/'plan.json')}:
         raise ValueError('Frozen remote plan changed')
+    check_cycle(plan,allow_expired=True)
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     profile = acceptance.from_plan(plan)
@@ -222,6 +231,7 @@ def run(directory):
                     or report['runtime_sha256'] != sha(directory/'artifacts/runtime.json')):
                 raise ValueError('Completed remote artifacts changed')
             return report
+        check_cycle(plan)
         pending = [p for p in (directory/'checkpoints').glob('*.intent.json')
                    if not p.with_name(p.name.replace('.intent.json', '.result.json')).exists()]
         if pending: raise RuntimeError('Pending requests require process and ledger reconciliation')
@@ -233,9 +243,11 @@ def run(directory):
             raise BudgetExhausted('Shared API charge requires reconciliation before model work')
         time_budget = InferenceBudget(directory/'inference.sqlite', VERSION, limit_seconds=None)
         client = openrouter.Client(plan['deployment'])
+        spend_scope=plan['execution_cycle']['sha256'] if plan.get('execution_cycle') is not None else plan_sha
         paid_budget = PaidBudget(time_budget, spending, plan_sha256=plan_sha, deployment=plan['deployment'],
                                  maximum_run_usd=plan['maximum_cost_usd'], paid_provider=client.generate,
                                  key_metadata=key_metadata,
+                                 spend_scope_sha256=spend_scope,
                                  local_providers=(framed_embedding.generate, evidence_nli.generate))
         checkpoint = CheckpointRunner(openrouter.Runner(directory, plan, paid_budget, client),
                                      plan['generation_allocation'])
@@ -253,6 +265,7 @@ def run(directory):
                 if digest(read_json(path)) != digest(value): raise ValueError('Same-plan artifact changed: '+name)
             else: write(path, value)
         def inspect(request):
+            check_cycle(plan,call_seconds=plan['limits']['call_seconds'])
             dispatch.check()
             check_quota(); return client.measure(request)
         class CheckedRunner:
@@ -274,6 +287,7 @@ def run(directory):
                     raise ValueError('Actual API prompt usage exceeded or omitted its declared bound')
                 return result
         def embed(stage, texts):
+            check_cycle(plan,call_seconds=plan['limits']['embedding_seconds'])
             dispatch.check()
             check_quota(); path = directory/'artifacts'/('embedding-'+stage+'.json')
             request = {'system': framed_embedding.VERSION, 'data': {'texts': texts, 'output': str(path)},
@@ -287,6 +301,7 @@ def run(directory):
                 raise ValueError('Embedding provenance changed')
             return artifact['vectors']
         def facts(request):
+            check_cycle(plan,call_seconds=plan['limits']['fact_batch_seconds'])
             dispatch.check()
             check_quota()
             return checkpoint.call('facts-'+digest(request)[:20], request, provider=evidence_nli.generate,
@@ -311,7 +326,8 @@ def run(directory):
                       'capacity_holds': len(output['capacity_holds']), 'unextracted': len(output['unextracted_source_ids']),
                       'output_sha256': sha(directory/'artifacts/output.json'), 'runtime_sha256': sha(directory/'artifacts/runtime.json'),
                       'attempt_seconds': time.monotonic()-started, 'same_plan_reused_calls': checkpoint.reused,
-                      'spending': spending.summary(), 'run_spending': spending.summary(plan_sha256=plan_sha),
+                      'spending': spending.summary(), 'run_spending': spending.summary(plan_sha256=spend_scope),
+                      'spend_scope_sha256':spend_scope,
                       'semantic_review_required': True, 'quality_gate_passed': False, 'local_llm_started': False, **origin}
             write(directory/'completed.json', report); return report
         except BaseException as exc:
@@ -328,23 +344,29 @@ def main(argv=None):
     p.add_argument('--gate', choices=['G1','G2','G3','G4'], default='G1'); p.add_argument('--admission-file', type=Path)
     p.add_argument('--discovery-mode', choices=['literal', 'free'], default='literal')
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
+    p.add_argument('--cycle-file', type=Path)
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
+    p.add_argument('--key-file',type=Path)
     args = parser.parse_args(argv)
     try:
         if args.action == 'prepare':
             plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
                            read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
-                           admission_file=args.admission_file, discovery_mode=args.discovery_mode)
+                           admission_file=args.admission_file, discovery_mode=args.discovery_mode,cycle_file=args.cycle_file)
             result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                       'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
-        else: result = run(args.directory)
+        else:
+            if args.key_file is not None:
+                os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
+            result = run(args.directory)
     except (ModelResponseUnavailable, PendingCallError, BudgetExhausted,
             host_resources.ResourceStopRequested, ValueError, OSError) as exc:
         reason = ('model_response_unavailable' if isinstance(exc, ModelResponseUnavailable)
                   else 'pending_call' if isinstance(exc, PendingCallError)
                   else 'budget_blocked' if isinstance(exc, BudgetExhausted)
                   else 'host_resources' if isinstance(exc, host_resources.ResourceStopRequested)
+                  else 'cycle_deadline' if isinstance(exc, TimeoutError)
                   else 'validation_failed' if isinstance(exc, ValueError) else 'io_unavailable')
         print(json.dumps({'status': 'blocked', 'reason': reason, 'directory': str(args.directory),
                           'failure_type': type(exc).__name__,

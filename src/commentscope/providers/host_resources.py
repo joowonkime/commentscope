@@ -123,7 +123,7 @@ def watch(directory, policy, observe, *, interrupt=None):
     first = observer.sample()
     if first.get('observation_error') or first['stop_reasons']:
         write(Path(directory)/'stop-requested.json', first)
-        raise RuntimeError('Host resources unavailable at deployment startup')
+        raise ResourceStopRequested('Host resources unavailable at deployment startup')
 
     def monitor():
         while not stop.wait(policy['poll_seconds']):

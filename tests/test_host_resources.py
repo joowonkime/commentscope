@@ -46,7 +46,7 @@ class HostResourceTests(unittest.TestCase):
         row = self.observation(); row['available_mb'] = 0
         with tempfile.TemporaryDirectory() as tmp:
             interrupt = Mock()
-            with self.assertRaises(RuntimeError):
+            with self.assertRaises(h.ResourceStopRequested):
                 with h.watch(tmp, h.POLICY, lambda: row, interrupt=interrupt):
                     self.fail('Unsafe startup yielded')
             interrupt.assert_not_called()
