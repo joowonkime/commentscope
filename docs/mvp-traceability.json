@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v1",
-  "baseline_commit": "57f660494800cb4b30afc2e771f7c5edaa37b96c",
+  "spec_version": "commentscope-mvp-20261105-v2",
+  "baseline_commit": "4c96191c14a0cc7573179e3c26ef6c0839a4b52f",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -22,7 +22,7 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-001",
+    "next_task": "TASK-003",
     "paid_execution_hold": true,
     "hold_reason": "명세 정리로 대량 유료 실행을 재개하지 않는다. 기존 예산·실행별 권한과 다음 설계/검증 조건을 먼저 확인한다."
   },
@@ -47,7 +47,11 @@
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
         "조건·반대·인용·불확실·미평가를 실제 지지와 구분하며 자동 산출물에서 확인한다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-002",
@@ -72,7 +76,11 @@
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
         "집계 지지 전수 유효, 희소·조건부·미평가 보존, 전체 출력·비용·실패를 보고한다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-003",
@@ -96,7 +104,11 @@
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
         "자기 허용 주장·인용·이력을 유지하고 모르는 이유·조건·숫자는 보류한다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-004",
@@ -117,7 +129,11 @@
         "각 항목을 사용자 원문 구간·허용 관점 주장에 연결하며 정보 부재를 반대로 단정하지 않는다.",
         "현재 저장 API 검사는 의미 비교 구현의 완료 증거가 아니다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-005",
@@ -140,7 +156,11 @@
         "자기 관점 근거의 후속 질문·적절한 보류·원문/부모 확인·대화 저장을 연결한다.",
         "같은 질문을 받은 두 Agent의 결과와 이력을 분리하며 실제 자동 결과를 팀 화면에 연결한다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-006",
@@ -157,7 +177,11 @@
         "화면의3Agent 예시를 Factory 최소 수로 바꾸지 않으며 실제 적격 Agent를 합성하지 않는다.",
         "두 Agent 동일 질문 API를 그룹 토론 완료로 계산하지 않는다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-007",
@@ -173,7 +197,11 @@
         "유지·변화·새로 배운 점·추가 고민을 사용자 원문·실제 관련 대화와 연결하고 사용자가 수정·저장할 수 있다.",
         "의견 유지·빈 범주를 허용하고 AI 제안으로 원문을 덮어쓰거나 인과·대화를 발명하지 않는다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-008",
@@ -196,7 +224,11 @@
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
         "최초 분석·증분·재열람·1:1·그룹·성찰 비용을 분리 측정하며 서비스 단가 목표는 결정 기록으로 확정한다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/README.md"
+      ]
     },
     {
       "id": "REQ-009",
@@ -219,7 +251,11 @@
         "복구 가능한 오류 상태·원문 이동·저장·접근 가능한 실행 URL과 사용자 과업 결과를 확인한다.",
         "합성 데모나 기존 제한된 백엔드 성공으로 전체 제품 완료를 선언하지 않는다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "REQ-010",
@@ -239,13 +275,17 @@
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
         "구현·오프라인·제한적실행·정식gate·제품E2E의 검증 범위를 구별하며 명세 검사 성공을 품질 승인으로 해석하지 않는다."
       ],
-      "evidence": []
+      "evidence": [],
+      "design_refs": [
+        "docs/design/README.md",
+        "docs/design/BASELINE.md"
+      ]
     }
   ],
   "decisions": [
     {
       "id": "DEC-001",
-      "status": "open",
+      "status": "proposed",
       "title": "의미 판정의 중복을 줄이는 책임·데이터 계약",
       "requirements": [
         "REQ-001",
@@ -259,12 +299,24 @@
         "원문 해석 재사용·판정 통합을 후보 계약으로 비교하되 기존 검사를 중복 추가하지 않음",
         "모델별 역할 배정·입력 축소를 같은 고정 기준으로 비교"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "S1/S2 원문 해석/검토, C1 후보 설명, E1/E2 동치 제안/양방향 검토, M1/M2 직접 지지/긍정 검토, A1/A2 source-target 논거/검토로 기존 중복 호출을 대체하는 opt-in 계약을 구현한다. complete-link와 최종 원문 직접 검토는 유지한다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/FACTORY.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/BASELINE.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "DEC-002",
-      "status": "open",
+      "status": "proposed",
       "title": "그룹 Controller·대화 상태·정보 경계",
       "requirements": [
         "REQ-003",
@@ -278,12 +330,23 @@
         "동일 질문의 독립 응답 경로를 유지하며 그룹 경로를 별도로 구현",
         "다른 Agent 발언은 대화 문맥으로만 전달하고 근거 소유권을 유지"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "host Controller가2~3실제Agent의 opening/reply 각1round를 실행하고 사용자 입력을 기다린다. 총Agent18턴·금액 한도·epoch/cursor·턴경계pause·부분실패를 적용한다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/INTERACTIONS.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/README.md"
+      ]
     },
     {
       "id": "DEC-003",
-      "status": "open",
+      "status": "proposed",
       "title": "성찰 분석·수정·저장 계약",
       "requirements": [
         "REQ-004",
@@ -296,12 +359,22 @@
         "초기/현재 원문 구간과 대화 message IDs를 참조",
         "의견 유지·분석 불가·빈 범주를 정상 상태로 허용"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "초기/현재 의견 revision과 실제 게시 message IDs를 동결해 네범주 AI제안을 만들고 사용자 채택본을 별도 저장한다. 변화 없음·빈범주를 정상으로 둔다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/INTERACTIONS.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md"
+      ]
     },
     {
       "id": "DEC-004",
-      "status": "open",
+      "status": "proposed",
       "title": "온라인 Auditor의 필요 범위와 비용",
       "requirements": [
         "REQ-003",
@@ -315,12 +388,24 @@
         "온라인 별도 모델 호출은 기대 오류 감소·지연·비용을 검증한 뒤 채택",
         "같은 모델의 재검사를 독립 정확성 증거로 보지 않음"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "초기 후보는 자기 허용claim 선택·host렌더링/검증을 사용하고 별도온라인LLM수정루프를 비활성으로 둔다. 실제 오류 감소·지연·추가비용 비교 전 자동 추가하지 않는다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/README.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/README.md",
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     },
     {
       "id": "DEC-005",
-      "status": "open",
+      "status": "proposed",
       "title": "서비스 단가·재사용·증분의 채택 기준",
       "requirements": [
         "REQ-002",
@@ -333,12 +418,23 @@
         "이전$0.50/1000·$0.02/두관점질문은 미검증 제안으로만 취급",
         "영상/snapshot/계약/모델/prompt/유효기간별 재사용을 설계하고 fresh gate와 분리"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "공유$50와기존청구를 유지하고 실제총청구로 구조를 비교한다. 최초/증분/재열람/질문/그룹/성찰을 따로 측정하고 입력/계약/모델별 불변캐시와 영향범위 재검증을 사용한다. 이전원가제안은 미검증 목표다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/EXECUTION.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/BASELINE.md"
+      ]
     },
     {
       "id": "DEC-006",
-      "status": "open",
+      "status": "proposed",
       "title": "출력 언어·번역·다국어 검증 범위",
       "requirements": [
         "REQ-001",
@@ -353,8 +449,21 @@
         "현재 영어 중심 표본 결과를 한국어·다국어 품질 합격으로 일반화하지 않음",
         "팀 화면의 언어 요구와 고정 부정 사례를 구현 전에 명시"
       ],
-      "selection": null,
-      "evidence": []
+      "selection": "기존Figma영문UI·입력원문을 보존하고 한국어/영어 부정사례를 평가한다. Agent는 검증원문 claim을 표시하고 생성번역은 별도검증 전 비활성으로 둔다. 한국어UI안내는 정적번역의 팀검토로 추가한다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
+          "reference": "docs/design/README.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/README.md",
+        "docs/design/FACTORY.md",
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ]
     }
   ],
   "tasks": [
@@ -369,7 +478,7 @@
         "REQ-010"
       ],
       "depends_on": [],
-      "status": "next",
+      "status": "done",
       "deliverables": [
         "기존 모듈/호출별 입력·출력·중복 판단·호출/토큰/비용 표",
         "정상·조건부·반대·인용·귀속·불확실 사례와 현행 실패 목록",
@@ -380,13 +489,23 @@
         "호출 감소와 실청구 감소를 구별하고 자료가 없는 항목은 미측정으로 남긴다.",
         "DEC-001/DEC-005 비교에 필요한 기준선을 재현 가능하게 남긴다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "AST/source identities of11 code files and arithmetic of two historical incomplete12-source runs; no semantic quality or new inference. Audit SHA2561b2efdd58e82005dcfd5449daed19bbe7d0d183d29a49b88a4ab7158b9ee846e.",
+          "reference": "docs/design/BASELINE.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "offline"
       ],
       "decisions": [
         "DEC-001",
         "DEC-005"
+      ],
+      "design_refs": [
+        "docs/design/BASELINE.md"
       ]
     },
     {
@@ -402,7 +521,7 @@
       "depends_on": [
         "TASK-001"
       ],
-      "status": "todo",
+      "status": "done",
       "deliverables": [
         "DEC-001 설계 선택·대안·허용 입력·정확한 출력/오류 계약",
         "기존/후보 구조 대비표와 정상·부정 계약 사례",
@@ -413,7 +532,14 @@
         "없애는 호출과 유지할 독립 검증을 명시한다.",
         "아직 증명되지 않은 품질·원가 이득을 확정하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Detailed candidate design and32 written cases,32 local links/anchors,8source/4target fixed input integrity pass. Semantic cases not executed. Design audit SHA256c0c5a63a2726d47a0d812bd52b5efdabd25da4c65ce0015dc2b2122ebe5936e4.",
+          "reference": "docs/design/README.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "offline"
       ],
@@ -421,6 +547,13 @@
         "DEC-001",
         "DEC-005",
         "DEC-006"
+      ],
+      "design_refs": [
+        "docs/design/README.md",
+        "docs/design/FACTORY.md",
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md",
+        "docs/design/diagnostic-fixture.json"
       ]
     },
     {
@@ -436,7 +569,7 @@
       "depends_on": [
         "TASK-002"
       ],
-      "status": "todo",
+      "status": "next",
       "deliverables": [
         "관련 모듈·adapter·회귀 검사",
         "기존 저장 실패와 정상 사례 비교 결과",
@@ -452,6 +585,11 @@
       ],
       "decisions": [
         "DEC-001"
+      ],
+      "design_refs": [
+        "docs/design/FACTORY.md",
+        "docs/design/EXECUTION.md",
+        "docs/design/diagnostic-fixture.json"
       ]
     },
     {
@@ -483,6 +621,11 @@
       "decisions": [
         "DEC-001",
         "DEC-005"
+      ],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/diagnostic-fixture.json",
+        "docs/design/BASELINE.md"
       ]
     },
     {
@@ -511,7 +654,11 @@
       "required_evidence": [
         "formal_gate"
       ],
-      "decisions": []
+      "decisions": [],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/FACTORY.md"
+      ]
     },
     {
       "id": "TASK-006",
@@ -537,7 +684,11 @@
       "required_evidence": [
         "formal_gate"
       ],
-      "decisions": []
+      "decisions": [],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/FACTORY.md"
+      ]
     },
     {
       "id": "TASK-007",
@@ -566,7 +717,11 @@
       "required_evidence": [
         "formal_gate"
       ],
-      "decisions": []
+      "decisions": [],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/FACTORY.md"
+      ]
     },
     {
       "id": "TASK-008",
@@ -596,7 +751,12 @@
       ],
       "decisions": [
         "DEC-006"
-      ]
+      ],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ],
+      "design_status": "written_unimplemented"
     },
     {
       "id": "TASK-009",
@@ -630,7 +790,12 @@
       "decisions": [
         "DEC-002",
         "DEC-004"
-      ]
+      ],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ],
+      "design_status": "written_unimplemented"
     },
     {
       "id": "TASK-010",
@@ -664,7 +829,12 @@
       "decisions": [
         "DEC-003",
         "DEC-006"
-      ]
+      ],
+      "design_refs": [
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ],
+      "design_status": "written_unimplemented"
     },
     {
       "id": "TASK-011",
@@ -698,7 +868,13 @@
       ],
       "decisions": [
         "DEC-006"
-      ]
+      ],
+      "design_refs": [
+        "docs/design/README.md",
+        "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md"
+      ],
+      "design_status": "written_unimplemented"
     },
     {
       "id": "TASK-012",
@@ -734,7 +910,12 @@
       ],
       "decisions": [
         "DEC-005"
-      ]
+      ],
+      "design_refs": [
+        "docs/design/EXECUTION.md",
+        "docs/design/README.md"
+      ],
+      "design_status": "written_unimplemented"
     }
   ],
   "changes": [
@@ -742,6 +923,13 @@
       "date": "2026-11-05",
       "reason": "사용자가 context 누적/compact 후 원래 의도 이탈을 지적하고 상세한 spec-driven 개발을 요청했다. 기존 Figma/계약을 대조하며 미결정은 open으로 남긴다.",
       "scope": "명세·추적·재개 절차 및 정합성 검사. 제품 런타임·품질 합격·유료 실행 변경 없음."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 기준명세에 더해 세부 설계스펙 작성을 요청했다. 기존코드/호출/비용 오프라인 대조, 구체적역할/계약/API/상태/원가/32사례와 고정합성입력을 연결한다.",
+      "scope": "Design candidate only. DEC001~006 proposed, not implemented or empirically adopted. No new paid calls/runtime/Figma changes."
     }
-  ]
+  ],
+  "design_version": "commentscope-detailed-design-20261105-v1",
+  "design_document": "docs/design/README.md"
 }

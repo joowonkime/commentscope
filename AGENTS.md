@@ -7,6 +7,7 @@
 시작·Compact·담당자 변경 후에는 `docs/MVP_SPEC.md` → `docs/SPEC_WORKFLOW.md`를 읽고
 `python tools/check_mvp_spec.py --resume`를 실행한다. `docs/mvp-traceability.json`에서 현재
 TASK와 관련 REQ/DEC의 본문·의존성·완료 조건을 확인한 뒤 필요한 코드·기존 계약만 읽는다.
+각 record의 `design_refs`와 `docs/design/README.md`의 담당 절을 읽고 현재 구현과 후보 계약을 구별한다.
 요약이나 과거 실행 기록을 현재 의도·완료 기준의 대체물로 쓰지 않는다.
 
 처음 조원 환경을 이해할 때는 `README.md` → `docs/TEAM_START.md`도 확인한다.

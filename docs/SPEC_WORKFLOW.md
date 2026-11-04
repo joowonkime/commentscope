@@ -7,7 +7,8 @@ Compact의 인과를 입증하거나 모든 도구의 재개 동작을 자동 �
 
 1. `AGENTS.md` → [MVP 명세](MVP_SPEC.md)를 읽는다.
 2. `python tools/check_mvp_spec.py --resume`로 명세 버전·다음 작업·요구사항·열린 결정·유료 실행 상태를 확인한다.
-3. [추적표](mvp-traceability.json)에서 해당 TASK와 REQ/DEC 본문을 읽고, 필요한 기존 계약·코드·실패만 추가로 읽는다.
+3. [추적표](mvp-traceability.json)에서 해당 TASK와 REQ/DEC 본문·`design_refs`를 읽고,
+   [상세 설계](design/README.md)의 담당 절과 필요한 기존 계약·코드·실패만 추가로 읽는다.
 4. 실제 git 상태·HEAD·진행 프로세스·원본 artifact를 확인한다. 비공개 progress가 없으면 합성 검증부터 가능한 범위를 진행한다.
 5. 현재 요청이 저장 명세를 변경하면 변경 범위·근거·미결정 상태를 먼저 기록한다. 대화 요약을 근거로 상태를 추측하지 않는다.
 

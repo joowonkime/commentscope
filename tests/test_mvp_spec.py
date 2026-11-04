@@ -74,6 +74,18 @@ class MVPSpecTests(TestCase):
                 doc['requirements'][0]['code'].append(path)
                 self.assertIn('reference', self.errors(doc))
 
+    def test_detailed_design_references_are_checked_for_each_record_type(self):
+        for key in ('requirements', 'tasks', 'decisions'):
+            with self.subTest(key=key):
+                doc = deepcopy(self.spec)
+                doc[key][0]['design_refs'] = ['docs/design/missing.md']
+                self.assertIn('reference', self.errors(doc))
+
+    def test_design_version_requires_a_real_entry_document(self):
+        self.spec['design_version'] = 'synthetic-design-v1'
+        self.spec['design_document'] = 'docs/design/missing.md'
+        self.assertIn('reference', self.errors())
+
     def test_done_without_evidence_or_unfinished_prerequisites_is_rejected(self):
         self.spec['tasks'][1]['status'] = 'done'
         errors = self.errors()
