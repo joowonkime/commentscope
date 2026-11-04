@@ -1,7 +1,7 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261105-v2`. 대조 코드: `fff2260`.
-연결: REQ-001~REQ-010, TASK-001~014, DEC-001~006.
+설계 버전: `commentscope-detailed-design-20261105-v3`. 대조 코드: `fff2260`.
+연결: REQ-001~REQ-010, TASK-001~015, DEC-001~006.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
 이 단계의 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
@@ -28,7 +28,7 @@ Compact 후 전체 실험 이력을 읽는 대신 해당 TASK의 `design_refs`�
 
 Before Use → Explore → Converse → Reflect. 시청자의 의견 변화는 성공 조건이 아니다.
 관점 수는 자료에 따라 달라지고 서로 반대할 필요가 없다. 그룹은 Converse의 대안 경로다.
-현재 최우선은 관점/Agent 생성 품질과 비용이며, 이 통과를 전체 제품 완료로 부르지 않는다.
+현재는 기존 자동 결과로 제품 기능을 구현하고 팀 프론트 연결을 진행한다. 관점/Agent 품질·비용과 최종 gate는 별도로 유지한다.
 
 ```mermaid
 flowchart LR
@@ -119,3 +119,7 @@ TASK-003은 source 계약·adapter·부정 사례와 기존 합성 전체 연결
 초기 adapter는 후속 검사를 그대로 두므로 비용 절감의 증거가 아니다. 모델 호출은 이 구현만으로 재개하지 않는다.
 이후 고정 G1→G2/G3→G4를 검증하고 Explore→Converse→Reflect를 연결한다.
 후속 기능의 설계를 먼저 작성했다는 이유로 그 구현 작업을 완료 처리하지 않는다.
+
+현재 구현 우선순위는 [기존 생성 결과의 제품 연결](PRODUCT_DELIVERY.md)을 따른다. 기능 개발과 최종 품질 판정의 의존성을 구별한다.
+
+제품 개발 API와 현재 확인 범위: [실행/API](../PRODUCT_API.md), [구현 결과](../PRODUCT_DELIVERY_RESULT.md).

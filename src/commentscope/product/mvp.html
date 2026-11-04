@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Re.View · CommentScope</title><link rel="stylesheet" href="/mvp/app.css"><script defer src="/mvp/app.js"></script></head>
+<body><header><a class="brand" href="/mvp">Re.View<span>CommentScope</span></a><span class="badge">개발 미리보기 · 분석 검수 전</span></header>
+<main><section class="intro"><p class="eyebrow">다른 생각을 만나고, 나의 생각을 정리하기</p><h1>댓글 속 관점과 대화해 보세요.</h1><p>관점의 이유와 조건을 원문으로 살펴보고, 질문하며 자신의 생각을 남길 수 있습니다.</p></section>
+<p id="status" role="status" aria-live="polite">등록된 분석을 불러오는 중입니다.</p>
+<section id="before" class="panel"><h2>먼저, 나의 생각</h2><p>의견이 아직 정해지지 않았어도 괜찮습니다.</p>
+<form id="begin"><label for="initial">이 주제에 대해 지금 어떻게 생각하나요?</label><textarea id="initial" rows="3" placeholder="초기 의견을 자유롭게 적어 주세요. 최대 500자"></textarea><button type="submit">관점 살펴보기</button></form></section>
+<div id="workspace" hidden><nav aria-label="탐색 단계"><button data-step="explore" class="active">1. Explore</button><button data-step="converse">2. Converse</button><button data-step="reflect">3. Reflect</button></nav>
+<section id="explore"><div class="section-title"><div><p class="eyebrow">EXPLORE</p><h2>어떤 관점이 있을까요?</h2></div><button id="new-session" class="quiet">새로 시작</button></div>
+<details class="panel compact"><summary>나의 초기 의견 보기·수정</summary><form id="edit-initial"><label for="initial-edit">초기 의견</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">수정 저장</button></form></details>
+<div id="perspectives" class="cards"></div><section id="comparison" class="panel" hidden><h3>나의 의견과 비교</h3><div id="comparison-items"></div></section>
+<div class="action-bar"><p>하나를 선택하면 1:1, 둘 이상을 선택하면 그룹으로 대화합니다.</p><button id="open-room">선택한 관점과 대화</button></div></section>
+<section id="converse" hidden><div class="section-title"><div><p class="eyebrow">CONVERSE</p><h2>직접 묻고, 근거를 확인하세요.</h2></div><select id="rooms" aria-label="이전 대화 선택"><option value="">대화 선택</option></select></div>
+<form id="opening" class="panel"><label for="opening-question">어떤 질문으로 시작할까요?</label><textarea id="opening-question" rows="2">이 관점의 핵심 입장과 이유를 함께 설명해 주세요.</textarea><button type="submit">대화 시작</button></form>
+<div class="conversation-layout"><section class="panel"><div class="conversation-toolbar"><span id="room-state">관점을 선택해 대화를 만들어 주세요.</span><div><button id="pause" class="quiet">일시 정지</button><button id="resume" class="quiet">이어가기</button><button id="next-round" class="quiet">다음 라운드</button><button id="close-room" class="quiet">종료</button></div></div>
+<div id="messages" class="messages"></div><form id="interject"><label for="question">나의 질문 또는 대화 개입</label><textarea id="question" rows="2" placeholder="대화 중에는 현재 응답이 끝난 뒤 질문이 전달됩니다."></textarea><button type="submit">질문 보내기</button></form></section>
+<aside class="panel source-panel"><h3>원문 확인</h3><p class="hint">답변 아래의 원문 버튼으로 해당 댓글과 부모 문맥을 확인할 수 있습니다.</p><pre id="source">아직 선택한 원문이 없습니다.</pre></aside></div>
+<button id="go-reflect" class="secondary">나의 생각 정리하기 →</button></section>
+<section id="reflect" hidden><div class="section-title"><div><p class="eyebrow">REFLECT</p><h2>대화 후, 나의 생각은 어떤가요?</h2></div></div>
+<div class="reflection-layout"><section class="panel"><h3>처음의 생각</h3><blockquote id="initial-copy"></blockquote><label for="current">지금의 생각</label><textarea id="current" rows="5" placeholder="같은 의견을 유지해도 괜찮습니다. 최대 2,000자"></textarea>
+<details><summary>분석에 참고할 대화 선택</summary><div id="context-messages"></div></details><button id="analyze">생각 정리 제안 받기</button><div id="suggestions"></div></section>
+<section class="panel"><h3>내가 남길 정리</h3><p class="hint">AI 제안을 선택하거나, 직접 쓰고 수정할 수 있습니다. 저장만 할 때는 AI를 호출하지 않습니다. 각 범주에는 한 줄에 한 항목씩, 최대 4개를 적을 수 있습니다.</p>
+<form id="save-reflection"><label for="stayed">유지한 생각</label><textarea id="stayed" rows="2"></textarea><label for="changed">달라진 생각</label><textarea id="changed" rows="2"></textarea><label for="newly_learned">새로 알게 된 점</label><textarea id="newly_learned" rows="2"></textarea><label for="worth_more_thought">더 생각해 볼 점</label><textarea id="worth_more_thought" rows="2"></textarea><button type="submit">내 성찰 저장</button></form><p id="save-state" role="status"></p><h3>저장한 성찰</h3><div id="saved-reflections"></div><div id="saved-view"></div></section></div></section></div>
+</main><footer>의견을 바꾸는 것이 목표는 아닙니다. 서로 다른 이유를 이해하고 나의 생각을 정리해 보세요.</footer></body></html>

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v4",
+  "spec_version": "commentscope-mvp-20261105-v6",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -22,9 +22,9 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-004",
+    "next_task": "TASK-011",
     "paid_execution_hold": true,
-    "hold_reason": "이번$5/7시간 cycle은 TASK004 원문 대조의 중대 의미 오류로 유료dispatch/013 이후 확대를 중단했다. 실제응답비용$0.14973945·보수차감$0.77168, 합계$0.92141945. 원문 대조 계약의 수정 판단을 먼저 한다. 기존r5/공유$50/과거청구 유지."
+    "hold_reason": "제품의 기존자동2Agent 개발입력과 Explore/그룹/Reflect 구현 및 제한된실제9호출을 완료했다. 새유료작업은 계획/잔여/기한 확인 후 기존동일cycle 잔여 내만 가능. 전체Factory품질/새의미구조채택은계속보류. 다음은 기존팀프론트의 API연결."
   },
   "requirements": [
     {
@@ -126,17 +126,36 @@
         "docs/COMPARE_BACKEND_API.md"
       ],
       "code": [
-        "src/commentscope/agents/grounded_web.py"
+        "src/commentscope/agents/grounded_web.py",
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
       ],
       "checks": [
-        "tests/test_grounded_web.py"
+        "tests/test_grounded_web.py",
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
       ],
       "acceptance": [
         "초기 의견 저장과 별도로 공통점·차이·추가 고려 항목을 의미적으로 비교한다.",
         "각 항목을 사용자 원문 구간·허용 관점 주장에 연결하며 정보 부재를 반대로 단정하지 않는다.",
         "현재 저장 API 검사는 의미 비교 구현의 완료 증거가 아니다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
@@ -152,18 +171,37 @@
       ],
       "code": [
         "src/commentscope/agents/grounded_runtime.py",
-        "src/commentscope/agents/grounded_web.py"
+        "src/commentscope/agents/grounded_web.py",
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
       ],
       "checks": [
         "tests/test_grounded_web.py",
         "tests/test_grounded_web_failures.py",
-        "tests/test_source_context_display.py"
+        "tests/test_source_context_display.py",
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
       ],
       "acceptance": [
         "자기 관점 근거의 후속 질문·적절한 보류·원문/부모 확인·대화 저장을 연결한다.",
         "같은 질문을 받은 두 Agent의 결과와 이력을 분리하며 실제 자동 결과를 팀 화면에 연결한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
@@ -172,19 +210,40 @@
     {
       "id": "REQ-006",
       "title": "Converse: 그룹 토론·사용자 개입",
-      "implementation": "not_implemented",
+      "implementation": "partial",
       "sources": [
         "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=378-1866",
         "docs/MVP_SPEC.md"
       ],
-      "code": [],
-      "checks": [],
+      "code": [
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
+      ],
+      "checks": [
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
+      ],
       "acceptance": [
         "대화 Controller와 자기 근거를 유지하는 Agent의 상호 응답·사용자 개입·턴/비용 제한·오류 복구를 명시하고 구현한다.",
         "화면의3Agent 예시를 Factory 최소 수로 바꾸지 않으며 실제 적격 Agent를 합성하지 않는다.",
         "두 Agent 동일 질문 API를 그룹 토론 완료로 계산하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
@@ -193,18 +252,39 @@
     {
       "id": "REQ-007",
       "title": "Reflect: 초기/현재 의견·대화 연결·저장",
-      "implementation": "not_implemented",
+      "implementation": "partial",
       "sources": [
         "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=241-327",
         "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=242-404"
       ],
-      "code": [],
-      "checks": [],
+      "code": [
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
+      ],
+      "checks": [
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
+      ],
       "acceptance": [
         "유지·변화·새로 배운 점·추가 고민을 사용자 원문·실제 관련 대화와 연결하고 사용자가 수정·저장할 수 있다.",
         "의견 유지·빈 범주를 허용하고 AI 제안으로 원문을 덮어쓰거나 인과·대화를 발명하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
@@ -220,19 +300,38 @@
       ],
       "code": [
         "src/commentscope/providers/openrouter_budget.py",
-        "tools/serve_openrouter_web.py"
+        "tools/serve_openrouter_web.py",
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
         "tests/test_openrouter_prices.py",
         "tests/test_openrouter_grounded_web.py",
-        "tests/test_openrouter_spend_scope.py"
+        "tests/test_openrouter_spend_scope.py",
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
         "최초 분석·증분·재열람·1:1·그룹·성찰 비용을 분리 측정하며 서비스 단가 목표는 결정 기록으로 확정한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/README.md"
@@ -248,18 +347,37 @@
       ],
       "code": [
         "src/commentscope/agents/grounded_web.py",
-        "src/commentscope/agents/team_demo.py"
+        "src/commentscope/agents/team_demo.py",
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
       ],
       "checks": [
         "tests/grounded_ui_smoke.cjs",
-        "tests/test_openrouter_grounded_web.py"
+        "tests/test_openrouter_grounded_web.py",
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
       ],
       "acceptance": [
         "기존 Figma·팀 프론트를 보존하고 실제 자동 bundle로 Explore→Converse→Reflect를 끝까지 수행한다.",
         "복구 가능한 오류 상태·원문 이동·저장·접근 가능한 실행 URL과 사용자 과업 결과를 확인한다.",
         "합성 데모나 기존 제한된 백엔드 성공으로 전체 제품 완료를 선언하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
@@ -274,16 +392,35 @@
         "docs/SPEC_WORKFLOW.md"
       ],
       "code": [
-        "tools/check_mvp_spec.py"
+        "tools/check_mvp_spec.py",
+        "src/commentscope/product/app.py",
+        "src/commentscope/product/contracts.py",
+        "src/commentscope/product/web.py"
       ],
       "checks": [
-        "tests/test_mvp_spec.py"
+        "tests/test_mvp_spec.py",
+        "tests/test_product_app.py",
+        "tests/test_product_web.py",
+        "tests/test_serve_mvp.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
         "구현·오프라인·제한적실행·정식gate·제품E2E의 검증 범위를 구별하며 명세 검사 성공을 품질 승인으로 해석하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/README.md",
         "docs/design/BASELINE.md"
@@ -324,7 +461,7 @@
     },
     {
       "id": "DEC-002",
-      "status": "proposed",
+      "status": "accepted",
       "title": "그룹 Controller·대화 상태·정보 경계",
       "requirements": [
         "REQ-003",
@@ -345,6 +482,18 @@
           "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
           "reference": "docs/design/INTERACTIONS.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -354,7 +503,7 @@
     },
     {
       "id": "DEC-003",
-      "status": "proposed",
+      "status": "accepted",
       "title": "성찰 분석·수정·저장 계약",
       "requirements": [
         "REQ-004",
@@ -373,6 +522,18 @@
           "kind": "offline",
           "scope": "Current-code and preserved-result review plus detailed contract design only. No candidate implementation, model quality or cost adoption.",
           "reference": "docs/design/INTERACTIONS.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
         }
       ],
@@ -621,7 +782,7 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "in_progress",
+      "status": "deferred",
       "deliverables": [
         "고정 source 계약 사례와 fact/value/prediction/uncertain 대비 통제군·모델/provider·출력/가격 상한·중단조건·명시적 비용 한도 계획",
         "새 귀속·유형·충실성 관측의 원문 검토와 실제 비용 기록",
@@ -680,7 +841,7 @@
       "depends_on": [
         "TASK-004"
       ],
-      "status": "todo",
+      "status": "deferred",
       "deliverables": [
         "후보 설명·동치·직접지지·논거 계약과 versioned adapter",
         "교체한 기존 호출·유지한 독립 검증의 실제 실행 비교",
@@ -716,7 +877,7 @@
       "depends_on": [
         "TASK-013"
       ],
-      "status": "todo",
+      "status": "deferred",
       "deliverables": [
         "실험별 표본·모델/provider·prompt/schema·한도·중단 조건을 고정한 계획",
         "첫 응답·원문 검토·실청구와 채택/폐기 기록"
@@ -750,7 +911,7 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-014"
+        "TASK-003"
       ],
       "status": "todo",
       "deliverables": [
@@ -835,6 +996,57 @@
       ]
     },
     {
+      "id": "TASK-015",
+      "title": "기존 자동 생성 bundle의 제품 개발 연결",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-005",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-003"
+      ],
+      "status": "done",
+      "deliverables": [
+        "기존 Factory plan/snapshot/output에 결합된 불변 개발 analysis와 현재 compiler 검증",
+        "초기 의견·대화·원문 조회 API와 연결한 개발 입력·동일cycle 공유비용·실제 연결 결과"
+      ],
+      "done_when": [
+        "전체 자동 profiles를 보존하고 experimental/not_assessed 상태를 정식 품질 합격으로 승격하지 않는다.",
+        "원본 변경/만료/다른 snapshot을 거부하고 기존 M0 API를 유지한다.",
+        "오프라인 및 제한된 실제 제품 연결 결과와 미검증 품질 범위를 기록한다."
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-005"
+      ],
+      "design_refs": [
+        "docs/design/PRODUCT_DELIVERY.md",
+        "docs/design/INTERACTIONS.md"
+      ],
+      "design_status": "implemented_development_scope"
+    },
+    {
       "id": "TASK-008",
       "title": "Explore 의미 비교 계약·구현",
       "requirements": [
@@ -844,9 +1056,9 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-007"
+        "TASK-015"
       ],
-      "status": "todo",
+      "status": "done",
       "deliverables": [
         "초기 의견 revision·관점 claim ID·사용자 구간 비교 계약",
         "관련 API·정상/부정 검사·실제 원문 대조"
@@ -855,7 +1067,20 @@
         "저장만 하는 현행 기능을 실제 의미 비교로 연결한다.",
         "정보 부재·조건·의견 유지·초기 의견 수정 사례를 검증한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "offline",
         "limited_live"
@@ -867,7 +1092,7 @@
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
       ],
-      "design_status": "written_unimplemented"
+      "design_status": "implemented_development_scope"
     },
     {
       "id": "TASK-009",
@@ -881,9 +1106,9 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-007"
+        "TASK-015"
       ],
-      "status": "todo",
+      "status": "done",
       "deliverables": [
         "DEC-002/DEC-004의 Controller·상호 응답·사용자 개입·한도·실패 계약",
         "기존1:1 경로와 연결한 그룹 대화·출처/이력 경계 검사"
@@ -893,7 +1118,20 @@
         "다른 발언의 근거 전이·중복 요청·부분 실패·비용 초과를 검증한다.",
         "프로토타입 그룹 흐름을 독립 동일 질문과 구별해 실제로 수행한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "offline",
         "limited_live"
@@ -906,7 +1144,7 @@
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
       ],
-      "design_status": "written_unimplemented"
+      "design_status": "implemented_development_scope"
     },
     {
       "id": "TASK-010",
@@ -923,7 +1161,7 @@
         "TASK-008",
         "TASK-009"
       ],
-      "status": "todo",
+      "status": "done",
       "deliverables": [
         "DEC-003 계약과 초기/현재 의견·대화 참조·AI 제안/사용자 채택 저장",
         "변화 없음·빈 범주·없는 대화·인과 과장·수정/재분석 검사"
@@ -932,7 +1170,20 @@
         "네 범주와 관련 대화 이동·저장을 연결한다.",
         "사용자 원문과 자기 해석을 보존하며 의견 변화를 강요하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Product23 focused tests; synthetic Chromium13 checks; existing Node UI7 and required Factory475 pass. Host/reference/control/persistence only, not semantic quality approval.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "offline",
         "limited_live"
@@ -945,7 +1196,7 @@
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md"
       ],
-      "design_status": "written_unimplemented"
+      "design_status": "implemented_development_scope"
     },
     {
       "id": "TASK-011",
@@ -964,7 +1215,7 @@
         "TASK-009",
         "TASK-010"
       ],
-      "status": "todo",
+      "status": "next",
       "deliverables": [
         "기존 Figma의 세 과업과 실제 자동 bundle를 연결한 화면/API",
         "팀 언어 정책·오류/보류·대화/성찰 저장·원문 이동 결과"
@@ -1003,6 +1254,7 @@
         "REQ-010"
       ],
       "depends_on": [
+        "TASK-007",
         "TASK-011"
       ],
       "status": "todo",
@@ -1049,8 +1301,18 @@
       "date": "2026-11-05",
       "reason": "사용자가 추가총$5/최대7시간의 TASK004→013→014→005 조건부 사이클을 승인했다. 단일cycle 공유 예산과 고정 정상/부정 진단·중단조건을 명시한다.",
       "scope": "실행별 계획/현재가격/예약 확인 후 승인 범위만 실행. r5/총$50/과거청구 및 범위밖전체유료보류 유지."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 신뢰성 검증의 효과를 가정하지 말고 MVP 구현 진도를 우선하라고 지시했다. 새역할구조채택은보류하고 기존생성bundle로 제품기능개발을 진행한다.",
+      "scope": "TASK015 개발입력 연결,008/009 기능개발 선행조건을015로 변경. 최종012는007/011을 모두 요구해 r5/999·품질완료조건을 유지. 예산·과거비용 초기화없음."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "기존자동생성 합성댓글2Agent로 별도제품API/개발화면을 실제구현하고 동일cycle에서9회 실제모델을 확인했다. 알려진원문오류를해결했다고가정하지않고 기능진도를분리한다.",
+      "scope": "TASK015/008/009/010 개발기능 완료, 다음011 팀프론트통합. 요구사항은 전체품질/통합미검증으로partial 유지. DEC002/003의bounded제품계약을구현범위로수락. r5/총50달러/기존5달러cycle와과거차감유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v2",
+  "design_version": "commentscope-detailed-design-20261105-v3",
   "design_document": "docs/design/README.md"
 }
