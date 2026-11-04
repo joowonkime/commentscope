@@ -134,5 +134,75 @@ class SourceDiagnosticTests(unittest.TestCase):
         with self.assertRaises(RuntimeError): probe.run(self.directory)
         self.assertEqual(self.base.call.call_count, 1)
 
+    def authored_review(self):
+        completed = read_json(self.directory/'completed.json')
+        records = read_json(self.directory/'source-records.json')
+        return {'plan_sha256': completed['plan_sha256'],
+                'source_records_sha256': completed['source_records_sha256'],
+                'reviewer_kind': 'developer_source_review',
+                'sources': [{'source_id': r['source']['id'], 'record_sha256': r['record_sha256'],
+                    'completeness': 'preserved',
+                    'proposals': [{'id': d['source_interpretation_id'], 'verdict': 'faithful', 'note': ''}
+                                  for d in r['decisions']]} for r in records]}
+
+    def test_manual_source_review_can_reject_after_all_controls_pass(self):
+        failure = read_json(Path('tests/fixtures/source-semantics-observed-failure.json'))
+        self.fixture['sources'] = [failure['source']]
+        patch.object(probe, 'fixture', return_value=deepcopy(self.fixture)).start()
+        original = self.response
+        def replay(request, *args, **kwargs):
+            result = original(request, *args, **kwargs)
+            proposals = request['data'].get('PROPOSALS')
+            if proposals and proposals[0]['text'] == failure['extraction_output']['c'][0]['t']:
+                output = failure['review_output']
+            elif proposals:
+                return result
+            else:
+                output = failure['extraction_output']
+            result['choices'][0]['message']['content'] = json.dumps(output)
+            return result
+        self.base.call.side_effect = replay
+        self.prepare(); probe.run(self.directory)
+        record = read_json(self.directory/'source-records.json')[0]
+        self.assertTrue(record['decisions'][0]['nomination_eligible'])
+        self.assertTrue(all(v == 'preserved' for v in
+                            record['reviews'][0]['response']['decisions'][0]['fidelity'].values()))
+        review = self.authored_review()
+        review['sources'][0]['proposals'][0].update(verdict=failure['expected_direct_review'],
+            note='Observed source decrease rewritten as a low level despite a preserved declaration.')
+        result = probe.assess(self.directory, review)
+        self.assertEqual(result['decision'], 'hold')
+        self.assertEqual(result['critical_errors'], 1)
+        self.assertFalse(result['quality_gate_passed'])
+        self.assertEqual(self.base.call.call_count, 3)
+
+    def test_missing_duplicate_or_changed_source_review_cannot_admit(self):
+        self.prepare(); probe.run(self.directory)
+        for mutate in (
+            lambda r: r['sources'].clear(),
+            lambda r: r['sources'].append(deepcopy(r['sources'][0])),
+            lambda r: r['sources'][0].update(record_sha256='0'*64),
+            lambda r: r['sources'][0]['proposals'].clear(),
+        ):
+            review = self.authored_review(); mutate(review)
+            with self.subTest(mutate=mutate), self.assertRaises(ValueError):
+                probe.assess(self.directory, review)
+        self.assertEqual(self.base.call.call_count, 3)
+
+    def test_review_does_not_turn_unclear_or_incomplete_sources_into_passes(self):
+        self.prepare(); probe.run(self.directory)
+        review = self.authored_review(); review['sources'][0]['completeness'] = 'unclear'
+        self.assertEqual(probe.assess(self.directory, review)['decision'], 'hold')
+        review = self.authored_review(); review['sources'][0]['proposals'][0]['verdict'] = 'unclear'
+        self.assertEqual(probe.assess(self.directory, review)['decision'], 'hold')
+        self.assertEqual(probe.assess(self.directory, self.authored_review())['decision'],
+                         'proceed_to_next_contract_only')
+
+    def test_review_does_not_accept_mutated_completed_artifacts(self):
+        self.prepare(); probe.run(self.directory); review = self.authored_review()
+        path = self.directory/'source-records.json'; value = read_json(path)
+        value[0]['source']['text'] = 'Mutated.'; path.write_text(json.dumps(value))
+        with self.assertRaises(ValueError): probe.assess(self.directory, review)
+
 
 if __name__ == '__main__': unittest.main()

@@ -3,6 +3,7 @@ import argparse
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 import json
+import os
 from pathlib import Path
 import re
 
@@ -220,14 +221,87 @@ def run(directory):
             raise
 
 
+def assess(directory, review):
+    """Bind direct source review to historical artifacts; never call a model."""
+    private(directory); plan = read_json(directory/'plan.json')
+    run_origin(plan, directory, attempt=1)
+    completed = read_json(directory/'completed.json'); plan_sha = sha(directory/'plan.json')
+    records = read_json(directory/'source-records.json')
+    controls = read_json(directory/'control-results.json')
+    if (read_json(directory/'frozen.json') != {'plan_sha256': plan_sha}
+            or completed['plan_sha256'] != plan_sha
+            or completed['source_records_sha256'] != sha(directory/'source-records.json')
+            or completed['control_results_sha256'] != sha(directory/'control-results.json')
+            or review.get('plan_sha256') != plan_sha
+            or review.get('source_records_sha256') != completed['source_records_sha256']
+            or review.get('reviewer_kind') != 'developer_source_review'):
+        raise ValueError('Source review must bind exact completed diagnostic artifacts')
+    for path, expected in plan['code_sha256'].items():
+        relative = Path(path)
+        if relative.is_absolute() or '..' in relative.parts or sha(directory/'frozen-code'/relative) != expected:
+            raise ValueError('Historical frozen execution code changed')
+    sources = {s['id']: s for s in plan['inputs']['sources']}
+    if (len(records) != len(sources) or {r['source']['id'] for r in records} != set(sources)
+            or len(controls) != len(plan['inputs']['controls'])
+            or {c['id'] for c in controls} != {c['id'] for c in plan['inputs']['controls']}):
+        raise ValueError('Complete fixed source and control coverage required')
+    lookup = {r['source']['id']: semantics.validate(r, snapshot_sha256=plan['inputs_sha256'],
+                                                  source=sources[r['source']['id']]) for r in records}
+    rows = review.get('sources')
+    if (not isinstance(rows, list) or len(rows) != len(lookup)
+            or any(not isinstance(r, dict) for r in rows)
+            or {r.get('source_id') for r in rows} != set(lookup)):
+        raise ValueError('Every actual source requires exactly one review')
+    critical = uncertain = preservation_loss = 0
+    for row in rows:
+        record = lookup[row['source_id']]
+        if (row.get('record_sha256') != record['record_sha256']
+                or row.get('completeness') not in ('preserved', 'lost', 'unclear')):
+            raise ValueError('Current source record and completeness verdict required')
+        preservation_loss += row['completeness'] != 'preserved'
+        decisions = {d['source_interpretation_id']: d for d in record['decisions']}
+        proposals = row.get('proposals')
+        if (not isinstance(proposals, list) or len(proposals) != len(decisions)
+                or any(not isinstance(p, dict) for p in proposals)
+                or {p.get('id') for p in proposals} != set(decisions)):
+            raise ValueError('Every actual proposal requires exactly one review')
+        for proposal in proposals:
+            verdict = proposal.get('verdict')
+            if (verdict not in ('faithful', 'held_correctly', 'changed_but_admitted', 'unclear')
+                    or not isinstance(proposal.get('note'), str)
+                    or verdict == 'held_correctly' and decisions[proposal['id']]['nomination_eligible']
+                    or verdict == 'changed_but_admitted' and not decisions[proposal['id']]['nomination_eligible']):
+                raise ValueError('Explicit source-bound semantic observation required')
+            critical += verdict == 'changed_but_admitted'
+            uncertain += verdict == 'unclear'
+    proceed = (all(c.get('pass') is True for c in controls)
+               and not critical and not uncertain and not preservation_loss)
+    return {'artifact_kind': VERSION+'-admission', 'plan_sha256': plan_sha,
+            'review_sha256': digest(review), 'reviewer_kind': review['reviewer_kind'],
+            'reviewed_sources': len(rows), 'critical_errors': critical,
+            'unclear_proposals': uncertain, 'preservation_loss_sources': preservation_loss,
+            'decision': 'proceed_to_next_contract_only' if proceed else 'hold',
+            'quality_gate_passed': False, 'cost_saving_adopted': False}
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
     actions = parser.add_subparsers(dest='action', required=True)
     p = actions.add_parser('prepare'); p.add_argument('directory', type=Path)
     p.add_argument('--cycle-file', type=Path, required=True)
     p = actions.add_parser('run'); p.add_argument('directory', type=Path)
+    p.add_argument('--key-file', type=Path)
+    p = actions.add_parser('assess'); p.add_argument('directory', type=Path)
+    p.add_argument('--review-file', type=Path, required=True)
     args = parser.parse_args()
-    result = prepare(args.directory, args.cycle_file) if args.action == 'prepare' else run(args.directory)
-    print(json.dumps(result if args.action == 'run' else {
+    if args.action == 'prepare': result = prepare(args.directory, args.cycle_file)
+    elif args.action == 'assess':
+        result = assess(args.directory, read_json(args.review_file))
+        publish(args.directory/'admission.json', result)
+    else:
+        if args.key_file is not None:
+            os.environ['OPENROUTER_API_KEY'] = args.key_file.read_text().strip()
+        result = run(args.directory)
+    print(json.dumps(result if args.action != 'prepare' else {
         'prepared': str(args.directory), 'max_requests': result['max_requests'],
         'maximum_request_reservation_usd': result['maximum_request_reservation_usd']}, ensure_ascii=False))

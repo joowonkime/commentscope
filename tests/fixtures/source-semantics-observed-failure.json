@@ -1,0 +1,62 @@
+{
+  "version": "source-semantics-observed-failure-20261105-v1",
+  "scope": "Synthetic source and actual model wire values only. Provider receipts, keys and private user data excluded. This is a saved failure, not a gold-quality benchmark.",
+  "source": {
+    "id": "P",
+    "text": "자율 참석을 도입하면 다음 달 참석률이 낮아질 것이다.",
+    "parent": null
+  },
+  "extraction_output": {
+    "c": [
+      {
+        "e": [
+          "S000"
+        ],
+        "k": [],
+        "a": "asserted",
+        "t": "If voluntary attendance is introduced, attendance rates will be low next month.",
+        "l": ""
+      }
+    ],
+    "m": false
+  },
+  "review_output": {
+    "decisions": [
+      {
+        "id": "N1",
+        "speech_act": "assertion",
+        "epistemic_status": "predicted",
+        "world": "real_world",
+        "reference_use": "none",
+        "references": [],
+        "scope_links": [
+          {
+            "kind": "condition",
+            "segment_ids": [
+              "S000"
+            ]
+          },
+          {
+            "kind": "quantities_time",
+            "segment_ids": [
+              "S000"
+            ]
+          }
+        ],
+        "world_frame_ids": [],
+        "fidelity": {
+          "reference": "preserved",
+          "attribution": "preserved",
+          "speech_act": "preserved",
+          "logical_scope": "preserved",
+          "quantities_time": "preserved",
+          "world": "preserved"
+        },
+        "authorship": "asserted",
+        "kind": "prediction"
+      }
+    ]
+  },
+  "expected_direct_review": "changed_but_admitted",
+  "finding": "A decrease was rendered as a low level; all model fidelity dimensions were preserved and nomination was allowed."
+}

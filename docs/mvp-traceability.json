@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-004",
     "paid_execution_hold": true,
-    "hold_reason": "사용자 승인: 이번 조건부 TASK004→013→014→005 사이클에 추가총$5·최대7시간. 동결cycle/입력/모델/가격/예약·시간 한도 확인 전 호출 보류. 범위밖 G2/G3/G4·전체실행은 계속 보류한다."
+    "hold_reason": "이번$5/7시간 cycle은 TASK004 원문 대조의 중대 의미 오류로 유료dispatch/013 이후 확대를 중단했다. 실제응답비용$0.14973945·보수차감$0.77168, 합계$0.92141945. 원문 대조 계약의 수정 판단을 먼저 한다. 기존r5/공유$50/과거청구 유지."
   },
   "requirements": [
     {
@@ -632,7 +632,26 @@
         "정상/부정 원문 관측과 전체 연결 영향을 함께 확인하고 중대오류가 있으면 다음 구현으로 자동 확대하지 않는다.",
         "초기adapter는 후속중복호출을 유지하므로 이번진단을 비용절감 채택으로 보고하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Frozen12-source/8-control diagnostic and shared cycle spending scope. Explicit developer source review binds all source/proposal/hash and can hold expansion after execution/control pass. No automatic semantic repair.",
+          "reference": "experiments/source_semantics_diagnostic.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "12 synthetic sources/16 proposals/8 controls,32 model requests, actual receipt cost0.14973945 USD. Controls8 passed, but direct source review found1 changed-but-admitted proposition (decrease→low state),1 unclear proposal and loss/uncertainty in2sources. Expansion held; no TASK013/014/G1 execution.",
+          "reference": "docs/design/SOURCE_DIAGNOSTIC_RESULT.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "New13 diagnostic and4 shared-spend-scope tests;related72 and requiredFactory475(216.316s) pass. Saved actual synthetic decrease→low-state output remains model-admitted in replay; full direct-source review produces hold. No automatic semantic repair or live quality adoption.",
+          "reference": "tests/test_source_semantics_diagnostic.py",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "limited_live"
       ],
@@ -644,7 +663,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/diagnostic-fixture.json",
         "docs/design/BASELINE.md",
-        "docs/design/SOURCE_DIAGNOSTIC.md"
+        "docs/design/SOURCE_DIAGNOSTIC.md",
+        "docs/design/SOURCE_DIAGNOSTIC_RESULT.md"
       ]
     },
     {

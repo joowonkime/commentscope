@@ -47,3 +47,17 @@ reasoning/output·context·timeout, 원문/코드/hash와44개 요청 상한을 
 
 모델 참고: [공식 GPT-5.2 문서](https://developers.openai.com/api/docs/models/gpt-5.2).
 실제 endpoint 가격·가용성은 각 실행 직전 OpenRouter metadata를 우선한다.
+
+### 원문 검토의 명시적 완료 조건
+
+실행 완료/통제군 통과와 다음 계약으로의 확대 결정을 분리한다. `assess`는 완료 artifact/hash와
+동결 코드 원본, 모든 source·proposal에 대한 개발 담당 원문 검토를 요구한다.
+실제 원문 record별 completeness와 모든 제안별 faithful/held_correctly/changed_but_admitted/unclear를 기록한다.
+누락·중복·다른 record·불명확·정상 보존 손실·잘못된 제안의 허용은 확대를 승인하지 않는다.
+성공해도 `proceed_to_next_contract_only`이며 G1이나 의미 gold의 자동 승인이 아니다.
+모델의 자체 `fidelity=preserved`가 원문 검토를 대신할 수 없다.
+
+CLI는 `python -m experiments.source_semantics_diagnostic run <directory> --key-file <private key path>`로 실행한다.
+프로세스 spawn에 필요한 실제 모듈 진입점을 사용하며 키 값은 계획·요청·출력에 넣지 않는다.
+
+첫 실제 실행의 실패·확대 보류와 비용은 [진단 결과](SOURCE_DIAGNOSTIC_RESULT.md)에 기록했다.
