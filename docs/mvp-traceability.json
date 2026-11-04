@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v3",
+  "spec_version": "commentscope-mvp-20261105-v4",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-004",
     "paid_execution_hold": true,
-    "hold_reason": "S1/S2 첫코드·오프라인/CI 검증만 완료했다. source 진단의 입력·역할·요청 수·예약 가능 비용·권한을 고정하기 전 유료 호출하지 않는다. 기존 전체 유료 실행 보류와 공유 장부는 유지한다."
+    "hold_reason": "사용자 승인: 이번 조건부 TASK004→013→014→005 사이클에 추가총$5·최대7시간. 동결cycle/입력/모델/가격/예약·시간 한도 확인 전 호출 보류. 범위밖 G2/G3/G4·전체실행은 계속 보류한다."
   },
   "requirements": [
     {
@@ -44,7 +44,8 @@
       "checks": [
         "tests/test_raw_membership_source_context.py",
         "tests/test_owner_observations.py",
-        "tests/test_source_semantics_contract.py"
+        "tests/test_source_semantics_contract.py",
+        "tests/test_source_semantics_diagnostic.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -224,7 +225,8 @@
       "checks": [
         "tests/test_openrouter_budget.py",
         "tests/test_openrouter_prices.py",
-        "tests/test_openrouter_grounded_web.py"
+        "tests/test_openrouter_grounded_web.py",
+        "tests/test_openrouter_spend_scope.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -619,7 +621,7 @@
       "depends_on": [
         "TASK-003"
       ],
-      "status": "next",
+      "status": "in_progress",
       "deliverables": [
         "고정 source 계약 사례와 fact/value/prediction/uncertain 대비 통제군·모델/provider·출력/가격 상한·중단조건·명시적 비용 한도 계획",
         "새 귀속·유형·충실성 관측의 원문 검토와 실제 비용 기록",
@@ -641,7 +643,8 @@
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/diagnostic-fixture.json",
-        "docs/design/BASELINE.md"
+        "docs/design/BASELINE.md",
+        "docs/design/SOURCE_DIAGNOSTIC.md"
       ]
     },
     {
@@ -1021,6 +1024,11 @@
       "date": "2026-11-05",
       "reason": "사용자가 작은 계약 구현→합성 전체 연결→bounded 진단 후 확대하는 spec 기반 진행에 동의했다. TASK003/004를 S1/S2 첫단위와 진단으로 좁히고 TASK013/014에 나머지 계약/전체비교를 분리한다.",
       "scope": "First slice only. No paid calls, r5/budget changes or production cost adoption."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 추가총$5/최대7시간의 TASK004→013→014→005 조건부 사이클을 승인했다. 단일cycle 공유 예산과 고정 정상/부정 진단·중단조건을 명시한다.",
+      "scope": "실행별 계획/현재가격/예약 확인 후 승인 범위만 실행. r5/총$50/과거청구 및 범위밖전체유료보류 유지."
     }
   ],
   "design_version": "commentscope-detailed-design-20261105-v2",

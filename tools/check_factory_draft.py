@@ -47,6 +47,8 @@ MODULES = (
     "test_source_interpretation",
     "test_source_semantic_review",
     "test_source_semantics_contract",
+    "test_source_semantics_diagnostic",
+    "test_openrouter_spend_scope",
     "test_inference_budget",
     "test_factory_operational_failures",
     "test_grounded_web_failures",

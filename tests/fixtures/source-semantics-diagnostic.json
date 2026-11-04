@@ -1,0 +1,178 @@
+{
+  "version": "source-semantics-diagnostic-synthetic-20261105-v1",
+  "purpose": "Developer-authored synthetic controls only; not independent gold, a formal gate or real comments. Expected labels never enter model requests.",
+  "sources": [
+    {
+      "id": "S1",
+      "text": "주4일제 도입에 찬성한다. 회복할 시간이 필요하기 때문이다.",
+      "parent": null
+    },
+    {
+      "id": "S2",
+      "text": "주4일제 도입에 찬성한다. 가족과 보낼 시간을 더 중요하게 생각한다.",
+      "parent": null
+    },
+    {
+      "id": "S3",
+      "text": "임금이 유지되는 경우에만 주4일제 도입에 찬성한다.",
+      "parent": null
+    },
+    {
+      "id": "S4",
+      "text": "친구는 주4일제 도입에 찬성하지만 나는 반대한다.",
+      "parent": null
+    },
+    {
+      "id": "S5",
+      "text": "비용은 걱정되지만 주4일제 도입에는 찬성한다.",
+      "parent": null
+    },
+    {
+      "id": "S6",
+      "text": "주4일제 도입에 찬성한다. 이와 별개로 미지급 초과근무 문제도 해결하자.",
+      "parent": null
+    },
+    {
+      "id": "S7",
+      "text": "주4일제 도입에 찬성하는지 아직 결정하지 못했다.",
+      "parent": null
+    },
+    {
+      "id": "S8",
+      "text": "그 제안에는 동의해. 하지만 그 이유에는 동의하지 않아.",
+      "parent": {
+        "id": "S2",
+        "text": "주4일제 도입에 찬성한다. 가족과 보낼 시간을 더 중요하게 생각한다."
+      }
+    },
+    {
+      "id": "F",
+      "text": "이 회의는 매주 월요일에 열린다.",
+      "parent": null
+    },
+    {
+      "id": "V",
+      "text": "회의는 자율 참석으로 운영해야 한다.",
+      "parent": null
+    },
+    {
+      "id": "P",
+      "text": "자율 참석을 도입하면 다음 달 참석률이 낮아질 것이다.",
+      "parent": null
+    },
+    {
+      "id": "U",
+      "text": "자율 참석은 참석률을 낮추며 더 바람직한 방식이다.",
+      "parent": null
+    }
+  ],
+  "controls": [
+    {
+      "id": "kind-F",
+      "source": {
+        "id": "F",
+        "text": "이 회의는 매주 월요일에 열린다.",
+        "parent": null
+      },
+      "proposal": "이 회의는 매주 월요일에 열린다.",
+      "expected": {
+        "kind": "fact",
+        "authorship": "asserted",
+        "nomination_eligible": true
+      }
+    },
+    {
+      "id": "kind-V",
+      "source": {
+        "id": "V",
+        "text": "회의는 자율 참석으로 운영해야 한다.",
+        "parent": null
+      },
+      "proposal": "회의는 자율 참석으로 운영해야 한다.",
+      "expected": {
+        "kind": "value",
+        "authorship": "asserted",
+        "nomination_eligible": true
+      }
+    },
+    {
+      "id": "kind-P",
+      "source": {
+        "id": "P",
+        "text": "자율 참석을 도입하면 다음 달 참석률이 낮아질 것이다.",
+        "parent": null
+      },
+      "proposal": "자율 참석을 도입하면 다음 달 참석률이 낮아질 것이다.",
+      "expected": {
+        "kind": "prediction",
+        "authorship": "asserted",
+        "nomination_eligible": true
+      }
+    },
+    {
+      "id": "kind-U",
+      "source": {
+        "id": "U",
+        "text": "자율 참석은 참석률을 낮추며 더 바람직한 방식이다.",
+        "parent": null
+      },
+      "proposal": "자율 참석은 참석률을 낮추며 더 바람직한 방식이다.",
+      "expected": {
+        "kind": "uncertain",
+        "authorship": "asserted",
+        "nomination_eligible": true
+      }
+    },
+    {
+      "id": "condition",
+      "source": {
+        "id": "bad-condition",
+        "text": "임금이 유지될 때만 주4일제 도입에 찬성한다.",
+        "parent": null
+      },
+      "proposal": "주4일제 도입에 찬성한다.",
+      "expected": {
+        "nomination_eligible": false
+      }
+    },
+    {
+      "id": "negation",
+      "source": {
+        "id": "bad-negation",
+        "text": "주4일제 도입에 반대한다.",
+        "parent": null
+      },
+      "proposal": "주4일제 도입에 찬성한다.",
+      "expected": {
+        "nomination_eligible": false
+      }
+    },
+    {
+      "id": "reported",
+      "source": {
+        "id": "bad-reported",
+        "text": "친구는 자율 참석이 바람직하다고 말했지만 나는 반대한다.",
+        "parent": null
+      },
+      "proposal": "자율 참석이 바람직하다.",
+      "expected": {
+        "nomination_eligible": false
+      }
+    },
+    {
+      "id": "parent-reason",
+      "source": {
+        "id": "bad-parent-reason",
+        "text": "그 제안에는 동의하지만 그 이유에는 동의하지 않아.",
+        "parent": {
+          "id": "other-author",
+          "text": "주4일제 도입에 찬성한다. 가족과 보낼 시간이 중요하기 때문이다."
+        }
+      },
+      "proposal": "가족과 보낼 시간이 중요하기 때문에 주4일제 도입에 찬성한다.",
+      "expected": {
+        "nomination_eligible": false
+      }
+    }
+  ]
+}
