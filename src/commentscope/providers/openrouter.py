@@ -6,6 +6,7 @@ Keys are read in the worker, never placed in plans, checkpoints or client state.
 This module does not select models, start servers, retry calls or grant gates.
 """
 from copy import deepcopy
+from decimal import Decimal, InvalidOperation
 import json
 import math
 import os
@@ -21,12 +22,13 @@ VERSION = 'openrouter-chat-completions-0.1'
 ENDPOINT = 'https://openrouter.ai/api/v1/chat/completions'
 CAPACITY_VERSION = 'openrouter-utf8-context-bound-0.2'
 PROVIDER_MARGIN = 8192
+BILLING_VERSION = 'openrouter-all-input-classes-and-tiers-20261104-v1'
 
 
 def validate(deployment):
     required = {'version', 'model', 'context', 'call_seconds'}
     if (not isinstance(deployment, dict) or not required <= deployment.keys()
-            or deployment.keys() - required - {'provider', 'reasoning', 'temperature', 'schema_policy', 'reasoning_output_tokens'}
+            or deployment.keys() - required - {'provider', 'reasoning', 'temperature', 'schema_policy', 'reasoning_output_tokens', 'billing_ceiling'}
             or deployment['version'] != VERSION
             or not isinstance(deployment['model'], str) or not deployment['model'].strip()
             or deployment['model'] != deployment['model'].strip()
@@ -47,6 +49,12 @@ def validate(deployment):
             or any(type(p) not in (int, float) or not math.isfinite(p) or p < 0
                    for p in prices.values())):
         raise ValueError('Finite nonnegative prompt/completion/request price ceilings required')
+    billing = deployment.get('billing_ceiling')
+    if 'billing_ceiling' in deployment and (not isinstance(billing, dict)
+            or set(billing) != {'prompt', 'completion', 'request'} or prices is None
+            or any(type(p) not in (int, float) or not math.isfinite(p) or p < prices[k]
+                   for k, p in billing.items())):
+        raise ValueError('Complete finite billing ceiling must cover every routing price ceiling')
     if 'schema_policy' in deployment and (deployment['schema_policy'] != openai_schema.VERSION
             or provider.get('only') != ['openai']):
         raise ValueError('Known schema policy and its explicitly pinned OpenAI provider required')
@@ -70,6 +78,37 @@ def validate(deployment):
                 or (active and tokens == 0) or (not active and tokens != 0)):
             raise ValueError('Bounded positive reasoning headroom requires explicitly active reasoning')
     return deepcopy(deployment)
+
+
+def billing_prices(deployment):
+    """USD/million input/output and USD/request; input covers every price class."""
+    deployment = validate(deployment)
+    prices = deployment.get('billing_ceiling', deployment.get('provider', {}).get('max_price'))
+    if prices is None: raise ValueError('Explicit billing or routing ceilings required')
+    return deepcopy(prices)
+
+
+def endpoint_price_ceiling(pricing):
+    """Worst advertised total rates, including cache writes and context overrides.
+
+    A cache-write price replaces the ordinary input price; it is not added to it.
+    Context-wide reservations must cover all tiers, irrespective of current size.
+    """
+    if (not isinstance(pricing, dict) or not {'prompt', 'completion'} <= pricing.keys()
+            or not isinstance(pricing.get('overrides', []), list)):
+        raise ValueError('Complete provider pricing and finite tier list required')
+    maxima = {'prompt': Decimal(0), 'completion': Decimal(0), 'request': Decimal(0)}
+    for tier in [pricing, *pricing.get('overrides', [])]:
+        if not isinstance(tier, dict): raise ValueError('Provider price tier must be an object')
+        for name in ('prompt', 'completion', 'request', 'input_cache_read', 'input_cache_write'):
+            value = tier.get(name, pricing.get(name, 0))
+            if type(value) not in (int, float, str): raise ValueError('Finite provider rate required')
+            try: amount = Decimal(str(value))
+            except InvalidOperation: raise ValueError('Invalid provider rate') from None
+            if not amount.is_finite() or amount < 0: raise ValueError('Finite nonnegative provider rate required')
+            destination = 'prompt' if name.startswith('input_cache_') else name
+            maxima[destination] = max(maxima[destination], amount*(1 if name == 'request' else 1_000_000))
+    return maxima
 
 
 def generation_allocation(deployment, *, require_explicit=False):

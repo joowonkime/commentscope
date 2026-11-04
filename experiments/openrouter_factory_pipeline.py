@@ -36,7 +36,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261104-v14'
+VERSION = 'minimal-factory-openrouter-executor-20261104-v17'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -50,10 +50,13 @@ def provider_preflight(deployment):
     matches = [e for e in endpoints if e['tag'] == selected[0]]
     if len(matches) != 1: raise ValueError('Pinned provider endpoint unavailable')
     endpoint = matches[0]; caps = deployment['provider']['max_price']
+    billing = openrouter.billing_prices(deployment)
+    observed = openrouter.endpoint_price_ceiling(endpoint['pricing'])
     if (endpoint.get('status') != 0 or endpoint['context_length'] != deployment['context']
             or not openrouter.required_parameters(deployment) <= set(endpoint['supported_parameters'])
             or any(Decimal(str(endpoint['pricing'].get(k, 0))) > Decimal(str(caps[k]))/(1 if k == 'request' else 1_000_000)
-                   for k in ('prompt', 'completion', 'request'))):
+                   for k in ('prompt', 'completion', 'request'))
+            or any(observed[k] > Decimal(str(billing[k])) for k in observed)):
         raise ValueError('Provider context, availability, parameters or price changed')
     return {k: endpoint[k] for k in ('tag', 'provider_name', 'context_length', 'pricing', 'supported_parameters')}
 
@@ -140,6 +143,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'verification_contract': raw_membership_verification.FULL_SCOPE,
             'capacity_policy': openrouter.CAPACITY_VERSION, 'provider_margin': openrouter.PROVIDER_MARGIN,
             'generation_allocation': allocation,
+            'billing_policy': openrouter.BILLING_VERSION,
             'snapshot': str(snapshot_path), 'snapshot_sha256': sha(snapshot_path),
             'canonical_population': len(sources(snapshot)), 'processing_count': len(scope),
             'sample_file': str(SAMPLES) if gate != 'G1' else None,
@@ -175,6 +179,7 @@ def validate(directory, plan):
             or plan['verification_contract'] != raw_membership_verification.FULL_SCOPE
             or plan['capacity_policy'] != openrouter.CAPACITY_VERSION or plan['provider_margin'] != openrouter.PROVIDER_MARGIN
             or plan.get('generation_allocation') != allocation
+            or plan.get('billing_policy') != openrouter.BILLING_VERSION
             or plan['questions'] != QUESTIONS or plan['schedule'] != minimal_pipeline.SCHEDULE
             or plan['resource_policy'] != host_resources.POLICY or units(plan['maximum_cost_usd']) <= 0
             or plan['reference_runtime_input'] is not False or plan['cross_run_response_reuse'] is not False

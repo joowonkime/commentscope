@@ -37,7 +37,7 @@ def positive(value):
 
 def charge_ceiling(deployment, pack):
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
-    prices = deployment.get('provider', {}).get('max_price')
+    prices = openrouter.billing_prices(deployment)
     if not prices or not deployment['provider'].get('only'):
         raise ValueError('Pinned provider and explicit price ceilings required')
     # Reserve the entire declared model context for every input, even though

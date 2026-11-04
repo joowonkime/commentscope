@@ -11,7 +11,7 @@ from pathlib import Path
 import sqlite3
 
 from commentscope.providers.budget import BudgetExhausted
-from commentscope.providers.openrouter import validate
+from commentscope.providers.openrouter import validate, billing_prices
 from commentscope.factory.automatic_contract import digest
 
 VERSION = 'openrouter-spend-ledger-0.1'
@@ -137,7 +137,7 @@ class PaidBudget:
                  paid_provider, key_metadata, local_providers=()):
         identity(plan_sha256)
         self.deployment = validate(deployment)
-        self.prices = self.deployment.get('provider', {}).get('max_price')
+        self.prices = billing_prices(self.deployment)
         if not self.prices or not self.deployment['provider'].get('only') or units(maximum_run_usd) <= 0:
             raise ValueError('Frozen provider, price ceilings and positive run limit required')
         self.base, self.ledger = base, ledger
