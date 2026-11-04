@@ -1,8 +1,11 @@
 # 조원 공유: 구현 현황과 테스트 방법
 
+2026-11-05: 현재 제품 범위·작업 상태는 [MVP 명세](MVP_SPEC.md)와 [추적표](mvp-traceability.json)를 따른다.
+아래는 당시 검증 범위의 보존 기록이며 현재 모델·우선순위·전체 완료 상태의 정본이 아니다.
+
 2026-10-28 추가: [Factory 현재 상태·재개 설계](FACTORY_RESTART_PLAN.md)가 최신 실행 상태와 남은 검증의 안내다. 아래 제한된 실제 결과는 당시 범위의 증거이며, 최신 코드의 전체 품질 통과로 해석하지 않는다.
 
-기준일: 2026-10-23. 현재 전체 기능 중 구현된 부분과 검증 범위의 정본이다.
+기준일: 2026-10-23. 당시 구현된 부분과 검증 범위의 기록이다.
 
 2026-10-24 추가: 클러스터링 → Agent 생성 코드의 공동 수정은 [파이프라인 개발 안내](PIPELINE_DRAFT.md)를 따른다. 모듈별 담당 위치·입출력·개인 브랜치/PR 절차를 정리했다. 저장소 루트에서 `python tools/check_factory_draft.py`를 실행하면 GPU 없이 합성 자료로 연결·출처·집계 계약을 검사한다. 실제 모델 품질 검증은 포함하지 않는다.
 
@@ -69,4 +72,5 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 `POST /api/session`→`POST /api/ask`→`GET /api/state`→`POST /api/source` 순으로 연결한다. 토큰·JSON 필드는 [API 계약](COMPARE_BACKEND_API.md)을 따른다. 별도 프론트 서버는 같은origin을 위한 프록시 설정이 필요하다. Factory는 매 질문마다 다시 실행하지 않는다.
 
-우선순위는 **프론트/API 연결→함께 화면 점검 및 Figma 변경 합의→[사용자 테스트 과업](COMPARE_BACKEND_USER_TEST_TASKS.md) 수행**이다. 전체 Factory 개선·독립 평가는 별도로 남아 있다.
+현재 우선순위는 [추적표](mvp-traceability.json)의 Factory 계약·품질·비용 검증부터 진행한다.
+전체 제품 통합 단계에서 팀 화면 연결·세 과업과 사용자 테스트를 확인한다. 아래 과거 데모 범위가 전체 제품 범위를 대체하지 않는다.

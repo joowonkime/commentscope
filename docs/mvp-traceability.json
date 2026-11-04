@@ -1,0 +1,747 @@
+{
+  "schema_version": 1,
+  "spec_version": "commentscope-mvp-20261105-v1",
+  "baseline_commit": "57f660494800cb4b30afc2e771f7c5edaa37b96c",
+  "observed_date": "2026-11-05",
+  "intent_document": "docs/MVP_SPEC.md",
+  "workflow_document": "docs/SPEC_WORKFLOW.md",
+  "acceptance_contract": {
+    "path": "tests/fixtures/factory-acceptance-r5.json",
+    "digest": "a4fafae58e462ee4ab3fad41f6bf03fa7f10a08218fb2106398df4f0feea81b2"
+  },
+  "product_tasks": {
+    "Explore": [
+      "REQ-004"
+    ],
+    "Converse": [
+      "REQ-005",
+      "REQ-006"
+    ],
+    "Reflect": [
+      "REQ-007"
+    ]
+  },
+  "resume": {
+    "next_task": "TASK-001",
+    "paid_execution_hold": true,
+    "hold_reason": "명세 정리로 대량 유료 실행을 재개하지 않는다. 기존 예산·실행별 권한과 다음 설계/검증 조건을 먼저 확인한다."
+  },
+  "requirements": [
+    {
+      "id": "REQ-001",
+      "title": "원문·출처·부모·조건·발언자 귀속 보존",
+      "implementation": "partial",
+      "sources": [
+        "docs/MVP_GOAL.md",
+        "docs/MVP_EXECUTION_SPEC.md"
+      ],
+      "code": [
+        "src/commentscope/factory/framed_corpus.py",
+        "src/commentscope/factory/source_arguments.py"
+      ],
+      "checks": [
+        "tests/test_raw_membership_source_context.py",
+        "tests/test_owner_observations.py"
+      ],
+      "acceptance": [
+        "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
+        "조건·반대·인용·불확실·미평가를 실제 지지와 구분하며 자동 산출물에서 확인한다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-002",
+      "title": "실제 댓글의 관점 발견·통합·지지 집계",
+      "implementation": "partial",
+      "sources": [
+        "docs/MVP_EXECUTION_SPEC.md",
+        "tests/fixtures/factory-acceptance-r5.json"
+      ],
+      "code": [
+        "src/commentscope/factory/minimal_pipeline.py",
+        "src/commentscope/factory/candidate_consolidation.py",
+        "src/commentscope/factory/raw_membership.py",
+        "src/commentscope/factory/comment_utilization.py"
+      ],
+      "checks": [
+        "tests/test_minimal_pipeline.py",
+        "tests/test_acceptance_r5.py",
+        "tests/test_factory_review_r5.py"
+      ],
+      "acceptance": [
+        "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
+        "집계 지지 전수 유효, 희소·조건부·미평가 보존, 전체 출력·비용·실패를 보고한다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-003",
+      "title": "검증된 관점의 Agent 구성·사실·실제 실행",
+      "implementation": "partial",
+      "sources": [
+        "docs/MVP_GOAL.md",
+        "tests/fixtures/factory-acceptance-r5.json"
+      ],
+      "code": [
+        "src/commentscope/factory/minimal_agents.py",
+        "src/commentscope/agents/grounded_inputs.py",
+        "src/commentscope/agents/grounded_runtime.py"
+      ],
+      "checks": [
+        "tests/test_minimal_agents.py",
+        "tests/test_grounded_runtime.py",
+        "tests/test_runtime_artifact_contract.py"
+      ],
+      "acceptance": [
+        "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
+        "자기 허용 주장·인용·이력을 유지하고 모르는 이유·조건·숫자는 보류한다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-004",
+      "title": "Explore: 초기 의견과 실제 관점의 비교",
+      "implementation": "partial",
+      "sources": [
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=210-864",
+        "docs/COMPARE_BACKEND_API.md"
+      ],
+      "code": [
+        "src/commentscope/agents/grounded_web.py"
+      ],
+      "checks": [
+        "tests/test_grounded_web.py"
+      ],
+      "acceptance": [
+        "초기 의견 저장과 별도로 공통점·차이·추가 고려 항목을 의미적으로 비교한다.",
+        "각 항목을 사용자 원문 구간·허용 관점 주장에 연결하며 정보 부재를 반대로 단정하지 않는다.",
+        "현재 저장 API 검사는 의미 비교 구현의 완료 증거가 아니다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-005",
+      "title": "Converse: 1:1·후속 질문·원문 확인",
+      "implementation": "partial",
+      "sources": [
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=314-2807",
+        "docs/COMPARE_BACKEND_API.md"
+      ],
+      "code": [
+        "src/commentscope/agents/grounded_runtime.py",
+        "src/commentscope/agents/grounded_web.py"
+      ],
+      "checks": [
+        "tests/test_grounded_web.py",
+        "tests/test_grounded_web_failures.py",
+        "tests/test_source_context_display.py"
+      ],
+      "acceptance": [
+        "자기 관점 근거의 후속 질문·적절한 보류·원문/부모 확인·대화 저장을 연결한다.",
+        "같은 질문을 받은 두 Agent의 결과와 이력을 분리하며 실제 자동 결과를 팀 화면에 연결한다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-006",
+      "title": "Converse: 그룹 토론·사용자 개입",
+      "implementation": "not_implemented",
+      "sources": [
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=378-1866",
+        "docs/MVP_SPEC.md"
+      ],
+      "code": [],
+      "checks": [],
+      "acceptance": [
+        "대화 Controller와 자기 근거를 유지하는 Agent의 상호 응답·사용자 개입·턴/비용 제한·오류 복구를 명시하고 구현한다.",
+        "화면의3Agent 예시를 Factory 최소 수로 바꾸지 않으며 실제 적격 Agent를 합성하지 않는다.",
+        "두 Agent 동일 질문 API를 그룹 토론 완료로 계산하지 않는다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-007",
+      "title": "Reflect: 초기/현재 의견·대화 연결·저장",
+      "implementation": "not_implemented",
+      "sources": [
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=241-327",
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=242-404"
+      ],
+      "code": [],
+      "checks": [],
+      "acceptance": [
+        "유지·변화·새로 배운 점·추가 고민을 사용자 원문·실제 관련 대화와 연결하고 사용자가 수정·저장할 수 있다.",
+        "의견 유지·빈 범주를 허용하고 AI 제안으로 원문을 덮어쓰거나 인과·대화를 발명하지 않는다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-008",
+      "title": "공유 예산·실행 복구·서비스 단가",
+      "implementation": "partial",
+      "sources": [
+        "docs/OPENROUTER_FACTORY.md",
+        "docs/MVP_TDD.md"
+      ],
+      "code": [
+        "src/commentscope/providers/openrouter_budget.py",
+        "tools/serve_openrouter_web.py"
+      ],
+      "checks": [
+        "tests/test_openrouter_budget.py",
+        "tests/test_openrouter_prices.py",
+        "tests/test_openrouter_grounded_web.py"
+      ],
+      "acceptance": [
+        "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
+        "최초 분석·증분·재열람·1:1·그룹·성찰 비용을 분리 측정하며 서비스 단가 목표는 결정 기록으로 확정한다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-009",
+      "title": "기존 프론트와 세 과업의 실제 통합",
+      "implementation": "partial",
+      "sources": [
+        "https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=105-1767",
+        "docs/MVP_SPEC.md"
+      ],
+      "code": [
+        "src/commentscope/agents/grounded_web.py",
+        "src/commentscope/agents/team_demo.py"
+      ],
+      "checks": [
+        "tests/grounded_ui_smoke.cjs",
+        "tests/test_openrouter_grounded_web.py"
+      ],
+      "acceptance": [
+        "기존 Figma·팀 프론트를 보존하고 실제 자동 bundle로 Explore→Converse→Reflect를 끝까지 수행한다.",
+        "복구 가능한 오류 상태·원문 이동·저장·접근 가능한 실행 URL과 사용자 과업 결과를 확인한다.",
+        "합성 데모나 기존 제한된 백엔드 성공으로 전체 제품 완료를 선언하지 않는다."
+      ],
+      "evidence": []
+    },
+    {
+      "id": "REQ-010",
+      "title": "명세·작업·실험·완료 증거의 추적",
+      "implementation": "partial",
+      "sources": [
+        "docs/MVP_SPEC.md",
+        "docs/SPEC_WORKFLOW.md"
+      ],
+      "code": [
+        "tools/check_mvp_spec.py"
+      ],
+      "checks": [
+        "tests/test_mvp_spec.py"
+      ],
+      "acceptance": [
+        "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
+        "구현·오프라인·제한적실행·정식gate·제품E2E의 검증 범위를 구별하며 명세 검사 성공을 품질 승인으로 해석하지 않는다."
+      ],
+      "evidence": []
+    }
+  ],
+  "decisions": [
+    {
+      "id": "DEC-001",
+      "status": "open",
+      "title": "의미 판정의 중복을 줄이는 책임·데이터 계약",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008"
+      ],
+      "question": "현재 단계별 반복 판단 중 무엇을 한 번의 구조화 해석으로 대체할 수 있으며 독립 검증·정상 보존·비용에 어떤 영향을 주는가?",
+      "options": [
+        "현행 구조의 근거·정상/부정 사례와 호출별 비용을 기준선으로 유지",
+        "원문 해석 재사용·판정 통합을 후보 계약으로 비교하되 기존 검사를 중복 추가하지 않음",
+        "모델별 역할 배정·입력 축소를 같은 고정 기준으로 비교"
+      ],
+      "selection": null,
+      "evidence": []
+    },
+    {
+      "id": "DEC-002",
+      "status": "open",
+      "title": "그룹 Controller·대화 상태·정보 경계",
+      "requirements": [
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008"
+      ],
+      "question": "상호 응답·사용자 개입·중단/재개·턴/비용 한도와 부분 실패를 어떤 계약으로 처리하는가?",
+      "options": [
+        "host가 발화 순서·한도·상태를 제어하는 제한된 토론",
+        "동일 질문의 독립 응답 경로를 유지하며 그룹 경로를 별도로 구현",
+        "다른 Agent 발언은 대화 문맥으로만 전달하고 근거 소유권을 유지"
+      ],
+      "selection": null,
+      "evidence": []
+    },
+    {
+      "id": "DEC-003",
+      "status": "open",
+      "title": "성찰 분석·수정·저장 계약",
+      "requirements": [
+        "REQ-004",
+        "REQ-007",
+        "REQ-009"
+      ],
+      "question": "사용자 원문·관련 대화·AI 제안·저장 revision을 어떻게 구별하고 검증하는가?",
+      "options": [
+        "사용자 초안과 AI 제안·채택 결과를 분리",
+        "초기/현재 원문 구간과 대화 message IDs를 참조",
+        "의견 유지·분석 불가·빈 범주를 정상 상태로 허용"
+      ],
+      "selection": null,
+      "evidence": []
+    },
+    {
+      "id": "DEC-004",
+      "status": "open",
+      "title": "온라인 Auditor의 필요 범위와 비용",
+      "requirements": [
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008"
+      ],
+      "question": "기존 host 검사·생성 전 검증으로 처리할 책임과 별도 온라인 수정 루프가 필요한 책임은 무엇인가?",
+      "options": [
+        "기존 검증의 실제 실패를 먼저 분류",
+        "온라인 별도 모델 호출은 기대 오류 감소·지연·비용을 검증한 뒤 채택",
+        "같은 모델의 재검사를 독립 정확성 증거로 보지 않음"
+      ],
+      "selection": null,
+      "evidence": []
+    },
+    {
+      "id": "DEC-005",
+      "status": "open",
+      "title": "서비스 단가·재사용·증분의 채택 기준",
+      "requirements": [
+        "REQ-002",
+        "REQ-008",
+        "REQ-009"
+      ],
+      "question": "최초 분석·재열람·대화·성찰의 허용 원가와 품질/캐시 무효화 기준은 무엇인가?",
+      "options": [
+        "기존$50 개발 예산·장부는 확정 제약으로 유지",
+        "이전$0.50/1000·$0.02/두관점질문은 미검증 제안으로만 취급",
+        "영상/snapshot/계약/모델/prompt/유효기간별 재사용을 설계하고 fresh gate와 분리"
+      ],
+      "selection": null,
+      "evidence": []
+    },
+    {
+      "id": "DEC-006",
+      "status": "open",
+      "title": "출력 언어·번역·다국어 검증 범위",
+      "requirements": [
+        "REQ-001",
+        "REQ-004",
+        "REQ-005",
+        "REQ-007",
+        "REQ-009"
+      ],
+      "question": "한국어/영어 화면과 댓글 원문을 어떤 정책으로 연결하며 번역 의미 보존을 어떤 자료로 확인하는가?",
+      "options": [
+        "원문은 보존하고 번역·설명을 구별",
+        "현재 영어 중심 표본 결과를 한국어·다국어 품질 합격으로 일반화하지 않음",
+        "팀 화면의 언어 요구와 고정 부정 사례를 구현 전에 명시"
+      ],
+      "selection": null,
+      "evidence": []
+    }
+  ],
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "title": "현재 판정·호출·오류·비용의 오프라인 기준선",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [],
+      "status": "next",
+      "deliverables": [
+        "기존 모듈/호출별 입력·출력·중복 판단·호출/토큰/비용 표",
+        "정상·조건부·반대·인용·귀속·불확실 사례와 현행 실패 목록",
+        "공개 요약과 비공개 원본의 참조 구분"
+      ],
+      "done_when": [
+        "새 유료 호출 없이 기존 코드·보존 기록을 대조한다.",
+        "호출 감소와 실청구 감소를 구별하고 자료가 없는 항목은 미측정으로 남긴다.",
+        "DEC-001/DEC-005 비교에 필요한 기준선을 재현 가능하게 남긴다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline"
+      ],
+      "decisions": [
+        "DEC-001",
+        "DEC-005"
+      ]
+    },
+    {
+      "id": "TASK-002",
+      "title": "작아진 의미 판정 계약과 구조 비교 설계",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-001"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "DEC-001 설계 선택·대안·허용 입력·정확한 출력/오류 계약",
+        "기존/후보 구조 대비표와 정상·부정 계약 사례",
+        "사전 고정한 채택·폐기·비용 기준"
+      ],
+      "done_when": [
+        "제품 의도·r5와 기존 출처/조건 규칙을 유지한다.",
+        "없애는 호출과 유지할 독립 검증을 명시한다.",
+        "아직 증명되지 않은 품질·원가 이득을 확정하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline"
+      ],
+      "decisions": [
+        "DEC-001",
+        "DEC-005",
+        "DEC-006"
+      ]
+    },
+    {
+      "id": "TASK-003",
+      "title": "후보 계약 구현·오프라인 회귀",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-002"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "관련 모듈·adapter·회귀 검사",
+        "기존 저장 실패와 정상 사례 비교 결과",
+        "현행 경로 보존과 후보 변경의 분리"
+      ],
+      "done_when": [
+        "관련 검사·Factory 연결 검사·필수 CI를 통과한다.",
+        "오프라인 통과를 모델 의미 품질 합격으로 기록하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline"
+      ],
+      "decisions": [
+        "DEC-001"
+      ]
+    },
+    {
+      "id": "TASK-004",
+      "title": "한도가 정해진 모델·구조 비교",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-003"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "실험별 표본·모델/provider·prompt/schema·한도·중단 조건을 고정한 계획",
+        "첫 응답·원문 검토·실청구와 채택/폐기 기록"
+      ],
+      "done_when": [
+        "기존 유료 실행 보류·권한·장부 상태를 확인한 뒤 허용 범위에서만 실행한다.",
+        "채택 기준을 결과에 맞춰 바꾸지 않고 실패 비용도 누적한다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-001",
+        "DEC-005"
+      ]
+    },
+    {
+      "id": "TASK-005",
+      "title": "동결 설정 G1 전체 품질 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-004"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "현행 설정의 G1 전체 산출물·원문 검토·Agent 로딩/각3질문",
+        "정확한 code/model/provider/prompt/자료/평가 hash"
+      ],
+      "done_when": [
+        "기존 합성12원문·2Agent·지지·사실·내용·runtime 기준을 통과한다.",
+        "코드/설정 변경 후 과거 G1 성공을 자동 승계하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "formal_gate"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "TASK-006",
+      "title": "동일 설정 G2·G3 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-005"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "실제24/96 고정 자료의 후보 보존·지지·논거·사실·모든 Agent 검토"
+      ],
+      "done_when": [
+        "G2 12/19·G3 45/74와 기존 오가입·오병합·조건 손실·호출 실패 조건을 통과한다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "formal_gate"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "TASK-007",
+      "title": "고정999 전체 Factory 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-006"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "fresh G4·전수 집계 지지 검토·전체 Agent 내용/사실/실제 로딩/3질문",
+        "453/755 활용 및 희소·보류·미평가·실청구·처리시간 보고"
+      ],
+      "done_when": [
+        "기존 r5 전체 계약을 통과한다.",
+        "snapshot 기한·원문 hash를 확인하고 분모를 바꾸지 않는다.",
+        "수천 개 확장 성능과 전체 제품 완료는 별도임을 명시한다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "formal_gate"
+      ],
+      "decisions": []
+    },
+    {
+      "id": "TASK-008",
+      "title": "Explore 의미 비교 계약·구현",
+      "requirements": [
+        "REQ-001",
+        "REQ-004",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-007"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "초기 의견 revision·관점 claim ID·사용자 구간 비교 계약",
+        "관련 API·정상/부정 검사·실제 원문 대조"
+      ],
+      "done_when": [
+        "저장만 하는 현행 기능을 실제 의미 비교로 연결한다.",
+        "정보 부재·조건·의견 유지·초기 의견 수정 사례를 검증한다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-006"
+      ]
+    },
+    {
+      "id": "TASK-009",
+      "title": "Converse 그룹 프로토콜·구현",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-007"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "DEC-002/DEC-004의 Controller·상호 응답·사용자 개입·한도·실패 계약",
+        "기존1:1 경로와 연결한 그룹 대화·출처/이력 경계 검사"
+      ],
+      "done_when": [
+        "적격 Agent 부족을 합성으로 보충하지 않는다.",
+        "다른 발언의 근거 전이·중복 요청·부분 실패·비용 초과를 검증한다.",
+        "프로토타입 그룹 흐름을 독립 동일 질문과 구별해 실제로 수행한다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-002",
+        "DEC-004"
+      ]
+    },
+    {
+      "id": "TASK-010",
+      "title": "Reflect 분석·수정·저장 계약·구현",
+      "requirements": [
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-008",
+        "TASK-009"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "DEC-003 계약과 초기/현재 의견·대화 참조·AI 제안/사용자 채택 저장",
+        "변화 없음·빈 범주·없는 대화·인과 과장·수정/재분석 검사"
+      ],
+      "done_when": [
+        "네 범주와 관련 대화 이동·저장을 연결한다.",
+        "사용자 원문과 자기 해석을 보존하며 의견 변화를 강요하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-003",
+        "DEC-006"
+      ]
+    },
+    {
+      "id": "TASK-011",
+      "title": "기존 팀 프론트 통합",
+      "requirements": [
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-008",
+        "TASK-009",
+        "TASK-010"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "기존 Figma의 세 과업과 실제 자동 bundle를 연결한 화면/API",
+        "팀 언어 정책·오류/보류·대화/성찰 저장·원문 이동 결과"
+      ],
+      "done_when": [
+        "합성 화면과 실제 모델/댓글 품질을 구별한다.",
+        "기존 팀 디자인·작업을 보존하고 임의 새 서비스 방향으로 교체하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "product_e2e"
+      ],
+      "decisions": [
+        "DEC-006"
+      ]
+    },
+    {
+      "id": "TASK-012",
+      "title": "전체 과업·원가·사용자 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-011"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "접근 가능한 실행 URL·재현 명령·실제세과업E2E",
+        "최초/재열람/질문/그룹/성찰 원가·실패·지연 측정",
+        "같은 자료의 일반 댓글 읽기/요약 대비 사용자 이해 검증"
+      ],
+      "done_when": [
+        "기존 Factory·제품 기능·서비스 원가·사용자 효과의 완료/미검증 범위를 각각 보고한다.",
+        "경쟁력·재방문·지불 의향을 Figma나 CI만으로 입증했다고 주장하지 않는다."
+      ],
+      "evidence": [],
+      "required_evidence": [
+        "product_e2e"
+      ],
+      "decisions": [
+        "DEC-005"
+      ]
+    }
+  ],
+  "changes": [
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 context 누적/compact 후 원래 의도 이탈을 지적하고 상세한 spec-driven 개발을 요청했다. 기존 Figma/계약을 대조하며 미결정은 open으로 남긴다.",
+      "scope": "명세·추적·재개 절차 및 정합성 검사. 제품 런타임·품질 합격·유료 실행 변경 없음."
+    }
+  ]
+}

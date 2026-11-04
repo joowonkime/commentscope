@@ -1,5 +1,9 @@
 # 조원 시작 안내
 
+작업 기준은 [MVP 명세](MVP_SPEC.md), 다음 작업과 상태는 [추적표](mvp-traceability.json)다.
+작업 시작·Compact 뒤에는 `python tools/check_mvp_spec.py --resume`를 실행하고 해당 REQ/TASK/DEC를 읽는다.
+아래 합성 데모는 제품의 Explore→Converse→Reflect 전체 구현을 뜻하지 않는다.
+
 ## 지금까지의 결론
 
 댓글을 관점별로 묶고 그 근거를 가진 Agent를 생성하는 코드 초안과, 두 관점에게 질문하고 원문을 보는 백엔드 흐름을 만들었다. 제한된 실제 자료에서 Agent 2개·각 지지 댓글 3개와 6응답을 확인했다. 전체 댓글의 의미를 충분히 살리는 자동 분석 품질은 미완료다.

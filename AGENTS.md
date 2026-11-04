@@ -4,7 +4,19 @@
 
 ## 먼저 읽기
 
-`README.md` → `docs/TEAM_START.md` → 담당 부분만 `docs/PIPELINE_DRAFT.md`, `docs/TEAM_STATUS.md`, `docs/COMPARE_BACKEND_API.md`에서 확인한다. `docs/NEXT_SESSION.md`와 날짜별 문서는 작성자 환경의 연구 이력이다. 일반 팀 작업에서 과거 실험을 전부 읽거나 재개하지 않는다.
+시작·Compact·담당자 변경 후에는 `docs/MVP_SPEC.md` → `docs/SPEC_WORKFLOW.md`를 읽고
+`python tools/check_mvp_spec.py --resume`를 실행한다. `docs/mvp-traceability.json`에서 현재
+TASK와 관련 REQ/DEC의 본문·의존성·완료 조건을 확인한 뒤 필요한 코드·기존 계약만 읽는다.
+요약이나 과거 실행 기록을 현재 의도·완료 기준의 대체물로 쓰지 않는다.
+
+처음 조원 환경을 이해할 때는 `README.md` → `docs/TEAM_START.md`도 확인한다.
+담당 부분의 개발 안내는 `docs/PIPELINE_DRAFT.md`, 기존 API는 `docs/COMPARE_BACKEND_API.md`다.
+`docs/TEAM_STATUS.md`, `docs/NEXT_SESSION.md`와 날짜별 문서의 과거 수치를 현재 완료 증거로 쓰지 않는다.
+일반 팀 작업에서 과거 실험을 전부 읽거나 재개하지 않는다.
+
+변경은 REQ/TASK ID에 연결한다. 책임·입출력 변경은 명세와 정상/부정 기대 동작부터 기록한다.
+구현·합성 검사·실제 gate·제품 E2E의 증거를 구분하고, 다음 작업과 미결정을 파일에 남긴다.
+명세 검사는 참조·작업 그래프만 검사하며 실제 의미 품질이나 사용자 의도를 자동 승인하지 않는다.
 
 ## 변경 요청 시 자동으로 수행
 
