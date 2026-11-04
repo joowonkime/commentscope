@@ -1,6 +1,7 @@
 # CommentScope — 지금까지 만든 것
 
 **2026-11-05 작업 기준:** [MVP 명세](docs/MVP_SPEC.md) → [작업·재개 절차](docs/SPEC_WORKFLOW.md).
+구현 후보의 모듈·알고리즘·입출력·API·상태·비용·검증 사례는 [상세 설계](docs/design/README.md)에 있습니다.
 원래 제품 흐름은 **Explore → Converse → Reflect**이며, 현재 구현 우선순위는 관점·Agent 생성 파이프라인이다.
 `python tools/check_mvp_spec.py --resume`로 명세 버전·다음 작업·미결정·유료 실행 보류를 확인한다.
 현재 상태와 작업 ID는 [추적표](docs/mvp-traceability.json)에 있다. 아래 과거 검증은 그 범위의 증거다.
@@ -48,7 +49,7 @@ python -m commentscope.agents.team_demo --session-dir ../runs/team-demo
 
 ## 다음에 함께 할 일
 
-1. 추적표의 TASK-001부터 기존 호출·오류·비용을 대조하고 관점·Agent 생성의 계약·품질·비용을 검증합니다.
+1. [기존 호출·오류·비용 기준선](docs/design/BASELINE.md)과 상세 설계를 따라 TASK-003에서 후보 계약을 구현하고 품질·비용을 검증합니다.
 2. 기존 Figma의 의견 비교·그룹 대화·성찰 중 빠진 기능을 명세·검사와 함께 구현합니다.
 3. 팀 프론트에 연결해 세 과업을 확인합니다. Figma 원본 변경은 팀과 먼저 합의하며, 사용자 검증과 Factory 합격을 구별합니다.
 

@@ -99,6 +99,10 @@ def validate(document, root=ROOT):
             errors.append(f'missing {key}')
     for key in ('intent_document', 'workflow_document'):
         reference(document.get(key), key, external=False)
+    if 'design_version' in document or 'design_document' in document:
+        if not nonempty(document.get('design_version')):
+            errors.append('missing design_version')
+        reference(document.get('design_document'), 'design_document', external=False)
 
     contract = document.get('acceptance_contract')
     if not isinstance(contract, dict):
@@ -115,6 +119,10 @@ def validate(document, root=ROOT):
     requirements = records('requirements', 'REQ')
     tasks = records('tasks', 'TASK')
     decisions = records('decisions', 'DEC')
+    for row in [*requirements.values(), *tasks.values(), *decisions.values()]:
+        if 'design_refs' in row:
+            for value in strings(row['design_refs'], f'{row["id"]}.design_refs', required=True):
+                reference(value, f'{row["id"]}.design_refs', external=False)
 
     def links(row, key, target, required=False):
         values = strings(row.get(key), f'{row["id"]}.{key}', required)
@@ -239,11 +247,15 @@ def main():
     if args.resume:
         print(f'Baseline code: {document["baseline_commit"]}; observed: {document["observed_date"]}')
         print('Read: ' + document['intent_document'] + ' -> ' + document['workflow_document'])
+        if 'design_version' in document:
+            print('Design: ' + document['design_version'] + ' -> ' + document['design_document'])
         next_id = document['resume']['next_task']
         if next_id is not None:
             task = next(row for row in document['tasks'] if row['id'] == next_id)
             print(f'Next: {next_id} ({task["status"]}) {task["title"]}')
             print('Requirements: ' + ', '.join(task['requirements']))
+            for value in task.get('design_refs', []):
+                print('Read design: ' + value)
             for requirement in document['requirements']:
                 if requirement['id'] in task['requirements']:
                     print(f'  {requirement["id"]} ({requirement["implementation"]}): {requirement["title"]}')
@@ -257,6 +269,8 @@ def main():
             for decision in document['decisions']:
                 if decision['id'] in task['decisions']:
                     print(f'  {decision["id"]} ({decision["status"]}): {decision["question"]}')
+                    for value in decision.get('design_refs', []):
+                        print('    design: ' + value)
         else:
             print('Next: none; task evidence still needs substantive review.')
         hold = document['resume']['paid_execution_hold']
