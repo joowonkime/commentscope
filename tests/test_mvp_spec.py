@@ -14,7 +14,30 @@ ROOT = Path(__file__).resolve().parents[1]
 
 class MVPSpecTests(TestCase):
     def setUp(self):
-        self.spec = json.loads((ROOT / 'docs/mvp-traceability.json').read_text(encoding='utf-8'))
+        self.committed = json.loads((ROOT / 'docs/mvp-traceability.json').read_text(encoding='utf-8'))
+        # Negative tests own their graph; advancing real work must not break them.
+        self.spec = {key: deepcopy(self.committed[key]) for key in (
+            'schema_version', 'spec_version', 'baseline_commit', 'observed_date',
+            'intent_document', 'workflow_document', 'acceptance_contract')}
+        self.spec['product_tasks'] = {key: sorted(values) for key, values in check.PRODUCT_REQUIREMENTS.items()}
+        ids = sorted({ident for values in self.spec['product_tasks'].values() for ident in values})
+        self.spec['requirements'] = [
+            {'id': ident, 'title': 'Synthetic requirement', 'implementation': 'partial',
+             'sources': ['docs/MVP_SPEC.md'], 'code': [], 'checks': [],
+             'acceptance': ['Synthetic completion boundary.'], 'evidence': []} for ident in ids]
+        self.spec['decisions'] = [
+            {'id': 'DEC-001', 'title': 'Synthetic decision', 'status': 'open',
+             'requirements': ids, 'question': 'Which contract?', 'options': ['A', 'B'],
+             'selection': None, 'evidence': []}]
+        self.spec['tasks'] = []
+        for i, kind in enumerate(('offline', 'formal_gate', 'product_e2e'), 1):
+            self.spec['tasks'].append(
+                {'id': f'TASK-{i:03}', 'title': 'Synthetic task', 'requirements': ids,
+                 'decisions': ['DEC-001'], 'depends_on': [f'TASK-{i-1:03}'] if i > 1 else [],
+                 'status': 'next' if i == 1 else 'todo', 'deliverables': ['Synthetic artifact'],
+                 'done_when': ['Verify the scoped result.'], 'required_evidence': [kind], 'evidence': []})
+        self.spec['resume'] = {'next_task': 'TASK-001', 'paid_execution_hold': True,
+                               'hold_reason': 'Synthetic hold'}
 
     def errors(self, document=None):
         return '\n'.join(check.validate(self.spec if document is None else document, ROOT))
@@ -24,6 +47,7 @@ class MVPSpecTests(TestCase):
                 'reference': 'tests/test_mvp_spec.py', 'result': 'pass'}
 
     def test_committed_graph_and_frozen_r5_contract_are_consistent(self):
+        self.assertEqual(self.errors(self.committed), '')
         self.assertEqual(self.errors(), '')
 
     def test_lost_product_task_and_dangling_requirement_are_rejected(self):
@@ -57,19 +81,19 @@ class MVPSpecTests(TestCase):
         self.assertIn('unfinished dependency', errors)
 
     def test_offline_result_cannot_complete_a_formal_gate_task(self):
-        for task in self.spec['tasks'][:4]:
-            task['status'] = 'done'
-            task['evidence'] = [self.evidence(kind) for kind in task['required_evidence']]
-        gate = self.spec['tasks'][4]
+        first = self.spec['tasks'][0]
+        first['status'] = 'done'
+        first['evidence'] = [self.evidence()]
+        gate = self.spec['tasks'][1]
         gate['status'] = 'done'
         gate['evidence'] = [self.evidence()]
-        self.spec['resume']['next_task'] = 'TASK-006'
-        self.spec['tasks'][5]['status'] = 'next'
+        self.spec['resume']['next_task'] = 'TASK-003'
+        self.spec['tasks'][2]['status'] = 'next'
         self.assertIn('formal_gate', self.errors())
 
     def test_resume_cannot_skip_dependencies_or_have_two_active_tasks(self):
-        self.spec['resume']['next_task'] = 'TASK-007'
-        self.spec['tasks'][6]['status'] = 'next'
+        self.spec['resume']['next_task'] = 'TASK-003'
+        self.spec['tasks'][2]['status'] = 'next'
         errors = self.errors()
         self.assertIn('active task', errors)
         self.assertIn('unfinished dependency', errors)
@@ -97,11 +121,25 @@ class MVPSpecTests(TestCase):
         self.spec['tasks'][0]['evidence'] = [dict(self.evidence(), kind=[])]
         self.assertTrue(self.errors())
 
+    def test_normal_progress_and_completion_remain_valid(self):
+        for i, task in enumerate(self.spec['tasks']):
+            task['status'] = 'done'
+            task['evidence'] = [self.evidence(kind) for kind in task['required_evidence']]
+            if i + 1 < len(self.spec['tasks']):
+                next_task = self.spec['tasks'][i + 1]
+                next_task['status'] = 'next'
+                self.spec['resume']['next_task'] = next_task['id']
+            else:
+                self.spec['resume']['next_task'] = None
+            self.assertEqual(self.errors(), '')
+
     def test_resume_prints_current_work_and_limits_without_model_access(self):
         result = subprocess.run([sys.executable, str(ROOT / 'tools/check_mvp_spec.py'), '--resume'],
                                 cwd=ROOT, capture_output=True, text=True, encoding='utf-8')
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn(self.spec['spec_version'], result.stdout)
-        self.assertIn('TASK-001', result.stdout)
-        self.assertIn('HOLD', result.stdout)
+        self.assertIn(self.committed['spec_version'], result.stdout)
+        next_id = self.committed['resume']['next_task']
+        self.assertIn(next_id if next_id is not None else 'Next: none', result.stdout)
+        if self.committed['resume']['paid_execution_hold']:
+            self.assertIn('HOLD', result.stdout)
         self.assertIn('not semantic quality', result.stdout)
