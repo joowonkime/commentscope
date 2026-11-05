@@ -1,5 +1,6 @@
 """Frozen transfer cases for the opt-in J4 graph adapter, before any G1 call."""
 import argparse
+from copy import deepcopy
 from decimal import Decimal
 from datetime import datetime,timezone
 import json
@@ -20,7 +21,7 @@ from experiments.jev_argument_controls import ledger_for
 from experiments.openrouter_factory_pipeline import archive_sources
 from experiments.openrouter_factory_probe import private,key_metadata,validate_spend_policy
 
-VERSION='jev-transfer-experiment-20261106-v1'
+VERSION='jev-transfer-experiment-20261106-v2'
 FIXTURE=Path('tests/fixtures/jev-transfer-controls.json')
 
 
@@ -69,6 +70,7 @@ def prepare(directory,scope_file):
     if len(requests)>18 or od.reservation(od.DEPLOYMENT)*len(requests)>Decimal('0.20'):
         raise ValueError('Transfer request/reservation cap exceeded')
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),'cross_run_response_reuse':False,
+          'workload':'remote_decisions_only','resource_policy':deepcopy(host_resources.HTTP_ONLY_POLICY),
           'deployment':od.DEPLOYMENT,'authorization':binding,'spend_policy':policy,'fixture':fixture,
           'requests':requests,'maximum_new_usd':'0.20','maximum_requests':len(requests),
           'inputs':{str(scope_file.resolve()):sha(scope_file),str(FIXTURE.resolve()):sha(FIXTURE),
@@ -83,6 +85,7 @@ def prepare(directory,scope_file):
 def validate(directory,*,allow_expired=False):
     plan=read_json(directory/'plan.json');run_origin(plan,directory,attempt=1)
     if (plan['artifact_kind']!=VERSION or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
+            or plan.get('workload')!='remote_decisions_only' or plan.get('resource_policy')!=host_resources.HTTP_ONLY_POLICY
             or plan['code_sha256']!=source_code_hashes() or any(sha(p)!=v for p,v in plan['inputs'].items())
             or plan['fixture']!=read_json(FIXTURE) or plan['maximum_new_usd']!='0.20'):
         raise ValueError('Frozen transfer code/input changed')
@@ -129,7 +132,8 @@ def run(directory):
         write(directory/'attempts'/f'{attempt:04}.started.json',{'at':datetime.now(timezone.utc).isoformat(),
             'plan_sha256':sha(directory/'plan.json'),'scope_before':ledger.summary(plan_sha256=scope)})
         try:
-            with host_resources.watch(directory/'resources'/f'{attempt:04}',host_resources.POLICY,host_resources.observe_wsl_host,interrupt=dispatch.request_stop):
+            with host_resources.watch(directory/'resources'/f'{attempt:04}',plan['resource_policy'],host_resources.observe_wsl_host,
+                                      interrupt=dispatch.request_stop,workload='http_only'):
                 for case in plan['fixture']['sources']:
                     selected=[]
                     for task in deps.tasks(case['record'],case['cores']):

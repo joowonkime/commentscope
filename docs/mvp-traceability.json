@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261106-v11",
+  "spec_version": "commentscope-mvp-20261106-v12",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "4단계 순차 진행은 승인됨. opt-in audit 연결·오프라인 검증 및6원문/12요청 전이계획 동결 완료. 실제 시작은 기존host 가용메모리1.5GB 미달로호출전중단(추가0회/$0). 같은scope$8·7시간/총$50/기존장부유지. 자원회복후전이→freshG1→조건부G2/G3;999/프론트제외."
+    "hold_reason": "메모리2327MB로 회복 후 같은scope에서 전이6원문/12호출 실행($0.000916062):5/6일치,한국어core재진술연결1건거부. local필수전제/누락·오연결은맞음. all-pass미달로G1/G2/G3미확대. API-only자원profile분리/오프라인분석 진행,추가유료재시도없음;기존$50/지출유지."
   },
   "requirements": [
     {
@@ -321,7 +321,8 @@
         "src/commentscope/product/web.py",
         "src/commentscope/providers/openrouter_decisions.py",
         "src/commentscope/providers/budget.py",
-        "src/commentscope/providers/scoped_authorization.py"
+        "src/commentscope/providers/scoped_authorization.py",
+        "src/commentscope/providers/host_resources.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -332,7 +333,8 @@
         "tests/test_product_web.py",
         "tests/test_serve_mvp.py",
         "tests/test_decision_controls.py",
-        "tests/test_scoped_factory_authorization.py"
+        "tests/test_scoped_factory_authorization.py",
+        "tests/test_host_resources.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -1084,6 +1086,18 @@
           "scope": "Opt-in blind local/core dependency receipts integrated with existing source/owner/core/fact/Agent vetoes. RequiredFactory514 passed; final focused26 and spec16 passed. Frozen6-source/12-request transfer plan; actual startup held before inference at existing1.5GB host-memory guard,0newpaidcalls/$0. No transfer/G1/G2/G3 quality admission.",
           "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Same original authorized scope: frozen transfer6sources/12physicalrequests cost$0.000916062. Five sources match; Korean T6 core restatement U3 rejected although local factual prerequisite and missing/wrong mutations match. English counterpart core-U3 argmax only0.51 vsnone0.48; no model/language-wide conclusion. All-pass fails, no freshG1/G2/G3 expansion.",
+          "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "API-only transport measured without network/model loading: parent41216KiB+worker34760KiB peakRSS with1.9MB synthetic receipt. Separate explicit256MB HTTP profile; default local/mixed1536MB and commit/disk/observation/settlement guards remain. Source/role/wire semantics unchanged. Resource/account/recovery/spec51 tests pass; live transfer failure remains failed. RequiredFactory516 tests also pass; counts overlap.",
+          "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1517,8 +1531,19 @@
         "REQ-008",
         "REQ-010"
       ]
+    },
+    {
+      "spec_version": "commentscope-mvp-20261106-v12",
+      "date": "2026-11-06",
+      "reason": "실제전이실패와메모리회복을분리기록. API-onlyworker무과금측정에근거해별도256MBprofile을명시하고mixedFactory1536MB및장부/기한유지.",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ]
     }
   ],
-  "design_version": "commentscope-detailed-design-20261106-v8",
+  "design_version": "commentscope-detailed-design-20261106-v9",
   "design_document": "docs/design/README.md"
 }

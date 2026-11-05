@@ -96,5 +96,20 @@ class ScopedFactoryTests(unittest.TestCase):
         self.assertTrue((directory/'attempts/0001.failed.json').exists())
         self.assertTrue((directory/'attempts/0002.started.json').exists())
 
+    def test_transfer_pins_http_only_profile_and_factory_keeps_local_model_profile(self):
+        from experiments import jev_transfer_controls as transfer
+        plan=self.prepare();directory=self.root/'http-profile'
+        self.assertEqual(plan['resource_policy'],executor.host_resources.POLICY)
+        transfer.prepare(directory,self.scope_file)
+        frozen=read_json(directory/'plan.json')
+        self.assertEqual(frozen['workload'],'remote_decisions_only')
+        self.assertEqual(frozen['resource_policy'],executor.host_resources.HTTP_ONLY_POLICY)
+        for workload,policy in [('local_embedding',executor.host_resources.HTTP_ONLY_POLICY),
+                                ('remote_decisions_only',executor.host_resources.POLICY)]:
+            changed=deepcopy(frozen);changed.update(workload=workload,resource_policy=policy)
+            (directory/'plan.json').write_text(json.dumps(changed))
+            (directory/'frozen.json').write_text(json.dumps({'plan_sha256':sha(directory/'plan.json')}))
+            with self.assertRaises(ValueError):transfer.validate(directory)
+
 
 if __name__=='__main__':unittest.main()

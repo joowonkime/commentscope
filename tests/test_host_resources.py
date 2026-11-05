@@ -34,6 +34,26 @@ class HostResourceTests(unittest.TestCase):
     def test_policy_cannot_be_silently_weakened(self):
         with self.assertRaises(ValueError): h.reasons(self.observation(), {**h.POLICY, 'minimum_available_mb': 1})
 
+    def test_http_only_and_local_model_workloads_have_distinct_memory_requirements(self):
+        row=self.observation();row['available_mb']=512
+        self.assertEqual(h.reasons(row,h.HTTP_ONLY_POLICY,workload='http_only'),[])
+        with self.assertRaises(ValueError):h.reasons(row,h.HTTP_ONLY_POLICY)
+        with self.assertRaises(ValueError):h.reasons(row,h.POLICY,workload='http_only')
+        self.assertEqual(h.reasons(row,h.POLICY),['low_host_available_memory'])
+        row['available_mb']=255
+        self.assertEqual(h.reasons(row,h.HTTP_ONLY_POLICY,workload='http_only'),['low_host_available_memory'])
+        with self.assertRaises(ValueError):h.reasons(row,{**h.HTTP_ONLY_POLICY,'minimum_available_mb':1},workload='http_only')
+
+    def test_http_only_keeps_disk_commit_and_observation_protection(self):
+        for field,value,expected in [('committed_bytes',38*1024**3,'low_host_commit_headroom'),
+                                     ('disk_free_bytes',6*1024**3-1,'low_host_disk')]:
+            row=self.observation();row[field]=value
+            self.assertEqual(h.reasons(row,h.HTTP_ONLY_POLICY,workload='http_only'),[expected])
+        with tempfile.TemporaryDirectory() as tmp:
+            observer=h.Observer(tmp,h.HTTP_ONLY_POLICY,Mock(side_effect=OSError()),workload='http_only')
+            observer.sample()
+            self.assertEqual(observer.sample()['stop_reasons'],['resource_observation_unavailable'])
+
     def test_missing_observations_are_recorded_and_bounded(self):
         with tempfile.TemporaryDirectory() as tmp:
             observer = h.Observer(tmp, h.POLICY, Mock(side_effect=[OSError(), OSError(), self.observation()]))
