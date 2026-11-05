@@ -201,6 +201,10 @@ class RemoteExecutorTests(unittest.TestCase):
         self.materials=self.root/'materials.json';write(self.materials,{'documents':[],'selections':[],
             'model_files':{'/nonexistent/local-model':'a'*64},'classifier':{'obsolete':True}})
         self.addCleanup(patch.stopall)
+        from types import SimpleNamespace
+        space_class=executor.api_resources.SpaceGuard
+        patch.object(executor.api_resources,'SpaceGuard',side_effect=lambda directory,policy:space_class(
+            directory,policy,disk_usage=lambda path:SimpleNamespace(free=10*1024**3))).start()
         patch.object(executor,'provider_preflight',return_value={}).start()
         patch.object(executor,'embedding_preflight',return_value={}).start()
         patch.object(executor,'source_code_hashes',side_effect=lambda:{p:executor.sha(p) for p in executor.RUNTIME_FILES}).start()
@@ -244,6 +248,18 @@ class RemoteExecutorTests(unittest.TestCase):
         sub=self.e.SubcapLedger(money,self.plan)
         with self.assertRaises(BudgetExhausted):sub.reserve(scope,'e'*64,Decimal('0.11'),run_limit_usd='8',key_remaining_usd='50')
         self.assertEqual(money.summary()['calls'],1)
+
+    def test_storage_exhaustion_refuses_before_paid_intent_or_model_dispatch(self):
+        base=Mock()
+        req={'system':'s','data':{},'schema':{'type':'object','properties':{},'required':[],'additionalProperties':False},'max_tokens':10}
+        with patch.object(self.e,'InferenceBudget',return_value=base),patch.object(self.e,'check_quota'):
+            session=self.e.RemoteSession(self.run,self.plan,self.e.host_resources.RemoteCallGuard())
+            session.storage.check=Mock(side_effect=self.e.host_resources.ResourceStopRequested('full'))
+            with self.assertRaises(self.e.host_resources.ResourceStopRequested):session.call('extract',req)
+            with self.assertRaises(self.e.host_resources.ResourceStopRequested):session.embed('source',{'A':'hello'})
+        base.call.assert_not_called()
+        self.assertEqual(list((self.run/'checkpoints').glob('*.intent.json')),[])
+        self.assertEqual(session.money.summary()['calls'],0)
 
 
 if __name__=='__main__':unittest.main()
