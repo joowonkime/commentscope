@@ -1,6 +1,9 @@
 # Explore·Converse·Reflect 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v5`. DEC-002/003/004/006, REQ-004~009.
+설계 `commentscope-detailed-design-20261105-v6`. DEC-002/003/004/006, REQ-004~009.
+
+비교·대화·성찰의 생성 역할과 Controller/저장/출처의 코드 책임, 배정 provenance는
+[Decision 계층](DECISION_LAYERS.md)의 GEN-3/H2를 따른다. 첫 Jev 비교는 Factory 논거 component에 한정한다.
 아래는 후보 상세 계약과 후속 확장을 포함한다. 현재 `/api/v1` 개발 구현·필드·차이는 [현재 API](../PRODUCT_API.md), 검증 범위는 [결과](../PRODUCT_DELIVERY_RESULT.md)를 따른다. 기존 [M0 API](../COMPARE_BACKEND_API.md)는 유지한다.
 
 ## I-01. 공통 요청·권한·revision

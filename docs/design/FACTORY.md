@@ -1,6 +1,6 @@
 # Factory 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v5`, DEC-001/006, REQ-001/002/003/008.
+설계 `commentscope-detailed-design-20261105-v6`, DEC-001/006, REQ-001/002/003/008.
 전체 구조는 **구현 후보 계약**이다. S1/S2의 typed 검토·source record는 첫 opt-in 구현이며,
 나머지 후보/관계/논거 교체는 미구현이다. 이전 기준 코드는 [기준선](BASELINE.md)에 있다.
 기존 r5 합격 기준은 변경하지 않는다. source 해석의 재사용과 지지 승인은 별개다.
@@ -45,8 +45,10 @@ relation의 `authorship`: asserted_or_endorsed/non_asserted/unclear이며 임의
 ## F-02. 요청 계약과 대체 경계
 
 모든 요청은 `contract_version/task_aliases/input_hashes/schema/output_limit`을 고정한다.
-자유로운 설명·confidence 점수·중복 prose 상태는 요청하지 않는다. source proposal의 충실한 명제 text만 필요한 생성 필드다.
+생성 LLM에 자유로운 설명·자기보고 confidence 점수·중복 prose 상태는 요청하지 않는다. source proposal의 충실한 명제 text만 필요한 생성 필드다.
 모든 판정은 구조화된 선택값·구간/대상 ID로 받으며 host는 ID 완전성·범위·중복을 검사한다.
+Decisions의 고유 확률·confidence는 raw 관측으로 보존하며 최종 승인의 대체물로 사용하지 않는다.
+모델 배정과 transport·오류·비용은 [Decision 계층](DECISION_LAYERS.md)을 따른다.
 
 | 계약 | 입력 | 출력 | 별도로 유지할 검토 |
 | --- | --- | --- | --- |
@@ -155,6 +157,8 @@ M1에서 conditional인 관계를 pure target의 supported로 바꾸지 않는�
 논거는 원문 span으로 복원한다. 개인의 이유/경험을 core 지지자 전원의 이유로 부르지 않는다.
 reason이 없으면 빈 목록이며 core_restatement·양보·추가 요구로 이유를 채우지 않는다.
 core·필수 사실 전제와 노출할 논거의 사실 의존성을 compiler 전에 동결한다.
+개인 이유·원문 내부 사실 전제·core 필수 사실 전제의 구분과 각 검토의 실제 입력은
+[J4 논거 계약](DECISION_LAYERS.md#d-03-논거-검토의-세부-계약)을 따른다. core 본문이 필요한 검사를 source-only 입력에 맡기지 않는다.
 기존 packet/NLI로 주요 사실을 검사하고 미확인·반박·충돌한 필수 전제를 가진 후보는 보류한다.
 검사 실패 후 그 전제를 삭제하거나 유형을 value로 바꾸지 않는다.
 

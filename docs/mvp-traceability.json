@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v8",
+  "spec_version": "commentscope-mvp-20261105-v9",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "G1-v2는1Agent로실패. A2필수사실전제범위를명시한split6후보의고정4통제중3개실행:정상가치이유/올바른전제는통과했으나누락전제도yes로오승인해중단(2/3일치,오연결미실행). 추가$0.02356795,동일cycle차감1.76286145/잔여3.23713855,예약/미확정0. split6기본미채택,기존split5유지. freshG1/G2유료확대보류."
+    "hold_reason": "G1-v2는1Agent로실패. A2필수사실전제범위를명시한split6후보의고정4통제중3개실행:정상가치이유/올바른전제는통과했으나누락전제도yes로오승인해중단(2/3일치,오연결미실행). 추가$0.02356795,동일cycle차감1.76286145/잔여3.23713855,예약/미확정0. split6기본미채택,기존split5유지. freshG1/G2유료확대보류. Decision계층 상세설계 추가(TASK016), 다음005는J4논거계약/adapter의비용0검증부터진행. 원래7시간기한은2026-11-05T03:15:51Z에만료됐으며모델배정변경/유료호출권한을확장하지않음."
   },
   "requirements": [
     {
@@ -54,7 +54,8 @@
       "evidence": [],
       "design_refs": [
         "docs/design/FACTORY.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -86,7 +87,8 @@
       "evidence": [],
       "design_refs": [
         "docs/design/FACTORY.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -114,7 +116,8 @@
       "evidence": [],
       "design_refs": [
         "docs/design/FACTORY.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -158,7 +161,8 @@
       ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -204,7 +208,8 @@
       ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -246,7 +251,8 @@
       ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -287,7 +293,8 @@
       ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -334,7 +341,8 @@
       ],
       "design_refs": [
         "docs/design/EXECUTION.md",
-        "docs/design/README.md"
+        "docs/design/README.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -380,7 +388,8 @@
       ],
       "design_refs": [
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -423,7 +432,8 @@
       ],
       "design_refs": [
         "docs/design/README.md",
-        "docs/design/BASELINE.md"
+        "docs/design/BASELINE.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     }
   ],
@@ -456,7 +466,8 @@
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/BASELINE.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -569,7 +580,8 @@
       "design_refs": [
         "docs/design/README.md",
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -598,7 +610,8 @@
       ],
       "design_refs": [
         "docs/design/EXECUTION.md",
-        "docs/design/BASELINE.md"
+        "docs/design/BASELINE.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -631,6 +644,44 @@
         "docs/design/README.md",
         "docs/design/FACTORY.md",
         "docs/design/INTERACTIONS.md",
+        "docs/design/EXECUTION.md",
+        "docs/design/DECISION_LAYERS.md"
+      ]
+    },
+    {
+      "id": "DEC-007",
+      "status": "proposed",
+      "title": "Decision 계층별 입력·출력·모델 배정과 채택",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "question": "생성·원문 관측·관계·논거·사실·host 판단을 어떤 허용 입력과 배정으로 분리하고, 기존 실패를 보존한 채 Jev 비교와 비용을 어떻게 통제하는가?",
+      "options": [
+        "기존 단일 GPT-5.2 deployment를 비교 기준으로 보존",
+        "기존 argument-audit를 대체하는 opt-in J4 관측/host 비교와 Jev typed Decisions adapter를 먼저 오프라인 검증",
+        "의미 판정 전체의 일괄 모델 교체와 자동 fallback은 채택하지 않고 각 component별 고정 비교 후 배정"
+      ],
+      "selection": "12개 논리 계층과 J4-U/O/L/K/C 입력 경계, 역할별 deployment/route provenance, 불확실·실패·비용·threshold 정책을 설계한다. 모델 배정·실제 실행은 미채택이며 기본 split5와 기존 deployment를 유지한다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Current call sites and preserved failed synthetic12-source receipts reviewed without inference; 253 paid historical calls/$0.75937505 grouped by responsibility. Design and references only; no routing/adapter implementation or semantic/model adoption.",
+          "reference": "docs/design/DECISION_LAYERS.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md"
       ]
     }
@@ -901,6 +952,55 @@
       ]
     },
     {
+      "id": "TASK-016",
+      "title": "Decision 계층별 모델 호출·오류·비용 상세 설계",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-004",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-002",
+        "TASK-003"
+      ],
+      "status": "done",
+      "deliverables": [
+        "현재 호출군과 비용에 연결한12개 논리 계층 및 J4의5개 과제별 입출력·권한",
+        "역할별 배정 후보·transport·확률/threshold·공유 장부·fallback·provenance 설계",
+        "기존4통제를 보존한12개 작성 사례와 오프라인→작은 실제 비교→fresh gate 채택 순서"
+      ],
+      "done_when": [
+        "현재 구현과 미구현 후보를 구별하고 각 decision의 입력·출력·금지한 승격·오류·모델 후보·검증을 연결한다.",
+        "명세·참조·작업 의존성 검사를 통과하며 실제 품질·Jev 채택·유료 실행 권한으로 승격하지 않는다."
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Decision-layer design and reference/graph checks only: current call-site mapping, 12 logical layers, 5 scoped argument tasks, model/transport/accounting contract, and 12 written unexecuted cases. No runtime change, new model inference, new quality pass or paid authorization.",
+          "reference": "docs/design/DECISION_LAYERS.md",
+          "result": "pass"
+        }
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "decisions": [
+        "DEC-007"
+      ],
+      "design_refs": [
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/FACTORY_DELIVERY.md",
+        "docs/design/EXECUTION.md"
+      ]
+    },
+    {
       "id": "TASK-005",
       "title": "동결 설정 G1 전체 품질 검증",
       "requirements": [
@@ -911,16 +1011,19 @@
         "REQ-010"
       ],
       "depends_on": [
-        "TASK-003"
+        "TASK-003",
+        "TASK-016"
       ],
       "status": "in_progress",
       "deliverables": [
         "현행 설정의 G1 전체 산출물·원문 검토·Agent 로딩/각3질문",
-        "정확한 code/model/provider/prompt/자료/평가 hash"
+        "정확한 code/model/provider/prompt/자료/평가 hash",
+        "논거 decision별 허용 입력·관측/host 결합의 오프라인 검증과 모델 비교의 채택/보류 판단"
       ],
       "done_when": [
         "기존 합성12원문·2Agent·지지·사실·내용·runtime 기준을 통과한다.",
-        "코드/설정 변경 후 과거 G1 성공을 자동 승계하지 않는다."
+        "코드/설정 변경 후 과거 G1 성공을 자동 승계하지 않는다.",
+        "등록된 decision 계약으로 생성/판정을 구분하고 입력 부족·모델/계약 변경·전제 누락/오연결·귀속·과금 회귀를 보존한다."
       ],
       "evidence": [
         {
@@ -945,11 +1048,14 @@
       "required_evidence": [
         "formal_gate"
       ],
-      "decisions": [],
+      "decisions": [
+        "DEC-007"
+      ],
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/FACTORY.md",
-        "docs/design/FACTORY_DELIVERY.md"
+        "docs/design/FACTORY_DELIVERY.md",
+        "docs/design/DECISION_LAYERS.md"
       ]
     },
     {
@@ -1341,8 +1447,13 @@
       "date": "2026-11-05",
       "reason": "실제G1에서정상가치이유1개의dependency거부로Agent전체가보류됐다. 필수사실전제와이유귀속의정의불일치를가설로명확화했으나통제에서누락전제가오승인됐다. 한사례개선을전체해결로승격하지않는다.",
       "scope": "split6명시계약은미채택opt-in후보,split5기본/observed3재생보존. 4통제중3실행/2일치/누락실패후중단,오연결·freshG1·G2미실행. guard/r5/과거차감/원래5달러cycle/기한유지."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가 OpenRouter 호출 모델을 임의로 정하지 말고 decision 계층별 상세 설계를 요청했다. 단일 deployment의 생성/관계/논거 호출과 저장 실패를 대조해 역할·입력·배정·실패·비용·채택 경계를 먼저 고정한다.",
+      "scope": "명세v9/설계v6,DEC007proposed/TASK016문서범위done. TASK005미완료/다음유지,기존r5·실패·split5·동결deployment·장부보존. Jev/라우터미구현·미채택,유료호출0/기한연장0. 새로운미완료대형리팩토링작업을추가하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v5",
+  "design_version": "commentscope-detailed-design-20261105-v6",
   "design_document": "docs/design/README.md"
 }
