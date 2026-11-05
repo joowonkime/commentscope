@@ -19,6 +19,10 @@ def respond(system, data, schema, max_tokens):
     return {'choices':[{'message':{'content':'{}'},'finish_reason':'stop'}]}
 
 
+def respond_typed(payload):
+    return {'received': payload, 'usage': {'cost': 0.0001}}
+
+
 def fail(system, data, schema, max_tokens):
     raise OSError('private value must not appear in the error log')
 
@@ -53,6 +57,17 @@ class InferenceBudgetTests(unittest.TestCase):
         self.assertEqual(summary['calls'][0]['state'],'ok')
         self.assertGreater(summary['charged_seconds'],0)
         self.assertEqual(summary['unfinished_reservations'],0)
+
+    def test_typed_request_has_no_chat_wrapper_and_persists_raw_receipt(self):
+        payload={'model':'synthetic/decision','state':{'text':'synthetic'},'questions':{}}
+        result=self.budget.call(payload,PLAN,timeout_seconds=10,provider=respond_typed,typed_request=True)
+        self.assertEqual(result['received'],payload)
+        self.assertEqual(self.budget.summary()['calls'][0]['state'],'ok')
+
+    def test_typed_request_cannot_select_the_default_local_provider(self):
+        with self.assertRaises(ValueError):
+            self.budget.call({'model':'synthetic/decision'},PLAN,typed_request=True)
+        self.assertEqual(self.budget.summary()['calls'],[])
 
     def test_error_is_charged_without_exception_message(self):
         with self.assertRaises(RuntimeError):

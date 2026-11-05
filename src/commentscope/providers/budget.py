@@ -65,10 +65,11 @@ def remaining_allowance(summary):
     return remaining
 
 
-def worker(pipe, provider, request):
+def worker(pipe, provider, request, typed_request=False):
     try:
-        result = provider(request['system'], request['data'], request['schema'],
-                          max_tokens=request['max_tokens'])
+        result = (provider(request) if typed_request else
+                  provider(request['system'], request['data'], request['schema'],
+                           max_tokens=request['max_tokens']))
         if not isinstance(result, dict):
             raise ValueError('Expected response object')
         raw = json.dumps(result, ensure_ascii=False, allow_nan=False)
@@ -125,10 +126,11 @@ class InferenceBudget:
         finally:
             db.close()
 
-    def reserve(self, request, plan_sha, timeout_seconds):
+    def reserve(self, request, plan_sha, timeout_seconds, *, typed_request=False):
         if not positive(timeout_seconds) or not isinstance(plan_sha, str) or len(plan_sha) != 64 or any(c not in '0123456789abcdef' for c in plan_sha):
             raise ValueError('Invalid request deadline or plan identity')
-        if set(request) != {'system','data','schema','max_tokens'}:
+        if (type(typed_request) is not bool or not isinstance(request,dict) or not request
+                or not typed_request and set(request) != {'system','data','schema','max_tokens'}):
             raise ValueError('Unexpected request fields')
         encoded = json.dumps(request, ensure_ascii=False, allow_nan=False)
         reserve = timeout_seconds + SHUTDOWN_RESERVATION_SECONDS
@@ -165,15 +167,17 @@ class InferenceBudget:
                 'charged_seconds':charged,'remaining_seconds':None if self.limit is None else max(0,self.limit-charged),
                 'unfinished_reservations':sum(c['state']=='reserved' for c in calls),'calls':calls}
 
-    def call(self, request, plan_sha, *, timeout_seconds=180, provider=generate):
-        call_id = self.reserve(request, plan_sha, timeout_seconds)
+    def call(self, request, plan_sha, *, timeout_seconds=180, provider=generate, typed_request=False):
+        if type(typed_request) is not bool or typed_request and provider is generate:
+            raise ValueError('Typed requests require an explicit typed provider')
+        call_id = self.reserve(request, plan_sha, timeout_seconds,typed_request=typed_request)
         started = time.monotonic()
         context = multiprocessing.get_context('spawn')
         receiver, sender = context.Pipe(duplex=False)
         # The disposable worker still enforces the wall-clock deadline. Match
         # the local HTTP timeout instead of imposing a hidden180second CPU cap.
         bounded_provider = partial(generate, timeout_seconds=timeout_seconds) if provider is generate else provider
-        process = context.Process(target=worker, args=(sender,bounded_provider,request), daemon=True)
+        process = context.Process(target=worker, args=(sender,bounded_provider,request,typed_request), daemon=True)
         state, response, error = 'error', None, 'worker_start_failed'
         caught = None
         try:

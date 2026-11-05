@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v9",
+  "spec_version": "commentscope-mvp-20261105-v10",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "G1-v2는1Agent로실패. A2필수사실전제범위를명시한split6후보의고정4통제중3개실행:정상가치이유/올바른전제는통과했으나누락전제도yes로오승인해중단(2/3일치,오연결미실행). 추가$0.02356795,동일cycle차감1.76286145/잔여3.23713855,예약/미확정0. split6기본미채택,기존split5유지. freshG1/G2유료확대보류. Decision계층 상세설계 추가(TASK016), 다음005는J4논거계약/adapter의비용0검증부터진행. 원래7시간기한은2026-11-05T03:15:51Z에만료됐으며모델배정변경/유료호출권한을확장하지않음."
+    "hold_reason": "첫Jev-only실제진단완료: 고유관측2회/선언4통제기대일치,실제$0.000147294,재조회추가0. 기본split5/Factory배정유지,GPTpaired/미사용전이/전체G1미완료. 본trial은종료했고일반유료확대는보류."
   },
   "requirements": [
     {
@@ -39,13 +39,15 @@
         "src/commentscope/factory/framed_corpus.py",
         "src/commentscope/factory/source_arguments.py",
         "src/commentscope/factory/source_interpretation.py",
-        "src/commentscope/factory/source_semantics.py"
+        "src/commentscope/factory/source_semantics.py",
+        "src/commentscope/factory/dependency_decisions.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
         "tests/test_owner_observations.py",
         "tests/test_source_semantics_contract.py",
-        "tests/test_source_semantics_diagnostic.py"
+        "tests/test_source_semantics_diagnostic.py",
+        "tests/test_decision_controls.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -102,12 +104,14 @@
       "code": [
         "src/commentscope/factory/minimal_agents.py",
         "src/commentscope/agents/grounded_inputs.py",
-        "src/commentscope/agents/grounded_runtime.py"
+        "src/commentscope/agents/grounded_runtime.py",
+        "src/commentscope/factory/dependency_decisions.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
         "tests/test_grounded_runtime.py",
-        "tests/test_runtime_artifact_contract.py"
+        "tests/test_runtime_artifact_contract.py",
+        "tests/test_decision_controls.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -310,7 +314,9 @@
         "tools/serve_openrouter_web.py",
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
-        "src/commentscope/product/web.py"
+        "src/commentscope/product/web.py",
+        "src/commentscope/providers/openrouter_decisions.py",
+        "src/commentscope/providers/budget.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -319,7 +325,8 @@
         "tests/test_openrouter_spend_scope.py",
         "tests/test_product_app.py",
         "tests/test_product_web.py",
-        "tests/test_serve_mvp.py"
+        "tests/test_serve_mvp.py",
+        "tests/test_decision_controls.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -404,13 +411,15 @@
         "tools/check_mvp_spec.py",
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
-        "src/commentscope/product/web.py"
+        "src/commentscope/product/web.py",
+        "experiments/jev_argument_controls.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
         "tests/test_product_app.py",
         "tests/test_product_web.py",
-        "tests/test_serve_mvp.py"
+        "tests/test_serve_mvp.py",
+        "tests/test_decision_controls.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -675,6 +684,12 @@
         {
           "kind": "offline",
           "scope": "Current call sites and preserved failed synthetic12-source receipts reviewed without inference; 253 paid historical calls/$0.75937505 grouped by responsibility. Design and references only; no routing/adapter implementation or semantic/model adoption.",
+          "reference": "docs/design/DECISION_LAYERS.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "First authorized Jev-only development diagnostic on fixed synthetic controls:2 independent source observations/17 Choice questions/4 host declaration checks match expected, including missing/wrong factual prerequisites rejected. Cost$0.000147294, API usage delta matches, completed replay0calls/$0. New contract plus host comparison, not isolated model A/B; uncalibrated, no paired GPT/held-out/production/freshG1 admission.",
           "reference": "docs/design/DECISION_LAYERS.md",
           "result": "pass"
         }
@@ -1043,6 +1058,18 @@
           "scope": "Dependency-scoped split6 candidate: fixed4 controls,3 actual requests,2 expected matches. Normal value reason and correct factual link accepted; missing necessary factual premise incorrectly accepted. Stopped before wrong-link control. Cost$0.02356795, same original$5 cycle; no freshG1 or G2. Candidate is opt-in and legacy split5 remains default.",
           "reference": "docs/design/FACTORY_DELIVERY.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Typed Decisions transport/accounting, original money owner plus fixed trial subcap/deadline, blind dependency controls and legacy chat compatibility:64 focused tests and required Factory502 pass. Model/schema mismatch settles known cost before rejection; missing usage retains hold. No production integration or semantic generalization.",
+          "reference": "tests/test_decision_controls.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "First authorized Jev-only development diagnostic on fixed synthetic controls:2 independent source observations/17 Choice questions/4 host declaration checks match expected, including missing/wrong factual prerequisites rejected. Cost$0.000147294, API usage delta matches, completed replay0calls/$0. New contract plus host comparison, not isolated model A/B; uncalibrated, no paired GPT/held-out/production/freshG1 admission.",
+          "reference": "docs/design/DECISION_LAYERS.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1452,8 +1479,18 @@
       "date": "2026-11-05",
       "reason": "사용자가 OpenRouter 호출 모델을 임의로 정하지 말고 decision 계층별 상세 설계를 요청했다. 단일 deployment의 생성/관계/논거 호출과 저장 실패를 대조해 역할·입력·배정·실패·비용·채택 경계를 먼저 고정한다.",
       "scope": "명세v9/설계v6,DEC007proposed/TASK016문서범위done. TASK005미완료/다음유지,기존r5·실패·split5·동결deployment·장부보존. Jev/라우터미구현·미채택,유료호출0/기한연장0. 새로운미완료대형리팩토링작업을추가하지않음."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "사용자가첫상용Jev검증실행을명시승인했다. 기존기한을몰래연장하지않고동일금액owner의기존차감을보존하는단일trial을동결한다.",
+      "scope": "명세v10/설계v7 D-10. Jev-only2고유관측/4host통제,신규최대0.10달러/15분/재시도0. 신규모델배정·전체품질기준·새5달러권한변경없음."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "승인한첫Jev진단을실행했다. 기존단일yes/no대신원문의blind유형/전제관측과host선언비교를적용해정상/누락/오연결을확인했다.",
+      "scope": "2유료관측/17Choice/4host통제일치,$0.000147294,재조회0. prototype J4-U/L만구현,기본Factory/Agent배정·r5·과거차감유지. 모델단독개선/전이/한국어/전체G1미검증,확대보류."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v6",
+  "design_version": "commentscope-detailed-design-20261105-v7",
   "design_document": "docs/design/README.md"
 }

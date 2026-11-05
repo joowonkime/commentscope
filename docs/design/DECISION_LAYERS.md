@@ -1,10 +1,11 @@
 # Decision 계층과 모델 호출 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v6`, DEC-007, TASK-016/005.
+설계 `commentscope-detailed-design-20261105-v7`, DEC-007, TASK-016/005.
 연결: REQ-001~010, [제품 명세](../MVP_SPEC.md), [Factory 계약](FACTORY.md), [실행 계약](EXECUTION.md).
 대조 코드 `227e3c9d1b8345f392a6dfe6aaba471290e44575`, 공식 자료 확인일 2026-11-05.
 
-상태: **호출 책임과 비교 절차의 설계본**. 역할별 라우터·Jev adapter는 미구현이며 모델 배정은 미채택이다.
+상태: **호출 책임과 비교 절차의 설계본**. 첫 Jev-only 진단용 transport와 J4-U/L 관측/host 비교는 구현했다.
+역할별 전체 라우터·Factory audit 연결·O/K/C 통합과 production 모델 배정은 미구현/미채택이다.
 기본 경로는 기존 GPT-5.2 deployment와 split5를 유지한다. 실패한 split6를 승인하지 않는다.
 이 문서는 기존 source S1/S2 교체나 전체 파이프라인 재작성을 채택하지 않는다.
 역할 하나가 반드시 모델 요청 하나를 뜻하지 않는다. 같은 원문을 읽더라도 다른 판단은 별도로 구별한다.
@@ -340,3 +341,46 @@ Jev가 기준을 통과하지 못하면 기본 배정을 유지하고 실패와 
 열린 값은 Jev의 과제별 정확도, 실제 gateway 문맥 조건, threshold 수치, 물리 묶음 크기,
 역할별 실제 완료 비용과 서비스 단가다. 값이 확정되기 전 production 배정이나 대량 유료 실행으로 승격하지 않는다.
 DEC-007은 `proposed`이며 TASK-016은 문서/참조 검증 범위다. TASK-005는 실제 품질 완료까지 계속 미완료다.
+
+
+## D-10. 사용자 승인 첫 Jev 진단의 실행 범위
+
+사용자가 첫 Jev 검증을 실제 실행하라고 요청했다. 이번 범위는 **Jev 단독 개발 진단**이다.
+D-08의 GPT paired 비교·전이·전체 G1이나 production 배정의 완료가 아니다.
+기존4통제의원문·대상·기대를유지하고,정상가치이유와사실추론의고유blind관측최대2개만실행한다.
+동일한사실관측을정상/누락/오연결선언에각각host비교한다.유료GPTbaseline을추가하지않는다.
+첫진단은고정선택지의argmax·uncertain을개발기대와비교하고모든확률을보존한다.
+calibration/production threshold는미설정이므로Agent승인에사용하지않는다.
+후보오승인/스키마·과금불명에서새유료호출을중단하며자동재시도/fallback은0이다.
+
+이번별도trial은최대신규$0.10,실제prepare후15분·물리호출2개·각30초로제한한다.
+기존cycle파일/기한/deployment를수정하지않고원래SHA의**동일통화소유자·총$5상한·기존차감**을공유한다.
+새사용자요청은이trial의시간/모델만허용하며새$5나전체실행권한을만들지않는다.
+별도동결authorization/plan에원래owner,시작차감,신규한도,scope/deployment/입력/코드hash와종료시각을기록한다.
+전체문맥×가격의최악예약합이신규한도·원래scope잔여·공유계정/key잔액모두에들어야한다.
+typed transport도기존SpendLedger·bounded worker·checkpoint·host resource guard를사용하고,raw영수증정산후의미를검증한다.
+기존chat worker는기본동작을유지하고명시적typed request만rawpayload를provider에전달한다.
+키는worker환경에서만읽고plan/출력에저장하지않는다.
+
+## D-11. 첫 실제 진단 결과와 한계
+
+`experiments.jev_argument_controls`에서 고정2개 원문 관측을 실제 TypeSafe `jev-1.14-20261014`로 실행했다.
+단독 개발 진단이며 GPT paired 비교·미사용 전이·한국어·O/K/C·Factory/Agent 통합 결과가 아니다.
+
+| 통제 | 관측/host 결과 | 기대와 일치 |
+| --- | --- | --- |
+| DC-01 정상 가치 이유 | value/reason, 필요한 사실 전제 없음 → 유지 | 예 |
+| DC-02 정상 사실 연결 | fact/position, 필요한 사실 전제 U1 → 유지 | 예 |
+| DC-03 전제 누락 | 같은 관측 U1과 빈 선언 비교 → missing_factual_prerequisite 차단 | 예 |
+| DC-04 다른 집단의 사실 연결 | U1 관측과 U2 선언 비교 → 누락/오연결 차단 | 예 |
+
+실제 모델 요청2개, 고유 원문 관측2개, Choice 질문17개, 선언 비교4개다.
+단일 사실 관측을3선언에 공유했으므로 독립적인 의미 사례4개에서100%라고 보고하지 않는다.
+첫 요청 입력1,467token/$0.000061614, 둘째2,040token/$0.000085680, 총$0.000147294가 청구됐다.
+나중에 조회한 API 사용액 증분도 같은 금액과 일치했다. 최악 예약합$0.022020096, 신규한도$0.10 이내다.
+완료 결과 재열람에서 ledger 호출 수·차감이 동일해 추가 요청/비용0임을 확인했다. 예약/미확정0이다.
+
+이는 **Jev+새 관측 계약+host 비교**의 개발 사례 확인이다. 과거 GPT split6와 입력/출력 계약이 다르므로
+Jev 모델만의 정확도/절감 효과로 분리하지 않는다. 확률 calibration/production threshold는 설정하지 않았다.
+기본 split5·GPT Factory·기존 Agent 보류 규칙과 r5는 유지한다. 새 G1 합격이나 999개 원가를 주장하지 않는다.
+다음은 기존 audit adapter의 오프라인 연결과 미사용 전이/선택지 순서의 동결 비교다.

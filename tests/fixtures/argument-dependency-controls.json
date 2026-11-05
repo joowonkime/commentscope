@@ -1,0 +1,125 @@
+{
+  "version": "argument-dependency-first-controls-20261105-v1",
+  "synthetic": true,
+  "observations": [
+    {
+      "id": "O1",
+      "original": "I support mandatory safety reviews because public safety is important.",
+      "parent_context_only": null,
+      "units": [
+        {
+          "id": "U1",
+          "text": "I support mandatory safety reviews",
+          "evidence": [
+            {
+              "start": 0,
+              "end": 34,
+              "text": "I support mandatory safety reviews"
+            }
+          ]
+        },
+        {
+          "id": "U2",
+          "text": "because public safety is important.",
+          "evidence": [
+            {
+              "start": 35,
+              "end": 70,
+              "text": "because public safety is important."
+            }
+          ]
+        }
+      ],
+      "target_id": "U2",
+      "owner_position_id": "U1"
+    },
+    {
+      "id": "O2",
+      "original": "Eight of ten trials in group A passed. Two of ten trials in group B passed. Therefore most trials in group A passed.",
+      "parent_context_only": null,
+      "units": [
+        {
+          "id": "U1",
+          "text": "Eight of ten trials in group A passed.",
+          "evidence": [
+            {
+              "start": 0,
+              "end": 38,
+              "text": "Eight of ten trials in group A passed."
+            }
+          ]
+        },
+        {
+          "id": "U2",
+          "text": "Two of ten trials in group B passed.",
+          "evidence": [
+            {
+              "start": 39,
+              "end": 75,
+              "text": "Two of ten trials in group B passed."
+            }
+          ]
+        },
+        {
+          "id": "U3",
+          "text": "Therefore most trials in group A passed.",
+          "evidence": [
+            {
+              "start": 76,
+              "end": 116,
+              "text": "Therefore most trials in group A passed."
+            }
+          ]
+        }
+      ],
+      "target_id": "U3",
+      "owner_position_id": "U3"
+    }
+  ],
+  "cases": [
+    {
+      "id": "DC-01",
+      "observation_id": "O1",
+      "declared": {
+        "kind": "value",
+        "function": "reason",
+        "requires": []
+      },
+      "expected_admitted": true
+    },
+    {
+      "id": "DC-02",
+      "observation_id": "O2",
+      "declared": {
+        "kind": "fact",
+        "function": "position",
+        "requires": [
+          "U1"
+        ]
+      },
+      "expected_admitted": true
+    },
+    {
+      "id": "DC-03",
+      "observation_id": "O2",
+      "declared": {
+        "kind": "fact",
+        "function": "position",
+        "requires": []
+      },
+      "expected_admitted": false
+    },
+    {
+      "id": "DC-04",
+      "observation_id": "O2",
+      "declared": {
+        "kind": "fact",
+        "function": "position",
+        "requires": [
+          "U2"
+        ]
+      },
+      "expected_admitted": false
+    }
+  ]
+}
