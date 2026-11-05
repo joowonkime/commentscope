@@ -12,9 +12,11 @@ VERSION = 'source-argument-observations-20261102-v3'
 LEGACY_SPLIT = 'source-argument-observations-20261102-v5'
 DEPENDENCY_SCOPED = 'source-argument-observations-20261105-v6'
 JEV_SPLIT = 'source-argument-observations-jev-graph-20261106-v7'
+CHAT_SPLIT = 'source-argument-observations-chat-graph-20261106-v8'
+GRAPH_SPLITS = (JEV_SPLIT, CHAT_SPLIT)
 # The candidate failed a missing-premise live control; keep the existing default.
 SPLIT = LEGACY_SPLIT
-SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED, JEV_SPLIT)
+SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED, *GRAPH_SPLITS)
 PROTOCOLS = (VERSION, *SPLIT_PROTOCOLS)
 CORE_VERSION = 'core-fidelity-observations-20261102-v1'
 CORE_CODED = 'core-fidelity-observations-20261102-v2'
@@ -220,7 +222,7 @@ OWNER_POSITION establishes the ground's own parent for function/ownership.
 Candidate equivalence is checked in a separate request; no candidate target or
 owner_relations is supplied here. Do not perform that comparison in this task.'''
     data={'SOURCES':sources,'TASKS':tasks}
-    if protocol == JEV_SPLIT:
+    if protocol in GRAPH_SPLITS:
         for s in sources:
             for u in s['UNIT_INVENTORY']:
                 u.pop('requires',None);u.pop('core_requires_for',None)
@@ -340,10 +342,13 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
     selected_owners = owners.select(records, cores, tasks, owner_checks) if protocol in SPLIT_PROTOCOLS else []
     relevant = select_checks(records, cores, tasks, checks)
     from commentscope.factory import argument_dependencies as deps
-    if protocol != JEV_SPLIT and dependency_checks:raise ValueError('Graph checks require their explicit protocol')
-    relevant_dependencies=deps.select(records,cores,tasks,dependency_checks) if protocol==JEV_SPLIT else []
+    if protocol not in GRAPH_SPLITS and dependency_checks:raise ValueError('Graph checks require their explicit protocol')
+    relevant_dependencies=deps.select(records,cores,tasks,dependency_checks) if protocol in GRAPH_SPLITS else []
+    if protocol in GRAPH_SPLITS and any(c['artifact_kind']!=(deps.CHAT_VERSION if protocol==CHAT_SPLIT else deps.VERSION)
+                                       for c in relevant_dependencies):
+        raise ValueError('Graph observations use another model transport protocol')
     graph_guards={}
-    if protocol==JEV_SPLIT:
+    if protocol in GRAPH_SPLITS:
         for record in records:
             if record['source']['id'] not in {t['source_id'] for t in tasks}:continue
             sid=record['source']['id']
@@ -357,10 +362,10 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
         seen.add(row['task_id']); task, address = wire[row['task_id']]
         record = lookup[task['source_id']]
         if task['kind'] == 'coverage':
-            fields(row, 'task_id actual_source_language source_coverage basis'+('' if protocol==JEV_SPLIT else ' dependency_fidelity')); basis(row, coded=protocol in SPLIT_PROTOCOLS)
+            fields(row, 'task_id actual_source_language source_coverage basis'+('' if protocol in GRAPH_SPLITS else ' dependency_fidelity')); basis(row, coded=protocol in SPLIT_PROTOCOLS)
             if row['actual_source_language'] not in ('en', 'other', 'uncertain') or row['source_coverage'] not in ('complete', 'incomplete', 'uncertain'):
                 raise ValueError('Unknown source coverage/language observation')
-            guards = list(graph_guards[record['source']['id']]['coverage']) if protocol==JEV_SPLIT else fidelity(row, ('dependency_fidelity',))
+            guards = list(graph_guards[record['source']['id']]['coverage']) if protocol in GRAPH_SPLITS else fidelity(row, ('dependency_fidelity',))
             if row['actual_source_language'] == 'uncertain' or row['actual_source_language'] != record['source_language']:
                 guards.append('source_language_unverified')
             if row['source_coverage'] != 'complete' or record['status'] != 'complete':
@@ -369,14 +374,14 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
             decisions.append({'task_id': task['task_id'], 'verdict': 'unsupported' if guards else 'supported',
                               'guards': sorted(set(guards)), 'basis': row['basis']})
             continue
-        fields(row, 'task_id actual_kind time_ids entity_fidelity conditions_fidelity actual_authorship actual_function basis'+('' if protocol==JEV_SPLIT else ' dependency_fidelity')+(' owner_relations' if protocol == VERSION else ''))
+        fields(row, 'task_id actual_kind time_ids entity_fidelity conditions_fidelity actual_authorship actual_function basis'+('' if protocol in GRAPH_SPLITS else ' dependency_fidelity')+(' owner_relations' if protocol == VERSION else ''))
         basis(row, coded=protocol in SPLIT_PROTOCOLS)
         unit = next(u for u in record['units'] if u['id'] == task['task_id'])
         if row['actual_authorship'] not in ('asserted_or_endorsed', 'not_asserted', 'unclear') or row['actual_function'] not in (*set(FUNCTIONS.values()), 'uncertain'):
             raise ValueError('Unknown source authorship/function observation')
         guards = scope_guards(row, unit['text'], unit['kind'], unit['scope'])
         alias='U'+str(record['units'].index(unit)+1)
-        guards.extend(graph_guards[record['source']['id']][alias] if protocol==JEV_SPLIT else fidelity(row, ('dependency_fidelity',)))
+        guards.extend(graph_guards[record['source']['id']][alias] if protocol in GRAPH_SPLITS else fidelity(row, ('dependency_fidelity',)))
         declared_authorship = unit.get('authorship', 'asserted_or_endorsed')
         if declared_authorship == 'linked_to_parent' and record['source']['parent'] is not None:
             declared_authorship = 'asserted_or_endorsed'
@@ -415,4 +420,4 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
             'response': deepcopy(result['output']), 'output_sha256': digest(result['output']),
             'core_checks': relevant, 'output': {'decisions': decisions},
             **({'owner_checks': selected_owners} if protocol in SPLIT_PROTOCOLS else {}),
-            **({'dependency_checks':relevant_dependencies} if protocol==JEV_SPLIT else {})}
+            **({'dependency_checks':relevant_dependencies} if protocol in GRAPH_SPLITS else {})}

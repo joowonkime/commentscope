@@ -1,6 +1,6 @@
 # Explore·Converse·Reflect 상세 설계
 
-설계 `commentscope-detailed-design-20261106-v10`. DEC-002/003/004/006, REQ-004~009.
+설계 `commentscope-detailed-design-20261106-v11`. DEC-002/003/004/006, REQ-004~009.
 
 비교·대화·성찰의 생성 역할과 Controller/저장/출처의 코드 책임, 배정 provenance는
 [Decision 계층](DECISION_LAYERS.md)의 GEN-3/H2를 따른다. 첫 Jev 비교는 Factory 논거 component에 한정한다.

@@ -149,6 +149,10 @@ class PaidBudget:
         self.paid_provider, self.metadata = paid_provider, key_metadata
         self.local_providers = tuple(local_providers)
 
+    def maximum_charge(self, request):
+        p = {k: Decimal(str(v)) for k, v in self.prices.items()}
+        return (self.deployment['context']*p['prompt'] + request['max_tokens']*p['completion'])/1_000_000 + p['request']
+
     def call(self, request, plan_sha, *, timeout_seconds, provider):
         if plan_sha != self.plan_sha: raise ValueError('API spending belongs to a different plan')
         if provider in self.local_providers:
@@ -159,8 +163,7 @@ class PaidBudget:
                 or not 0 < request['max_tokens'] < self.deployment['context']):
             raise ValueError('Complete bounded API request required')
         json.dumps(request, allow_nan=False)
-        p = {k: Decimal(str(v)) for k, v in self.prices.items()}
-        maximum = (self.deployment['context']*p['prompt'] + request['max_tokens']*p['completion'])/1_000_000 + p['request']
+        maximum = self.maximum_charge(request)
         metadata = self.metadata()
         call_id = self.ledger.reserve(self.spend_scope, digest(request), maximum, run_limit_usd=self.run_limit,
                                       key_remaining_usd=metadata['limit_remaining'])

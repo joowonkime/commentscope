@@ -22,9 +22,9 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     if agent_source_policy not in ('all_members','verified_subset'):raise ValueError('Unknown Agent source policy')
     from commentscope.factory import compact_claims
     from commentscope.factory import argument_observations
-    if argument_audit_protocol is not None and (argument_audit_protocol!=argument_observations.JEV_SPLIT
+    if argument_audit_protocol is not None and (argument_audit_protocol not in argument_observations.GRAPH_SPLITS
             or (discovery_mode,membership_mode)!=('free','raw') or extraction_protocol not in compact_claims.INDEPENDENT_CONTEXT
-            or not callable(getattr(runner,'decide',None))):
+            or argument_audit_protocol==argument_observations.JEV_SPLIT and not callable(getattr(runner,'decide',None))):
         raise ValueError('Jev graph audit requires explicit free/raw protocol and typed runner')
     if extraction_protocol is not None and (discovery_mode != 'free' or extraction_protocol not in compact_claims.VERSIONS):
         raise ValueError('Compact extraction requires its explicit free-discovery protocol')

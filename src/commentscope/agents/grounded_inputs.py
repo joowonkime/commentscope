@@ -101,7 +101,9 @@ def compile_inputs(bundle):
         if cid in fact_status:
             raise ValueError('Ambiguous multiple fact judgments')
         bound = facts.packet(claims[cid],bundle['documents'],check['selections'],bundle['expires_at'])
-        validator = (nli_fact_records.validate_record
+        from commentscope.factory import remote_fact_records
+        validator = (remote_fact_records.validate_record if check['record'].get('artifact_kind') == remote_fact_records.VERSION
+                     else nli_fact_records.validate_record
                      if check['record'].get('artifact_kind') == nli_fact_records.VERSION
                      else facts.validate_record)
         passed = validator(check['record'],bound,bundle['model'])

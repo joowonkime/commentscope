@@ -18,7 +18,7 @@ class RuntimeRunner:
     cannot silently carry an 8B response into a replacement-model experiment.
     """
     def __init__(self, directory, plan, budget, client, *, clock=time.monotonic, deployment_key='deployment'):
-        if deployment_key not in ('deployment','decisions_deployment') or client.deployment != plan[deployment_key]:
+        if deployment_key not in ('deployment','decisions_deployment','verification_deployment','embedding_deployment') or client.deployment != plan[deployment_key]:
             raise ValueError('Client does not belong to the frozen deployment')
         self.directory = Path(directory)
         self.plan = deepcopy(plan)

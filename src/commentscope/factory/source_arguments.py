@@ -375,7 +375,7 @@ def audit_wire_tasks(records, tasks):
 
 
 def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=(), owner_checks=(), dependency_checks=()):
-    if dependency_checks and protocol!=argument_observations.JEV_SPLIT:
+    if dependency_checks and protocol not in argument_observations.GRAPH_SPLITS:
         raise ValueError('Graph observations require their explicit audit protocol')
     req = audit_request(records, cores, tasks, protocol=protocol, core_checks=core_checks)
     if protocol in OBSERVED_PROTOCOLS:
