@@ -261,16 +261,22 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
         from commentscope.providers import openrouter_decisions as decisions
         if not split:raise ValueError('Typed dependencies require split source audits')
         protocol=execution.argument_audit_protocol
+        chat=protocol==argument_observations.CHAT_SPLIT
         for record in arguments:
             for task in deps.tasks(record,cores):
-                try:requests=deps.requests(task)
+                try:requests=deps.chat_requests(task) if chat else deps.requests(task)
                 except ValueError:
                     holds.append({'stage':'argument-dependency','source_id':record['source']['id'],
                                   'reason':'complete_dependency_input_exceeds_capacity'})
                     continue
-                responses=[execution.runner.decide('argument-dependency-'+decisions.wire_sha256(p,decisions.DEPLOYMENT)[:20],p)
-                           for p in requests]
-                dependency_checks.append(deps.bind(task,responses))
+                if chat:
+                    from commentscope.providers.remote_verification import SOL
+                    responses=[execution.runner.call('argument-dependency-'+digest(p)[:20],p) for p in requests]
+                    dependency_checks.append(deps.bind_chat(task,responses,SOL))
+                else:
+                    responses=[execution.runner.decide('argument-dependency-'+decisions.wire_sha256(p,decisions.DEPLOYMENT)[:20],p)
+                               for p in requests]
+                    dependency_checks.append(deps.bind(task,responses))
         save('argument-dependency-checks',dependency_checks)
     audit_groups = [(arguments, cores, tasks, core_checks, owner_checks)]
     if split:
@@ -288,7 +294,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     audits = []
     for scoped_records, scoped_cores, scoped_tasks, scoped_checks, scoped_owners in audit_groups:
         dependencies=[c for c in dependency_checks if c['task']['source_id'] in {r['source']['id'] for r in scoped_records}]
-        if protocol==argument_observations.JEV_SPLIT:
+        if protocol in argument_observations.GRAPH_SPLITS:
             from commentscope.factory import argument_dependencies as deps
             try:deps.select(scoped_records,scoped_cores,scoped_tasks,dependencies)
             except ValueError:
@@ -311,6 +317,17 @@ def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
     packets = [fact_checks.packet(c, list(documents), list(selections), snapshot.usage.expires_at)
                for c in agent_inputs['bundle']['claims'] if c['kind'] == 'fact']
     checks = []
+    if model.get('kind') == 'remote_llm':
+        from commentscope.factory import remote_fact_records
+        for bound in packets:
+            if not bound['evidence']:continue
+            req=remote_fact_records.invocation(bound,model)
+            record=remote_fact_records.bind(bound,model,fact_check(req))
+            checks.append({'claim_id':bound['claim']['id'],'selections':deepcopy(list(selections)),'record':record})
+        if checks:
+            agent_inputs=ma.prepare(snapshot,candidates,memberships,arguments,cores,audits,
+                model=model,documents=documents,checks=checks,source_policy=source_policy)
+        return agent_inputs,checks
     for offset in range(0, len(packets), 16):
         batch = packets[offset:offset+16]; req = nli_fact_records.invocation(batch)
         response = fact_check(req)

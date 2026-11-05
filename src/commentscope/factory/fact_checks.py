@@ -139,6 +139,14 @@ def errors(value, ids):
 
 
 def model_identity(model):
+    if model.get('kind') == 'remote_llm':
+        if (set(model) != {'kind','name','revision','provider','deployment_sha256','runtime_sha256','language_scope'}
+                or not nonempty(model['name']) or not nonempty(model['revision']) or model['provider']!='OpenAI'
+                or model['language_scope']!='multilingual'
+                or any(not isinstance(model[k],str) or not re.fullmatch('[a-f0-9]{64}',model[k])
+                       for k in ('deployment_sha256','runtime_sha256'))):
+            raise ValueError('Remote API model/runtime identity required')
+        return digest(model)
     if set(model) != {'name','revision','weights_sha256','runtime_sha256'} or not nonempty(model['name']) or not nonempty(model['revision']):
         raise ValueError('Model/runtime identity required')
     if any(not isinstance(model[k],str) or not re.fullmatch('[a-f0-9]{64}',model[k]) for k in ['weights_sha256','runtime_sha256']):
@@ -161,6 +169,7 @@ def invocation(bound, model):
 
 def check(bound, model, provider=generate):
     """One local call, no retries. Empty evidence and size limits cause no call."""
+    if model.get('kind')=='remote_llm':raise ValueError('Remote facts require remote API records')
     req = invocation(bound, model)
     skipped = ('no_evidence' if not bound['evidence'] else 'request_size_budget'
                if len(json.dumps(req,ensure_ascii=False).encode()) > MAX_REQUEST_BYTES else None)
@@ -180,6 +189,7 @@ def check(bound, model, provider=generate):
 
 def validate_record(record, bound, model):
     """Reject stale/cross-claim/cross-document records; does not certify semantics."""
+    if model.get('kind')=='remote_llm':raise ValueError('Local fact records cannot approve a remote classifier')
     req = invocation(bound, model)
     if (record.get('artifact_kind') != VERSION or record.get('packet_sha256') != digest(bound)
             or record.get('request_sha256') != digest(req) or record.get('model') != model

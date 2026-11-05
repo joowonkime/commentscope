@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261106-v13",
+  "spec_version": "commentscope-mvp-20261106-v14",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": false,
-    "hold_reason": "사용자60%선별활용목표재확인: 부품진단5/6실패기록유지,all-pass전역중단철회. plan에record_and_continue명시후현재설정freshG1→합격시G2/G3. 출력guard/r5기준/고정분모/같은scope$8·$50장부·기한유지;단일거부사례유료반복수정안함."
+    "hold_reason": "사용자GPT6.1Sol검증전환지시: 생성/대화5.2,의미·논거·사실6.1Sol,임베딩remote로새opt-in경로구현. localLLM/weights로딩없음. 기존scope$8/종료시각/공유$50/과거차감유지. 첫확인subcap$0.50;60%선별활용기준유지."
   },
   "requirements": [
     {
@@ -41,7 +41,10 @@
         "src/commentscope/factory/source_interpretation.py",
         "src/commentscope/factory/source_semantics.py",
         "src/commentscope/factory/dependency_decisions.py",
-        "src/commentscope/factory/argument_dependencies.py"
+        "src/commentscope/factory/argument_dependencies.py",
+        "src/commentscope/providers/remote_verification.py",
+        "src/commentscope/factory/remote_fact_records.py",
+        "experiments/remote_factory_pipeline.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -49,7 +52,8 @@
         "tests/test_source_semantics_contract.py",
         "tests/test_source_semantics_diagnostic.py",
         "tests/test_decision_controls.py",
-        "tests/test_jev_audit_integration.py"
+        "tests/test_jev_audit_integration.py",
+        "tests/test_remote_verification.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -59,7 +63,8 @@
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -76,7 +81,10 @@
         "src/commentscope/factory/raw_membership.py",
         "src/commentscope/factory/comment_utilization.py",
         "src/commentscope/factory/source_interpretation.py",
-        "src/commentscope/factory/source_semantics.py"
+        "src/commentscope/factory/source_semantics.py",
+        "src/commentscope/providers/remote_verification.py",
+        "src/commentscope/factory/remote_fact_records.py",
+        "experiments/remote_factory_pipeline.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -84,7 +92,8 @@
         "tests/test_factory_review_r5.py",
         "tests/test_source_semantics_contract.py",
         "tests/test_component_diagnostic_policy.py",
-        "tests/test_selective_agent_sources.py"
+        "tests/test_selective_agent_sources.py",
+        "tests/test_remote_verification.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -94,7 +103,8 @@
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -110,7 +120,10 @@
         "src/commentscope/agents/grounded_inputs.py",
         "src/commentscope/agents/grounded_runtime.py",
         "src/commentscope/factory/dependency_decisions.py",
-        "src/commentscope/factory/argument_dependencies.py"
+        "src/commentscope/factory/argument_dependencies.py",
+        "src/commentscope/providers/remote_verification.py",
+        "src/commentscope/factory/remote_fact_records.py",
+        "experiments/remote_factory_pipeline.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -119,7 +132,8 @@
         "tests/test_decision_controls.py",
         "tests/test_jev_audit_integration.py",
         "tests/test_component_diagnostic_policy.py",
-        "tests/test_selective_agent_sources.py"
+        "tests/test_selective_agent_sources.py",
+        "tests/test_remote_verification.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -129,7 +143,8 @@
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -326,7 +341,10 @@
         "src/commentscope/providers/openrouter_decisions.py",
         "src/commentscope/providers/budget.py",
         "src/commentscope/providers/scoped_authorization.py",
-        "src/commentscope/providers/host_resources.py"
+        "src/commentscope/providers/host_resources.py",
+        "src/commentscope/providers/remote_verification.py",
+        "src/commentscope/factory/remote_fact_records.py",
+        "experiments/remote_factory_pipeline.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -338,7 +356,8 @@
         "tests/test_serve_mvp.py",
         "tests/test_decision_controls.py",
         "tests/test_scoped_factory_authorization.py",
-        "tests/test_host_resources.py"
+        "tests/test_host_resources.py",
+        "tests/test_remote_verification.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -361,7 +380,8 @@
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/README.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -425,7 +445,10 @@
         "src/commentscope/product/contracts.py",
         "src/commentscope/product/web.py",
         "experiments/jev_argument_controls.py",
-        "experiments/jev_transfer_controls.py"
+        "experiments/jev_transfer_controls.py",
+        "src/commentscope/providers/remote_verification.py",
+        "src/commentscope/factory/remote_fact_records.py",
+        "experiments/remote_factory_pipeline.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -435,7 +458,8 @@
         "tests/test_decision_controls.py",
         "tests/test_scoped_factory_authorization.py",
         "tests/test_component_diagnostic_policy.py",
-        "tests/test_selective_agent_sources.py"
+        "tests/test_selective_agent_sources.py",
+        "tests/test_remote_verification.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -458,7 +482,8 @@
       "design_refs": [
         "docs/design/README.md",
         "docs/design/BASELINE.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     }
   ],
@@ -695,7 +720,7 @@
         "기존 argument-audit를 대체하는 opt-in J4 관측/host 비교와 Jev typed Decisions adapter를 먼저 오프라인 검증",
         "의미 판정 전체의 일괄 모델 교체와 자동 fallback은 채택하지 않고 각 component별 고정 비교 후 배정"
       ],
-      "selection": "12개 논리 계층과 J4-U/O/L/K/C 입력 경계, 역할별 deployment/route provenance, 불확실·실패·비용·threshold 정책을 설계한다. 모델 배정·실제 실행은 미채택이며 기본 split5와 기존 deployment를 유지한다.",
+      "selection": "기존 split5/GPT-5.2 경로와 Jev 비교를 보존한다. 최신 사용자 지시로 별도 opt-in 실행의 생성·대화는 GPT-5.2, 의미·논거·사실 검증은 GPT-6.1 Sol, 임베딩은 외부 API로 배정한다. 모델 품질 채택은 새 고정40건과 fresh G1~G3 증거를 요구하며 전체 결정 상태는 proposed로 유지한다.",
       "evidence": [
         {
           "kind": "offline",
@@ -713,7 +738,8 @@
       "design_refs": [
         "docs/design/DECISION_LAYERS.md",
         "docs/design/FACTORY.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     }
   ],
@@ -1110,6 +1136,12 @@
           "scope": "Selective progression: diagnostic failures remain failed; explicit record-and-continue does not approve runtime outputs or reset money. Verified-subset Agent compilation holds a whole unverified source, needs3verifiedpeers, retains common-required factual/core vetoes, and preserves the raw map/denominator. Ten focused regressions pass; previous53/44 tests pass with overlap. FreshG1-selective plan prepared, no new model call yet. FinalrequiredFactory526 tests pass (overlapping counts).",
           "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "All-HTTP Sol verification/remote fact receipts/embedding adapter and explicit stage registry implemented. Generation/runtime remain GPT-5.2; inherited money owner/cap/deadline and 60% selective policy preserved. New actual startup passed RAM2479MB but stopped before HTTP dispatch at C disk216326144 bytes <6GiB;0newpaidcalls/$0. New model accuracy remains unmeasured. Required offline Factory539 passed; final expanded remote/graph/fact/owner/bundle regression82 passed, including15 new tests (overlapping counts). This does not assert actual Sol accuracy.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "partial"
         }
       ],
       "required_evidence": [
@@ -1123,7 +1155,8 @@
         "docs/design/FACTORY.md",
         "docs/design/FACTORY_DELIVERY.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/JEV_AUDIT_INTEGRATION.md"
+        "docs/design/JEV_AUDIT_INTEGRATION.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -1154,7 +1187,8 @@
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/FACTORY.md",
-        "docs/design/JEV_AUDIT_INTEGRATION.md"
+        "docs/design/JEV_AUDIT_INTEGRATION.md",
+        "docs/design/REMOTE_VERIFICATION.md"
       ]
     },
     {
@@ -1566,8 +1600,20 @@
         "REQ-008",
         "REQ-010"
       ]
+    },
+    {
+      "spec_version": "commentscope-mvp-20261106-v14",
+      "date": "2026-11-06",
+      "reason": "사용자선택gpt6.1sol검증을역할별로적용하고로컬임베딩/NLI RAM병목을externalAPI로제거하는계약을먼저고정. 이전예산/실패기록/r5유지.",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ]
     }
   ],
-  "design_version": "commentscope-detailed-design-20261106-v10",
+  "design_version": "commentscope-detailed-design-20261106-v11",
   "design_document": "docs/design/README.md"
 }

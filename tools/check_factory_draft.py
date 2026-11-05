@@ -25,6 +25,7 @@ MODULES = (
     "test_argument_dependency_contract",
     "test_decision_controls",
     "test_jev_audit_integration",
+    "test_remote_verification",
     "test_scoped_factory_authorization",
     "test_component_diagnostic_policy",
     "test_selective_agent_sources",

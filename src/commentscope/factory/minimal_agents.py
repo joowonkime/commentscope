@@ -24,7 +24,7 @@ def relation(claim, source, evidence, trace):
             'span': span, 'verdict': 'supported', 'trace_id': trace, 'origin': 'local_model'}
 
 
-def _source_reasons(record,cid,core,verdicts,observed,runtime_scope):
+def _source_reasons(record,cid,core,verdicts,observed,runtime_scope,*,multilingual_facts=False):
     if record is None or cid not in record['candidate_ids']:return ['member_arguments_unassessed']
     reasons=[]
     if record['status']!='complete':reasons.append('member_arguments_incomplete')
@@ -43,10 +43,10 @@ def _source_reasons(record,cid,core,verdicts,observed,runtime_scope):
         if observed:verdict=verdicts.get(argument_observations.candidate_key(unit['id'],cid),
             verdicts.get(argument_observations.source_key(unit['id']),verdict))
         if verdict!='supported':reasons.append('argument_not_verified')
-        if unit['kind']=='fact' and record['source_language']!='en':reasons.append('fact_source_language_unsupported')
+        if unit['kind']=='fact' and record['source_language']!='en' and not multilingual_facts:reasons.append('fact_source_language_unsupported')
         if unit['kind']=='fact' and runtime_scope and runtime_scope['interpretation_scope']['world']!='actual':
             reasons.append('nonactual_factual_scope_unsupported')
-    if core is not None and core['output']['kind']=='fact' and record['source_language']!='en':
+    if core is not None and core['output']['kind']=='fact' and record['source_language']!='en' and not multilingual_facts:
         reasons.append('fact_source_language_unsupported')
     return sorted(set(reasons))
 
@@ -96,7 +96,8 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
         original_sids=sids;verified=[]
         for sid in original_sids:
             record=rr.get(sid)
-            failures=_source_reasons(record,cid,cr.get(cid),verdicts,observed,runtime_scope)
+            failures=_source_reasons(record,cid,cr.get(cid),verdicts,observed,runtime_scope,
+                multilingual_facts=model.get('kind')=='remote_llm' and model.get('language_scope')=='multilingual')
             if not failures:verified.append(sid);continue
             if source_policy=='all_members':reasons.extend(failures);continue
             source_holds.append({'candidate_id':cid,'source_id':sid,'reasons':failures})
