@@ -45,7 +45,8 @@ EXECUTORS = ('minimal-factory-executor-20261016-v1', 'minimal-factory-executor-2
              'minimal-factory-openrouter-executor-20261105-v18',
              'minimal-factory-openrouter-executor-20261106-v19',
              'minimal-factory-openrouter-executor-20261106-v20',
-             'minimal-factory-remote-verification-20261106-v1')
+             'minimal-factory-remote-verification-20261106-v1',
+             'minimal-factory-remote-verification-20261106-v2')
 
 
 def private(path):
@@ -73,7 +74,8 @@ def load_run(run):
                                     'minimal-factory-openrouter-executor-20261105-v18',
                                     'minimal-factory-openrouter-executor-20261106-v19',
                                     'minimal-factory-openrouter-executor-20261106-v20',
-                                    'minimal-factory-remote-verification-20261106-v1'):
+                                    'minimal-factory-remote-verification-20261106-v1',
+                                    'minimal-factory-remote-verification-20261106-v2'):
         run_origin(plan, run, attempt=1)
     if (plan['artifact_kind'] not in EXECUTORS
             or completion['execution_complete'] is not True or completion['plan_sha256'] != sha(run/'plan.json')
@@ -99,7 +101,8 @@ def _packet_for_run(run, plan, completion, snapshot, output, runtime):
     profile = acceptance.from_plan(plan)
     version = R5_VERSION if profile is not None else VERSION
     checks = output['agent_inputs']['bundle']['checks']
-    if plan.get('artifact_kind')=='minimal-factory-remote-verification-20261106-v1':
+    if plan.get('artifact_kind') in ('minimal-factory-remote-verification-20261106-v1',
+                                   'minimal-factory-remote-verification-20261106-v2'):
         from experiments.remote_factory_pipeline import replay_benchmark as replay_remote
         facts=replay_remote(Path(plan['fact_benchmark']).parent,plan,checks)
     else:

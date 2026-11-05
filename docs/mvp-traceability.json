@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261106-v14",
+  "spec_version": "commentscope-mvp-20261106-v15",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -344,7 +344,8 @@
         "src/commentscope/providers/host_resources.py",
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
-        "experiments/remote_factory_pipeline.py"
+        "experiments/remote_factory_pipeline.py",
+        "src/commentscope/providers/api_resources.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -357,7 +358,8 @@
         "tests/test_decision_controls.py",
         "tests/test_scoped_factory_authorization.py",
         "tests/test_host_resources.py",
-        "tests/test_remote_verification.py"
+        "tests/test_remote_verification.py",
+        "tests/test_api_resources.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -448,7 +450,8 @@
         "experiments/jev_transfer_controls.py",
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
-        "experiments/remote_factory_pipeline.py"
+        "experiments/remote_factory_pipeline.py",
+        "src/commentscope/providers/api_resources.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -459,7 +462,8 @@
         "tests/test_scoped_factory_authorization.py",
         "tests/test_component_diagnostic_policy.py",
         "tests/test_selective_agent_sources.py",
-        "tests/test_remote_verification.py"
+        "tests/test_remote_verification.py",
+        "tests/test_api_resources.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1142,6 +1146,12 @@
           "scope": "All-HTTP Sol verification/remote fact receipts/embedding adapter and explicit stage registry implemented. Generation/runtime remain GPT-5.2; inherited money owner/cap/deadline and 60% selective policy preserved. New actual startup passed RAM2479MB but stopped before HTTP dispatch at C disk216326144 bytes <6GiB;0newpaidcalls/$0. New model accuracy remains unmeasured. Required offline Factory539 passed; final expanded remote/graph/fact/owner/bundle regression82 passed, including15 new tests (overlapping counts). This does not assert actual Sol accuracy.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Separate versioned http_api RAM256MB/disk1GiB policy with64MiB next-record headroom and1GiB per-run artifact admission; preserves both old6GiB policies and resource/settlement interruption. Actual local stress stored1.9MB synthetic receipt through worker/SQLite/result/checkpoint/aggregate:19042633bytes total,0network calls. No Sol quality claim.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1612,8 +1622,12 @@
         "REQ-008",
         "REQ-010"
       ]
+    },
+    {
+      "spec_version": "commentscope-mvp-20261106-v15",
+      "reason": "사용자 요청: API 검증에 남아 있는 로컬 모델용 6GiB 디스크 기준을 분리한다. 기존 정책은 보존하고 API 디스크 floor1GiB·요청별 저장 여유64MiB·실행 산출물 검사1GiB를 명시적으로 동결한다. 모델/의미/r5/돈/종료시각은 변경하지 않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261106-v11",
+  "design_version": "commentscope-detailed-design-20261106-v12",
   "design_document": "docs/design/README.md"
 }
