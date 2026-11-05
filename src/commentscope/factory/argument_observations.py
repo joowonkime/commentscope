@@ -9,7 +9,12 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
 VERSION = 'source-argument-observations-20261102-v3'
-SPLIT = 'source-argument-observations-20261102-v5'
+LEGACY_SPLIT = 'source-argument-observations-20261102-v5'
+DEPENDENCY_SCOPED = 'source-argument-observations-20261105-v6'
+# The candidate failed a missing-premise live control; keep the existing default.
+SPLIT = LEGACY_SPLIT
+SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED)
+PROTOCOLS = (VERSION, *SPLIT_PROTOCOLS)
 CORE_VERSION = 'core-fidelity-observations-20261102-v1'
 CORE_CODED = 'core-fidelity-observations-20261102-v2'
 BASIS_CODES = ('normative_assertion', 'empirical_assertion', 'modal_possibility',
@@ -20,6 +25,25 @@ CODED_BASIS = '''\nThe basis field is a closed evidence category, not prose. Sel
 supplied basis code describing the source of this observation. Keep every kind,
 authorship, function, condition, entity, time and dependency check independent.
 A code does not approve any declaration or replace those checks.\n'''
+DEPENDENCY_RULES = {
+    'requires': 'unit -> necessary local factual premise',
+    'core_requires_for': 'factual unit -> core assertions requiring that fact',
+    'scope': 'factual_prerequisites_only',
+    'discourse_ownership_is_a_factual_dependency': False,
+}
+DEPENDENCY_SYSTEM = '''\nDECLARED_DEPENDENCIES is a factual-prerequisite graph, distinct from discourse ownership.
+requires names local FACT premises necessary for SOURCE_TARGET to hold.
+core_requires_for names core assertions that themselves require this FACT unit;
+it does not collect every supporter's personal reasons. A value or prediction
+cannot be a verified FACT prerequisite. OWNER_POSITION and ownership edges tell
+whose position a reason explains; that relation is not a requires edge.
+Do not reject empty factual links merely because a value reason explains a position.
+Empty links are faithful when no necessary factual premise is asserted.
+Still return no/uncertain for a missing or wrong necessary factual prerequisite,
+including one omitted or misclassified in UNIT_INVENTORY. Read ORIGINAL and the
+literal units independently; prior declarations are not proof. Do not invent
+external premises. Keep kind, ownership, source coverage and factual dependencies separate.
+'''
 SOURCE_SYSTEM = """Independently observe source declarations.
 Write each basis as one sentence of at most 120 characters. Do not quote or translate whole source sentences.
 Interpret ONLY TARGET, a literal source fragment whose boundaries are fixed.
@@ -160,7 +184,7 @@ def typed_props(t):
 
 
 def request(sources, tasks, *, protocol=VERSION):
-    if protocol not in (VERSION, SPLIT): raise ValueError('Unknown source observation protocol')
+    if protocol not in PROTOCOLS: raise ValueError('Unknown source observation protocol')
     old = {"data": {"SOURCES": sources, "TASKS": tasks}}
     sources=[{'ORIGINAL':deepcopy(s['ORIGINAL']), 'UNIT_INVENTORY':[span(u) for u in s['UNITS']]} for s in old['data']['SOURCES']]
     tasks=[];branches=[]
@@ -184,17 +208,21 @@ def request(sources, tasks, *, protocol=VERSION):
                          source_coverage=enum(('complete','incomplete','uncertain')),
                          dependency_fidelity=deepcopy(FID))
         props['basis']={'type':'string','minLength':1,'maxLength':240}
-        if protocol == SPLIT:
+        if protocol in SPLIT_PROTOCOLS:
             t.pop('LINK_TARGETS', None); props.pop('owner_relations', None)
             props['basis'] = enum(BASIS_CODES)
         tasks.append(t);branches.append(obj(props))
     system = SOURCE_SYSTEM
-    if protocol == SPLIT:
+    if protocol in SPLIT_PROTOCOLS:
         system += CODED_BASIS + '''Observe source declarations and coverage only.
 OWNER_POSITION establishes the ground's own parent for function/ownership.
 Candidate equivalence is checked in a separate request; no candidate target or
 owner_relations is supplied here. Do not perform that comparison in this task.'''
-    return {'system':system,'data':{'SOURCES':sources,'TASKS':tasks},
+    data={'SOURCES':sources,'TASKS':tasks}
+    if protocol == DEPENDENCY_SCOPED:
+        system+=DEPENDENCY_SYSTEM
+        data['DEPENDENCY_CONTRACT']=deepcopy(DEPENDENCY_RULES)
+    return {'system':system,'data':data,
             'schema':obj({'observations':arr({'anyOf':branches},len(tasks),len(tasks))}),
             'max_tokens':512+512*len(tasks)}
 
@@ -294,9 +322,9 @@ FUNCTIONS = {'core_restatement': 'position', 'additional_position': 'position',
 def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION, owner_checks=()):
     from commentscope.factory import source_arguments as sa
     from commentscope.factory import owner_observations as owners
-    if protocol not in (VERSION, SPLIT): raise ValueError('Unknown source observation protocol')
-    if protocol != SPLIT and owner_checks: raise ValueError('Separate owners require the split protocol')
-    selected_owners = owners.select(records, cores, tasks, owner_checks) if protocol == SPLIT else []
+    if protocol not in PROTOCOLS: raise ValueError('Unknown source observation protocol')
+    if protocol not in SPLIT_PROTOCOLS and owner_checks: raise ValueError('Separate owners require the split protocol')
+    selected_owners = owners.select(records, cores, tasks, owner_checks) if protocol in SPLIT_PROTOCOLS else []
     relevant = select_checks(records, cores, tasks, checks)
     lookup = {r['source']['id']: r for r in records}
     wire = {w['task_id']: (t, w) for t, w in zip(tasks, req['data']['TASKS'], strict=True)}
@@ -307,7 +335,7 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
         seen.add(row['task_id']); task, address = wire[row['task_id']]
         record = lookup[task['source_id']]
         if task['kind'] == 'coverage':
-            fields(row, 'task_id actual_source_language source_coverage dependency_fidelity basis'); basis(row, coded=protocol==SPLIT)
+            fields(row, 'task_id actual_source_language source_coverage dependency_fidelity basis'); basis(row, coded=protocol in SPLIT_PROTOCOLS)
             if row['actual_source_language'] not in ('en', 'other', 'uncertain') or row['source_coverage'] not in ('complete', 'incomplete', 'uncertain'):
                 raise ValueError('Unknown source coverage/language observation')
             guards = fidelity(row, ('dependency_fidelity',))
@@ -320,7 +348,7 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
                               'guards': sorted(set(guards)), 'basis': row['basis']})
             continue
         fields(row, 'task_id actual_kind time_ids entity_fidelity conditions_fidelity actual_authorship actual_function dependency_fidelity basis'+(' owner_relations' if protocol == VERSION else ''))
-        basis(row, coded=protocol==SPLIT)
+        basis(row, coded=protocol in SPLIT_PROTOCOLS)
         unit = next(u for u in record['units'] if u['id'] == task['task_id'])
         if row['actual_authorship'] not in ('asserted_or_endorsed', 'not_asserted', 'unclear') or row['actual_function'] not in (*set(FUNCTIONS.values()), 'uncertain'):
             raise ValueError('Unknown source authorship/function observation')
@@ -332,7 +360,7 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
         if row['actual_authorship'] == 'unclear' or row['actual_authorship'] != declared_authorship:
             guards.append('source_authorship_unverified')
         if row['actual_function'] != FUNCTIONS[unit['role']]: guards.append('source_function_unverified')
-        if protocol == SPLIT:
+        if protocol in SPLIT_PROTOCOLS:
             candidate_guards = {cid: owners.guards(record, unit, cid, selected_owners) for cid in unit['candidate_ids']}
         else:
             aliases = {a['id']: cid for a, cid in zip(address['LINK_TARGETS'], unit['candidate_ids'], strict=True)}
@@ -363,4 +391,4 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
             'request_sha256': digest(req), 'tasks': deepcopy(tasks), 'protocol': protocol,
             'response': deepcopy(result['output']), 'output_sha256': digest(result['output']),
             'core_checks': relevant, 'output': {'decisions': decisions},
-            **({'owner_checks': selected_owners} if protocol == SPLIT else {})}
+            **({'owner_checks': selected_owners} if protocol in SPLIT_PROTOCOLS else {})}

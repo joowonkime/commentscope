@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261105-v7",
+  "spec_version": "commentscope-mvp-20261105-v8",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-05",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "Cluster→Agent 실제경로G1을동일cycle에결합해준비했다. 기존최소6GiB 디스크보호규칙에현재호스트여유약2.5GiB가미달하여 모델호출0으로기동중단. 자원확보·현재장부/기한확인후같은동결G1재개. 프론트/새의미구조채택은미착수."
+    "hold_reason": "G1-v2는1Agent로실패. A2필수사실전제범위를명시한split6후보의고정4통제중3개실행:정상가치이유/올바른전제는통과했으나누락전제도yes로오승인해중단(2/3일치,오연결미실행). 추가$0.02356795,동일cycle차감1.76286145/잔여3.23713855,예약/미확정0. split6기본미채택,기존split5유지. freshG1/G2유료확대보류."
   },
   "requirements": [
     {
@@ -928,6 +928,18 @@
           "scope": "Cycle-bound Factory/host tests21 pass; required Factory482 pass including the new7. G1 frozen12-source plan prepared. All12/24/96/999 source request schemas/capacity checked without inference. Actual start stopped at existing low_host_disk guard; no checkpoint intent/model call. Not G1 quality approval.",
           "reference": "docs/design/FACTORY_DELIVERY.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "G1-v2 execution complete with15 candidates, mandatory5/voluntary3 valid support groups, but only1 compiledAgent/3 runtime turns. A normative reason in sourceB received dependency_fidelity=no, withholding mandatoryAgent.253 paid calls/$0.75937505,0unknown; not G1 admission.",
+          "reference": "docs/design/FACTORY_DELIVERY.md",
+          "result": "fail"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Dependency-scoped split6 candidate: fixed4 controls,3 actual requests,2 expected matches. Normal value reason and correct factual link accepted; missing necessary factual premise incorrectly accepted. Stopped before wrong-link control. Cost$0.02356795, same original$5 cycle; no freshG1 or G2. Candidate is opt-in and legacy split5 remains default.",
+          "reference": "docs/design/FACTORY_DELIVERY.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -1324,8 +1336,13 @@
       "date": "2026-11-05",
       "reason": "사용자가 프론트는아직없으며 그전에 cluster→Agent구조의완성을통해실제로작동해야한다고정정했다. 정식생성경로G1→실제댓글검증을우선한다.",
       "scope": "TASK005진행,011미착수. Factory실행도동일승인cycle의5달러/기존차감/기한에묶는다. 알려진S1/S2후보는보류,기존기본파이프라인/현재모델/정식품질기준유지. 프론트소스부재를새설계반복의이유로삼지않는다."
+    },
+    {
+      "date": "2026-11-05",
+      "reason": "실제G1에서정상가치이유1개의dependency거부로Agent전체가보류됐다. 필수사실전제와이유귀속의정의불일치를가설로명확화했으나통제에서누락전제가오승인됐다. 한사례개선을전체해결로승격하지않는다.",
+      "scope": "split6명시계약은미채택opt-in후보,split5기본/observed3재생보존. 4통제중3실행/2일치/누락실패후중단,오연결·freshG1·G2미실행. guard/r5/과거차감/원래5달러cycle/기한유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261105-v4",
+  "design_version": "commentscope-detailed-design-20261105-v5",
   "design_document": "docs/design/README.md"
 }
