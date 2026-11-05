@@ -67,6 +67,13 @@ class RemoteVerificationTests(unittest.TestCase):
         for value in mutations:
             with self.assertRaises(ValueError):remote.embedding_vectors(value,len(value['data']))
 
+    def test_embedding_accepts_provider_response_model_id_but_rejects_other_model_or_provider(self):
+        value=embedding();value.update(model='text-embedding-3-small',provider='OpenAI')
+        self.assertEqual(len(remote.embedding_vectors(value,1)[0]),1536)
+        for model,provider in [('text-embedding-3-large','OpenAI'),('text-embedding-3-small','Azure')]:
+            changed=deepcopy(value);changed.update(model=model,provider=provider)
+            with self.assertRaises(ValueError):remote.embedding_vectors(changed,1)
+
     def budget(self,response):
         directory=tempfile.TemporaryDirectory();self.addCleanup(directory.cleanup)
         ledger=SpendLedger(Path(directory.name)/'spend.sqlite','test',maximum_usd='50')

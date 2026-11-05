@@ -102,5 +102,11 @@ G1→실제24→별도96과 전체Agent/원문 검토를 유지한다. 확장 �
 부정: 디스크 floor/다음 기록 여유 부족·실행 기록 초과·관측 실패는 호출 전 차단한다.
 과거6GiB plan은 새 정책으로 이름만 바꾸어 재개하지 않고 새 plan·코드·정책으로 동결한다.
 
+실제 첫 임베딩 응답은 OpenAI provider와1536차원/2입력/28token이 맞았으나 model이 provider 표기
+`text-embedding-3-small`이어서 v1 adapter의 vendor-prefixed ID 검사에서 중단했다. 비용$0.00000056은
+응답 검증 전에 정상 정산됐다. embedding deployment0.2는 두 정확한 ID(`openai/text-embedding-3-small`,
+`text-embedding-3-small`)만 허용한다. 다른 모델/반환된 다른 provider·차원/index/usage 검사는 유지한다.
+이전 실패와 비용은 보존하며 새 역할 binding/plan의 첫$0.50 한도에서 이미 쓴 금액을 뺀다.
+
 오프라인 저장 스트레스:1,900,000byte payload를 worker → SQLite → request/result → checkpoint → aggregate로 저장한
 합계는19,042,633byte(약18.2MiB)였다. 요청당64MiB 여유 안에 들어왔으며 실제 네트워크/과금은0건이다.

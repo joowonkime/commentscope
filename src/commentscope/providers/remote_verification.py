@@ -21,7 +21,8 @@ SOL = {'version':'openrouter-chat-completions-0.1', 'model':'openai/gpt-6.1-sol'
        'schema_policy':'openai-strict-schema-20261104-v1',
        'provider':{'only':['openai'], 'max_price':{'prompt':2,'completion':10,'request':0}},
        'billing_ceiling':{'prompt':5,'completion':15,'request':0}}
-EMBEDDING = {'version':'openrouter-embeddings-0.1', 'model':'openai/text-embedding-3-small',
+EMBEDDING = {'version':'openrouter-embeddings-0.2', 'model':'openai/text-embedding-3-small',
+             'response_models':['openai/text-embedding-3-small','text-embedding-3-small'],
              'context':8192,'dimensions':1536,'call_seconds':180,
              'provider':{'only':['openai'],'allow_fallbacks':False,
                          'max_price':{'prompt':0.02,'completion':0,'request':0}}}
@@ -100,7 +101,8 @@ def batches(texts):
 
 
 def embedding_vectors(response, count):
-    if response.get('model')!=EMBEDDING['model'] or len(response.get('data',[]))!=count:
+    if (response.get('model') not in EMBEDDING['response_models'] or len(response.get('data',[]))!=count
+            or response.get('provider') not in (None,'OpenAI')):
         raise ValueError('Embedding model/count changed')
     found={}
     for row in response['data']:
