@@ -22,6 +22,7 @@ MODULES = (
     "test_argument_audit_wire",
     "test_argument_audit_subjects",
     "test_argument_observations",
+    "test_argument_dependency_contract",
     "test_owner_observations",
     "test_comment_utilization",
     "test_acceptance_r5",
