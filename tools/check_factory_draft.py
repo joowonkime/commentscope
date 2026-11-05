@@ -26,6 +26,8 @@ MODULES = (
     "test_decision_controls",
     "test_jev_audit_integration",
     "test_scoped_factory_authorization",
+    "test_component_diagnostic_policy",
+    "test_selective_agent_sources",
     "test_owner_observations",
     "test_comment_utilization",
     "test_acceptance_r5",

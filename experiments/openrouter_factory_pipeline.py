@@ -41,7 +41,7 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261106-v19'
+VERSION = 'minimal-factory-openrouter-executor-20261106-v20'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -73,7 +73,7 @@ def archive_sources(directory, manifest):
         target.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(path, target)
 
 
-def check_admission(gate, deployment, admission_file, materials, policy, *, discovery_mode='literal', argument_audit_protocol=None):
+def check_admission(gate, deployment, admission_file, materials, policy, *, discovery_mode='literal', argument_audit_protocol=None, allow_component_warnings=False, agent_source_policy='all_members'):
     prior_admission(gate, deployment, admission_file, discovery_mode, 'raw')
     required = {'G1': (), 'G2': ('G1',), 'G3': ('G1', 'G2'), 'G4': ('G1', 'G2', 'G3')}[gate]
     if not required: return
@@ -81,6 +81,8 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
     for stage in required:
         previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
+                or previous.get('agent_source_policy')!=agent_source_policy
+                or previous.get('component_diagnostic_policy') != ('record_and_continue' if allow_component_warnings else 'all_controls_pass')
                 or previous.get('argument_audit_protocol') != argument_audit_protocol
                 or previous.get('decisions_deployment') != (od.DEPLOYMENT if argument_audit_protocol else None)
                 or previous['extraction_protocol'] != (compact_claims.PROPOSALS if discovery_mode == 'free' else None)
@@ -111,20 +113,21 @@ def fixed_scope(gate):
     return snapshot, list(scope), path
 
 
-def transfer_admission(binding):
+def transfer_admission(binding,*,allow_component_warnings=False):
     from experiments.jev_transfer_controls import replay_report
     directory=Path(binding['authorization']['transfer_directory'])
-    report=replay_report(directory)
-    if not report['all_passed'] or read_json(directory/'plan.json')['authorization']!=binding:
+    report=replay_report(directory,historical_diagnostic=allow_component_warnings)
+    if (not report['all_passed'] and not allow_component_warnings) or read_json(directory/'plan.json')['authorization']!=binding:
         raise ValueError('All frozen transfer controls must pass in the same authorization')
     return {str((directory/name).resolve()):sha(directory/name) for name in ('plan.json','checks.json','report.json')}
 
 
-def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal', cycle_file=None, scope_file=None, argument_audit_protocol=None):
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal', cycle_file=None, scope_file=None, argument_audit_protocol=None, allow_component_warnings=False, agent_source_policy='all_members'):
     private(directory); private(materials_file)
     if directory.exists(): raise ValueError('New remote Factory directory required')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
     if discovery_mode not in ('literal', 'free'): raise ValueError('Unknown remote discovery mode')
+    if agent_source_policy not in ('all_members','verified_subset'):raise ValueError('Unknown Agent source policy')
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
@@ -133,7 +136,9 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             or scope_file and (cycle_file is not None or discovery_mode!='free')):
         raise ValueError('Jev integration requires its scoped authorization and free discovery')
     authorization=scoped_auth.bind(scope_file,deployment,policy,maximum_cost_usd,gate) if scope_file else None
-    transfer_inputs=transfer_admission(authorization) if authorization else {}
+    if type(allow_component_warnings) is not bool or allow_component_warnings and authorization is None:
+        raise ValueError('Component warnings require explicit scoped execution')
+    transfer_inputs=transfer_admission(authorization,allow_component_warnings=allow_component_warnings) if authorization else {}
     cycle=None
     if cycle_file is not None:
         private(cycle_file)
@@ -142,7 +147,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
         raise ValueError('Pinned classifier, model files and evidence required')
     if admission_file is not None: private(admission_file)
-    check_admission(gate, deployment, admission_file, materials, policy, discovery_mode=discovery_mode, argument_audit_protocol=argument_audit_protocol)
+    check_admission(gate, deployment, admission_file, materials, policy, discovery_mode=discovery_mode, argument_audit_protocol=argument_audit_protocol,allow_component_warnings=allow_component_warnings,agent_source_policy=agent_source_policy)
     snapshot, scope, original_path = fixed_scope(gate)
     provider = provider_preflight(deployment)
     fact_checks.live(snapshot.usage.expires_at)
@@ -165,6 +170,8 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
             'execution_cycle':cycle,
             'scoped_authorization':authorization,'argument_audit_protocol':argument_audit_protocol,
+            'component_diagnostic_policy':'record_and_continue' if allow_component_warnings else 'all_controls_pass',
+            'agent_source_policy':agent_source_policy,
             'decisions_deployment':deepcopy(od.DEPLOYMENT) if argument_audit_protocol else None,
             'extraction_protocol': compact_claims.PROPOSALS if discovery_mode == 'free' else None,
             'assertion_equivalence_protocol': candidate_consolidation.BILATERAL if discovery_mode == 'free' else None,
@@ -199,8 +206,13 @@ def validate(directory, plan):
         raise ValueError('Frozen remote plan changed')
     check_cycle(plan,allow_expired=True)
     scoped_auth.check(plan,allow_expired=True)
+    if plan.get('component_diagnostic_policy') not in ('record_and_continue','all_controls_pass'):
+        raise ValueError('Frozen component diagnostic policy changed')
+    if plan.get('agent_source_policy') not in ('all_members','verified_subset'):raise ValueError('Frozen Agent source policy changed')
+    allow_component_warnings=plan['component_diagnostic_policy']=='record_and_continue'
+    if allow_component_warnings and not plan.get('scoped_authorization'):raise ValueError('Component warnings require the original money owner')
     if plan.get('scoped_authorization'):
-        if any(plan['inputs'].get(p)!=h for p,h in transfer_admission(plan['scoped_authorization']).items()):
+        if any(plan['inputs'].get(p)!=h for p,h in transfer_admission(plan['scoped_authorization'],allow_component_warnings=allow_component_warnings).items()):
             raise ValueError('Transfer admission evidence changed')
     if (plan.get('argument_audit_protocol') not in (None,argument_observations.JEV_SPLIT)
             or bool(plan.get('scoped_authorization'))!=bool(plan.get('argument_audit_protocol'))
@@ -235,7 +247,7 @@ def validate(directory, plan):
         raise ValueError('Frozen remote code, input or model changed')
     material = {k: plan[k] for k in ('classifier', 'model_files', 'documents', 'selections')}
     admission_file = Path(plan['admission_file']) if plan['admission_file'] is not None else None
-    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'], discovery_mode=plan['discovery_mode'],argument_audit_protocol=plan.get('argument_audit_protocol'))
+    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'], discovery_mode=plan['discovery_mode'],argument_audit_protocol=plan.get('argument_audit_protocol'),allow_component_warnings=allow_component_warnings,agent_source_policy=plan['agent_source_policy'])
     expected_snapshot, expected_scope, original_path = fixed_scope(plan['gate'])
     expected_path = directory/'snapshot.json' if plan['gate'] == 'G1' else original_path
     if (Path(plan['snapshot']).resolve() != expected_path.resolve()
@@ -369,7 +381,8 @@ def run(directory):
                     model=plan['classifier'], documents=plan['documents'], selections=plan['selections'],
                     scope_ids=plan['scope_ids'], save=save, discovery_mode=plan['discovery_mode'],
                     membership_mode=plan['membership_mode'], verification_contract=plan['verification_contract'],
-                    extraction_protocol=plan['extraction_protocol'],argument_audit_protocol=plan.get('argument_audit_protocol'))
+                    extraction_protocol=plan['extraction_protocol'],argument_audit_protocol=plan.get('argument_audit_protocol'),
+                    agent_source_policy=plan['agent_source_policy'])
                 save('output', output)
                 runtime = runtime_probe(output['agent_inputs']['bundle'], CheckedRunner(),
                     save_turn=lambda row: save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'], row))
@@ -401,6 +414,8 @@ def main(argv=None):
     p.add_argument('--cycle-file', type=Path)
     p.add_argument('--scope-file', type=Path)
     p.add_argument('--jev-argument-dependencies', action='store_true')
+    p.add_argument('--allow-component-warnings', action='store_true')
+    p.add_argument('--agent-source-policy', choices=['all_members','verified_subset'], default='all_members')
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
     p.add_argument('--key-file',type=Path)
@@ -410,7 +425,8 @@ def main(argv=None):
             plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
                            read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
                            admission_file=args.admission_file, discovery_mode=args.discovery_mode,cycle_file=args.cycle_file,
-                           scope_file=args.scope_file,argument_audit_protocol=argument_observations.JEV_SPLIT if args.jev_argument_dependencies else None)
+                           scope_file=args.scope_file,argument_audit_protocol=argument_observations.JEV_SPLIT if args.jev_argument_dependencies else None,
+                           allow_component_warnings=args.allow_component_warnings,agent_source_policy=args.agent_source_policy)
             result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                       'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
         else:

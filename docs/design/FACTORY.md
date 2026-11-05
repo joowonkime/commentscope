@@ -1,6 +1,6 @@
 # Factory 상세 설계
 
-설계 `commentscope-detailed-design-20261106-v9`, DEC-001/006, REQ-001/002/003/008.
+설계 `commentscope-detailed-design-20261106-v10`, DEC-001/006, REQ-001/002/003/008.
 전체 구조는 **구현 후보 계약**이다. S1/S2의 typed 검토·source record는 첫 opt-in 구현이며,
 나머지 후보/관계/논거 교체는 미구현이다. 이전 기준 코드는 [기준선](BASELINE.md)에 있다.
 기존 r5 합격 기준은 변경하지 않는다. source 해석의 재사용과 지지 승인은 별개다.

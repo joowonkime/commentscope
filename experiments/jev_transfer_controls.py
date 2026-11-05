@@ -23,6 +23,9 @@ from experiments.openrouter_factory_probe import private,key_metadata,validate_s
 
 VERSION='jev-transfer-experiment-20261106-v2'
 FIXTURE=Path('tests/fixtures/jev-transfer-controls.json')
+SEMANTIC_FILES=('src/commentscope/factory/argument_dependencies.py',
+    'src/commentscope/factory/dependency_decisions.py','src/commentscope/factory/automatic_contract.py',
+    'src/commentscope/providers/openrouter_decisions.py')
 
 
 def assess(case,checks):
@@ -82,13 +85,20 @@ def prepare(directory,scope_file):
     return {'prepared':str(directory),'sources':len(fixture['sources']),'maximum_paid_calls':len(requests),'maximum_new_usd':'0.20'}
 
 
-def validate(directory,*,allow_expired=False):
+def validate(directory,*,allow_expired=False,historical_diagnostic=False):
     plan=read_json(directory/'plan.json');run_origin(plan,directory,attempt=1)
-    if (plan['artifact_kind']!=VERSION or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
-            or plan.get('workload')!='remote_decisions_only' or plan.get('resource_policy')!=host_resources.HTTP_ONLY_POLICY
-            or plan['code_sha256']!=source_code_hashes() or any(sha(p)!=v for p,v in plan['inputs'].items())
+    allowed=(VERSION,'jev-transfer-experiment-20261106-v1') if historical_diagnostic else (VERSION,)
+    if (plan['artifact_kind'] not in allowed or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
+            or any(sha(p)!=v for p,v in plan['inputs'].items())
             or plan['fixture']!=read_json(FIXTURE) or plan['maximum_new_usd']!='0.20'):
         raise ValueError('Frozen transfer code/input changed')
+    if plan['artifact_kind']==VERSION and (plan.get('workload')!='remote_decisions_only'
+            or plan.get('resource_policy')!=host_resources.HTTP_ONLY_POLICY):raise ValueError('Frozen workload changed')
+    if historical_diagnostic:
+        if not (directory/'report.json').exists():raise ValueError('Only completed diagnostics can be read historically')
+        if any(plan['code_sha256'].get(p)!=sha(p) or sha(directory/'frozen-code'/p)!=sha(p) for p in SEMANTIC_FILES):
+            raise ValueError('Diagnostic semantic contract changed')
+    elif plan['code_sha256']!=source_code_hashes():raise ValueError('Frozen transfer code/input changed')
     auth.guard(plan['authorization']['authorization'],allow_expired=allow_expired)
     expected={od.wire_sha256(p,od.DEPLOYMENT):p for c in plan['fixture']['sources']
         for t in deps.tasks(c['record'],c['cores']) for p in deps.requests(t)}
@@ -96,8 +106,8 @@ def validate(directory,*,allow_expired=False):
     return plan
 
 
-def replay_report(directory):
-    plan=validate(directory,allow_expired=True);report=read_json(directory/'report.json')
+def replay_report(directory,*,historical_diagnostic=False):
+    plan=validate(directory,allow_expired=True,historical_diagnostic=historical_diagnostic);report=read_json(directory/'report.json')
     checks=read_json(directory/'checks.json')
     rows=[assess(case,[c for c in checks if c['task']['source_id']==case['id']]) for case in plan['fixture']['sources']
           if any(c['task']['source_id']==case['id'] for c in checks)]

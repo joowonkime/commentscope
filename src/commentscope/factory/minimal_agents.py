@@ -24,7 +24,36 @@ def relation(claim, source, evidence, trace):
             'span': span, 'verdict': 'supported', 'trace_id': trace, 'origin': 'local_model'}
 
 
-def prepare(snapshot, candidates, memberships, records, cores, audits, *, model, documents=(), checks=(), _draft_single_source=False):
+def _source_reasons(record,cid,core,verdicts,observed,runtime_scope):
+    if record is None or cid not in record['candidate_ids']:return ['member_arguments_unassessed']
+    reasons=[]
+    if record['status']!='complete':reasons.append('member_arguments_incomplete')
+    if record['dependency_status']!='complete':reasons.append('member_dependencies_unresolved')
+    if verdicts.get('AC'+digest(record))!='supported':reasons.append('member_completeness_not_verified')
+    selected=[u for u in record['units'] if cid in u['candidate_ids'] and u.get('runtime_exposure')!='scope_annotation_only']
+    by_local={u['local_id']:u for u in record['units']};expanded={u['local_id']:u for u in selected}
+    def include(lid):
+        expanded[lid]=by_local[lid]
+        for dep in by_local[lid]['requires']:
+            if dep not in expanded:include(dep)
+    for unit in selected:include(unit['local_id'])
+    for unit in expanded.values():
+        if unit['kind']=='uncertain':reasons.append('argument_type_uncertain')
+        verdict=verdicts.get(unit['id'])
+        if observed:verdict=verdicts.get(argument_observations.candidate_key(unit['id'],cid),
+            verdicts.get(argument_observations.source_key(unit['id']),verdict))
+        if verdict!='supported':reasons.append('argument_not_verified')
+        if unit['kind']=='fact' and record['source_language']!='en':reasons.append('fact_source_language_unsupported')
+        if unit['kind']=='fact' and runtime_scope and runtime_scope['interpretation_scope']['world']!='actual':
+            reasons.append('nonactual_factual_scope_unsupported')
+    if core is not None and core['output']['kind']=='fact' and record['source_language']!='en':
+        reasons.append('fact_source_language_unsupported')
+    return sorted(set(reasons))
+
+
+def prepare(snapshot, candidates, memberships, records, cores, audits, *, model, documents=(), checks=(), _draft_single_source=False, source_policy='all_members'):
+    if source_policy not in ('all_members','verified_subset') or _draft_single_source and source_policy!='all_members':
+        raise ValueError('Explicit supported Agent source policy required')
     mapped = mm.assemble_map(snapshot, candidates, memberships)
     fact_checks.model_identity(model)
     members = {p['id']: p['supported_canonical_ids'] for p in mapped['opinion_map']['perspectives']}
@@ -49,7 +78,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
                 or sa.validate_core(core) != core):
             raise ValueError('Core declaration differs from final candidate')
         cr[cid] = core
-    claims = {}; relations = {}; sources = {}; prepared = []; holds = []; runtime_scopes = {}; source_contexts = {}
+    claims = {}; relations = {}; sources = {}; prepared = []; holds = []; runtime_scopes = {}; source_contexts = {};source_holds=[]
     for cid, candidate in cs.items():
         sids = members[cid]; reasons = []
         runtime_scope=cr.get(cid,{}).get('runtime_scope')
@@ -64,36 +93,21 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
         if cid in cr: reasons.extend(cr[cid].get('hold_reasons', []))
         if observed and cid in cr and verdicts.get(argument_observations.core_key(cid)) != 'supported':
             reasons.append('core_fidelity_not_verified')
-        for sid in sids:
-            record = rr.get(sid)
-            if record is None or cid not in record['candidate_ids']:
-                reasons.append('member_arguments_unassessed'); continue
-            if record['status'] != 'complete': reasons.append('member_arguments_incomplete')
-            if record['dependency_status'] != 'complete': reasons.append('member_dependencies_unresolved')
-            if verdicts.get('AC'+digest(record)) != 'supported': reasons.append('member_completeness_not_verified')
-            selected = [u for u in record['units'] if cid in u['candidate_ids'] and u.get('runtime_exposure')!='scope_annotation_only']
-            by_local = {u['local_id']: u for u in record['units']}
-            expanded = {u['local_id']: u for u in selected}
-            def include(lid):
-                expanded[lid] = by_local[lid]
-                for dep in by_local[lid]['requires']:
-                    if dep not in expanded: include(dep)
-            for unit in selected: include(unit['local_id'])
-            for unit in expanded.values():
-                if unit['kind'] == 'uncertain': reasons.append('argument_type_uncertain')
-                verdict = verdicts.get(unit['id'])
-                if observed:
-                    verdict = verdicts.get(argument_observations.candidate_key(unit['id'], cid),
-                        verdicts.get(argument_observations.source_key(unit['id']), verdict))
-                if verdict != 'supported': reasons.append('argument_not_verified')
-                if unit['kind'] == 'fact' and record['source_language'] != 'en':
-                    reasons.append('fact_source_language_unsupported')
-                if unit['kind']=='fact' and runtime_scope and runtime_scope['interpretation_scope']['world']!='actual':
-                    reasons.append('nonactual_factual_scope_unsupported')
-            if cid in cr and cr[cid]['output']['kind'] == 'fact' and record['source_language'] != 'en':
-                reasons.append('fact_source_language_unsupported')
+        original_sids=sids;verified=[]
+        for sid in original_sids:
+            record=rr.get(sid)
+            failures=_source_reasons(record,cid,cr.get(cid),verdicts,observed,runtime_scope)
+            if not failures:verified.append(sid);continue
+            if source_policy=='all_members':reasons.extend(failures);continue
+            source_holds.append({'candidate_id':cid,'source_id':sid,'reasons':failures})
+            core_required=(cid in cr and cr[cid]['output']['kind']=='fact'
+                or record is not None and any(cid in u['core_requires_for'] for u in record['units']))
+            if core_required:reasons.extend([*failures,'core_required_source_held'])
+        if source_policy=='verified_subset':
+            sids=verified
+            if len(sids)<3:reasons.append('fewer_than_three_verified_core_sources')
         if reasons:
-            holds.append({'candidate_id': cid, 'reasons': sorted(set(reasons)), 'source_ids': sids})
+            holds.append({'candidate_id': cid, 'reasons': sorted(set(reasons)), 'source_ids': original_sids})
             continue
         core = {'id': cid+':C', 'text': candidate['text'], 'kind': cr[cid]['output']['kind'],
                 'scope': deepcopy(cr[cid]['output']['scope']), 'requires': []}
@@ -140,5 +154,6 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     if _draft_single_source and compiled['profiles']:
         raise ValueError('A source draft must never compile into an exposed Agent')
     return {'artifact_kind': VERSION, 'map': mapped, 'bundle': bundle, 'compiled': compiled,
+            **({'source_policy':source_policy,'source_holds':source_holds} if source_policy!='all_members' else {}),
             'argument_holds': holds, 'source_arguments_sha256': digest(records),
             'quality_gate_passed': False, 'runtime_verified': False}
