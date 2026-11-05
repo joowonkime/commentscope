@@ -113,23 +113,24 @@ class Client:
         return json.loads(body)
 
 
-class PaidDecisions:
-    """Use the existing money owner plus a non-resetting first-trial subcap."""
+class DecisionsBudget:
+    """Shared reservation/settlement for a caller's immutable money owner."""
     def __init__(self,base,ledger,*,plan_sha256,deployment,spend_scope_sha256,parent_limit_usd,
-                 opening_scope_charge_usd,trial_limit_usd,paid_provider,key_metadata):
+                 opening_scope_charge_usd,additional_limit_usd,paid_provider,key_metadata):
         identity(plan_sha256);identity(spend_scope_sha256)
         self.base=base;self.ledger=ledger;self.plan_sha=plan_sha256;self.deployment=validate(deployment)
         self.scope=spend_scope_sha256;self.parent_limit=parent_limit_usd
-        self.opening=units(opening_scope_charge_usd);self.trial_limit=units(trial_limit_usd)
-        if not 0<self.trial_limit<=units('0.10'):raise ValueError('First-trial subcap exceeds authorization')
+        self.opening=units(opening_scope_charge_usd);self.limit=units(additional_limit_usd)
+        if not 0<self.limit<=units(parent_limit_usd) or self.opening>=units(parent_limit_usd):
+            raise ValueError('Typed subcap must fit its existing monetary owner')
         self.paid_provider=paid_provider;self.metadata=key_metadata
 
     def call(self,payload,plan_sha,*,timeout_seconds,provider):
         if plan_sha!=self.plan_sha or provider!=self.paid_provider:raise ValueError('Unbound typed call')
         validate_request(payload,self.deployment)
         reserve=reservation(self.deployment);charged=units(self.ledger.summary(plan_sha256=self.scope)['charged_usd'])
-        if charged<self.opening or charged-self.opening+units(reserve)>self.trial_limit:
-            raise BudgetExhausted('Original scope charge cannot fit the fixed trial subcap')
+        if charged<self.opening or charged-self.opening+units(reserve)>self.limit:
+            raise BudgetExhausted('Original scope charge cannot fit the fixed typed subcap')
         metadata=self.metadata()
         call_id=self.ledger.reserve(self.scope,wire_sha256(payload,self.deployment),reserve,run_limit_usd=self.parent_limit,
                                    key_remaining_usd=metadata['limit_remaining'])
@@ -143,3 +144,11 @@ class PaidDecisions:
         self.ledger.finish(call_id,cost)
         # Semantic/schema/model validation happens after durable raw accounting.
         return response
+
+
+class PaidDecisions(DecisionsBudget):
+    """The original first-trial entry point retains its strict $0.10 bound."""
+    def __init__(self,base,ledger,*,trial_limit_usd,**kwargs):
+        if not 0<units(trial_limit_usd)<=units('0.10'):
+            raise ValueError('First-trial subcap exceeds authorization')
+        super().__init__(base,ledger,additional_limit_usd=trial_limit_usd,**kwargs)

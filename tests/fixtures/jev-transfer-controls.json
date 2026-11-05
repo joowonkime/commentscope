@@ -1,0 +1,459 @@
+{
+  "version": "jev-transfer-controls-20261106-v1",
+  "evaluation": "unseen_before_first_execution; fixed expectations outside model inputs",
+  "sources": [
+    {
+      "id": "T1",
+      "record": {
+        "source": {
+          "id": "T1",
+          "text": "I support later library hours because equal access matters.",
+          "parent": null
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "I support later library hours",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 29,
+                "text": "I support later library hours"
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "because equal access matters.",
+            "evidence": [
+              {
+                "start": 30,
+                "end": 59,
+                "text": "because equal access matters."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "Libraries should stay open later."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "value",
+        "U2": "value"
+      },
+      "expected_authorship": {
+        "U1": "asserted",
+        "U2": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": []
+      },
+      "expected_core": {
+        "C1": []
+      }
+    },
+    {
+      "id": "T2",
+      "record": {
+        "source": {
+          "id": "T2",
+          "text": "나는 무료 급식을 지지한다. 공정함이 중요하기 때문이다.",
+          "parent": null
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "나는 무료 급식을 지지한다.",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 15,
+                "text": "나는 무료 급식을 지지한다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "공정함이 중요하기 때문이다.",
+            "evidence": [
+              {
+                "start": 16,
+                "end": 31,
+                "text": "공정함이 중요하기 때문이다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "무료 급식을 제공해야 한다."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "value",
+        "U2": "value"
+      },
+      "expected_authorship": {
+        "U1": "asserted",
+        "U2": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": []
+      },
+      "expected_core": {
+        "C1": []
+      }
+    },
+    {
+      "id": "T3",
+      "record": {
+        "source": {
+          "id": "T3",
+          "text": "My neighbor says 'the bridge is unsafe.' I support an inspection.",
+          "parent": {
+            "text": "The bridge failed a test.",
+            "role": "parent_context_only"
+          }
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "the bridge is unsafe.",
+            "evidence": [
+              {
+                "start": 18,
+                "end": 39,
+                "text": "the bridge is unsafe."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "I support an inspection.",
+            "evidence": [
+              {
+                "start": 41,
+                "end": 65,
+                "text": "I support an inspection."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "The bridge should be inspected."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "fact",
+        "U2": "value"
+      },
+      "expected_authorship": {
+        "U1": "not_asserted",
+        "U2": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": []
+      },
+      "expected_core": {
+        "C1": []
+      }
+    },
+    {
+      "id": "T4",
+      "record": {
+        "source": {
+          "id": "T4",
+          "text": "I support night buses only if the city publishes a safety plan.",
+          "parent": null
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "I support night buses",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 21,
+                "text": "I support night buses"
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "only if the city publishes a safety plan.",
+            "evidence": [
+              {
+                "start": 22,
+                "end": 63,
+                "text": "only if the city publishes a safety plan."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "The city should offer night buses only if it publishes a safety plan."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "value"
+      },
+      "expected_authorship": {
+        "U1": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": []
+      },
+      "expected_core": {
+        "C1": []
+      }
+    },
+    {
+      "id": "T5",
+      "record": {
+        "source": {
+          "id": "T5",
+          "text": "Container N has zero apples. Container S has six apples. Therefore container N has no apples.",
+          "parent": null
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "Container N has zero apples.",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 28,
+                "text": "Container N has zero apples."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": [
+              "C"
+            ]
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "Container S has six apples.",
+            "evidence": [
+              {
+                "start": 29,
+                "end": 56,
+                "text": "Container S has six apples."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U3",
+            "local_id": "U3",
+            "text": "Therefore container N has no apples.",
+            "evidence": [
+              {
+                "start": 57,
+                "end": 93,
+                "text": "Therefore container N has no apples."
+              }
+            ],
+            "requires": [
+              "U1"
+            ],
+            "core_requires_for": [
+              "C"
+            ]
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "Container N has no apples."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "fact",
+        "U2": "fact",
+        "U3": "fact"
+      },
+      "expected_authorship": {
+        "U1": "asserted",
+        "U2": "asserted",
+        "U3": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": [],
+        "U3": [
+          "U1"
+        ]
+      },
+      "expected_core": {
+        "C1": [
+          "U1",
+          "U3"
+        ]
+      }
+    },
+    {
+      "id": "T6",
+      "record": {
+        "source": {
+          "id": "T6",
+          "text": "동쪽 문은 잠겨 있다. 서쪽 문은 열려 있다. 그래서 동쪽 문은 잠긴 상태다.",
+          "parent": null
+        },
+        "candidate_ids": [
+          "C"
+        ],
+        "units": [
+          {
+            "id": "U1",
+            "local_id": "U1",
+            "text": "동쪽 문은 잠겨 있다.",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 12,
+                "text": "동쪽 문은 잠겨 있다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": [
+              "C"
+            ]
+          },
+          {
+            "id": "U2",
+            "local_id": "U2",
+            "text": "서쪽 문은 열려 있다.",
+            "evidence": [
+              {
+                "start": 13,
+                "end": 25,
+                "text": "서쪽 문은 열려 있다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "U3",
+            "local_id": "U3",
+            "text": "그래서 동쪽 문은 잠긴 상태다.",
+            "evidence": [
+              {
+                "start": 26,
+                "end": 43,
+                "text": "그래서 동쪽 문은 잠긴 상태다."
+              }
+            ],
+            "requires": [
+              "U1"
+            ],
+            "core_requires_for": [
+              "C"
+            ]
+          }
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "C",
+            "text": "동쪽 문은 잠긴 상태다."
+          }
+        }
+      ],
+      "expected_kinds": {
+        "U1": "fact",
+        "U2": "fact",
+        "U3": "fact"
+      },
+      "expected_authorship": {
+        "U1": "asserted",
+        "U2": "asserted",
+        "U3": "asserted"
+      },
+      "expected_local": {
+        "U1": [],
+        "U2": [],
+        "U3": [
+          "U1"
+        ]
+      },
+      "expected_core": {
+        "C1": [
+          "U1",
+          "U3"
+        ]
+      }
+    }
+  ]
+}

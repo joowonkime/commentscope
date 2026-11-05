@@ -16,10 +16,15 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     from commentscope.factory import compact_claims
+    from commentscope.factory import argument_observations
+    if argument_audit_protocol is not None and (argument_audit_protocol!=argument_observations.JEV_SPLIT
+            or (discovery_mode,membership_mode)!=('free','raw') or extraction_protocol not in compact_claims.INDEPENDENT_CONTEXT
+            or not callable(getattr(runner,'decide',None))):
+        raise ValueError('Jev graph audit requires explicit free/raw protocol and typed runner')
     if extraction_protocol is not None and (discovery_mode != 'free' or extraction_protocol not in compact_claims.VERSIONS):
         raise ValueError('Compact extraction requires its explicit free-discovery protocol')
     if type(review_interpretations) is not bool or (review_interpretations and
@@ -52,6 +57,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                              verification_contract=verification_contract, schedule=SCHEDULE,
                              extraction_protocol=extraction_protocol, review_interpretations=review_interpretations,
                              source_review_protocol=source_review_protocol)
+    execution.argument_audit_protocol=argument_audit_protocol
     errors, holds, capacity = execution.errors, execution.holds, execution.capacity
     # Immutable syntax exists before any generated candidate or argument. This
     # artifact is not semantic approval. Argument text and ownership below must
@@ -93,6 +99,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         save('contextual-engine',engine.diagnostics())
     return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
             'canonical_population': len(registry), 'processing_ids': ids,
+            **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
             **({'source_review_protocol': source_review_protocol, 'source_records': source_records}
                if typed_source_review else {}),
             **({'interpretation_review_required': True,

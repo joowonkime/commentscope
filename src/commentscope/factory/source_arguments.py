@@ -17,7 +17,7 @@ ADDRESSED_AUDIT = argument_audit_wire.VERSION
 SUBJECT_AUDIT = argument_audit_wire.SUBJECT_SCOPED
 OBSERVED_AUDIT = argument_observations.VERSION
 SPLIT_AUDIT = argument_observations.SPLIT
-OBSERVED_PROTOCOLS = (OBSERVED_AUDIT, SPLIT_AUDIT, argument_observations.DEPENDENCY_SCOPED)
+OBSERVED_PROTOCOLS = argument_observations.PROTOCOLS
 KINDS = ('fact', 'value', 'prediction', 'uncertain')
 ROLES = ('reason', 'essential_condition', 'factual_premise', 'concession', 'additional_position')
 SYSTEM = '''Extract source-owned arguments linked to the supplied supported CANDIDATES.
@@ -374,11 +374,13 @@ def audit_wire_tasks(records, tasks):
     return result
 
 
-def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=(), owner_checks=()):
+def bind_audit(records, cores, tasks, result, *, protocol=None, core_checks=(), owner_checks=(), dependency_checks=()):
+    if dependency_checks and protocol!=argument_observations.JEV_SPLIT:
+        raise ValueError('Graph observations require their explicit audit protocol')
     req = audit_request(records, cores, tasks, protocol=protocol, core_checks=core_checks)
     if protocol in OBSERVED_PROTOCOLS:
         return argument_observations.bind_source(records, cores, tasks, req, result, core_checks,
-                                                 protocol=protocol, owner_checks=owner_checks)
+                                                 protocol=protocol, owner_checks=owner_checks, dependency_checks=dependency_checks)
     if owner_checks: raise ValueError('Separate owners require the split audit protocol')
     if result.get('errors'): raise ValueError('Failed argument audit')
     value = result.get('output'); fields(value, 'decisions'); rows = value['decisions']
@@ -416,7 +418,7 @@ def audit_verdicts(records, cores, audits):
             scoped_cores=[c for c in cores if c['candidate']['id'] in candidate_ids]
         if bind_audit(scoped_records, scoped_cores, audit['tasks'], {'output': audit['response']},
                       protocol=audit.get('protocol'), core_checks=audit.get('core_checks', ()),
-                      owner_checks=audit.get('owner_checks', ())) != audit:
+                      owner_checks=audit.get('owner_checks', ()), dependency_checks=audit.get('dependency_checks', ())) != audit:
             raise ValueError('Argument audit binding changed')
         for row in audit['output']['decisions']:
             if row['task_id'] in verdicts: raise ValueError('Duplicate argument audit')

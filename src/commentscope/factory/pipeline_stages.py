@@ -255,6 +255,23 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
                         lambda group, result: owner_observations.bind(group[0], result), 1) if split else []
     if split: save('argument-owner-checks', owner_checks)
     protocol = sa.SPLIT_AUDIT if split else sa.OBSERVED_AUDIT if observed else sa.ADDRESSED_AUDIT
+    dependency_checks=[]
+    if getattr(execution,'argument_audit_protocol',None):
+        from commentscope.factory import argument_dependencies as deps
+        from commentscope.providers import openrouter_decisions as decisions
+        if not split:raise ValueError('Typed dependencies require split source audits')
+        protocol=execution.argument_audit_protocol
+        for record in arguments:
+            for task in deps.tasks(record,cores):
+                try:requests=deps.requests(task)
+                except ValueError:
+                    holds.append({'stage':'argument-dependency','source_id':record['source']['id'],
+                                  'reason':'complete_dependency_input_exceeds_capacity'})
+                    continue
+                responses=[execution.runner.decide('argument-dependency-'+decisions.wire_sha256(p,decisions.DEPLOYMENT)[:20],p)
+                           for p in requests]
+                dependency_checks.append(deps.bind(task,responses))
+        save('argument-dependency-checks',dependency_checks)
     audit_groups = [(arguments, cores, tasks, core_checks, owner_checks)]
     if split:
         # Close each original before hashing/replaying its audit. Rebuilding
@@ -270,11 +287,19 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
                 [c for c in owner_checks if c['task']['source']['id'] == sid]))
     audits = []
     for scoped_records, scoped_cores, scoped_tasks, scoped_checks, scoped_owners in audit_groups:
+        dependencies=[c for c in dependency_checks if c['task']['source_id'] in {r['source']['id'] for r in scoped_records}]
+        if protocol==argument_observations.JEV_SPLIT:
+            from commentscope.factory import argument_dependencies as deps
+            try:deps.select(scoped_records,scoped_cores,scoped_tasks,dependencies)
+            except ValueError:
+                holds.append({'stage':'argument-audit','source_ids':[r['source']['id'] for r in scoped_records],
+                              'reason':'incomplete_dependency_observations'})
+                continue
         audits.extend(work('argument-audit', scoped_tasks,
             lambda group: sa.audit_request(scoped_records, scoped_cores, group,
                                           protocol=protocol, core_checks=scoped_checks),
             lambda group, result: sa.bind_audit(scoped_records, scoped_cores, group, result,
-                protocol=protocol, core_checks=scoped_checks, owner_checks=scoped_owners), 1))
+                protocol=protocol, core_checks=scoped_checks, owner_checks=scoped_owners, dependency_checks=dependencies), 1))
     save('argument-audits', audits)
     return ArgumentResult(arguments, cores, audits)
 
