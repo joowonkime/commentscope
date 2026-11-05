@@ -1,6 +1,6 @@
 # Cluster → Agent의 실제 실행
 
-TASK-005~007, REQ-001~003/008/010. 설계 `commentscope-detailed-design-20261106-v9`.
+TASK-005~007, REQ-001~003/008/010. 설계 `commentscope-detailed-design-20261106-v10`.
 사용자 정정: 별도 프론트는 아직 없다. 먼저 실제 댓글을 관점으로 묶고 근거를 가진 Agent를 생성해 질문에 응답한다.
 이미 구현한 `/mvp`는 결과를 확인하는 개발 화면으로 유지한다. 원본 Figma는 수정하지 않는다.
 

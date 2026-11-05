@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261106-v12",
+  "spec_version": "commentscope-mvp-20261106-v13",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-005",
-    "paid_execution_hold": true,
-    "hold_reason": "메모리2327MB로 회복 후 같은scope에서 전이6원문/12호출 실행($0.000916062):5/6일치,한국어core재진술연결1건거부. local필수전제/누락·오연결은맞음. all-pass미달로G1/G2/G3미확대. API-only자원profile분리/오프라인분석 진행,추가유료재시도없음;기존$50/지출유지."
+    "paid_execution_hold": false,
+    "hold_reason": "사용자60%선별활용목표재확인: 부품진단5/6실패기록유지,all-pass전역중단철회. plan에record_and_continue명시후현재설정freshG1→합격시G2/G3. 출력guard/r5기준/고정분모/같은scope$8·$50장부·기한유지;단일거부사례유료반복수정안함."
   },
   "requirements": [
     {
@@ -82,7 +82,9 @@
         "tests/test_minimal_pipeline.py",
         "tests/test_acceptance_r5.py",
         "tests/test_factory_review_r5.py",
-        "tests/test_source_semantics_contract.py"
+        "tests/test_source_semantics_contract.py",
+        "tests/test_component_diagnostic_policy.py",
+        "tests/test_selective_agent_sources.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -115,7 +117,9 @@
         "tests/test_grounded_runtime.py",
         "tests/test_runtime_artifact_contract.py",
         "tests/test_decision_controls.py",
-        "tests/test_jev_audit_integration.py"
+        "tests/test_jev_audit_integration.py",
+        "tests/test_component_diagnostic_policy.py",
+        "tests/test_selective_agent_sources.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -429,7 +433,9 @@
         "tests/test_product_web.py",
         "tests/test_serve_mvp.py",
         "tests/test_decision_controls.py",
-        "tests/test_scoped_factory_authorization.py"
+        "tests/test_scoped_factory_authorization.py",
+        "tests/test_component_diagnostic_policy.py",
+        "tests/test_selective_agent_sources.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1098,6 +1104,12 @@
           "scope": "API-only transport measured without network/model loading: parent41216KiB+worker34760KiB peakRSS with1.9MB synthetic receipt. Separate explicit256MB HTTP profile; default local/mixed1536MB and commit/disk/observation/settlement guards remain. Source/role/wire semantics unchanged. Resource/account/recovery/spec51 tests pass; live transfer failure remains failed. RequiredFactory516 tests also pass; counts overlap.",
           "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Selective progression: diagnostic failures remain failed; explicit record-and-continue does not approve runtime outputs or reset money. Verified-subset Agent compilation holds a whole unverified source, needs3verifiedpeers, retains common-required factual/core vetoes, and preserves the raw map/denominator. Ten focused regressions pass; previous53/44 tests pass with overlap. FreshG1-selective plan prepared, no new model call yet. FinalrequiredFactory526 tests pass (overlapping counts).",
+          "reference": "docs/design/JEV_AUDIT_INTEGRATION.md",
+          "result": "partial"
         }
       ],
       "required_evidence": [
@@ -1542,8 +1554,20 @@
         "REQ-008",
         "REQ-010"
       ]
+    },
+    {
+      "spec_version": "commentscope-mvp-20261106-v13",
+      "date": "2026-11-06",
+      "reason": "사용자지시로60%올바른활용MVP와부품진단100%를분리. 거부사례는그대로보류하며bounded전체실행을명시적정책으로계속한다. 모델/질문/threshold/r5/예산변경없음.",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ]
     }
   ],
-  "design_version": "commentscope-detailed-design-20261106-v9",
+  "design_version": "commentscope-detailed-design-20261106-v10",
   "design_document": "docs/design/README.md"
 }

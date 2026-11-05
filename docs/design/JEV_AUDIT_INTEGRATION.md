@@ -92,3 +92,41 @@ Jev 전이 경로는 모델을 로드하지 않는데 같은 floor가 적용됐�
 정상: 가용512MB에서 HTTP-only 경로는 통과하되 혼합 Factory는 중단한다.
 부정: HTTP-only256MB 미만, commit/disk 부족·관측 실패, 임의 floor 변경·잘못된 workload/profile은 중단한다.
 관련 자원·회계·재개·명세51개와 필수 Factory516개 오프라인 검사를 통과했다(중복 포함). 자원 수정으로 위 전이 실패를 합격 처리하지 않는다.
+
+## 현재 진행 기준: 부품 진단과 전체 MVP 판정의 분리
+
+사용자 지시: “1건이 틀렸다고 계속 수정하려는 것은 어렵다. 결국60퍼만 넘으면 된다.”
+기존6건의 all-pass를 전체 작업 중단 조건으로 추가한 것은 철회한다. r5의60%는 실제 댓글의 올바른
+활용률이며6건의83%를 전체 품질 달성으로 승격하지 않는다. 고정분모755/453, G2 12/19,
+G3 45/74, 집계 지지 전수 유효·주요 사실·2Agent/각3지지·각3응답 기준은 유지한다.
+
+현재5/6 진단은 실패를 그대로 보존한 채 **예산 내 전체 실행을 진행할 근거**로 사용한다.
+정상 내용을 거부한 사례를 완벽하게 고칠 때까지 source/core 질문·모델·threshold를 다시 바꾸지 않는다.
+해당 출력은 기존 host/source/core/owner/fact guard에 따라 보류되고 공개 내용으로 승인되지 않는다.
+존재하지 않는 근거·필수 사실 누락을 승인하거나 원문/출처·조건을 변형한 실제 공개 결과는 계속 실패다.
+
+실행 plan의 `component_diagnostic_policy=record_and_continue`를 명시해 G1부터 새로 실행한다.
+이 옵션은 diagnostic all-pass 전제만 대체한다. G1 합격 후 G2, G2 합격 후 G3의 실제 결과 검토는 유지한다.
+기본 정책은 기존 all-controls-pass이며 현재 사용자 지시에 따른 선택은 plan hash에 결합한다.
+과거 diagnostic을 읽을 때는 원래 plan/inputs/raw receipt/평가 기대값·결과·원래 semantic code와
+현재의 동일한 ordered wire를 대조한다. resource/executor 코드 변경을 관측의 재호출 사유로 삼지 않는다.
+과거6건의 `all_passed=false`를 바꾸지 않고 fresh G1 응답으로 끼워 넣지 않는다.
+모든 새 요청은 기존 scope$8·공유$50·기존 종료시각·이전 차감을 유지한다.
+
+### Agent의 출처별 보류 격리
+
+`agent_source_policy=verified_subset`을 별도로 plan에 고정한다. 기본 `all_members`와 구별하며
+diagnostic 경고 허용만으로 compiler 정책이 바뀌지 않는다. source별 원문·완전성·owner·kind·조건·
+의존 closure 검사를 모두 수행하고, 검증된 source 전체만 Agent에 포함한다. 한 source에서 실패한
+논거만 지우고 나머지를 승인하지 않는다. 실패 source는 원문/원래 membership과 보류 이유를 보존한다.
+
+공통 core의 fidelity/type/주요 사실 검사는 그대로다. 보류 source에 해당 core의 `core_requires_for`
+필수 사실이 있거나 core 자체가 fact이면 기존 전체 보류를 유지해 필수 사실을 삭제해서 구제하지 않는다.
+남은 서로 다른 검증 source가3개 미만이면 Agent를 만들지 않는다. 공통 주장을 다시 쓰거나 지원 수를 채우지 않는다.
+개인 이유·반대·조건은 해당 source에만 남으며 공개 bundle/인용은 선택된 source와 그 전수 검증 논거만 가진다.
+원래 후보 map과 고정 평가 분모는 유지하고 Agent에 사용한 source 수와 보류 수를 별도로 기록한다.
+
+정상:4개의 유효 지지 중1source의 개인 논거 검증 실패 → 원래 map4/Agent근거3/보류1.
+부정:남은source2 → Agent보류; 공통필수전제/core검증 실패 → 보류; 실패 source의 일부 문장 재사용 금지.
+
+진행 정책·출처 선별의 관련10개 및 필수 Factory526개 검사가 통과했다(중복 포함). 이전 all_members 기본 계약도 회귀 검사에 포함한다.

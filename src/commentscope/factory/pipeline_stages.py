@@ -305,9 +305,9 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
 
 
 def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
-                   fact_check, *, model, documents, selections):
+                   fact_check, *, model, documents, selections, source_policy='all_members'):
     """Owned arguments -> fact-screened bundle/profiles plus bound NLI checks."""
-    agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits, model=model, documents=documents)
+    agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits, model=model, documents=documents,source_policy=source_policy)
     packets = [fact_checks.packet(c, list(documents), list(selections), snapshot.usage.expires_at)
                for c in agent_inputs['bundle']['claims'] if c['kind'] == 'fact']
     checks = []
@@ -319,5 +319,5 @@ def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
             checks.append({'claim_id': packet['claim']['id'], 'selections': deepcopy(list(selections)), 'record': record})
     if checks:
         agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits,
-                                  model=model, documents=documents, checks=checks)
+                                  model=model, documents=documents, checks=checks,source_policy=source_policy)
     return agent_inputs, checks

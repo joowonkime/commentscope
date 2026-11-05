@@ -16,9 +16,10 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members'):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
+    if agent_source_policy not in ('all_members','verified_subset'):raise ValueError('Unknown Agent source policy')
     from commentscope.factory import compact_claims
     from commentscope.factory import argument_observations
     if argument_audit_protocol is not None and (argument_audit_protocol!=argument_observations.JEV_SPLIT
@@ -91,7 +92,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         discovery_mode=discovery_mode)
     arguments, cores, audits = owned.arguments, owned.cores, owned.audits
     agent_inputs, checks = pipeline_stages.compile_agents(snapshot, candidates, memberships,
-        arguments, cores, audits, fact_check, model=model, documents=documents, selections=selections)
+        arguments, cores, audits, fact_check, model=model, documents=documents, selections=selections,source_policy=agent_source_policy)
     save('qualification-inventories',list(execution.shape_cache.values()));save('qualification-assessments',list(execution.assessment_cache.values()))
     save('fact-checks', checks); save('agent-inputs', agent_inputs)
     if engine is not None:
@@ -100,6 +101,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
             'canonical_population': len(registry), 'processing_ids': ids,
             **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
+            **({'agent_source_policy':agent_source_policy} if agent_source_policy!='all_members' else {}),
             **({'source_review_protocol': source_review_protocol, 'source_records': source_records}
                if typed_source_review else {}),
             **({'interpretation_review_required': True,
