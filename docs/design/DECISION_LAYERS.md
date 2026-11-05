@@ -107,6 +107,13 @@ Jev가 제공하지 않는 설명문을 모델의 rationale로 만들지 않는�
 생성 LLM 비교군도 동일 관계/정의를 JSON으로 반환한다. 기대 답·이전 모델 답·이전 requires는 두 입력에서 숨긴다.
 단일 `dependency_fidelity=yes`는 관측한 관계가 선언과 일치한다는 증거를 대신하지 않는다.
 
+DC-02/03/04처럼 원문·대상은 같고 선언한 edge만 바뀌면, blind 관측의 입력도 같아야 한다.
+동일 plan/decision/model의 실제 관측1개를 공유하고 host가 정상·누락·오연결 선언을 각각 비교한다.
+`observation_request_hash`와 `declaration_hash` 및 결합한 `verdict_hash`는 따로 남긴다.
+관측 요청에는 평가 case ID·기대값·변형 requires를 넣지 않는다. host 평가 ID를 provider task로 복제해 중복 과금하지 않는다.
+세 선언의 결과는 host 비교3건이며 독립 모델 관측3건으로 정확도를 집계하지 않는다.
+다른 원문/대상·언어·조건의 미사용 전이로 의미 관측 자체가 맞는지도 별도 확인한다.
+
 host는 아래를 검사한 뒤 기존 audit verdict로 결합한다.
 
 1. 요청한 모든 task/pair에 정확히1개 결과, 알 수 없는 ID·중복·다른 source의 구간 없음.
@@ -212,7 +219,8 @@ OpenRouter의 Jev는 [Decisions API](https://openrouter.ai/docs/api/api-referenc
 필요한 local pair를 줄이면 제외 pair의 `unassessed`를 보존하고 전제 없음으로 승인하지 않는다.
 원문 내 unit 수/질문 수/질문 byte·token/최대 물리 요청 수는 비교 plan에 고정한다.
 첫 개발 profile은 동시성1·자동재시도0·fallback0, 기존4통제만 대상으로 한다.
-한 통제당 baseline1회+Jev1회, 전체 최대8개 물리 요청이다. 같은 원문과 과제 안의 원자 질문만 함께 보낼 수 있다.
+한 통제당 최대 baseline1회+Jev1회, 전체 최대8개 물리 요청이다. 같은 원문과 과제 안의 원자 질문만 함께 보낼 수 있다.
+동일 blind 관측은 위 규칙으로 재사용한다. 고정 입력의 고유 요청 수를 prepare에서 계산하므로 최대8회가 실제8회 청구를 뜻하지 않는다.
 baseline의180초와 Jev의유한 timeout, question 수·출력 한도·문맥 제한은 adapter 측정 후 plan에 수치로 고정하며 미정이면 실행하지 않는다.
 
 확률 처리 정책:
@@ -307,6 +315,7 @@ endpoint 설정과 동결 입력에 대해 확인하고, 불명확하면 paid pr
    원래 split5 결과 재생과 모델 배정 변경 후 응답 재사용 거부도 유지한다.
 3. **작은 실제 비교, 별도 동결 권한:** 먼저 기존4통제를 같은 질문 의미/원문/대상으로 비교한다.
    baseline도 계약이 바뀌면 새 응답이 필요하다. 실패한3개 과거 답을 새 baseline으로 재표시하지 않는다.
+   같은 plan 안의 동일 blind 관측은 공유하되 서로 다른 선언과의 비교 결과를 구별하고, 물리 요청·고유 의미 관측·host 비교 건수를 따로 보고한다.
    baseline의 알려진 실패는 비교 결과로 보존한다. 후보의 첫 중대 오승인에서 후보 실행/확대를 중단하고 baseline 재시도로 구제하지 않는다.
    정상 오거부·부정 오승인·보류·실제 요청 수/비용·지연을 전부 보고한다.
    통과 후 고정 미사용 전이와 옵션 순서 사례를 평가한다. 결과를 보고 기대값/정책을 낮추지 않는다.
