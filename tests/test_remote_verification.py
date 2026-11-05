@@ -105,7 +105,7 @@ class RemoteVerificationTests(unittest.TestCase):
             with self.assertRaises(ValueError):remote.receipt(response,remote.SOL)
 
     def test_chat_graph_receipt_has_no_manufactured_probabilities_and_binds_choices(self):
-        case=json.loads(Path('tests/fixtures/jev-transfer-controls.json').read_text())['sources'][0]
+        case=json.loads(Path('tests/fixtures/jev-transfer-controls.json').read_text(encoding='utf-8'))['sources'][0]
         task=deps.tasks(case['record'],case['cores'])[0]
         requests=deps.chat_requests(task)
         results=[parsed({k:('value' if k.startswith('kind_') else 'asserted' if k.startswith('authorship_')
