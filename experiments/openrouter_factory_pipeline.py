@@ -33,12 +33,15 @@ from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.local_llama import NoRedirect
 from commentscope.providers.openrouter_budget import PaidBudget, SpendLedger, units
 from commentscope.providers.execution_cycle import bind_cycle, check_cycle
+from commentscope.providers import scoped_authorization as scoped_auth, openrouter_decisions as od
+from commentscope.providers.runtime_runner import RuntimeRunner
+from commentscope.factory import argument_observations
 from commentscope.storage import write_json_exclusive as write
 from experiments.compare_backend_discovery import check_quota, quota_watch
 from experiments.minimal_factory_pipeline import synthetic12, check_admission as prior_admission
 from experiments.openrouter_factory_probe import key_metadata, private, validate_spend_policy
 
-VERSION = 'minimal-factory-openrouter-executor-20261105-v18'
+VERSION = 'minimal-factory-openrouter-executor-20261106-v19'
 SAMPLES = Path('runs/design-freeze-20261016/samples.json')
 
 
@@ -70,7 +73,7 @@ def archive_sources(directory, manifest):
         target.parent.mkdir(parents=True, exist_ok=True); shutil.copyfile(path, target)
 
 
-def check_admission(gate, deployment, admission_file, materials, policy, *, discovery_mode='literal'):
+def check_admission(gate, deployment, admission_file, materials, policy, *, discovery_mode='literal', argument_audit_protocol=None):
     prior_admission(gate, deployment, admission_file, discovery_mode, 'raw')
     required = {'G1': (), 'G2': ('G1',), 'G3': ('G1', 'G2'), 'G4': ('G1', 'G2', 'G3')}[gate]
     if not required: return
@@ -78,6 +81,8 @@ def check_admission(gate, deployment, admission_file, materials, policy, *, disc
     for stage in required:
         previous = read_json(Path(manifest['gates'][stage]['run'])/'plan.json')
         if (previous['artifact_kind'] != VERSION or previous['spend_policy'] != policy
+                or previous.get('argument_audit_protocol') != argument_audit_protocol
+                or previous.get('decisions_deployment') != (od.DEPLOYMENT if argument_audit_protocol else None)
                 or previous['extraction_protocol'] != (compact_claims.PROPOSALS if discovery_mode == 'free' else None)
                 or previous.get('assertion_equivalence_protocol') != (candidate_consolidation.BILATERAL if discovery_mode == 'free' else None)
                 or previous.get('membership_observation_protocol') != (raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION)
@@ -106,7 +111,16 @@ def fixed_scope(gate):
     return snapshot, list(scope), path
 
 
-def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal', cycle_file=None):
+def transfer_admission(binding):
+    from experiments.jev_transfer_controls import replay_report
+    directory=Path(binding['authorization']['transfer_directory'])
+    report=replay_report(directory)
+    if not report['all_passed'] or read_json(directory/'plan.json')['authorization']!=binding:
+        raise ValueError('All frozen transfer controls must pass in the same authorization')
+    return {str((directory/name).resolve()):sha(directory/name) for name in ('plan.json','checks.json','report.json')}
+
+
+def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_usd, *, gate='G1', admission_file=None, discovery_mode='literal', cycle_file=None, scope_file=None, argument_audit_protocol=None):
     private(directory); private(materials_file)
     if directory.exists(): raise ValueError('New remote Factory directory required')
     if gate not in ('G1', 'G2', 'G3', 'G4'): raise ValueError('Unknown implementation gate')
@@ -114,6 +128,12 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     deployment = openrouter.validate(deployment); policy = validate_spend_policy(spend_policy)
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     if units(maximum_cost_usd) <= 0: raise ValueError('Explicit positive run cost ceiling required')
+    if (argument_audit_protocol not in (None,argument_observations.JEV_SPLIT)
+            or bool(scope_file)!=bool(argument_audit_protocol)
+            or scope_file and (cycle_file is not None or discovery_mode!='free')):
+        raise ValueError('Jev integration requires its scoped authorization and free discovery')
+    authorization=scoped_auth.bind(scope_file,deployment,policy,maximum_cost_usd,gate) if scope_file else None
+    transfer_inputs=transfer_admission(authorization) if authorization else {}
     cycle=None
     if cycle_file is not None:
         private(cycle_file)
@@ -122,7 +142,7 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     if set(materials) != {'classifier', 'model_files', 'documents', 'selections'}:
         raise ValueError('Pinned classifier, model files and evidence required')
     if admission_file is not None: private(admission_file)
-    check_admission(gate, deployment, admission_file, materials, policy, discovery_mode=discovery_mode)
+    check_admission(gate, deployment, admission_file, materials, policy, discovery_mode=discovery_mode, argument_audit_protocol=argument_audit_protocol)
     snapshot, scope, original_path = fixed_scope(gate)
     provider = provider_preflight(deployment)
     fact_checks.live(snapshot.usage.expires_at)
@@ -134,7 +154,9 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
     if gate == 'G1': write(directory/'snapshot.json', snapshot.to_dict())
     snapshot_path = directory/'snapshot.json' if gate == 'G1' else original_path
     inputs = {str(materials_file): sha(materials_file)}
+    inputs.update(transfer_inputs)
     if cycle is not None:inputs[cycle['file']]=cycle['sha256']
+    if authorization is not None:inputs[authorization['file']]=authorization['sha256']
     if gate != 'G1': inputs[str(SAMPLES)] = sha(SAMPLES)
     if admission_file is not None: inputs[str(admission_file)] = sha(admission_file)
     plan = {'artifact_kind': VERSION, 'run_directory': str(directory.resolve()), 'gate': gate,
@@ -142,6 +164,8 @@ def prepare(directory, deployment, materials_file, spend_policy, maximum_cost_us
             'deployment': deployment, 'provider_at_prepare': provider, 'spend_policy': policy,
             'maximum_cost_usd': maximum_cost_usd, 'discovery_mode': discovery_mode, 'membership_mode': 'raw',
             'execution_cycle':cycle,
+            'scoped_authorization':authorization,'argument_audit_protocol':argument_audit_protocol,
+            'decisions_deployment':deepcopy(od.DEPLOYMENT) if argument_audit_protocol else None,
             'extraction_protocol': compact_claims.PROPOSALS if discovery_mode == 'free' else None,
             'assertion_equivalence_protocol': candidate_consolidation.BILATERAL if discovery_mode == 'free' else None,
             'membership_observation_protocol': raw_membership.WORLD_CONTEXT if discovery_mode == 'free' else raw_membership.VERSION,
@@ -174,6 +198,14 @@ def validate(directory, plan):
     if read_json(directory/'frozen.json') != {'plan_sha256': sha(directory/'plan.json')}:
         raise ValueError('Frozen remote plan changed')
     check_cycle(plan,allow_expired=True)
+    scoped_auth.check(plan,allow_expired=True)
+    if plan.get('scoped_authorization'):
+        if any(plan['inputs'].get(p)!=h for p,h in transfer_admission(plan['scoped_authorization']).items()):
+            raise ValueError('Transfer admission evidence changed')
+    if (plan.get('argument_audit_protocol') not in (None,argument_observations.JEV_SPLIT)
+            or bool(plan.get('scoped_authorization'))!=bool(plan.get('argument_audit_protocol'))
+            or plan.get('decisions_deployment')!=(od.DEPLOYMENT if plan.get('argument_audit_protocol') else None)):
+        raise ValueError('Frozen dependency role map changed')
     deployment = openrouter.validate(plan['deployment']); validate_spend_policy(plan['spend_policy'])
     allocation = openrouter.generation_allocation(deployment, require_explicit=True)
     profile = acceptance.from_plan(plan)
@@ -203,7 +235,7 @@ def validate(directory, plan):
         raise ValueError('Frozen remote code, input or model changed')
     material = {k: plan[k] for k in ('classifier', 'model_files', 'documents', 'selections')}
     admission_file = Path(plan['admission_file']) if plan['admission_file'] is not None else None
-    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'], discovery_mode=plan['discovery_mode'])
+    check_admission(plan['gate'], deployment, admission_file, material, plan['spend_policy'], discovery_mode=plan['discovery_mode'],argument_audit_protocol=plan.get('argument_audit_protocol'))
     expected_snapshot, expected_scope, original_path = fixed_scope(plan['gate'])
     expected_path = directory/'snapshot.json' if plan['gate'] == 'G1' else original_path
     if (Path(plan['snapshot']).resolve() != expected_path.resolve()
@@ -232,6 +264,7 @@ def run(directory):
                 raise ValueError('Completed remote artifacts changed')
             return report
         check_cycle(plan)
+        scoped_auth.check(plan)
         pending = [p for p in (directory/'checkpoints').glob('*.intent.json')
                    if not p.with_name(p.name.replace('.intent.json', '.result.json')).exists()]
         if pending: raise RuntimeError('Pending requests require process and ledger reconciliation')
@@ -244,6 +277,7 @@ def run(directory):
         time_budget = InferenceBudget(directory/'inference.sqlite', VERSION, limit_seconds=None)
         client = openrouter.Client(plan['deployment'])
         spend_scope=plan['execution_cycle']['sha256'] if plan.get('execution_cycle') is not None else plan_sha
+        if plan.get('scoped_authorization'):spend_scope=plan['scoped_authorization']['sha256']
         paid_budget = PaidBudget(time_budget, spending, plan_sha256=plan_sha, deployment=plan['deployment'],
                                  maximum_run_usd=plan['maximum_cost_usd'], paid_provider=client.generate,
                                  key_metadata=key_metadata,
@@ -251,6 +285,13 @@ def run(directory):
                                  local_providers=(framed_embedding.generate, evidence_nli.generate))
         checkpoint = CheckpointRunner(openrouter.Runner(directory, plan, paid_budget, client),
                                      plan['generation_allocation'])
+        decision_client=decision_checkpoint=None
+        if plan.get('scoped_authorization'):
+            decision_client=od.Client(plan['decisions_deployment'])
+            decision_budget=scoped_auth.PaidDecisions(time_budget,spending,plan_sha256=plan_sha,
+                binding=plan['scoped_authorization'],paid_provider=decision_client.generate,key_metadata=key_metadata)
+            decision_checkpoint=CheckpointRunner(RuntimeRunner(directory,plan,decision_budget,decision_client,
+                deployment_key='decisions_deployment'),{})
         dispatch = host_resources.RemoteCallGuard()
         attempt = len(list((directory/'attempts').glob('*.started.json')))+1
         origin = run_origin(plan, directory, attempt=attempt)
@@ -266,9 +307,19 @@ def run(directory):
             else: write(path, value)
         def inspect(request):
             check_cycle(plan,call_seconds=plan['limits']['call_seconds'])
+            scoped_auth.check(plan,call_seconds=plan['limits']['call_seconds'])
             dispatch.check()
             check_quota(); return client.measure(request)
         class CheckedRunner:
+            def decide(self,stage,payload):
+                if decision_checkpoint is None:raise ValueError('No frozen typed decision route')
+                scoped_auth.check(plan,call_seconds=plan['decisions_deployment']['call_seconds'])
+                od.validate_request(payload,plan['decisions_deployment']);dispatch.check();check_quota()
+                with dispatch.remote_call():
+                    raw=decision_checkpoint.call(stage,payload,provider=decision_client.generate,
+                        maximum=plan['decisions_deployment']['call_seconds'])
+                od.answers(payload,raw,plan['decisions_deployment']);check_quota();return raw
+
             def call(self, stage, request):
                 measured = inspect(request)
                 if not measured['fits']: raise ValueError('Unsplit remote request exceeds its context bound')
@@ -288,6 +339,7 @@ def run(directory):
                 return result
         def embed(stage, texts):
             check_cycle(plan,call_seconds=plan['limits']['embedding_seconds'])
+            scoped_auth.check(plan,call_seconds=plan['limits']['embedding_seconds'])
             dispatch.check()
             check_quota(); path = directory/'artifacts'/('embedding-'+stage+'.json')
             request = {'system': framed_embedding.VERSION, 'data': {'texts': texts, 'output': str(path)},
@@ -302,12 +354,14 @@ def run(directory):
             return artifact['vectors']
         def facts(request):
             check_cycle(plan,call_seconds=plan['limits']['fact_batch_seconds'])
+            scoped_auth.check(plan,call_seconds=plan['limits']['fact_batch_seconds'])
             dispatch.check()
             check_quota()
             return checkpoint.call('facts-'+digest(request)[:20], request, provider=evidence_nli.generate,
                                    maximum=plan['limits']['fact_batch_seconds'])
         try:
             provider = provider_preflight(plan['deployment'])
+            if decision_client:od.preflight(plan['decisions_deployment'])
             write(directory/'attempts'/f'{attempt:04}.provider.json', provider)
             with host_resources.watch(directory/'resources'/f'{attempt:04}', plan['resource_policy'],
                                       host_resources.observe_wsl_host, interrupt=dispatch.request_stop):
@@ -315,7 +369,7 @@ def run(directory):
                     model=plan['classifier'], documents=plan['documents'], selections=plan['selections'],
                     scope_ids=plan['scope_ids'], save=save, discovery_mode=plan['discovery_mode'],
                     membership_mode=plan['membership_mode'], verification_contract=plan['verification_contract'],
-                    extraction_protocol=plan['extraction_protocol'])
+                    extraction_protocol=plan['extraction_protocol'],argument_audit_protocol=plan.get('argument_audit_protocol'))
                 save('output', output)
                 runtime = runtime_probe(output['agent_inputs']['bundle'], CheckedRunner(),
                     save_turn=lambda row: save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'], row))
@@ -325,7 +379,7 @@ def run(directory):
                       'runtime_turns': len(runtime['turns']), 'binding_errors': len(output['errors']),
                       'capacity_holds': len(output['capacity_holds']), 'unextracted': len(output['unextracted_source_ids']),
                       'output_sha256': sha(directory/'artifacts/output.json'), 'runtime_sha256': sha(directory/'artifacts/runtime.json'),
-                      'attempt_seconds': time.monotonic()-started, 'same_plan_reused_calls': checkpoint.reused,
+                      'attempt_seconds': time.monotonic()-started, 'same_plan_reused_calls': checkpoint.reused+(decision_checkpoint.reused if decision_checkpoint else 0),
                       'spending': spending.summary(), 'run_spending': spending.summary(plan_sha256=spend_scope),
                       'spend_scope_sha256':spend_scope,
                       'semantic_review_required': True, 'quality_gate_passed': False, 'local_llm_started': False, **origin}
@@ -345,6 +399,8 @@ def main(argv=None):
     p.add_argument('--discovery-mode', choices=['literal', 'free'], default='literal')
     p.add_argument('--deployment-file', type=Path, required=True); p.add_argument('--materials-file', type=Path, required=True)
     p.add_argument('--cycle-file', type=Path)
+    p.add_argument('--scope-file', type=Path)
+    p.add_argument('--jev-argument-dependencies', action='store_true')
     p.add_argument('--spend-policy', type=Path, required=True); p.add_argument('--maximum-cost-usd', type=float, required=True)
     p = commands.add_parser('run'); p.add_argument('directory', type=Path)
     p.add_argument('--key-file',type=Path)
@@ -353,7 +409,8 @@ def main(argv=None):
         if args.action == 'prepare':
             plan = prepare(args.directory, read_json(args.deployment_file), args.materials_file,
                            read_json(args.spend_policy), args.maximum_cost_usd, gate=args.gate,
-                           admission_file=args.admission_file, discovery_mode=args.discovery_mode,cycle_file=args.cycle_file)
+                           admission_file=args.admission_file, discovery_mode=args.discovery_mode,cycle_file=args.cycle_file,
+                           scope_file=args.scope_file,argument_audit_protocol=argument_observations.JEV_SPLIT if args.jev_argument_dependencies else None)
             result = {'prepared': str(args.directory), 'gate': plan['gate'], 'sources': len(plan['scope_ids']),
                       'maximum_cost_usd': plan['maximum_cost_usd'], 'inference_calls': 0}
         else:

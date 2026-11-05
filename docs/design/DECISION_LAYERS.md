@@ -1,19 +1,22 @@
 # Decision 계층과 모델 호출 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v7`, DEC-007, TASK-016/005.
+설계 `commentscope-detailed-design-20261106-v8`, DEC-007, TASK-016/005.
 연결: REQ-001~010, [제품 명세](../MVP_SPEC.md), [Factory 계약](FACTORY.md), [실행 계약](EXECUTION.md).
 대조 코드 `227e3c9d1b8345f392a6dfe6aaba471290e44575`, 공식 자료 확인일 2026-11-05.
 
 상태: **호출 책임과 비교 절차의 설계본**. 첫 Jev-only 진단용 transport와 J4-U/L 관측/host 비교는 구현했다.
-역할별 전체 라우터·Factory audit 연결·O/K/C 통합과 production 모델 배정은 미구현/미채택이다.
+후속 opt-in Factory 연결·미사용 전이·G1→G2→G3의 현재 계약은 [audit 연결](JEV_AUDIT_INTEGRATION.md)을 따른다.
+J4-L/K의 opt-in Factory 연결은 구현했다. source fidelity/owner/core/fact 검사는 유지한다.
+역할별 전체 라우터·O/K/C 전체 교체와 production 모델 배정은 미구현/미채택이다.
 기본 경로는 기존 GPT-5.2 deployment와 split5를 유지한다. 실패한 split6를 승인하지 않는다.
 이 문서는 기존 source S1/S2 교체나 전체 파이프라인 재작성을 채택하지 않는다.
 역할 하나가 반드시 모델 요청 하나를 뜻하지 않는다. 같은 원문을 읽더라도 다른 판단은 별도로 구별한다.
 
 ## D-01. 현재 호출과 변경할 경계
 
-현재 [Factory 실행기](../../experiments/openrouter_factory_pipeline.py)는 `plan.deployment` 하나를
-추출·의미 판정·runtime에 사용한다. [PipelineWork](../../src/commentscope/factory/pipeline_work.py)의
+기본 [Factory 실행기](../../experiments/openrouter_factory_pipeline.py)는 `plan.deployment` 하나를
+추출·의미 판정·runtime에 사용한다. 새 opt-in은 `argument_audit_protocol`과 `decisions_deployment`를 고정해
+전제 관측만 별도 typed 경로로 보낸다. 전체 role router를 구현한 것은 아니다. [PipelineWork](../../src/commentscope/factory/pipeline_work.py)의
 stage 문자열은 작업 이름이며 모델 역할별 라우팅을 구현하지 않는다.
 [제품 Broker](../../tools/serve_mvp.py)도 비교·대화·성찰을 한 deployment로 전달한다.
 embedding과 사실 NLI는 별도 로컬 부품이다. bundle의 `model`은 **사실 classifier identity**이므로
