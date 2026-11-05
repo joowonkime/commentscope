@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261105-v6`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261105-v7`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -119,8 +119,8 @@ J4 논거 검토부터 비교하며 비용0 adapter 회귀·고정 정상/부정
 
 ## 7. 구현 순서
 
-TASK-016은 decision 상세 설계·참조 확인 범위로 완료했다. 라우터/Jev adapter 구현이나 모델 채택의 완료가 아니다.
-다음 TASK-005에서 J4 논거 입력·관측/host adapter와 회귀를 먼저 확인하고 고정 비교·fresh G1로 연결한다.
+TASK-016은 decision 상세 설계·참조 확인 범위로 완료했다. 첫 Jev 진단용 adapter/관측 비교는 TASK-005의 부분 구현으로 확인했으며 전체 라우터/Factory 연결이나 모델 채택은 미완료다.
+TASK-005의 첫 Jev-only2관측/4선언 통제는 기대와 일치했다. 다음은 기존 audit 연결의 오프라인 검증과 미사용 전이·고정 paired 비교이며 fresh G1 성공을 승계하지 않는다.
 
 TASK-001/002/003은 기준선·상세 설계·첫 source adapter의 완료 이력이다.
 TASK-004/013/014의 새 의미 역할 진단/채택은 보류한다. 초기 adapter를 원가 개선으로 채택하지 않았다.
