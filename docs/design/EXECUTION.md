@@ -1,7 +1,11 @@
 # 실행·비용·검증·전환 상세 설계
 
-설계 `commentscope-detailed-design-20261105-v5`, DEC-001/004/005/006, REQ-001~010.
+설계 `commentscope-detailed-design-20261105-v6`, DEC-001/004/005/006, REQ-001~010.
 이 문서는 실험을 실행하거나 예산 보류를 해제하지 않는다. 모든 수치 비교는 기존 품질 기준 안에서 한다.
+
+각 decision의 허용 입력·모델 역할·transport·확률/보류·배정 변경의 provenance는
+[Decision 계층 상세 설계](DECISION_LAYERS.md)를 따른다. 기존 단일 deployment와 후보 역할별 registry를 구별한다.
+Jev transport를 추가할 때도 이 문서의 공유 장부·기한·전체 문맥 예약·실제 청구·기존 r5를 유지한다.
 
 ## X-01. 비용 모델
 
