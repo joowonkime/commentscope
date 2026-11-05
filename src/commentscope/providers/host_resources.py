@@ -15,6 +15,10 @@ from commentscope.storage import write_json_exclusive as write
 POLICY = {'version': 'host-headroom-0.1', 'minimum_available_mb': 1536,
           'minimum_commit_headroom_bytes': 1024**3, 'minimum_disk_free_bytes': 6*1024**3,
           'poll_seconds': 10, 'maximum_observation_failures': 2}
+# No weights/torch: bounded HTTP request, disposable Python worker and receipt.
+# Keep the mixed Factory/local-model policy above unchanged. Callers must pin
+# this separate workload profile into their plan; it is not a fallback.
+HTTP_ONLY_POLICY = {**POLICY, 'version':'http-only-headroom-0.1','minimum_available_mb':256}
 
 
 class ResourceStopRequested(RuntimeError):
@@ -64,13 +68,13 @@ class RemoteCallGuard:
         self.check()
 
 
-def validate(policy):
-    if policy != POLICY:
+def validate(policy, *, workload='local_models'):
+    if workload not in ('local_models','http_only') or policy != (HTTP_ONLY_POLICY if workload=='http_only' else POLICY):
         raise ValueError('Unknown host resource policy; freeze changes explicitly')
 
 
-def reasons(observation, policy):
-    validate(policy)
+def reasons(observation, policy, *, workload='local_models'):
+    validate(policy,workload=workload)
     for field in ('available_mb', 'committed_bytes', 'commit_limit', 'disk_free_bytes'):
         value = observation[field]
         if type(value) not in (float, int) or not math.isfinite(value) or value < 0:
@@ -88,9 +92,10 @@ def reasons(observation, policy):
 
 
 class Observer:
-    def __init__(self, directory, policy, observe):
-        validate(policy)
+    def __init__(self, directory, policy, observe, *, workload='local_models'):
+        validate(policy,workload=workload)
         self.directory, self.policy, self.observe = Path(directory), dict(policy), observe
+        self.workload=workload
         self.sequence = 0; self.failures = 0
 
     def sample(self):
@@ -98,7 +103,7 @@ class Observer:
         row = {'at': datetime.now(timezone.utc).isoformat(), 'executor_pid': os.getpid()}
         try:
             value = self.observe()
-            row['stop_reasons'] = reasons(value, self.policy)
+            row['stop_reasons'] = reasons(value, self.policy,workload=self.workload)
             row['observation'] = value
             self.failures = 0
         except Exception as exc:
@@ -110,13 +115,13 @@ class Observer:
 
 
 @contextmanager
-def watch(directory, policy, observe, *, interrupt=None):
+def watch(directory, policy, observe, *, interrupt=None, workload='local_models'):
     """A daemon observer interrupts this executor, never an unrelated PID.
 
     The caller owns its model-server cleanup in an outer finally block. No
     monitoring failure grants permission to run indefinitely unobserved.
     """
-    observer = Observer(directory, policy, observe)
+    observer = Observer(directory, policy, observe,workload=workload)
     stop = threading.Event()
     interrupt = interrupt or (lambda: os.kill(os.getpid(), signal.SIGINT))
     write(Path(directory)/'started.json', {'executor_pid': os.getpid(), 'policy': policy})

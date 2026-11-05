@@ -57,9 +57,38 @@ requires와 core_requires_for의 방향별 정확한 집합, fact/자기 귀속,
 같은 공유 money owner/기한/role binding은 `scoped_authorization`이 담당한다.
 첫 trial의 $0.10 한도와 기본 split5를 유지한다. 재개는 attempt별 resource 기록과 같은 plan checkpoint를 쓴다.
 
-필수 Factory514개, 최종 연결/회계26개, 명세16개의 오프라인 검사를 통과했다.
+PR65 구현에서 필수 Factory515개, 연결/회계26개, 명세16개의 오프라인 검사를 통과했다(중복 포함).
 기존 G1 논거8원문의 신규 typed 입력을 무과금 구성해16요청 전부28kB 한도 안임을 확인했다.
 이는 과거 응답을 새 protocol로 승인하거나 fresh G1을 실행한 결과가 아니다.
 새 전이는 합성6원문/최대12물리요청·별도$0.20 subcap으로 고정했다. 기대값은 provider 입력에 없다.
-현재 호스트 가용 메모리가 기존1.5GB 기준 아래라 실제 전이 시작을 보류했다. 실제 비용/품질은 미측정이다.
-기준을 낮추거나 다른 앱/다른 대화의 프로세스를 종료하지 않는다. 이후 G1/G2/G3는 아직 미실행이다.
+최초 시작은 호스트 가용 메모리가 기존1.5GB 기준 아래라 호출 전에 보류됐다. 이후 재개 결과는 아래와 같다.
+다른 앱/다른 대화의 프로세스를 종료하지 않는다. 이후 G1/G2/G3는 아직 미실행이다.
+
+## API 전용 실행의 자원 계약과 실제 전이 결과
+
+2026-11-06 사용자가 현재 메모리와 OpenRouter 사용 시 메모리가 필요한 이유를 확인하도록 요청했다.
+가용 메모리2327MB로 회복된 뒤 **기존 코드·계획·같은$8 money owner**에서 전이를 재개했다.
+6원문/12물리요청, 실제$0.000916062,5원문 기대 일치/1원문 실패, 예약·미확정0이다.
+한국어 T6는 local 사실전제와 누락/오연결 변형을 올바르게 구별했지만 core의 사실 재진술U3 연결을
+필수 전제로 관측하지 않았다. 같은 형태의 영어 T5도 해당 선택은 necessary0.51/none0.48로 근소했다.
+한국어는 necessary0.40/none0.56이었다. confidence를 정답률로 해석하지 않는다.
+동일 주장/재진술과 추론의 필수 사실 전제를 같은 relation으로 묶은 계약의 모호성이 의심되며,
+이 결과만으로 한국어 전체 성능이나 더 좋은 모델이 필요하다는 결론을 내리지 않는다.
+기대값을 바꾸거나 실패를 제외해 합격 처리하지 않는다. all-pass 미달로 G1/G2/G3 확대는 중단한다.
+
+기존1536MB floor는 로컬 embedding/NLI를 포함한 실행용이며 OpenRouter의 서버 모델 요구량이 아니다.
+Jev 전이 경로는 모델을 로드하지 않는데 같은 floor가 적용됐다. 합성28kB 입력·1.9MB JSON 영수증으로
+실제 disposable worker를 무과금 측정한 Linux RSS high-water 합은 약74MiB였다(torch 로드/네트워크0).
+이는 측정한 경로이며 최악 메모리 보장은 아니다. 새 HTTP-only profile의 공학적 floor는256MB로 고정한다.
+
+- `host-headroom-0.1`/1536MB: 전체 Factory와 로컬 모델 경로에서 그대로 유지한다.
+- `http-only-headroom-0.1`/256MB: 모델을 로드하지 않는 typed HTTP 전이 경로에서만 명시적으로 사용한다.
+- 기존 commit headroom1GiB·디스크6GiB·관측 실패 중단·진행 중 요청 정산/체크포인트·가격/예산/기한은 유지한다.
+- 새 전이 plan에 workload와 resource_policy를 고정하고 validate/replay에서 정확히 대조한다.
+  다른 policy로 이름만 바꾼 plan이나 혼합 Factory의 HTTP-only profile을 거부한다.
+- 자원 profile 변경은 semantic 선택지/관측/기대값을 수정하지 않는다. 이전 실패 영수증은 원래 동결 코드로
+  보존하며 현재 코드의 새 전이 또는 G1 합격으로 승계하지 않는다. 이번 수정 후 유료 재시도는 하지 않는다.
+
+정상: 가용512MB에서 HTTP-only 경로는 통과하되 혼합 Factory는 중단한다.
+부정: HTTP-only256MB 미만, commit/disk 부족·관측 실패, 임의 floor 변경·잘못된 workload/profile은 중단한다.
+관련 자원·회계·재개·명세51개와 필수 Factory516개 오프라인 검사를 통과했다(중복 포함). 자원 수정으로 위 전이 실패를 합격 처리하지 않는다.
