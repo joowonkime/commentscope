@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v23`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261110-v24`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -142,3 +142,5 @@ TASK-017의 [실제24개 개발 실행](ACTUAL24_DEVELOPMENT.md)은 사용자rr�
 TASK-005 [후보별 원문 완전성](CANDIDATE_SOURCE_COVERAGE.md)은 bound typed 관측을 host에서 다시 결합하는 opt-in 수정이다. 새 모델 역할이나 기존 raw 지지 오류의 승인으로 사용하지 않는다.
 
 사용자 ㄱㄱㄱ에 따른 [공통입장 계약 연결](SHARED_DISCOVERY_DELIVERY.md)은 기존 공통제안 구현과 방향성소유권/typed감사를 연결한다. 합성검사 후 새 실제24개 개발 실행은 합계1.50 상한이며 정식r5 합격은 별도다.
+
+- TASK-017 / REQ-008·009: [개발 제품 시험의 동일 trial 예산](PRODUCT_TRIAL_BUDGET.md). 실제96 결과와 분리한 실행 준비이며 제품 완료 증거가 아니다.
