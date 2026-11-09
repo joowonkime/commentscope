@@ -36,7 +36,7 @@ class Actual24DevelopmentTests(unittest.TestCase):
             'decisions_deployment':openrouter_decisions.DEPLOYMENT})
         self.auth=self.root/'auth.json'
         dev.executor.authorize(self.auth,self.parent)
-        auth=json.loads(self.auth.read_text())
+        auth=json.loads(self.auth.read_text(encoding='utf-8'))
         self.plan={'artifact_kind':dev.VERSION,'mode':'development','gate':'G2',
             'formal_admission_eligible':False,'quality_gate_passed':False,'admission_file':None,
             'development_user_request':'rr after actual24 development clarification',
@@ -44,7 +44,7 @@ class Actual24DevelopmentTests(unittest.TestCase):
             'authorization':{'file':str(self.auth),'sha256':sha(self.auth),'authorization':auth},
             'deployment':generation,'verification_deployment':dev.executor.remote.SOL,
             'embedding_deployment':dev.executor.remote.EMBEDDING,'role_registry':dev.executor.remote.ROLES,
-            'spend_scope_sha256':sha(self.parent),'spend_policy':json.loads(self.policy.read_text()),
+            'spend_scope_sha256':sha(self.parent),'spend_policy':json.loads(self.policy.read_text(encoding='utf-8')),
             'run_directory':str((self.root/'run').resolve()), 'cross_run_response_reuse':False}
 
     def test_actual24_uses_original_financial_authority_without_formal_admission(self):
@@ -109,7 +109,7 @@ class Actual24DevelopmentTests(unittest.TestCase):
             self.assertEqual(process.call_count,1)
             self.assertEqual(money.summary()['charged_usd'],'13')
         write(directory/'artifacts'/'tampered.json',{})
-        (directory/'artifacts'/'output.json').write_text('{}')
+        (directory/'artifacts'/'output.json').write_text('{}', encoding='utf-8')
         with patch.object(dev,'validate',return_value=self.plan),\
                 patch.object(dev.executor,'quota_watch',return_value=nullcontext()),\
                 self.assertRaisesRegex(ValueError,'Completed development artifacts changed'):
