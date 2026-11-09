@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v27",
+  "spec_version": "commentscope-mvp-20261110-v28",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -416,7 +416,9 @@
         "tools/actual24_development.py",
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
-        "tools/shared_factory_trial.py"
+        "tools/shared_factory_trial.py",
+        "tools/serve_mvp.py",
+        "tools/product_trial_budget.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -485,7 +487,9 @@
         "src/commentscope/product/web.py",
         "tools/actual24_development.py",
         "tools/complete_factory.py",
-        "tools/cohort_refresh.py"
+        "tools/cohort_refresh.py",
+        "tools/serve_mvp.py",
+        "tools/product_trial_budget.py"
       ],
       "checks": [
         "tests/grounded_ui_smoke.cjs",
@@ -548,7 +552,9 @@
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
         "src/commentscope/factory/candidate_source_coverage.py",
-        "tools/shared_factory_trial.py"
+        "tools/shared_factory_trial.py",
+        "tools/serve_mvp.py",
+        "tools/product_trial_budget.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -1731,7 +1737,8 @@
       "deliverables": [
         "별도development artifact의 고정24개 전체 자동 생성 결과·실패·비용",
         "정식admission 거절과 기존money owner·총50 보존 검증",
-        "생성 가능한 실제24개 bundle의 experimental 제품 연결 결과"
+        "생성 가능한 실제24개 bundle의 experimental 제품 연결 결과",
+        "실제 bundle 제품 테스트도 같은trial 누적상한을 공유하는 실행 연결; 새서버로 한도초기화 금지"
       ],
       "done_when": [
         "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
@@ -1767,6 +1774,12 @@
           "scope": "Current typed common v3 and shared/owner/source/graph integration:required Factory635 and focused43 pass (overlap). Single-kind proposal schema and old protocol separation; same-plan proposal pause/read/full continuation, original scope/global money and cumulative1.50 cap verified. This is not live semantic admission.",
           "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Product budget bridge and related product/runtime/spend/spec80 checks pass, no paid calls. Server plans share the original trial/owner and one fixed product anchor, retaining legacy product charges. Room reservations match actual allocated wire bounds. Actual96 is still running; no actual bundle replacement, live product pass or formal admission.",
+          "reference": "tests/test_serve_mvp.py",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1778,7 +1791,8 @@
       ],
       "design_refs": [
         "docs/design/ACTUAL24_DEVELOPMENT.md",
-        "docs/design/SHARED_DISCOVERY_DELIVERY.md"
+        "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+        "docs/design/PRODUCT_TRIAL_BUDGET.md"
       ]
     }
   ],
@@ -1936,8 +1950,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v27",
       "reason": "24개 공통제안의 혼합명제 오류를 고비용 후속검증 전 발견. 명시적 assertion_kind 계약과 기존Sol배정으로 고정하고 등록96/74 개발확인 추가. 동일trial상한1.50·모든과거비용·정식차단 유지."
+    },
+    {
+      "reason": "TASK-017 실제96 검증 대기 중 제품 시험의 동일trial/원owner/기존제품cycle 상한 연결을 설계한다. 현재모델실행의 source freeze와 정식gate 실패는 유지한다.",
+      "spec_version": "commentscope-mvp-20261110-v28"
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v23",
+  "design_version": "commentscope-detailed-design-20261110-v24",
   "design_document": "docs/design/README.md"
 }
