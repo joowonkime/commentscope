@@ -264,6 +264,12 @@ class RemoteExecutorTests(unittest.TestCase):
                 self.e.prepare(self.root/('invalid-'+mode),self.auth,self.materials,mode=mode,gate=gate,
                     scope_refresh_file=self.root/'untrusted.json')
 
+    def test_control_preflight_rejects_unreservable_largest_request_before_creating_run(self):
+        directory=self.root/'insufficient-controls'
+        with self.assertRaisesRegex(ValueError,'largest complete request'):
+            self.e.prepare(directory,self.auth,self.materials,mode='controls',subcap_usd='0.15')
+        self.assertFalse(directory.exists())
+
     def test_storage_exhaustion_refuses_before_paid_intent_or_model_dispatch(self):
         base=Mock()
         req={'system':'s','data':{},'schema':{'type':'object','properties':{},'required':[],'additionalProperties':False},'max_tokens':10}

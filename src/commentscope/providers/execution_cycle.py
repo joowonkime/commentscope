@@ -7,11 +7,19 @@ from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.providers.openrouter_budget import units
 
 CYCLE_VERSION = 'commentscope-autonomous-cycle-20261105-v1'
+PRODUCT_CYCLE_VERSION = 'commentscope-product-cycle-20261109-v2'
 
 
 def cycle_guard(cycle, *, call_seconds=0, allow_expired=False, observed_at=None):
-    if (cycle.get('version') != CYCLE_VERSION or 'TASK-004' not in cycle.get('tasks', [])
-            or not 0 < units(cycle['maximum_additional_usd']) <= units('5')):
+    product=cycle.get('version')==PRODUCT_CYCLE_VERSION
+    if product:
+        tasks=cycle.get('tasks')
+        valid=(isinstance(tasks,list) and bool(tasks) and all(t in ('TASK-011','TASK-012') for t in tasks)
+               and len(tasks)==len(set(tasks)) and isinstance(cycle.get('user_request'),str) and bool(cycle['user_request'].strip())
+               and cycle.get('historical_charges_preserved') is True
+               and cycle.get('shared_policy_sha256')==sha(cycle['shared_policy_file']))
+    else:valid=cycle.get('version')==CYCLE_VERSION and 'TASK-004' in cycle.get('tasks',[])
+    if not valid or not 0<units(cycle['maximum_additional_usd'])<=units('2' if product else '5'):
         raise ValueError('Explicit bounded cycle authorization required')
     start = datetime.fromisoformat(cycle['started_at'])
     end = datetime.fromisoformat(cycle['deadline'])
@@ -31,6 +39,7 @@ def bind_cycle(path, deployment, policy, maximum_usd):
 
 
 def _configuration(cycle,deployment,policy,maximum_usd):
+    if cycle.get('version')==PRODUCT_CYCLE_VERSION:raise ValueError('Product-only cycle cannot authorize Factory work')
     if (deployment!=cycle['selected_deployment']
             or policy!=read_json(Path(cycle['shared_policy_file']))
             or units(maximum_usd)!=units(cycle['maximum_additional_usd'])):

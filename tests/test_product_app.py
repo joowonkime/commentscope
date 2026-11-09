@@ -15,6 +15,19 @@ from test_grounded_web import provider
 
 
 class ProductAppTests(unittest.TestCase):
+    def test_public_composition_does_not_count_shared_sources_twice(self):
+        value=self.analysis.public()
+        self.assertEqual(value['analyzed_comments'],3)
+        self.assertEqual(sum(x['count'] for x in value['composition']),3)
+        self.assertEqual(next(x['count'] for x in value['composition'] if x.get('kind')=='multiple'),3)
+        self.assertTrue(all(g['claim_id']!='eliminated' for p in value['perspectives'] for g in p['grounds']))
+
+    def test_processed_scope_and_population_have_different_public_counts(self):
+        value=Analysis(self.analysis.bundle,{'processing_count':6,'canonical_population':999}).public()
+        self.assertEqual(value['analyzed_comments'],6);self.assertEqual(value['canonical_population'],999)
+        self.assertEqual(value['count_scope'],'processed_comments')
+        self.assertEqual(sum(x['count'] for x in value['composition']),6)
+
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)
         self.path = Path(temp.name)/'app.sqlite'

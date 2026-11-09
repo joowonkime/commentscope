@@ -217,11 +217,15 @@ def validate(document, root=ROOT):
     else:
         active = [ident for ident, row in tasks.items() if choice(row.get('status'), {'next', 'in_progress'})]
         selected = resume.get('next_task')
+        parallel=resume.get('parallel_tasks',[])
+        valid_parallel=(isinstance(parallel,list) and all(isinstance(i,str) and i in tasks for i in parallel)
+                        and len(parallel)==len(set(parallel)) and selected not in parallel)
+        if not valid_parallel:errors.append('resume parallel_tasks must name unique independent tasks')
         if selected is None:
             if active or any(not choice(row.get('status'), {'done', 'deferred'}) for row in tasks.values()):
                 errors.append('resume has no next task while unfinished work remains')
-        elif not isinstance(selected, str) or selected not in tasks or active != [selected]:
-            errors.append('resume must name the single active task')
+        elif not isinstance(selected, str) or selected not in tasks or not valid_parallel or set(active)!={selected,*parallel}:
+            errors.append('resume must name each active task with one primary and explicit parallel tasks')
         if resume.get('paid_execution_hold') and not nonempty(resume.get('hold_reason')):
             errors.append('paid execution HOLD needs a reason')
     return errors

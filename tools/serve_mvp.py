@@ -31,6 +31,7 @@ from experiments.source_semantics_diagnostic import CYCLE_VERSION,cycle_guard
 
 VERSION='commentscope-product-server-20261105-v1'
 ASSETS=[ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','mvp.css')]
+ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 
 def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd):
@@ -72,6 +73,7 @@ def validate(directory):
     plan=read_json(directory/'plan.json');run_origin(plan,directory,attempt=1)
     if (plan['artifact_kind']!=VERSION or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
             or plan['entrypoint_sha256']!=sha(Path(__file__)) or plan['code_sha256']!=source_code_hashes()
+            or set(plan['assets_sha256'])!={str(p.relative_to(ROOT)) for p in ASSETS}
             or any(sha(ROOT/path)!=h for path,h in plan['assets_sha256'].items())
             or any(sha(path)!=h for path,h in plan['inputs'].items())
             or plan['spend_scope_sha256']!=sha(plan['cycle_file'])
@@ -171,6 +173,8 @@ def main(argv=None):
     p.add_argument('--session-ttl-seconds',type=int,required=True);p.add_argument('--room-maximum-usd',required=True)
     p=actions.add_parser('serve');p.add_argument('directory',type=Path)
     p.add_argument('--key-file',type=Path);p.add_argument('--port',type=int,default=8767)
+    p.add_argument('--bind',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1')
+    p.add_argument('--public-origin')
     p.add_argument('--experimental',action='store_true',required=True)
     args=parser.parse_args(argv)
     if args.action=='prepare':
@@ -180,7 +184,8 @@ def main(argv=None):
                           'quality_gate_passed':False,'inference_calls':0}));return
     if args.key_file is not None:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
     with experiment_lock(args.directory):
-        product,legacy,broker=build(args.directory);server=ProductServer(product,legacy,args.port)
+        product,legacy,broker=build(args.directory);server=ProductServer(product,legacy,args.port,
+            bind_host=args.bind,public_origin=args.public_origin)
         print(json.dumps({'origin':'http://127.0.0.1:'+str(server.server_address[1]),
                           'preview':'/mvp','quality_gate_passed':False}),flush=True)
         try:server.serve_forever()

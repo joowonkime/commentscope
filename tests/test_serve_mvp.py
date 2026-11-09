@@ -19,6 +19,29 @@ from test_openrouter import deployment
 
 
 class ProductServerPlanTests(unittest.TestCase):
+    def product_cycle(self):
+        from commentscope.providers.execution_cycle import PRODUCT_CYCLE_VERSION
+        self.cycle.update(version=PRODUCT_CYCLE_VERSION,tasks=['TASK-011','TASK-012'],
+            user_request='Complete the remaining MVP',maximum_additional_usd='1',historical_charges_preserved=True,
+            shared_policy_sha256=sha(self.root/'policy.json'))
+        self.cycle_file.write_text(json.dumps(self.cycle))
+
+    def test_product_cycle_keeps_shared_history_without_requiring_research_task(self):
+        self.product_cycle();directory,plan=self.prepare()
+        self.assertEqual(plan['cycle']['tasks'],['TASK-011','TASK-012']);self.base.call.assert_not_called()
+        product,legacy,broker=server.build(directory)
+        try:self.assertEqual(self.compare(product)['state'],'succeeded')
+        finally:product.close()
+        self.assertEqual(broker.ledger.summary()['confirmed_usd'],'0.10001')
+
+    def test_product_cycle_does_not_authorize_factory_or_reset_its_cap(self):
+        from commentscope.providers.execution_cycle import bind_cycle,cycle_guard
+        self.product_cycle()
+        with self.assertRaisesRegex(ValueError,'Product-only'):
+            bind_cycle(self.cycle_file,self.cycle['selected_deployment'],self.policy,'1')
+        for change in ({'maximum_additional_usd':'2.01'},{'user_request':' '},{'tasks':['TASK-005']},{'shared_policy_sha256':'f'*64}):
+            with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
+
     def setUp(self):
         temp=tempfile.TemporaryDirectory(dir='runs',prefix='mvp-plan-test-');self.addCleanup(temp.cleanup)
         self.root=Path(temp.name);self.addCleanup(patch.stopall)

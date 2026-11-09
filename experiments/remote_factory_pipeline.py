@@ -148,19 +148,26 @@ def admission(gate,path,profile):
 
 
 def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap_usd='0.5',
-            fact_benchmark=None,admission_file=None,scope_refresh_file=None):
+            fact_benchmark=None,admission_file=None,scope_refresh_file=None,controls_selection_file=None):
     directory=Path(directory);auth_file=Path(auth_file).resolve();materials_file=Path(materials_file)
     for p in (directory,auth_file,materials_file):private(p)
-    if directory.exists() or mode not in ('factory','benchmark') or gate not in ('G1','G2','G3'):
+    if directory.exists() or mode not in ('factory','benchmark','controls') or gate not in ('G1','G2','G3'):
         raise ValueError('Fresh supported remote run required')
     if scope_refresh_file is not None and (mode!='factory' or gate not in ('G2','G3')):
         raise ValueError('Revalidated scope applies only to fixed actual G2/G3')
+    if controls_selection_file is not None and mode!='controls':raise ValueError('Controls selection is diagnostic-only')
     auth=read_json(auth_file);old=read_json(auth['money_owner']['file'])
     policy=validate_spend_policy(read_json(old['shared_policy_file']));money=ledger(policy)
     if money.summary()['reserved_calls'] or money.summary()['uncertain_calls']:raise BudgetExhausted('Existing money hold')
     materials=read_json(materials_file)
     inputs={str(materials_file):sha(materials_file),str(auth_file):sha(auth_file)}
     if mode=='benchmark':inputs[str(FACT_SOURCE)]=sha(FACT_SOURCE)
+    if mode=='controls':
+        from tools import typed_verification_controls as controls
+        inputs[str(controls.FIXTURE)]=sha(controls.FIXTURE)
+        inputs['tools/typed_verification_controls.py']=sha('tools/typed_verification_controls.py')
+        if controls_selection_file is not None:
+            private(controls_selection_file);inputs[str(controls_selection_file)]=sha(controls_selection_file)
     for p in (fact_benchmark,admission_file):
         if p is not None:private(p);inputs[str(p)]=sha(p)
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),'mode':mode,'gate':gate,
@@ -178,7 +185,7 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'limits':{'analysis_seconds':None,'call_seconds':180},
           'discovery_mode':'free','membership_mode':'raw','extraction_protocol':compact_claims.PROPOSALS,
           'verification_contract':raw_membership_verification.FULL_SCOPE,
-          'argument_audit_protocol':argument_observations.CHAT_SPLIT,'agent_source_policy':'verified_subset',
+          'argument_audit_protocol':argument_observations.TYPED_CHAT,'agent_source_policy':'verified_subset',
           'membership_retrieval_policy':candidate_consolidation.ALIAS_RETRIEVAL,'scope_refresh':None,
           'component_diagnostic_policy':'record_and_continue','fact_benchmark':str(fact_benchmark) if fact_benchmark else None,
           'admission_file':str(admission_file) if admission_file else None,
@@ -186,6 +193,16 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'goal_revision':acceptance.R5,'acceptance_profile':acceptance.validate(read_json('tests/fixtures/factory-acceptance-r5.json'),acceptance.R5_DIGEST),
           'reference_runtime_input':False,'cross_run_response_reuse':False,'quality_gate_passed':False}
     plan['acceptance_profile_sha256']=digest(plan['acceptance_profile'])
+    if mode=='controls':
+        from commentscope.providers.generation_limits import allocate
+        selection=read_json(controls_selection_file) if controls_selection_file else None
+        plan['controls_selection']=selection
+        pricing=remote.WireBudget(None,None,plan_sha256='0'*64,deployment=remote.SOL,
+            maximum_run_usd=old['maximum_additional_usd'],paid_provider=None,key_metadata=None)
+        allocation=openrouter.generation_allocation(remote.SOL,require_explicit=True)
+        maximum=max(pricing.maximum_charge(allocate(req,allocation)) for req in controls.requests(selection))
+        if maximum>Decimal(subcap_usd):raise ValueError('Controls subcap cannot reserve the largest complete request')
+        plan['controls_maximum_reservation_usd']=str(maximum)
     guard(plan)
     plan['providers_at_prepare']={'generation':provider_preflight(plan['deployment']),
         'verification':provider_preflight(remote.SOL),'embedding':embedding_preflight()}
@@ -207,7 +224,9 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
             canonical_population=len(sources(snapshot)))
         if gate!='G1':plan['inputs'][str(Path('runs/design-freeze-20261016/samples.json'))]=sha('runs/design-freeze-20261016/samples.json')
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
-    archive_sources(directory,plan['code_sha256']);return plan
+    archive_sources(directory,plan['code_sha256'])
+    if mode=='controls':archive_sources(directory,{'tools/typed_verification_controls.py':inputs['tools/typed_verification_controls.py']})
+    return plan
 
 
 class SubcapLedger:
@@ -325,7 +344,7 @@ def validate(directory,plan):
             or plan.get('artifact_storage_policy')!=api_resources.STORAGE_POLICY
             or plan['classifier']!=model_identity() or plan['model_files']!={}
             or plan['billing_policy']!=remote.WIRE_BUDGET
-            or plan['argument_audit_protocol']!=argument_observations.CHAT_SPLIT
+            or plan['argument_audit_protocol']!=argument_observations.TYPED_CHAT
             or plan.get('membership_retrieval_policy')!=candidate_consolidation.ALIAS_RETRIEVAL
             or plan['agent_source_policy']!='verified_subset'):
         raise ValueError('Frozen remote code/input/execution contract changed')
@@ -347,7 +366,8 @@ def run(directory):
         if (directory/'completed.json').exists():
             completed=read_json(directory/'completed.json')
             files=({'report_sha256':'artifacts/fact-report.json','records_sha256':'artifacts/fact-records.json'}
-                   if plan['mode']=='benchmark' else {'output_sha256':'artifacts/output.json','runtime_sha256':'artifacts/runtime.json'})
+                   if plan['mode']=='benchmark' else {'report_sha256':'artifacts/controls-report.json','records_sha256':'artifacts/control-records.json'}
+                   if plan['mode']=='controls' else {'output_sha256':'artifacts/output.json','runtime_sha256':'artifacts/runtime.json'})
             if completed['plan_sha256']!=sha(directory/'plan.json') or any(completed[k]!=sha(directory/p) for k,p in files.items()):
                 raise ValueError('Completed remote artifacts changed')
             return completed
@@ -382,6 +402,13 @@ def run(directory):
                     completion={'execution_complete':True,'plan_sha256':sha(directory/'plan.json'),
                         'records_sha256':sha(directory/'artifacts/fact-records.json'),
                         'report_sha256':sha(directory/'artifacts/fact-report.json'),'fact_benchmark_passed':report['passed']}
+                elif plan['mode']=='controls':
+                    from tools import typed_verification_controls as controls
+                    report=controls.execute(session,save)
+                    completion={'execution_complete':True,'plan_sha256':sha(directory/'plan.json'),
+                        'records_sha256':sha(directory/'artifacts/control-records.json'),
+                        'report_sha256':sha(directory/'artifacts/controls-report.json'),
+                        'controls_all_expected':report['all_expected'],'control_false_approval':report['false_approval']}
                 else:
                     replay=replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
                     if not replay['passed']:raise ValueError('Remote fixed fact benchmark failed')
@@ -416,15 +443,16 @@ def run(directory):
 def main():
     p=argparse.ArgumentParser();p.add_argument('action',choices=('authorize','prepare','run'))
     p.add_argument('directory',type=Path);p.add_argument('--owner',type=Path);p.add_argument('--authorization',type=Path)
-    p.add_argument('--materials',type=Path);p.add_argument('--mode',choices=('factory','benchmark'),default='factory')
+    p.add_argument('--materials',type=Path);p.add_argument('--mode',choices=('factory','benchmark','controls'),default='factory')
     p.add_argument('--gate',choices=('G1','G2','G3'),default='G1');p.add_argument('--subcap-usd',default='0.5')
     p.add_argument('--fact-benchmark',type=Path);p.add_argument('--admission',type=Path)
     p.add_argument('--resume-request')
     p.add_argument('--scope-refresh-file',type=Path)
+    p.add_argument('--controls-selection-file',type=Path)
     a=p.parse_args()
     if a.action=='authorize':result=authorize(a.directory,a.owner,resume_request=a.resume_request)
     elif a.action=='prepare':result=prepare(a.directory,a.authorization,a.materials,mode=a.mode,gate=a.gate,
-        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission,scope_refresh_file=a.scope_refresh_file)
+        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission,scope_refresh_file=a.scope_refresh_file,controls_selection_file=a.controls_selection_file)
     else:result=run(a.directory)
     print(json.dumps({k:v for k,v in result.items() if k not in ('code_sha256','inputs','documents','selections')},ensure_ascii=False))
 

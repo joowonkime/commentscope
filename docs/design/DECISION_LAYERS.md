@@ -1,6 +1,6 @@
 # Decision 계층과 모델 호출 상세 설계
 
-설계 `commentscope-detailed-design-20261109-v15`, DEC-007, TASK-016/005.
+설계 `commentscope-detailed-design-20261109-v17`, DEC-007, TASK-016/005.
 연결: REQ-001~010, [제품 명세](../MVP_SPEC.md), [Factory 계약](FACTORY.md), [실행 계약](EXECUTION.md).
 대조 코드 `227e3c9d1b8345f392a6dfe6aaba471290e44575`, 공식 자료 확인일 2026-11-05.
 
