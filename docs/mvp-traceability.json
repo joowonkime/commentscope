@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v29",
+  "spec_version": "commentscope-mvp-20261110-v30",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "공통관점 실제96 개발실행은 trial누적1.37279746/상한1.50에서 다음예약0.12762를 감당못해 API전송전 중단. 미확정/예약0. 1차288쌍 완료·추가192쌍 중일부만완료·전체350/480쌍. 지지1/2/4/2/0, 논거/Agent/runtime 미도달. 무료전체호출계획·비용예측/단위범위검토 전 유료재시도 금지; 실패·원8/총50 장부 유지.",
+    "hold_reason": "공통관점 실제96 개발실행은 trial누적1.37279746/상한1.50에서 다음예약0.12762를 감당못해 API전송전 중단. 미확정/예약0. 1차288쌍 완료·추가192쌍 중일부만완료·전체350/480쌍. 지지1/2/4/2/0, 논거/Agent/runtime 미도달. 무료전체호출계획·비용예측/단위범위검토 전 유료재시도 금지; 실패·원8/총50 장부 유지. 원문영상식별문맥을후속검사로보존하는opt-inv4구현·Factory644/집중32/관련74무료검사통과(중복있음). 기존350raw/20evidence재검증동일·새v4의실제모델판정0. 전체단계비용계획/새실제승인없이재호출하지않는다.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -54,7 +54,9 @@
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
         "src/commentscope/factory/candidate_source_coverage.py",
-        "tools/shared_factory_trial.py"
+        "tools/shared_factory_trial.py",
+        "src/commentscope/factory/raw_membership_verification.py",
+        "src/commentscope/factory/pipeline_work.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -72,7 +74,8 @@
         "tests/test_cohort_refresh.py",
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
-        "tests/test_shared_factory_trial.py"
+        "tests/test_shared_factory_trial.py",
+        "tests/test_membership_reference_context.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -112,7 +115,9 @@
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
         "src/commentscope/factory/candidate_source_coverage.py",
-        "tools/shared_factory_trial.py"
+        "tools/shared_factory_trial.py",
+        "src/commentscope/factory/raw_membership_verification.py",
+        "src/commentscope/factory/pipeline_work.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -130,7 +135,8 @@
         "tests/test_cohort_refresh.py",
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
-        "tests/test_shared_factory_trial.py"
+        "tests/test_shared_factory_trial.py",
+        "tests/test_membership_reference_context.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -174,7 +180,9 @@
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
         "src/commentscope/factory/candidate_source_coverage.py",
-        "tools/shared_factory_trial.py"
+        "tools/shared_factory_trial.py",
+        "src/commentscope/factory/raw_membership_verification.py",
+        "src/commentscope/factory/pipeline_work.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -192,7 +200,8 @@
         "tests/test_cohort_refresh.py",
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
-        "tests/test_shared_factory_trial.py"
+        "tests/test_shared_factory_trial.py",
+        "tests/test_membership_reference_context.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -554,7 +563,9 @@
         "src/commentscope/factory/candidate_source_coverage.py",
         "tools/shared_factory_trial.py",
         "tools/serve_mvp.py",
-        "tools/product_trial_budget.py"
+        "tools/product_trial_budget.py",
+        "src/commentscope/factory/raw_membership_verification.py",
+        "src/commentscope/factory/pipeline_work.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -575,7 +586,8 @@
         "tests/test_cohort_refresh.py",
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
-        "tests/test_shared_factory_trial.py"
+        "tests/test_shared_factory_trial.py",
+        "tests/test_membership_reference_context.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1738,7 +1750,8 @@
         "별도development artifact의 고정24개 전체 자동 생성 결과·실패·비용",
         "정식admission 거절과 기존money owner·총50 보존 검증",
         "생성 가능한 실제24개 bundle의 experimental 제품 연결 결과",
-        "실제 bundle 제품 테스트도 같은trial 누적상한을 공유하는 실행 연결; 새서버로 한도초기화 금지"
+        "실제 bundle 제품 테스트도 같은trial 누적상한을 공유하는 실행 연결; 새서버로 한도초기화 금지",
+        "새명시적 근거검사 protocol에서 원문영상 식별문맥 연속성 보존·기존계약/부정검사 유지; 유료재검증 별도"
       ],
       "done_when": [
         "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
@@ -1786,6 +1799,12 @@
           "scope": "Actual96 common typed development run:584 completed paid responses/$1.34735548; previous24 proposal included cumulative trial$1.37279746. Full96 context/world and first288 membership pairs completed;350/480 total pairs assessed before reservation cap stop. Partial support1/2/4/2/0, only one core meets3-source threshold. Arguments, final Agent compiler and runtime were not reached. Rejected next request has no ledger call; reserved/uncertain0. No product replacement or formal admission. Offline same-plan initial projection adds0 calls.",
           "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "New explicit FULL_SCOPE/raw evidence-context v4 transports exact original video identity through the common pipeline; old omission protocols and all modality/amount/approximation/ownership vetoes retained. Required Factory644, focused32 and related74 checks passed (overlap). Read-only compatibility:350 old raw proofs and20 evidence records unchanged,9 prior partial supports retained;20 new requests have exact original context and distinct hashes. Fact40 six runtime hashes unchanged,0 paid retest. No fresh v4 semantic verdict, completed actual96 run, actual product replacement or formal admission.",
+          "reference": "tests/test_membership_reference_context.py",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1964,8 +1983,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v29",
       "reason": "고정96 개발실행의 실제 예산중단과 미도달단계를 기록한다. 코드/CI통과와 실제MVP미완료를 구별하고, 전체호출계획 비용예측을 보완하기 전 추가유료호출을 보류한다. 새서버·다른실험으로 이번trial상한을 초기화하지 않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v30",
+      "reason": "실제보류11건을 전수읽어 후속FULL_SCOPE 근거검사에서 원문영상문맥이 빠짐을 확인. 기존v3응답은 그대로 두고 opt-in v4 입력연속성 수정과무료회귀만 수행. paid hold와원trial한도 유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v25",
+  "design_version": "commentscope-detailed-design-20261110-v26",
   "design_document": "docs/design/README.md"
 }

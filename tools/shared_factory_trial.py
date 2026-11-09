@@ -71,6 +71,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or plan['discovery_mode']!='shared' or plan['membership_mode']!='raw'
             or plan['extraction_protocol'] is not None or plan['argument_audit_protocol']!=obs.SHARED_TYPED_CHAT
             or plan['agent_source_policy']!='candidate_verified_subset'
+            or plan.get('membership_evidence_protocol') not in (None,executor.raw_membership_verification.QUALIFIED_CONTEXT)
             or plan['membership_retrieval_policy']!=cc.ALIAS_RETRIEVAL or plan['stage_aliases']!=ALIASES):
         raise ValueError('Frozen shared development scope, roles or cumulative cap changed')
 
@@ -108,6 +109,7 @@ def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=No
         discovery_mode='shared',membership_mode='raw',extraction_protocol=None,
         argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset',
         membership_retrieval_policy=cc.ALIAS_RETRIEVAL,stage_aliases=deepcopy(ALIASES),
+        membership_evidence_protocol=executor.raw_membership_verification.QUALIFIED_CONTEXT,
         snapshot=str(path),snapshot_sha256=sha(path),scope_ids=scope,scope_refresh=binding,
         processing_count=len(scope),canonical_population=len(executor.sources(snapshot)),
         expires_at=snapshot.usage.expires_at,code_sha256=source_code_hashes(),inputs=inputs,
@@ -198,6 +200,7 @@ def run(directory,*,proposals_only=False):
                     session,session.embed,session.inspect,lambda req:session.call('facts-'+digest(req)[:20],req),
                     model=plan['classifier'],documents=plan['documents'],selections=plan['selections'],scope_ids=plan['scope_ids'],save=save,
                     discovery_mode='shared',membership_mode='raw',verification_contract=plan['verification_contract'],
+                    membership_evidence_protocol=plan.get('membership_evidence_protocol'),
                     argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset')
                 save('output',output)
                 runtime=runtime_probe(output['agent_inputs']['bundle'],session,

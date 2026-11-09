@@ -104,3 +104,32 @@ Sol/common typed v3 고정96 개발실행은584개의 유료응답, $1.34735548 
 PR77의 공통/방향성 연결과 PR78의 제품 동일예산/wire예약 수정은 Ubuntu·Windows CI를 통과해
 main에 병합됐다. 관련Factory635·제품80 오프라인 검사는 실제96 완료나 정식gate를 대신하지 않는다.
 정식G1 실패와G2/G3/G4 admission 차단, 999개/60% 활용과 사람평가 미검증 상태는 유지한다.
+
+
+## 원문 지칭문맥의 단계 간 연속성 — v4 구현 전 계약
+
+실제 보류11건의 own-evidence 응답을 모두 읽었다. 여러 응답이 “UBI를 지칭하는지 알 수 없음”을
+명시했다. raw membership에는 정확한 `VIDEO_CONTEXT_ONLY`가 있지만 FULL_SCOPE/v3 후속근거
+request는 이를 제외한다. 기존ALIGNED/Full-scope의 의도적 metadata-omission 계약은 변경하지
+않는다. 영상제목을 제외한 비교와 포함한 비교를 같은영수증으로 다루지 않는다.
+
+새 opt-in `membership_evidence_protocol`은 FULL_SCOPE/raw에서만 유효하다. v4는 원문 packet의
+영상 식별문맥(id/title/language)을 후속근거검사에 그대로 보낸다. 제목은 'it/이 정책'의 정체만
+해석할 수 있으며 효과·금액·논거·찬성의 근거가 아니다. 부모/영상/후보/앞단 판정은 원문작성자의
+assertion을 대신하지 않는다. 모호하면 계속 보류한다. own evidence/span·full original·parent와
+전체candidate·기존예측/요구·수량·approximation·귀속/조건 guard는 유지한다.
+
+기존 v3 request/record와 새v4는 prompt/data/requestSHA/protocol로 구별한다. v3영수증을 이름만
+바꾸거나 기존실패판정을 v4결과로 다시집계하지 않는다. 공통개발 실행의 새plan에 명시적으로
+v4를 고정하며, 인자가 없는 기존pipeline은 종전동작을 유지한다. 새 pipeline설정이 기존모델
+역할·배정·가격·원trial시작값·한도를 변경하지 않는다.
+
+정상회귀: 영상 식별문맥을 가진 자기주장의 raw→후속근거 입력과 캐시 hash 연속성, 새설정을
+전체파이프라인에 전달하는 모의실행. 부정회귀: 모호한지칭/부모만의 주장/없는 금액/요구→예측/
+예측→요구/approximation누락은 문맥이 있어도 거절한다. 다른영상/프로토콜 영수증 바꿔붙이기,
+FULL_SCOPE/raw 이외의 조합도 거절한다.
+
+이 수정의 검증은 무료합성/기존응답의 입력대조만이다. 새유료호출0, 실제지지수1/2/4/2/0과
+미완료결과는 그대로다. video문맥 하나로 모든보류가 해소되거나2Agent가 생긴다고 추정하지 않는다.
+
+구현 후 확인: 필수Factory644·집중32·관련74 검사 통과(중복포함). 실제저장350 raw/20 근거검사 record를 새코드로 무료 검증해 모두동일함을 확인했다. 새요청20개는 exact영상문맥과서로다른requestSHA를 가지며 원문근거 span은동일하다. 기존지지9건은그대로이며 새v4모델판정/추가유료호출0이다. fact40의6개runtime파일 hash는같아 재결제하지않았다.

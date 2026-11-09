@@ -124,6 +124,29 @@ class SharedTypedPipelineTests(unittest.TestCase):
         reasons=[c for c in result['agent_inputs']['bundle']['claims'] if 'because' in c['text']]
         self.assertEqual(len(reasons),6)
 
+    def test_explicit_source_context_protocol_reaches_every_membership_evidence_request(self):
+        runner=SharedRunner()
+        result=self.h.process(runner,discovery_mode='shared',membership_mode='raw',
+            verification_contract=verify.FULL_SCOPE,argument_audit_protocol=obs.SHARED_TYPED_CHAT,
+            agent_source_policy='candidate_verified_subset',membership_evidence_protocol=verify.QUALIFIED_CONTEXT)
+        evidence=[req for stage,req in runner.calls if stage.startswith('raw-own-evidence')]
+        self.assertTrue(evidence)
+        self.assertTrue(all('VIDEO_CONTEXT_ONLY' in req['data'] for req in evidence))
+        self.assertEqual(result['membership_evidence_protocol'],verify.QUALIFIED_CONTEXT)
+        self.assertEqual(len(result['agent_inputs']['compiled']['profiles']),2)
+        proofs=[r for b in result['memberships'] for r in b['verified_assessments'] if r['passed']]
+        self.assertTrue(all(r['evidence_check']['protocol']==verify.QUALIFIED_CONTEXT for r in proofs))
+
+    def test_source_context_flag_cannot_relabel_staged_or_non_raw_legacy_membership(self):
+        for kwargs in ({'membership_mode':'scoped','verification_contract':verify.FULL_SCOPE},
+                {'membership_mode':'raw','verification_contract':verify.LEGACY},
+                {'membership_mode':'raw','verification_contract':verify.FULL_SCOPE,'shared_records':[],
+                 'shared_memberships':[]}):
+            runner=SharedRunner()
+            with self.subTest(kwargs=kwargs),self.assertRaises(ValueError):
+                self.h.process(runner,discovery_mode='shared',membership_evidence_protocol=verify.QUALIFIED_CONTEXT,**kwargs)
+            self.assertEqual(runner.calls,[])
+
     def test_source_condition_failure_still_holds_every_affected_agent(self):
         result=self.run_pipeline(SharedRunner(bad_condition=True))
         self.assertFalse(result['agent_inputs']['compiled']['profiles'])
