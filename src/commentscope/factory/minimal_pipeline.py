@@ -19,7 +19,7 @@ SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs':
 def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
-    if agent_source_policy not in ('all_members','verified_subset'):raise ValueError('Unknown Agent source policy')
+    if agent_source_policy not in ('all_members','verified_subset','candidate_verified_subset'):raise ValueError('Unknown Agent source policy')
     from commentscope.factory import candidate_hierarchy
     if (membership_retrieval_policy not in (cc.ALIAS_RETRIEVAL,candidate_hierarchy.VERSION)
             or membership_retrieval_policy==candidate_hierarchy.VERSION and (discovery_mode,membership_mode)!=('free','raw')):

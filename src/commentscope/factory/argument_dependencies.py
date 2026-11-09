@@ -151,16 +151,30 @@ def select(records, cores, audit_tasks, checks, *, typed=False):
     return [deepcopy(found[k]) for k in sorted(needed)]
 
 
-def guards(record, cores, checks, *, typed=False):
+def guards(record, cores, checks, *, typed=False, candidate_id=None):
     checked=select([record],cores,[{'source_id':record['source']['id']}],checks,typed=typed)
     local=next(c for c in checked if c['task']['kind']==('combined' if typed else 'local')); labels=local['labels']
     aliases={u['id']:'U'+str(i) for i,u in enumerate(record['units'],1)}
     local_aliases={u['local_id']:'U'+str(i) for i,u in enumerate(record['units'],1)}
     failures={a:[] for a in aliases.values()};failures['coverage']=[]
+    selected=None
+    if candidate_id is not None:
+        if not typed or candidate_id not in record['candidate_ids']:
+            raise ValueError('Bound typed candidate scope required')
+        by_local={u['local_id']:u for u in record['units']};selected=set()
+        def include(unit):
+            if unit['id'] in selected:return
+            selected.add(unit['id'])
+            for lid in unit['requires']:include(by_local[lid])
+        for unit in record['units']:
+            if candidate_id in unit['candidate_ids'] or candidate_id in unit.get('core_requires_for',[]):include(unit)
+        selected={aliases[uid] for uid in selected}
     for check in checked:
         for target,value in check['task']['targets'].items():
             observed=set();bad=[]
             is_core='core_id' in value
+            if candidate_id is not None and (value['core_id']!=candidate_id if is_core else target not in selected):
+                continue
             if typed and is_core:
                 core=next(c for c in cores if c['candidate']['id']==value['core_id'])
                 if labels['kind_'+target]=='uncertain' or labels['kind_'+target]!=core['output']['kind']:

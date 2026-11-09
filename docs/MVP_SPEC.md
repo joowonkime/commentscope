@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261110-v24`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261110-v25`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v20`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v21`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -194,3 +194,7 @@ TASK-004/013/014의 새 의미 역할 채택은 보류한다. Figma 화면과 �
 2026-11-10 typed/world 새G1은2Agent·유효지지4/3·6실제응답·binding0으로 실행됐으나, 세부관점에만남은B의 일반지지누락으로정식15/16이다. [상하위검색계약](design/HIERARCHY_RETRIEVAL.md)은기존기준을낮추지않고검증대상을확장한다. Figma세과업실제9호출/$0.05072025·재열람추가0을확인했다. 사용자rr로승인한[현재999자료갱신](design/COHORT_COMPLETION.md)도새참조755/최소453을유지하며, 기존결과와구별한다.
 
 상하위검색 새G1은 집계5/3 복원·299호출/$0.618985150이나 논거완전성 보류로Agent0이다. 사용자rr에 따라 [실제24개 개발검증](design/ACTUAL24_DEVELOPMENT.md)을 TASK-017로 별도 진행한다. 정식G1 실패와G2/G3/G4 admission 차단은 유지하며, 추가 유료합성 재시도는 보류한다.
+
+[후보별 원문 완전성](design/CANDIDATE_SOURCE_COVERAGE.md)의 opt-in host 수정은 원래 감사/모델응답을 바꾸지 않는다. 무료 전체G1 compiler 재생에서0→2Agent(5/3)이나 잘못된 raw 지지3건과정식G1 실패는 유지한다. 현재실제24개 실행은 별도동결checkout에서 계속하며 새유료합성 반복을 하지 않는다.
+
+실제24개 개발실행은412호출/$0.94319150·연결/용량/미추출오류0이나47후보가각각지원0~1개여서Agent0으로 끝났다. 논거 이전의 후보수용/공통관점 형성이 별도미해결이다. 무료후보별컴파일 재생도실제24개는0이며 제품자료를 교체하지 않았다. 추가유료호출은 보류한다.
