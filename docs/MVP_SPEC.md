@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261110-v28`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261110-v29`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v24`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v25`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -202,3 +202,5 @@ TASK-004/013/014의 새 의미 역할 채택은 보류한다. Figma 화면과 �
 사용자 ㄱㄱㄱ에 따른 [공통입장 계약 연결](design/SHARED_DISCOVERY_DELIVERY.md)은 기존 공통제안 구현과 방향성소유권/typed감사를 연결한다. 합성검사 후 새 실제24개 개발 실행은 합계1.50 상한이며 정식r5 합격은 별도다.
 
 실제 bundle의 개발용 제품 시험은 [동일 trial 예산 연결](design/PRODUCT_TRIAL_BUDGET.md)을 따른다. 실제96 검증 중 source 코드는 동결하며, 새 제품서버로1.50 상한이나 기존제품cycle 한도를 초기화하지 않는다.
+
+공통 typed 실제96 개발실행은584응답/$1.34735548 뒤 다음예약상한에서 중단됐다. 이전24개 제안까지합친trial누적$1.37279746이며 추가유료호출은 보류한다. 전체96 문맥·1차288쌍은 처리했으나 전체480쌍 중350쌍만 판정돼 논거/최종Agent/runtime은 미도달이다. 부분지지는1/2/4/2/0이고 제품 자료를 교체하지 않았다. 명세/CI통과를 MVP완료로 보고하지 않는다.

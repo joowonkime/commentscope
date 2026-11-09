@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v28",
+  "spec_version": "commentscope-mvp-20261110-v29",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-005",
-    "paid_execution_hold": false,
-    "hold_reason": "최신 전체Factory635 및 관련43검사 통과. 같은trial 합계1.50/원8/총50 안에서 등록96/74 개발제안부터 확인. 제안 모델Sol·typed common v3·source/owner/graph/fact 검증 보존. 다른실행 의미응답 재사용0, 정식G1/G2/G3 실패/차단은 유지.",
+    "paid_execution_hold": true,
+    "hold_reason": "공통관점 실제96 개발실행은 trial누적1.37279746/상한1.50에서 다음예약0.12762를 감당못해 API전송전 중단. 미확정/예약0. 1차288쌍 완료·추가192쌍 중일부만완료·전체350/480쌍. 지지1/2/4/2/0, 논거/Agent/runtime 미도달. 무료전체호출계획·비용예측/단위범위검토 전 유료재시도 금지; 실패·원8/총50 장부 유지.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -1780,6 +1780,12 @@
           "scope": "Product budget bridge and related product/runtime/spend/spec80 checks pass, no paid calls. Server plans share the original trial/owner and one fixed product anchor, retaining legacy product charges. Room reservations match actual allocated wire bounds. Actual96 is still running; no actual bundle replacement, live product pass or formal admission.",
           "reference": "tests/test_serve_mvp.py",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual96 common typed development run:584 completed paid responses/$1.34735548; previous24 proposal included cumulative trial$1.37279746. Full96 context/world and first288 membership pairs completed;350/480 total pairs assessed before reservation cap stop. Partial support1/2/4/2/0, only one core meets3-source threshold. Arguments, final Agent compiler and runtime were not reached. Rejected next request has no ledger call; reserved/uncertain0. No product replacement or formal admission. Offline same-plan initial projection adds0 calls.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -1954,8 +1960,12 @@
     {
       "reason": "TASK-017 실제96 검증 대기 중 제품 시험의 동일trial/원owner/기존제품cycle 상한 연결을 설계한다. 현재모델실행의 source freeze와 정식gate 실패는 유지한다.",
       "spec_version": "commentscope-mvp-20261110-v28"
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v29",
+      "reason": "고정96 개발실행의 실제 예산중단과 미도달단계를 기록한다. 코드/CI통과와 실제MVP미완료를 구별하고, 전체호출계획 비용예측을 보완하기 전 추가유료호출을 보류한다. 새서버·다른실험으로 이번trial상한을 초기화하지 않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v24",
+  "design_version": "commentscope-detailed-design-20261110-v25",
   "design_document": "docs/design/README.md"
 }
