@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v23",
+  "spec_version": "commentscope-mvp-20261110-v24",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,8 +24,10 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": false,
-    "hold_reason": "상하위검색 무과금전체G1재생에서누락2pair검사후보복원, 신규투표0. 필수Factory590 및 최종45검사 통과후같은원8/총50에서새G1 최대1.50. 사용자rr 승인999/755 자료갱신완료. G1→G2→G3합격후고정G4완료phase.",
-    "parallel_tasks": []
+    "hold_reason": "상하위 새G1 299호출/$0.618985150·Agent0 실패 보존. 추가 유료합성 반복 보류. 사용자rr 승인으로 별도artifact 실제24개 개발검증 최대1.50, 같은원8/총50 장부. 정식G2/G3/G4 admission은 차단 유지.",
+    "parallel_tasks": [
+      "TASK-017"
+    ]
   },
   "requirements": [
     {
@@ -47,7 +49,10 @@
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
         "src/commentscope/ingestion/revalidated_snapshot.py",
-        "src/commentscope/factory/owner_observations.py"
+        "src/commentscope/factory/owner_observations.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -59,7 +64,10 @@
         "tests/test_remote_verification.py",
         "tests/test_revalidated_snapshot.py",
         "tests/test_typed_verification.py",
-        "tests/test_typed_controls.py"
+        "tests/test_typed_controls.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -94,7 +102,10 @@
         "experiments/remote_factory_pipeline.py",
         "src/commentscope/factory/pipeline_stages.py",
         "src/commentscope/factory/argument_dependencies.py",
-        "src/commentscope/factory/owner_observations.py"
+        "src/commentscope/factory/owner_observations.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -106,7 +117,10 @@
         "tests/test_remote_verification.py",
         "tests/test_alias_retrieval.py",
         "tests/test_typed_verification.py",
-        "tests/test_typed_controls.py"
+        "tests/test_typed_controls.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -145,7 +159,10 @@
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
-        "src/commentscope/factory/owner_observations.py"
+        "src/commentscope/factory/owner_observations.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -157,7 +174,10 @@
         "tests/test_selective_agent_sources.py",
         "tests/test_remote_verification.py",
         "tests/test_typed_verification.py",
-        "tests/test_typed_controls.py"
+        "tests/test_typed_controls.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -377,7 +397,10 @@
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
-        "src/commentscope/providers/api_resources.py"
+        "src/commentscope/providers/api_resources.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -392,7 +415,10 @@
         "tests/test_host_resources.py",
         "tests/test_remote_verification.py",
         "tests/test_api_resources.py",
-        "tests/test_alias_retrieval.py"
+        "tests/test_alias_retrieval.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -438,14 +464,20 @@
         "src/commentscope/agents/team_demo.py",
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
-        "src/commentscope/product/web.py"
+        "src/commentscope/product/web.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/grounded_ui_smoke.cjs",
         "tests/test_openrouter_grounded_web.py",
         "tests/test_product_app.py",
         "tests/test_product_web.py",
-        "tests/test_serve_mvp.py"
+        "tests/test_serve_mvp.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "기존 Figma·팀 프론트를 보존하고 실제 자동 bundle로 Explore→Converse→Reflect를 끝까지 수행한다.",
@@ -493,7 +525,10 @@
         "src/commentscope/providers/api_resources.py",
         "src/commentscope/ingestion/revalidated_snapshot.py",
         "src/commentscope/factory/argument_dependencies.py",
-        "src/commentscope/factory/owner_observations.py"
+        "src/commentscope/factory/owner_observations.py",
+        "tools/actual24_development.py",
+        "tools/complete_factory.py",
+        "tools/cohort_refresh.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -508,7 +543,10 @@
         "tests/test_api_resources.py",
         "tests/test_revalidated_snapshot.py",
         "tests/test_typed_verification.py",
-        "tests/test_typed_controls.py"
+        "tests/test_typed_controls.py",
+        "tests/test_actual24_development.py",
+        "tests/test_factory_completion.py",
+        "tests/test_cohort_refresh.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1234,6 +1272,12 @@
           "scope": "Supported-parent one-hop retrieval implemented with original/legacy default preserved. Fixed priorG1 replay adds only B→general mandatory and B→public-safety value targets,0embedding/model calls/derived votes. Source limit3, overflow visible, original attempts never retried, conditional parent still requires independent direct verdict. Required full590 tests passed; after the final adapter-key adjustment, completion/authorization45 tests also passed. Counts overlap. No fresh semantic pass yet.",
           "reference": "docs/design/HIERARCHY_RETRIEVAL.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Hierarchy fresh G1 restores mandatory5/voluntary3 raw groups but yields0 Agents.299 calls/$0.618985150; all92 packet tasks reviewed by assistant (not independent human gold),3 invalid counted reporting supports,4 unresolved argument records,1 invalid nonmerging narrowing.13/16 requirements true; no formal admission.",
+          "reference": "docs/design/ACTUAL24_DEVELOPMENT.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -1624,6 +1668,50 @@
         "docs/design/README.md"
       ],
       "design_status": "written_unimplemented"
+    },
+    {
+      "id": "TASK-017",
+      "title": "실제24개 개발 검증과 experimental 제품 연결",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-003",
+        "TASK-016"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "별도development artifact의 고정24개 전체 자동 생성 결과·실패·비용",
+        "정식admission 거절과 기존money owner·총50 보존 검증",
+        "생성 가능한 실제24개 bundle의 experimental 제품 연결 결과"
+      ],
+      "done_when": [
+        "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
+        "정식G1 실패·G2/G3/G4 차단 및 미검증999개/60%/사람효과를 유지한다."
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Required Factory607 pass and37 focused checks pass (overlapping). Distinct development artifact rejected by formal review; original money owner/global50 history,1.50 subcap, zero-call completed replay, and invalid predecessor admission verified. Actual24 frozen plan prepared with0 model calls before separate live start; not semantic approval.",
+          "reference": "tests/test_actual24_development.py",
+          "result": "pass"
+        }
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-007"
+      ],
+      "design_refs": [
+        "docs/design/ACTUAL24_DEVELOPMENT.md"
+      ]
     }
   ],
   "changes": [
@@ -1764,8 +1852,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v23",
       "reason": "질문설명후사용자rr로999자료갱신진행. 재검증997+시간순최초2를의미기준선택없이동결, 새참조도755/최소453. 원r5불변. 실행권한guard와고정G4도구/평가자료adapter경계를분리해공통의미코드G1~G4동결을유지. G4별도잔여예산phase는구8/총50장부초기화금지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v24",
+      "reason": "사용자rr 승인으로 현재999자료 갱신과 formal gate와 구별한 실제24개 개발 실행. G1 Agent0 실패·기존r5·돈 보존."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v19",
+  "design_version": "commentscope-detailed-design-20261110-v20",
   "design_document": "docs/design/README.md"
 }

@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v19`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261110-v20`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -136,3 +136,5 @@ TASK-012의 전체 과업/원가/사용자 효과는 별도 검증이며 개발 
 
 제품 API와 현재 확인 범위: [실행/API](../PRODUCT_API.md), [구현 결과](../PRODUCT_DELIVERY_RESULT.md),
 [기존 개발 연결의 기록](PRODUCT_DELIVERY.md).
+
+TASK-017의 [실제24개 개발 실행](ACTUAL24_DEVELOPMENT.md)은 사용자rr로 승인됐다. 별도artifact·상한1.50·원8/총50 장부를 사용하며 정식admission을 만들지 않는다.
