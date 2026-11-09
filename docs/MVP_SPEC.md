@@ -1,6 +1,6 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261109-v20`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261109-v21`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는

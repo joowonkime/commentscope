@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v20",
+  "spec_version": "commentscope-mvp-20261109-v21",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-005",
-    "paid_execution_hold": true,
-    "hold_reason": "새 typed/scope protocol 오프라인 구현과 component동결 전 유료보류. 사용자 전체MVP진행 지시, 같은 money owner 및 총50 유지. 전체999자료갱신 답변대기.",
+    "paid_execution_hold": false,
+    "hold_reason": "같은 원money owner/총50/현window에서 component18 기대일치 후 freshG1 1.50 실행중. G2/G3는 각 선행정식gate 통과시에만. 전체999 자료갱신은 사용자응답대기.",
     "parallel_tasks": [
       "TASK-011"
     ]
@@ -1212,6 +1212,18 @@
           "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Complete Factory580 tests pass after literal inventory admission, typed graph/world protocol and whole-request component reservation preflight. Existing protocols remain covered; not semantic quality approval.",
+          "reference": "tests/test_typed_verification.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed component18 cases:8 positive retained,10 negative held,0falseapproval;13physical requests/$0.072416 total across preserved prefix4 and remaining9. First prefix execution incomplete due reservation cap, not a single fresh Factory gate. No independent human gold. FreshG1 underway with1.50 subcap; no G2/G3 admission yet.",
+          "reference": "docs/design/TYPED_VERIFICATION.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1524,7 +1536,14 @@
         "합성 화면과 실제 모델/댓글 품질을 구별한다.",
         "기존 팀 디자인·작업을 보존하고 임의 새 서비스 방향으로 교체하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Existing Figma before/explore/comparison/1:1/group/reflection views connected to product API. Chromium19 checks pass,0paid calls/JS exceptions/external requests: full workflows, Unicode, modal dismissal, cached comparison, local assets, source drawer, reload/manual persistence. Current actual-model E2E remains pending.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        }
+      ],
       "required_evidence": [
         "product_e2e"
       ],
@@ -1537,7 +1556,7 @@
         "docs/design/EXECUTION.md",
         "docs/design/TYPED_VERIFICATION.md"
       ],
-      "design_status": "written_unimplemented"
+      "design_status": "implemented_pending_evidence"
     },
     {
       "id": "TASK-012",
@@ -1708,6 +1727,10 @@
     {
       "spec_version": "commentscope-mvp-20261109-v20",
       "reason": "실제component4관측정상을보존. 모든요청최대예약 사전검사누락으로0.15상한중단을수정하고, 원scope8내component누적0.40에서기지출0.026629를빼나머지원문만실행. typed입력literal원문누락은host가과금전거부. 제품UI읽기metric/중복집계·정적asset/명시HTTPS origin·제품전용상한2 cycle을기존50공유장부에연결. r5/장부/구cycle유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v21",
+      "reason": "typed component18 기대일치/오승인0과Factory580을 기록하고 같은 예산에서freshG1 시작. Figma프론트구현·합성browser19 증거를 추가하고 실제모델E2E·정식gate·999갱신대기는 미완료로 구별."
     }
   ],
   "design_version": "commentscope-detailed-design-20261109-v17",

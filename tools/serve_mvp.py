@@ -31,6 +31,7 @@ from experiments.source_semantics_diagnostic import CYCLE_VERSION,cycle_guard
 
 VERSION='commentscope-product-server-20261105-v1'
 ASSETS=[ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','mvp.css')]
+ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 
 def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd):
@@ -72,6 +73,7 @@ def validate(directory):
     plan=read_json(directory/'plan.json');run_origin(plan,directory,attempt=1)
     if (plan['artifact_kind']!=VERSION or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
             or plan['entrypoint_sha256']!=sha(Path(__file__)) or plan['code_sha256']!=source_code_hashes()
+            or set(plan['assets_sha256'])!={str(p.relative_to(ROOT)) for p in ASSETS}
             or any(sha(ROOT/path)!=h for path,h in plan['assets_sha256'].items())
             or any(sha(path)!=h for path,h in plan['inputs'].items())
             or plan['spend_scope_sha256']!=sha(plan['cycle_file'])
