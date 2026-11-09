@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v16",
+  "spec_version": "commentscope-mvp-20261109-v17",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -44,7 +44,8 @@
         "src/commentscope/factory/argument_dependencies.py",
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
-        "experiments/remote_factory_pipeline.py"
+        "experiments/remote_factory_pipeline.py",
+        "src/commentscope/ingestion/revalidated_snapshot.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -53,7 +54,8 @@
         "tests/test_source_semantics_diagnostic.py",
         "tests/test_decision_controls.py",
         "tests/test_jev_audit_integration.py",
-        "tests/test_remote_verification.py"
+        "tests/test_remote_verification.py",
+        "tests/test_revalidated_snapshot.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -84,7 +86,8 @@
         "src/commentscope/factory/source_semantics.py",
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
-        "experiments/remote_factory_pipeline.py"
+        "experiments/remote_factory_pipeline.py",
+        "src/commentscope/factory/pipeline_stages.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -93,7 +96,8 @@
         "tests/test_source_semantics_contract.py",
         "tests/test_component_diagnostic_policy.py",
         "tests/test_selective_agent_sources.py",
-        "tests/test_remote_verification.py"
+        "tests/test_remote_verification.py",
+        "tests/test_alias_retrieval.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -359,7 +363,8 @@
         "tests/test_scoped_factory_authorization.py",
         "tests/test_host_resources.py",
         "tests/test_remote_verification.py",
-        "tests/test_api_resources.py"
+        "tests/test_api_resources.py",
+        "tests/test_alias_retrieval.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -451,7 +456,8 @@
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
-        "src/commentscope/providers/api_resources.py"
+        "src/commentscope/providers/api_resources.py",
+        "src/commentscope/ingestion/revalidated_snapshot.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -463,7 +469,8 @@
         "tests/test_component_diagnostic_policy.py",
         "tests/test_selective_agent_sources.py",
         "tests/test_remote_verification.py",
-        "tests/test_api_resources.py"
+        "tests/test_api_resources.py",
+        "tests/test_revalidated_snapshot.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1152,6 +1159,12 @@
           "scope": "Separate versioned http_api RAM256MB/disk1GiB policy with64MiB next-record headroom and1GiB per-run artifact admission; preserves both old6GiB policies and resource/settlement interruption. Actual local stress stored1.9MB synthetic receipt through worker/SQLite/result/checkpoint/aggregate:19042633bytes total,0network calls. No Sol quality claim.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "First all-HTTP Sol run: fact40 supported10/10, non-supported falseapproval0/30, exact sublabels39/40,41calls/$0.155939560. SyntheticG1 compiled2Agents, each3validsources,6runtime answers,0bindingerrors,253calls/$0.530922280. Full assistant review meets15/16 requirements; mandatory B/I support missed by representative-only retrieval. Formal G1 FAIL preserved; no larger gate admitted.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -1630,8 +1643,12 @@
     {
       "spec_version": "commentscope-mvp-20261109-v16",
       "reason": "사용자가 2026-11-09 이어 진행을 명시했다. 만료된 원본 authorization은 보존하고 같은 money owner/상한/과거청구를 참조하는 재개 window를 별도 연결한다. 실제 댓글의 만료된 snapshot은 자동 연장/교체하지 않으며 유효한 fact40과 합성G1을 먼저 진행한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v17",
+      "reason": "실측G1에서2Agent/6응답은 작동했지만 대표 문장만 검색해 동치 영어 표현이 사라지고2source가 미평가로 남았다. 이미 계산한 검증된 동치 표현의 벡터를 검색에만 유지하고 지지 투표는 옮기지 않는다. 고정24/96 표본은 원문·부모·영상 packet이 재조회 시에도 완전히 같은 경우에만 유효한 새 snapshot에 연결하며 분모19/74를 유지한다. 전체999모집단 변경은 별도 결정이다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261109-v13",
+  "design_version": "commentscope-detailed-design-20261109-v14",
   "design_document": "docs/design/README.md"
 }

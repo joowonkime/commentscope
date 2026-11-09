@@ -9,6 +9,7 @@ from commentscope.factory.position_frames import fields
 
 VERSION = 'candidate-consolidation-20261016-v4'
 RETRIEVAL_VERSION = 'shared-membership-retrieval-20261017-v2'
+ALIAS_RETRIEVAL = 'equivalent-alias-membership-retrieval-20261109-v1'
 REPRESENTATIVE_POLICY = mc.REPRESENTATIVE_POLICY
 RELATIONS = ('equivalent', 'a_narrower', 'b_narrower', 'opposed', 'different', 'uncertain')
 ASSERTION_ONLY = 'candidate-assertion-equivalence-20261102-v1'
@@ -281,17 +282,33 @@ def _bind_scoped(sources,candidates,memberships,pairs,contextual_assessments,sem
     return result
 
 
-def membership_pairs(sources, candidates, source_vectors, candidate_vectors, *, previous=(), statuses=None, expand=False):
+def membership_pairs(sources, candidates, source_vectors, candidate_vectors, *, previous=(), statuses=None, expand=False,retrieval_index=None):
     ss = mc.source_index(sources); cs = {c['id']: mc.validate_candidate(c) for c in candidates}
     if set(source_vectors) != set(ss) or set(candidate_vectors) != set(cs):
         raise ValueError('Retrieval embeddings must match exactly the processing scope')
     if not cs: return []
+    groups=None
+    if retrieval_index is not None:
+        fields(retrieval_index,'vectors alias_to_final')
+        av=retrieval_index['vectors'];mapping=retrieval_index['alias_to_final']
+        if (not isinstance(av,dict) or not isinstance(mapping,dict) or set(av)!=set(mapping)
+                or any(not isinstance(cid,str) for cid in mapping.values()) or set(mapping.values())!=set(cs)
+                or any(mapping.get(cid)!=cid or av.get(cid)!=candidate_vectors[cid] for cid in cs)
+                or any(aid not in cs[cid]['aliases'] for aid,cid in mapping.items())):
+            raise ValueError('Retrieval aliases must belong to their exact consolidated candidates')
+        normalized=vectors(av);groups={cid:[normalized[aid] for aid in mapping if mapping[aid]==cid] for cid in cs}
+        query_vectors=vectors(source_vectors)
+        if len(next(iter(query_vectors.values())))!=len(next(iter(normalized.values()))):raise ValueError('Embedding dimensions differ')
     rows = mm.collect(sources, candidates, list(previous)); existing = {(r['source_id'], r['candidate_id']) for r in rows}
     supported = {cid: {r['source_id'] for r in rows if r['candidate_id'] == cid and r['relation'] == 'supported'}
                  for cid in cs}
     statuses = statuses or {}; result = []
     for sid in sorted(ss):
-        ordered = rank(source_vectors[sid], candidate_vectors)
+        if groups is None:ordered = rank(source_vectors[sid], candidate_vectors)
+        else:
+            q=query_vectors[sid]
+            scores={cid:max(sum(x*y for x,y in zip(q,v,strict=True)) for v in aliases) for cid,aliases in groups.items()}
+            ordered=sorted(scores,key=lambda cid:(-scores[cid],cid))
         if expand:
             shared = any(sid in members and len(members) >= 2 for members in supported.values())
             if shared and statuses.get(sid) not in ('partial', 'unresolved'): continue

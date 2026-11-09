@@ -152,14 +152,18 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
                                   if c['id'] in engine.scopes} if engine is not None else None)
         merged = cc.consolidate(sources,candidates,nomination_batches,equivalences,runtime_scopes=representative_scopes)
         candidates = merged['candidates']; save('consolidation', merged); save('equivalences', equivalences)
-        # Representative text is unchanged; reuse its embedding, never another's support vote.
+        # Keep equivalent wording searchable; only the canonical wording is
+        # judged. Reusing a retrieval vector never transfers a source vote.
         final_vectors = {c['id']: candidate_vectors[c['id']] for c in candidates}
-        first = cc.membership_pairs(sources, candidates, vectors, final_vectors)
+        retrieval_index={'vectors':candidate_vectors,'alias_to_final':merged['alias_to_final']}
+        save('membership-retrieval',{'version':cc.ALIAS_RETRIEVAL,'alias_to_final':merged['alias_to_final'],
+            'candidate_vectors_sha256':digest(candidate_vectors),'source_vectors_sha256':digest(vectors),'semantic_approval':False})
+        first = cc.membership_pairs(sources, candidates, vectors, final_vectors,retrieval_index=retrieval_index)
         memberships = judge('membership-initial', first, candidates)
         statuses = {r['source']['id']: r['status'] for r in records}
         statuses.update({sid: 'unresolved' for sid in ids if sid not in statuses})
         extra_pairs = cc.membership_pairs(sources, candidates, vectors, final_vectors,
-                                         previous=memberships, statuses=statuses, expand=True)
+                                         previous=memberships, statuses=statuses, expand=True,retrieval_index=retrieval_index)
         # A failed initial batch must not be silently retried as expansion.
         attempted = {(p['source_id'], p['candidate_id']) for p in first}
         extra_pairs = [p for p in extra_pairs if (p['source_id'], p['candidate_id']) not in attempted]

@@ -15,6 +15,8 @@ from urllib.request import build_opener, ProxyHandler
 
 from commentscope.factory import acceptance, argument_observations, compact_claims, minimal_pipeline
 from commentscope.factory import fact_checks, remote_fact_records, raw_membership_verification
+from commentscope.factory import candidate_consolidation
+from commentscope.ingestion import revalidated_snapshot
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.framed_corpus import sources
@@ -140,16 +142,19 @@ def admission(gate,path,profile):
         previous=load_run(run)[0]
         if (previous['gate']!=prior or previous['artifact_kind']!=VERSION
                 or any(previous[k]!=profile[k] for k in ('deployment','verification_deployment','embedding_deployment',
-                    'role_registry','classifier','documents','selections','code_sha256','spend_policy','fact_benchmark'))):
+                    'role_registry','classifier','documents','selections','code_sha256','spend_policy','fact_benchmark','membership_retrieval_policy'))
+                or prior!='G1' and previous.get('scope_refresh')!=profile.get('scope_refresh')):
             raise ValueError('Prior remote gate uses different roles/code/evidence or failed review')
 
 
 def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap_usd='0.5',
-            fact_benchmark=None,admission_file=None):
+            fact_benchmark=None,admission_file=None,scope_refresh_file=None):
     directory=Path(directory);auth_file=Path(auth_file).resolve();materials_file=Path(materials_file)
     for p in (directory,auth_file,materials_file):private(p)
     if directory.exists() or mode not in ('factory','benchmark') or gate not in ('G1','G2','G3'):
         raise ValueError('Fresh supported remote run required')
+    if scope_refresh_file is not None and (mode!='factory' or gate not in ('G2','G3')):
+        raise ValueError('Revalidated scope applies only to fixed actual G2/G3')
     auth=read_json(auth_file);old=read_json(auth['money_owner']['file'])
     policy=validate_spend_policy(read_json(old['shared_policy_file']));money=ledger(policy)
     if money.summary()['reserved_calls'] or money.summary()['uncertain_calls']:raise BudgetExhausted('Existing money hold')
@@ -174,6 +179,7 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'discovery_mode':'free','membership_mode':'raw','extraction_protocol':compact_claims.PROPOSALS,
           'verification_contract':raw_membership_verification.FULL_SCOPE,
           'argument_audit_protocol':argument_observations.CHAT_SPLIT,'agent_source_policy':'verified_subset',
+          'membership_retrieval_policy':candidate_consolidation.ALIAS_RETRIEVAL,'scope_refresh':None,
           'component_diagnostic_policy':'record_and_continue','fact_benchmark':str(fact_benchmark) if fact_benchmark else None,
           'admission_file':str(admission_file) if admission_file else None,
           'questions':deepcopy(QUESTIONS),'schedule':deepcopy(minimal_pipeline.SCHEDULE),
@@ -187,8 +193,13 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
     if mode=='factory':
         if fact_benchmark is None:raise ValueError('Fresh remote fact benchmark required')
         replay_benchmark(Path(fact_benchmark).parent,plan,[])
+        snapshot,scope,original=fixed_scope(gate)
+        if scope_refresh_file is not None:
+            private(scope_refresh_file);registered_sha=sha(original);inputs[str(original)]=registered_sha
+            snapshot,original,extra,binding=revalidated_snapshot.bind(scope_refresh_file,snapshot,registered_sha,scope)
+            inputs.update(extra);plan['scope_refresh']=binding
+        fact_checks.live(snapshot.usage.expires_at)
         admission(gate,admission_file,plan)
-        snapshot,scope,original=fixed_scope(gate);fact_checks.live(snapshot.usage.expires_at)
         if gate=='G1':write(directory/'snapshot.json',snapshot.to_dict())
         snapshot_path=directory/'snapshot.json' if gate=='G1' else original
         plan.update(snapshot=str(snapshot_path),snapshot_sha256=sha(snapshot_path),scope_ids=scope,
@@ -315,10 +326,17 @@ def validate(directory,plan):
             or plan['classifier']!=model_identity() or plan['model_files']!={}
             or plan['billing_policy']!=remote.WIRE_BUDGET
             or plan['argument_audit_protocol']!=argument_observations.CHAT_SPLIT
+            or plan.get('membership_retrieval_policy')!=candidate_consolidation.ALIAS_RETRIEVAL
             or plan['agent_source_policy']!='verified_subset'):
         raise ValueError('Frozen remote code/input/execution contract changed')
     run_origin(plan,directory,attempt=1);guard(plan)
-    if plan['mode']=='factory':admission(plan['gate'],Path(plan['admission_file']) if plan['admission_file'] else None,plan)
+    if plan['mode']=='factory':
+        if plan.get('scope_refresh'):
+            if plan['gate'] not in ('G2','G3'):raise ValueError('Unexpected actual-scope refresh')
+            original,scope,path=fixed_scope(plan['gate'])
+            _,_,_,binding=revalidated_snapshot.bind(plan['scope_refresh']['file'],original,sha(path),scope)
+            if scope!=plan['scope_ids'] or binding!=plan['scope_refresh']:raise ValueError('Revalidated fixed scope changed')
+        admission(plan['gate'],Path(plan['admission_file']) if plan['admission_file'] else None,plan)
     if 'torch' in sys.modules or 'transformers' in sys.modules:raise ValueError('All-HTTP executor imported local model runtime')
 
 
@@ -402,10 +420,11 @@ def main():
     p.add_argument('--gate',choices=('G1','G2','G3'),default='G1');p.add_argument('--subcap-usd',default='0.5')
     p.add_argument('--fact-benchmark',type=Path);p.add_argument('--admission',type=Path)
     p.add_argument('--resume-request')
+    p.add_argument('--scope-refresh-file',type=Path)
     a=p.parse_args()
     if a.action=='authorize':result=authorize(a.directory,a.owner,resume_request=a.resume_request)
     elif a.action=='prepare':result=prepare(a.directory,a.authorization,a.materials,mode=a.mode,gate=a.gate,
-        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission)
+        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission,scope_refresh_file=a.scope_refresh_file)
     else:result=run(a.directory)
     print(json.dumps({k:v for k,v in result.items() if k not in ('code_sha256','inputs','documents','selections')},ensure_ascii=False))
 
