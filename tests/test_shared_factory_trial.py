@@ -42,6 +42,8 @@ class SharedTrialTests(unittest.TestCase):
                 ('agent_source_policy','all_members'),('stage_aliases',{}),('formal_admission_eligible',True)]:
             plan=deepcopy(self.plan);plan[key]=value
             with self.subTest(key=key),self.assertRaises(ValueError):trial.guard(plan)
+        changed=deepcopy(self.plan);changed['membership_evidence_protocol']='unregistered'
+        with self.assertRaises(ValueError):trial.guard(changed)
 
     def test_same_payload_raw_membership_stage_is_shared_but_independent_reviews_are_not(self):
         suffix='-'+'a'*20
@@ -74,6 +76,7 @@ class SharedTrialTests(unittest.TestCase):
         plan.update(classifier=MODEL,documents=[],selections=[],scope_ids=[str(i) for i in range(6)],
             resource_policy=trial.host_resources.HTTP_API_POLICY,snapshot='scripted-unused',
             verification_contract=trial.executor.raw_membership_verification.FULL_SCOPE,questions=trial.executor.QUESTIONS)
+        plan['membership_evidence_protocol']=trial.executor.raw_membership_verification.QUALIFIED_CONTEXT
         write(directory/'plan.json',plan)
         runner=SharedRunner();runner.embed=helper.embed;runner.inspect=helper.inspect
         runner.storage=SimpleNamespace(before_write=lambda value:None)
@@ -91,6 +94,8 @@ class SharedTrialTests(unittest.TestCase):
             self.assertEqual(len(runner.calls),calls)
             done=trial.run(directory)
             self.assertEqual(done['compiled_agents'],2);self.assertEqual(done['runtime_turns'],6)
+            output=read_json(directory/'artifacts/output.json')
+            self.assertEqual(output['membership_evidence_protocol'],trial.executor.raw_membership_verification.QUALIFIED_CONTEXT)
             self.assertTrue(done['same_plan_resume']);self.assertFalse(done['formal_admission_eligible'])
             self.assertEqual(trial.run(directory),done)
             self.assertEqual(sessions.call_count,2)

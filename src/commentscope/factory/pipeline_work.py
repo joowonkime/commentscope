@@ -178,6 +178,7 @@ class PipelineWork:
                             if (self.verification_contract == verification.FULL_SCOPE
                                     and (self.extraction_protocol in compact_claims.UNIFIED_VERSIONS or getattr(self,'shared_typed',False))):
                                 protocol = verification.QUALIFIED
+                            protocol=getattr(self,'membership_evidence_protocol',None) or protocol
                             rows=self.work('raw-own-evidence',[proof],
                                 lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
                                 lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)

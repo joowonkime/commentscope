@@ -28,6 +28,7 @@ FULL_SCOPE = 'raw-membership-verification-20261026-v12'
 EXPLAINED = 'full-scope-evidence-basis-20261102-v1'
 BRIEF = 'full-scope-evidence-basis-20261102-v2'
 QUALIFIED = 'full-scope-evidence-qualifiers-20261103-v3'
+QUALIFIED_CONTEXT = 'full-scope-evidence-source-context-20261110-v4'
 AUTHORED_CONTRACTS = (AUTHORED, REFERENCED, ACYCLIC)
 NORMALIZED_TARGETS = (TARGETED_NORMALIZED, *AUTHORED_CONTRACTS)
 TARGETED_CONTRACTS = (TARGETED, *NORMALIZED_TARGETS)
@@ -330,7 +331,7 @@ def independent_candidate_view(record, candidate_scope=None):
 
 
 def evidence_request(record, version=VERSION, *, candidate_scope=None, protocol=None):
-    if protocol not in (None, EXPLAINED, BRIEF, QUALIFIED) or protocol and version != FULL_SCOPE:
+    if protocol not in (None, EXPLAINED, BRIEF, QUALIFIED, QUALIFIED_CONTEXT) or protocol and version != FULL_SCOPE:
         raise ValueError('Explained evidence requires its exact full-scope contract')
     if version not in VERSIONS: raise ValueError('Unknown evidence contract')
     raw.validate(record)
@@ -359,7 +360,7 @@ def evidence_request(record, version=VERSION, *, candidate_scope=None, protocol=
             **properties}
         system = SPEECH + EVIDENCE
     if version in GROUNDED_CONTRACTS:
-        if version == GROUNDED:
+        if version == GROUNDED or protocol == QUALIFIED_CONTEXT:
             data['VIDEO_CONTEXT_ONLY'] = deepcopy(source.get('video_context'))
         properties = {
             'reference_basis': {'type': 'string', 'enum': ['self_contained', 'supplied_context', 'missing_or_ambiguous']},
@@ -377,9 +378,9 @@ consideration is not an only-if condition. If the candidate itself asserts a
 concession, that assertion must also be preserved. Explain the declared verdict
 without deliberation; all source, scope, authorship and uncertainty checks remain.
 '''
-    if protocol in (BRIEF, QUALIFIED):
+    if protocol in (BRIEF, QUALIFIED, QUALIFIED_CONTEXT):
         system += '\nWrite basis as one sentence of at most120 characters. Do not copy or translate a whole source sentence. A repeated predicate or substituted actor does not preserve the whole claim.\n'
-    if protocol == QUALIFIED:
+    if protocol in (QUALIFIED, QUALIFIED_CONTEXT):
         system += '''
 Preserve approximation and analogy as well as uncertainty. A source saying that
 one system is essentially/similarly doing something does not establish an actual
@@ -388,6 +389,16 @@ nearly, roughly or equivalent qualification while resolving a reference. An
 approximation in an unrelated original clause or parent cannot qualify a claim
 whose selected own evidence is unqualified. Retained words alone are insufficient:
 their predicate, attachment, scope and authorship must also remain aligned.
+'''
+    if protocol == QUALIFIED_CONTEXT:
+        system += '''
+VIDEO_CONTEXT_ONLY is the exact original video's identity, not an author's
+assertion. Use it only to resolve a policy/topic referent when the supplied own
+text and parent make that resolution defensible. It cannot supply a stance,
+predicate, effect, amount, reason or condition absent from the selected author's
+evidence. A generic title never resolves an unstated comparator or an ambiguous
+alternative. If identity or scope remains unclear, retain unresolved. No earlier
+membership verdict or another author's reasons are evidence of this author's view.
 '''
     return mc.request(system, data, obj(properties), 512 if protocol else 256)
 
@@ -425,7 +436,7 @@ def bind_evidence(record, result, version=VERSION, *, candidate_scope=None, prot
     if any(cw.MODAL.search(p) and not cw.DIRECTIVE.search(p) for p in modal_texts) and cw.DIRECTIVE.search(target):
         guards.append('forecast_or_possibility_is_not_a_demand')
     approximation = None
-    if protocol == QUALIFIED:
+    if protocol in (QUALIFIED, QUALIFIED_CONTEXT):
         from commentscope.factory import qualification_guards
         approximation = qualification_guards.approximation_loss(
             ' '.join(p['text'] for p in record['evidence']), target)

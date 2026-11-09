@@ -16,9 +16,12 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
+    if membership_evidence_protocol is not None and (membership_evidence_protocol!=raw_verification.QUALIFIED_CONTEXT
+            or membership_mode!='raw' or verification_contract!=raw_verification.FULL_SCOPE):
+        raise ValueError('Source-context evidence requires explicit full-scope raw verification')
     if agent_source_policy not in ('all_members','verified_subset','candidate_verified_subset'):raise ValueError('Unknown Agent source policy')
     from commentscope.factory import candidate_hierarchy
     if (membership_retrieval_policy not in (cc.ALIAS_RETRIEVAL,candidate_hierarchy.VERSION)
@@ -49,6 +52,8 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         raise ValueError('Shared proposal injection requires shared discovery')
     if shared_memberships is not None and (discovery_mode!='shared' or shared_records is None):
         raise ValueError('Staged memberships require rebound common proposals')
+    if shared_memberships is not None and membership_evidence_protocol is not None:
+        raise ValueError('Explicit evidence protocol requires fresh membership judging')
     if type(source_entailment_required) is not bool or (source_entailment_required and shared_memberships is None):
         raise ValueError('Whole-original entailment requires explicit staged common memberships')
     if verification_contract not in raw_verification.VERSIONS:raise ValueError('Unknown raw verification contract')
@@ -67,6 +72,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                              source_review_protocol=source_review_protocol)
     execution.argument_audit_protocol=argument_audit_protocol
     execution.shared_typed=shared_typed
+    execution.membership_evidence_protocol=membership_evidence_protocol
     execution.membership_retrieval_policy=membership_retrieval_policy
     errors, holds, capacity = execution.errors, execution.holds, execution.capacity
     # Immutable syntax exists before any generated candidate or argument. This
@@ -110,6 +116,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
             'canonical_population': len(registry), 'processing_ids': ids,
             **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
+            **({'membership_evidence_protocol':membership_evidence_protocol} if membership_evidence_protocol else {}),
             **({'agent_source_policy':agent_source_policy} if agent_source_policy!='all_members' else {}),
             **({'source_review_protocol': source_review_protocol, 'source_records': source_records}
                if typed_source_review else {}),
