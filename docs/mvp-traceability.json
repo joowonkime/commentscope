@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v30",
+  "spec_version": "commentscope-mvp-20261110-v31",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "공통관점 실제96 개발실행은 trial누적1.37279746/상한1.50에서 다음예약0.12762를 감당못해 API전송전 중단. 미확정/예약0. 1차288쌍 완료·추가192쌍 중일부만완료·전체350/480쌍. 지지1/2/4/2/0, 논거/Agent/runtime 미도달. 무료전체호출계획·비용예측/단위범위검토 전 유료재시도 금지; 실패·원8/총50 장부 유지. 원문영상식별문맥을후속검사로보존하는opt-inv4구현·Factory644/집중32/관련74무료검사통과(중복있음). 기존350raw/20evidence재검증동일·새v4의실제모델판정0. 전체단계비용계획/새실제승인없이재호출하지않는다.",
+    "hold_reason": "구조v1의책임/입출력은고정. 공통개발경로전체비용gate·단계상한·실제archive비용profile검증구현. Factory665/관련81/집중28무료검사통과(중복). 999개453source시나리오는계산부분34.64~37.57+미측정비용으로현재보수잔액33.94보다높음. 현재trial잔여0.12720254와원8/총50/기존시간·formal차단유지. 새유료호출0; 같은구조안에서batch전송의영수증/품질/원가비교를준비하기전대량재실행하지않음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -427,7 +427,9 @@
         "tools/cohort_refresh.py",
         "tools/shared_factory_trial.py",
         "tools/serve_mvp.py",
-        "tools/product_trial_budget.py"
+        "tools/product_trial_budget.py",
+        "src/commentscope/factory/cost_planning.py",
+        "tools/plan_factory_cost.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -447,7 +449,8 @@
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
         "tests/test_shared_typed_pipeline.py",
-        "tests/test_shared_factory_trial.py"
+        "tests/test_shared_factory_trial.py",
+        "tests/test_factory_cost_plan.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -470,6 +473,12 @@
           "kind": "limited_live",
           "scope": "Same original money owner. Fresh G1 paused at host237MB after203settled/checkpointed responses; resumed same plan without repaying them. Final285actualrequests,0reserved/uncertain charges, no local model loaded. Single observed Python RSS80.9MiB is not whole-run peak. Internal total50USD budget and historical conservative charges preserved.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Shared development cost plan and request caps:Factory665,related81,focused28 pass (overlap). Actual saved fees/cache audited; unknown downstream stages stay null and cannot admit full execution. Original trial/owner/global history unchanged,0 new paid calls. Current999 scenarios are not an admitted run or a service-price guarantee.",
+          "reference": "tests/test_factory_cost_plan.py",
           "result": "pass"
         }
       ],
@@ -565,7 +574,9 @@
         "tools/serve_mvp.py",
         "tools/product_trial_budget.py",
         "src/commentscope/factory/raw_membership_verification.py",
-        "src/commentscope/factory/pipeline_work.py"
+        "src/commentscope/factory/pipeline_work.py",
+        "src/commentscope/factory/cost_planning.py",
+        "tools/plan_factory_cost.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -587,7 +598,8 @@
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
-        "tests/test_membership_reference_context.py"
+        "tests/test_membership_reference_context.py",
+        "tests/test_factory_cost_plan.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -869,6 +881,44 @@
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/REMOTE_VERIFICATION.md"
+      ]
+    },
+    {
+      "id": "DEC-008",
+      "title": "책임 계층 구조v1 고정과 호출 최적화 경계",
+      "status": "accepted",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "question": "확인된 책임·입출력을 유지하면서 검증 호출량과 비용을 개선하는 경계를 어디에 두는가?",
+      "options": [
+        "원문/발견/검증/조립/제품과공통실행계층을명세로고정",
+        "기존전체구조재작성은채택하지않음",
+        "같은원문의여러후보판정batch는새전송계약과실제대조후별도채택"
+      ],
+      "selection": "사용자요청에따라현재코드로대조한논리책임/입출력경계를구조v1로고정한다. 검증체계의실제정확도/서비스원가/production모델채택을승인하는결정은아니다. 전체비용계획이없는본실행은거절하고실제장부/한도/단계별호출상한을유지한다.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Current implementation boundaries inspected; user authorized keeping a suitable structure and Mermaid diagrams. Accept responsibility/input-output baseline only, not semantic quality, model choice, batch transport, service cost or final MVP.",
+          "reference": "docs/design/ARCHITECTURE_BASELINE.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "2 Mermaid sources parsed;current module/input-output boundaries documented. Factory665 and related81 pass. Accept responsibility architecture only; batch transport/model/performance/cost remain distinct decisions.",
+          "reference": "docs/design/ARCHITECTURE_BASELINE.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/ARCHITECTURE_BASELINE.md",
+        "docs/design/FACTORY_COST_PLAN.md"
       ]
     }
   ],
@@ -1751,7 +1801,9 @@
         "정식admission 거절과 기존money owner·총50 보존 검증",
         "생성 가능한 실제24개 bundle의 experimental 제품 연결 결과",
         "실제 bundle 제품 테스트도 같은trial 누적상한을 공유하는 실행 연결; 새서버로 한도초기화 금지",
-        "새명시적 근거검사 protocol에서 원문영상 식별문맥 연속성 보존·기존계약/부정검사 유지; 유료재검증 별도"
+        "새명시적 근거검사 protocol에서 원문영상 식별문맥 연속성 보존·기존계약/부정검사 유지; 유료재검증 별도",
+        "단계별실측/추정/미측정과누적예산을구별한무료비용preview·본실행gate·단계호출상한",
+        "현재구조v1의책임/입출력/코드매핑·Mermaid원본"
       ],
       "done_when": [
         "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
@@ -1805,6 +1857,12 @@
           "scope": "New explicit FULL_SCOPE/raw evidence-context v4 transports exact original video identity through the common pipeline; old omission protocols and all modality/amount/approximation/ownership vetoes retained. Required Factory644, focused32 and related74 checks passed (overlap). Read-only compatibility:350 old raw proofs and20 evidence records unchanged,9 prior partial supports retained;20 new requests have exact original context and distinct hashes. Fact40 six runtime hashes unchanged,0 paid retest. No fresh v4 semantic verdict, completed actual96 run, actual product replacement or formal admission.",
           "reference": "tests/test_membership_reference_context.py",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Full-stage cost audit/template/preview/review and physical request caps implemented for shared-development runner. Required Factory665, related81 and focused28 pass (overlap); missing/infeasible/unknown cost plans, altered cost profiles, pending checkpoints and inherited spend stop before dispatch. Rejected estimates are preserved without sealing the proposal plan; accepted inputs are immutable.4 actual archived runs re-audited with0 new calls. Mermaid2 syntax checks pass; responsibility/input-output structurev1 fixed, scalar transport/batch quality and fresh96/999 remain unverified.",
+          "reference": "docs/design/FACTORY_COST_RESULT.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1812,12 +1870,16 @@
         "limited_live"
       ],
       "decisions": [
-        "DEC-007"
+        "DEC-007",
+        "DEC-008"
       ],
       "design_refs": [
         "docs/design/ACTUAL24_DEVELOPMENT.md",
         "docs/design/SHARED_DISCOVERY_DELIVERY.md",
-        "docs/design/PRODUCT_TRIAL_BUDGET.md"
+        "docs/design/PRODUCT_TRIAL_BUDGET.md",
+        "docs/design/ARCHITECTURE_BASELINE.md",
+        "docs/design/FACTORY_COST_PLAN.md",
+        "docs/design/FACTORY_COST_RESULT.md"
       ]
     }
   ],
@@ -1987,8 +2049,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v30",
       "reason": "실제보류11건을 전수읽어 후속FULL_SCOPE 근거검사에서 원문영상문맥이 빠짐을 확인. 기존v3응답은 그대로 두고 opt-in v4 입력연속성 수정과무료회귀만 수행. paid hold와원trial한도 유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v31",
+      "reason": "사용자 해봐 및 구조가괜찮으면고정/mermaid요청. 유료호출0으로 전체단계 비용preview와제안후실행gate/단계호출상한을구현하고, 현재논리책임계층/입출력을구조v1로고정한다. batch전송·모델재배정·의미품질채택은별도미검증으로유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v26",
+  "design_version": "commentscope-detailed-design-20261110-v27",
   "design_document": "docs/design/README.md"
 }

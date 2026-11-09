@@ -33,6 +33,7 @@ MODULES = (
     "test_candidate_source_coverage",
     "test_shared_typed_pipeline",
     "test_shared_factory_trial",
+    "test_factory_cost_plan",
     "test_cohort_refresh",
     "test_factory_completion",
     "test_actual24_development",

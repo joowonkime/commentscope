@@ -1,0 +1,18 @@
+flowchart LR
+    snapshot["원문 snapshot"] --> proposals["공통 후보 제안"]
+    proposals --> costReview{"전체 비용계획 유효"}
+    costReview -->|"불충분"| hold["보류와 기록"]
+    costReview -->|"유효"| membership["원문별 독립 지지"]
+    membership --> arguments["개별 논거와 조건"]
+    arguments --> facts["필수 사실과 의존 검증"]
+    facts --> compiler{"MVP bundle 자격 충족"}
+    compiler -->|"미달"| hold
+    compiler -->|"충족"| bundle[("불변 bundle")]
+    bundle --> runtimeCheck{"모든 Agent 실제 검증"}
+    runtimeCheck -->|"통과"| register["개발 분석 등록"]
+    runtimeCheck -->|"실패"| hold
+    register --> explore["Explore"]
+    explore --> converse["Converse"]
+    converse --> reflect["Reflect"]
+    register --> reread["저장 결과 재열람"]
+    bundle --> reread

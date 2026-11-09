@@ -82,6 +82,7 @@ class SharedTrialTests(unittest.TestCase):
         runner.storage=SimpleNamespace(before_write=lambda value:None)
         runner.money=trial.executor.ledger(self.plan['spend_policy'])
         with patch.object(trial,'validate',return_value=plan),\
+                patch.object(trial.cost_review,'verify_profile'),\
                 patch.object(trial,'Session',return_value=runner) as sessions,\
                 patch.object(trial.executor,'quota_watch',return_value=nullcontext()),\
                 patch.object(trial.host_resources,'watch',side_effect=lambda *a,**k:nullcontext()),\
@@ -92,6 +93,10 @@ class SharedTrialTests(unittest.TestCase):
             self.assertFalse(list((directory/'attempts').glob('*.failed.json')))
             self.assertEqual(trial.run(directory,proposals_only=True),first)
             self.assertEqual(len(runner.calls),calls)
+            from test_factory_cost_plan import cost_workload,cost_profile
+            workload=self.f.root/'cost-work.json';profile=self.f.root/'cost-profile.json'
+            write(workload,cost_workload());write(profile,cost_profile(plan))
+            trial.cost_review.prepare_review(directory,workload,[profile])
             done=trial.run(directory)
             self.assertEqual(done['compiled_agents'],2);self.assertEqual(done['runtime_turns'],6)
             output=read_json(directory/'artifacts/output.json')
@@ -100,6 +105,14 @@ class SharedTrialTests(unittest.TestCase):
             self.assertEqual(trial.run(directory),done)
             self.assertEqual(sessions.call_count,2)
             self.assertEqual(runner.money.summary()['charged_usd'],'13')
+
+    def test_full_execution_without_cost_plan_stops_before_session_or_provider(self):
+        directory=self.f.root/'no-cost-review';write(directory/'plan.json',self.plan)
+        with patch.object(trial,'validate',return_value=self.plan),\
+                patch.object(trial.executor,'quota_watch',return_value=nullcontext()),\
+                patch.object(trial,'Session') as session,patch.object(trial.executor,'provider_preflight') as preflight:
+            with self.assertRaisesRegex(ValueError,'cost-preflight'):trial.run(directory)
+        session.assert_not_called();preflight.assert_not_called()
 
 
 if __name__=='__main__':unittest.main()
