@@ -11,6 +11,8 @@ from commentscope.factory.position_frames import fields
 from commentscope.contracts.perspective_draft import obj
 
 VERSION = 'fixed-owner-position-observation-20261102-v2'
+SOURCE_BOUND = 'source-bound-owner-position-20261109-v3'
+WORLD_CONTEXT_POLICY = 'source-linguistic-world-20261109-v1'
 WORLDS = ('real_world', 'fictional_world', 'hypothetical_world', 'uncertain')
 BASES = ('same_assertion', 'different_scope', 'different_condition', 'different_time',
          'different_modality', 'different_stance', 'unresolved_reference', 'uncertain')
@@ -35,10 +37,23 @@ Ordinary necessary conditions of a real policy do not make a fictional world.
 Only equivalent plus same_assertion and matching established worlds can verify
 this comparison. A mismatch vetoes even a positive relation. It still cannot
 approve source kind, source authorship, source coverage or Agent eligibility.'''
+SOURCE_BOUND_SYSTEM = SYSTEM.split('First observe owner_world')[0]+'''Observe owner_world and candidate_world independently from their assertion frames.
+ORIGINAL_CONTEXT_ONLY can resolve the owner's pronouns and explicit narrative or
+hypothetical framing. VIDEO_CONTEXT is topic metadata, not asserted source text:
+a video title alone never makes an otherwise unqualified policy demand fictional.
+An explicit novel, game or hypothetical frame in the original or relevant parent
+still restricts the owner's world. An unqualified candidate cannot silently
+inherit that frame. Ordinary policy conditions do not change the assertion world.
+Identical text never bypasses world, conditions, timing, negation or owner checks.
+Only equivalent plus same_assertion and matching established worlds verifies the
+link. A mismatch or uncertainty vetoes even a positive relation. This observation
+cannot approve source kind, source coverage, factual truth or Agent eligibility.'''
 
 
 def validate_task(task):
-    fields(task, 'id source owner_position candidate')
+    scoped='world_context_policy' in task
+    fields(task, 'id source owner_position candidate'+(' world_context_policy' if scoped else ''))
+    if scoped and task['world_context_policy']!=WORLD_CONTEXT_POLICY:raise ValueError('Frozen owner world context required')
     mc.validate_source(task['source']); mc.validate_candidate(task['candidate'])
     fields(task['owner_position'], 'id text')
     graph = ed.parse(task['source'])
@@ -48,12 +63,14 @@ def validate_task(task):
             or 'meaning_context' in task['candidate']):
         raise ValueError('Exact literal owner and plain candidate required')
     value = {k: task[k] for k in ('source', 'owner_position', 'candidate')}
-    if task['id'] != 'OP'+digest([VERSION, value]):
+    if scoped:value['world_context_policy']=WORLD_CONTEXT_POLICY
+    if task['id'] != 'OP'+digest([SOURCE_BOUND if scoped else VERSION, value]):
         raise ValueError('Owner comparison identity changed')
     return task
 
 
-def tasks(records, cores, audit_tasks):
+def tasks(records, cores, audit_tasks, *, protocol=VERSION):
+    if protocol not in (VERSION,SOURCE_BOUND):raise ValueError('Unknown owner protocol')
     from commentscope.factory import source_arguments as sa
     available = {t['task_id']: t for t in sa.audit_tasks(records, cores)}
     if any(available.get(t['task_id']) != t for t in audit_tasks):
@@ -72,15 +89,18 @@ def tasks(records, cores, audit_tasks):
             value = {'source': deepcopy(record['source']),
                      'owner_position': {'id': owner['source_node_id'], 'text': owner['text']},
                      'candidate': deepcopy(candidates[cid])}
-            value = {'id': 'OP'+digest([VERSION, value]), **value}
+            if protocol==SOURCE_BOUND:value['world_context_policy']=WORLD_CONTEXT_POLICY
+            value = {'id': 'OP'+digest([protocol, value]), **value}
             validate_task(value); result[value['id']] = value
     return [result[k] for k in sorted(result)]
 
 
 def request(task):
     validate_task(task)
-    return mc.request(SYSTEM, {'OWNER_POSITION': deepcopy(task['owner_position']),
+    scoped='world_context_policy' in task
+    return mc.request(SOURCE_BOUND_SYSTEM if scoped else SYSTEM, {'OWNER_POSITION': deepcopy(task['owner_position']),
         'CANDIDATE': mc.candidate_packet(task['candidate']),
+        **({'WORLD_CONTEXT_POLICY':WORLD_CONTEXT_POLICY} if scoped else {}),
         'ORIGINAL_CONTEXT_ONLY': mc.packet(task['source'])}, obj({
             'relation': {'type': 'string', 'enum': ['equivalent', 'different', 'uncertain']},
             'owner_world': {'type': 'string', 'enum': list(WORLDS)},
@@ -97,17 +117,17 @@ def bind(task, result):
         raise ValueError('Unknown owner observation')
     if any(value[k] not in WORLDS for k in ('owner_world', 'candidate_world')):
         raise ValueError('Unknown assertion world')
-    return {'artifact_kind': VERSION, 'task': deepcopy(task), 'request_sha256': digest(req),
+    return {'artifact_kind': SOURCE_BOUND if 'world_context_policy' in task else VERSION, 'task': deepcopy(task), 'request_sha256': digest(req),
             'response': deepcopy(value), 'output_sha256': digest(value),
             'passed': value['relation'] == 'equivalent' and value['basis'] == 'same_assertion'
                       and value['owner_world'] == value['candidate_world'] != 'uncertain',
             'semantic_approval': False}
 
 
-def select(records, cores, audit_tasks, checks):
+def select(records, cores, audit_tasks, checks, *, protocol=VERSION):
     from commentscope.factory import source_arguments as sa
-    expected = {t['id']: t for t in tasks(records, cores, sa.audit_tasks(records, cores))}
-    used = {t['id'] for t in tasks(records, cores, audit_tasks)}
+    expected = {t['id']: t for t in tasks(records, cores, sa.audit_tasks(records, cores),protocol=protocol)}
+    used = {t['id'] for t in tasks(records, cores, audit_tasks,protocol=protocol)}
     result = {}
     if not isinstance(checks, (list, tuple)): raise ValueError('Bound owner checks required')
     for check in checks:

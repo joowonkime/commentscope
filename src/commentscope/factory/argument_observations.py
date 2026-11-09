@@ -13,7 +13,8 @@ LEGACY_SPLIT = 'source-argument-observations-20261102-v5'
 DEPENDENCY_SCOPED = 'source-argument-observations-20261105-v6'
 JEV_SPLIT = 'source-argument-observations-jev-graph-20261106-v7'
 CHAT_SPLIT = 'source-argument-observations-chat-graph-20261106-v8'
-GRAPH_SPLITS = (JEV_SPLIT, CHAT_SPLIT)
+TYPED_CHAT = 'source-argument-observations-typed-graph-20261109-v9'
+GRAPH_SPLITS = (JEV_SPLIT, CHAT_SPLIT,TYPED_CHAT)
 # The candidate failed a missing-premise live control; keep the existing default.
 SPLIT = LEGACY_SPLIT
 SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED, *GRAPH_SPLITS)
@@ -339,12 +340,15 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
     from commentscope.factory import owner_observations as owners
     if protocol not in PROTOCOLS: raise ValueError('Unknown source observation protocol')
     if protocol not in SPLIT_PROTOCOLS and owner_checks: raise ValueError('Separate owners require the split protocol')
-    selected_owners = owners.select(records, cores, tasks, owner_checks) if protocol in SPLIT_PROTOCOLS else []
+    typed=protocol==TYPED_CHAT
+    selected_owners = owners.select(records, cores, tasks, owner_checks,
+        protocol=owners.SOURCE_BOUND if typed else owners.VERSION) if protocol in SPLIT_PROTOCOLS else []
     relevant = select_checks(records, cores, tasks, checks)
     from commentscope.factory import argument_dependencies as deps
     if protocol not in GRAPH_SPLITS and dependency_checks:raise ValueError('Graph checks require their explicit protocol')
-    relevant_dependencies=deps.select(records,cores,tasks,dependency_checks) if protocol in GRAPH_SPLITS else []
-    if protocol in GRAPH_SPLITS and any(c['artifact_kind']!=(deps.CHAT_VERSION if protocol==CHAT_SPLIT else deps.VERSION)
+    relevant_dependencies=deps.select(records,cores,tasks,dependency_checks,typed=typed) if protocol in GRAPH_SPLITS else []
+    expected_graph=deps.TYPED_CHAT_VERSION if typed else deps.CHAT_VERSION if protocol==CHAT_SPLIT else deps.VERSION
+    if protocol in GRAPH_SPLITS and any(c['artifact_kind']!=expected_graph
                                        for c in relevant_dependencies):
         raise ValueError('Graph observations use another model transport protocol')
     graph_guards={}
@@ -352,7 +356,7 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
         for record in records:
             if record['source']['id'] not in {t['source_id'] for t in tasks}:continue
             sid=record['source']['id']
-            graph_guards[sid]=deps.guards(record,cores,[c for c in relevant_dependencies if c['task']['source_id']==sid])
+            graph_guards[sid]=deps.guards(record,cores,[c for c in relevant_dependencies if c['task']['source_id']==sid],typed=typed)
     lookup = {r['source']['id']: r for r in records}
     wire = {w['task_id']: (t, w) for t, w in zip(tasks, req['data']['TASKS'], strict=True)}
     seen = set(); decisions = []

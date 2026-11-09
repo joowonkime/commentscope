@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v18",
+  "spec_version": "commentscope-mvp-20261109-v19",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,10 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "새G1: 지지5/3복원·1Agent/3응답·2Agent요건실패. G2/G3 admission거부. 다음은REMOTE_VERIFICATION의12종 유형/world경계 사례와 일관성 연결 계약부터 고정한다. 개별문구유료전체반복은 보류; 새component실험은 원 moneyowner/잔액/window/고정가설을 검사한 뒤에만. 원 scope$8/공유$50/과거차감유지; 이번window종료2026-11-09T14:26:51Z. 전체999재동결미결정."
+    "hold_reason": "새 typed/scope protocol 오프라인 구현과 component동결 전 유료보류. 사용자 전체MVP진행 지시, 같은 money owner 및 총50 유지. 전체999자료갱신 답변대기.",
+    "parallel_tasks": [
+      "TASK-011"
+    ]
   },
   "requirements": [
     {
@@ -45,7 +48,8 @@
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
-        "src/commentscope/ingestion/revalidated_snapshot.py"
+        "src/commentscope/ingestion/revalidated_snapshot.py",
+        "src/commentscope/factory/owner_observations.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -55,7 +59,9 @@
         "tests/test_decision_controls.py",
         "tests/test_jev_audit_integration.py",
         "tests/test_remote_verification.py",
-        "tests/test_revalidated_snapshot.py"
+        "tests/test_revalidated_snapshot.py",
+        "tests/test_typed_verification.py",
+        "tests/test_typed_controls.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -66,7 +72,8 @@
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ]
     },
     {
@@ -87,7 +94,9 @@
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
-        "src/commentscope/factory/pipeline_stages.py"
+        "src/commentscope/factory/pipeline_stages.py",
+        "src/commentscope/factory/argument_dependencies.py",
+        "src/commentscope/factory/owner_observations.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -97,7 +106,9 @@
         "tests/test_component_diagnostic_policy.py",
         "tests/test_selective_agent_sources.py",
         "tests/test_remote_verification.py",
-        "tests/test_alias_retrieval.py"
+        "tests/test_alias_retrieval.py",
+        "tests/test_typed_verification.py",
+        "tests/test_typed_controls.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -115,7 +126,8 @@
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ]
     },
     {
@@ -134,7 +146,8 @@
         "src/commentscope/factory/argument_dependencies.py",
         "src/commentscope/providers/remote_verification.py",
         "src/commentscope/factory/remote_fact_records.py",
-        "experiments/remote_factory_pipeline.py"
+        "experiments/remote_factory_pipeline.py",
+        "src/commentscope/factory/owner_observations.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -144,7 +157,9 @@
         "tests/test_jev_audit_integration.py",
         "tests/test_component_diagnostic_policy.py",
         "tests/test_selective_agent_sources.py",
-        "tests/test_remote_verification.py"
+        "tests/test_remote_verification.py",
+        "tests/test_typed_verification.py",
+        "tests/test_typed_controls.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -162,7 +177,8 @@
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ]
     },
     {
@@ -477,7 +493,9 @@
         "src/commentscope/factory/remote_fact_records.py",
         "experiments/remote_factory_pipeline.py",
         "src/commentscope/providers/api_resources.py",
-        "src/commentscope/ingestion/revalidated_snapshot.py"
+        "src/commentscope/ingestion/revalidated_snapshot.py",
+        "src/commentscope/factory/argument_dependencies.py",
+        "src/commentscope/factory/owner_observations.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -490,7 +508,9 @@
         "tests/test_selective_agent_sources.py",
         "tests/test_remote_verification.py",
         "tests/test_api_resources.py",
-        "tests/test_revalidated_snapshot.py"
+        "tests/test_revalidated_snapshot.py",
+        "tests/test_typed_verification.py",
+        "tests/test_typed_controls.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -514,7 +534,8 @@
         "docs/design/README.md",
         "docs/design/BASELINE.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ]
     }
   ],
@@ -1205,7 +1226,8 @@
         "docs/design/FACTORY_DELIVERY.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/JEV_AUDIT_INTEGRATION.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ]
     },
     {
@@ -1493,7 +1515,7 @@
         "TASK-009",
         "TASK-010"
       ],
-      "status": "todo",
+      "status": "in_progress",
       "deliverables": [
         "기존 Figma의 세 과업을 구현한 프론트와 실제 자동 bundle/API 연결",
         "팀 언어 정책·오류/보류·대화/성찰 저장·원문 이동 결과"
@@ -1512,7 +1534,8 @@
       "design_refs": [
         "docs/design/README.md",
         "docs/design/INTERACTIONS.md",
-        "docs/design/EXECUTION.md"
+        "docs/design/EXECUTION.md",
+        "docs/design/TYPED_VERIFICATION.md"
       ],
       "design_status": "written_unimplemented"
     },
@@ -1677,8 +1700,12 @@
     {
       "spec_version": "commentscope-mvp-20261109-v18",
       "reason": "PR71 동치 검색과 고정 표본 재검증을 구현/회귀563개 후 실제 새G1을 평가했다. 지지5/3 복원은 확인했으나 local/value와 core/necessary_fact, 동일 owner/candidate world 관측 모순으로2Agent 미달. 84항목 검토·실패·동일plan203응답 재개·과거장부를 보존하고 G2/G3 확대를 차단했다. 다음 변경은12종의 유형/scope 경계 사례와 연결 계약을 먼저 고정하는 제안이며 아직 구현/채택하지 않았다. 기존r5와 예산을 낮추지 않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v19",
+      "reason": "사용자 나머지 MVP 전체 진행 지시. 기존모델/장부/r5를 유지하고 blind combined type/relation 그래프와 source-linguistic world 문맥을 별도 protocol로 구현한다. 과거관측승계/문자일치자동승인/사실전제삭제는 금지. component0.15·freshG1 1.50 이하로 동결하고 G1대기 중 Figma프론트를 구현한다. 전체999재동결 답변은 아직 대기하며 G4원가/자료는 G2/G3실측 후 동결한다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261109-v15",
+  "design_version": "commentscope-detailed-design-20261109-v16",
   "design_document": "docs/design/README.md"
 }

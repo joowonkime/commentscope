@@ -1,0 +1,671 @@
+{
+  "version": "typed-verification-controls-20261109-v1",
+  "graphs": [
+    {
+      "id": "norm_en",
+      "record": {
+        "source": {
+          "id": "norm_en",
+          "text": "Require public hearings. Accessibility matters.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "norm_en-u1",
+            "local_id": "U1",
+            "text": "Require public hearings.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 24,
+                "text": "Require public hearings."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "norm_en-u2",
+            "local_id": "U2",
+            "text": "Accessibility matters.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 25,
+                "end": 47,
+                "text": "Accessibility matters."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ],
+        "candidate_ids": [
+          "core-norm_en"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-norm_en",
+            "text": "Public hearings should be required."
+          },
+          "output": {
+            "kind": "value"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "norm_ko",
+      "record": {
+        "source": {
+          "id": "norm_ko",
+          "text": "공청회를 열어야 합니다. 공정한 참여가 중요하기 때문입니다.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "norm_ko-u1",
+            "local_id": "U1",
+            "text": "공청회를 열어야 합니다.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 13,
+                "text": "공청회를 열어야 합니다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "norm_ko-u2",
+            "local_id": "U2",
+            "text": "공정한 참여가 중요하기 때문입니다.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 14,
+                "end": 33,
+                "text": "공정한 참여가 중요하기 때문입니다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ],
+        "candidate_ids": [
+          "core-norm_ko"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-norm_ko",
+            "text": "공청회를 개최해야 한다."
+          },
+          "output": {
+            "kind": "value"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "quoted_rebuttal",
+      "record": {
+        "source": {
+          "id": "quoted_rebuttal",
+          "text": "Some people say 'Close the library.' I disagree: keep it open.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "quoted_rebuttal-u1",
+            "local_id": "U1",
+            "text": "Some people say 'Close the library.'",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 36,
+                "text": "Some people say 'Close the library.'"
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "quoted_rebuttal-u2",
+            "local_id": "U2",
+            "text": "I disagree: keep it open.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 37,
+                "end": 62,
+                "text": "I disagree: keep it open."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ],
+        "candidate_ids": [
+          "core-quoted_rebuttal"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-quoted_rebuttal",
+            "text": "The library should remain open."
+          },
+          "output": {
+            "kind": "value"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "conditional",
+      "record": {
+        "source": {
+          "id": "conditional",
+          "text": "Require public hearings only if online access is provided.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "conditional-u1",
+            "local_id": "U1",
+            "text": "Require public hearings only if online access is provided.",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 58,
+                "text": "Require public hearings only if online access is provided."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ],
+        "candidate_ids": [
+          "core-conditional"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-conditional",
+            "text": "Require public hearings only if online access is provided."
+          },
+          "output": {
+            "kind": "value"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "facts_en",
+      "record": {
+        "source": {
+          "id": "facts_en",
+          "text": "Room A has zero desks. Room B has four desks. Therefore room A has no desks.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "facts_en-u1",
+            "local_id": "U1",
+            "text": "Room A has zero desks.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 22,
+                "text": "Room A has zero desks."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": [
+              "core-facts_en"
+            ]
+          },
+          {
+            "id": "facts_en-u2",
+            "local_id": "U2",
+            "text": "Room B has four desks.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 23,
+                "end": 45,
+                "text": "Room B has four desks."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "facts_en-u3",
+            "local_id": "U3",
+            "text": "Therefore room A has no desks.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 46,
+                "end": 76,
+                "text": "Therefore room A has no desks."
+              }
+            ],
+            "requires": [
+              "U1"
+            ],
+            "core_requires_for": [
+              "core-facts_en"
+            ]
+          }
+        ],
+        "candidate_ids": [
+          "core-facts_en"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-facts_en",
+            "text": "Room A has no desks."
+          },
+          "output": {
+            "kind": "fact"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "facts_ko",
+      "record": {
+        "source": {
+          "id": "facts_ko",
+          "text": "북쪽 문은 잠겨 있다. 남쪽 문은 열려 있다. 그러므로 북쪽 문은 잠긴 상태다.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "facts_ko-u1",
+            "local_id": "U1",
+            "text": "북쪽 문은 잠겨 있다.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 12,
+                "text": "북쪽 문은 잠겨 있다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": [
+              "core-facts_ko"
+            ]
+          },
+          {
+            "id": "facts_ko-u2",
+            "local_id": "U2",
+            "text": "남쪽 문은 열려 있다.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 13,
+                "end": 25,
+                "text": "남쪽 문은 열려 있다."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "facts_ko-u3",
+            "local_id": "U3",
+            "text": "그러므로 북쪽 문은 잠긴 상태다.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 26,
+                "end": 44,
+                "text": "그러므로 북쪽 문은 잠긴 상태다."
+              }
+            ],
+            "requires": [
+              "U1"
+            ],
+            "core_requires_for": [
+              "core-facts_ko"
+            ]
+          }
+        ],
+        "candidate_ids": [
+          "core-facts_ko"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-facts_ko",
+            "text": "북쪽 문은 잠긴 상태다."
+          },
+          "output": {
+            "kind": "fact"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "prediction",
+      "record": {
+        "source": {
+          "id": "prediction",
+          "text": "I favor evening classes even though they may be expensive.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "prediction-u1",
+            "local_id": "U1",
+            "text": "I favor evening classes",
+            "kind": "value",
+            "evidence": [
+              {
+                "start": 0,
+                "end": 23,
+                "text": "I favor evening classes"
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "prediction-u2",
+            "local_id": "U2",
+            "text": "even though they may be expensive.",
+            "kind": "prediction",
+            "evidence": [
+              {
+                "start": 24,
+                "end": 58,
+                "text": "even though they may be expensive."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          }
+        ],
+        "candidate_ids": [
+          "core-prediction"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-prediction",
+            "text": "Evening classes should be offered."
+          },
+          "output": {
+            "kind": "value"
+          }
+        }
+      ],
+      "expected_accepted": true
+    },
+    {
+      "id": "omitted_fact",
+      "record": {
+        "source": {
+          "id": "omitted_fact",
+          "text": "Room A has zero desks. Room B has four desks. Therefore room A has no desks.",
+          "parent": null
+        },
+        "units": [
+          {
+            "id": "omitted_fact-u1",
+            "local_id": "U1",
+            "text": "Room B has four desks.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 23,
+                "end": 45,
+                "text": "Room B has four desks."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": []
+          },
+          {
+            "id": "omitted_fact-u2",
+            "local_id": "U2",
+            "text": "Therefore room A has no desks.",
+            "kind": "fact",
+            "evidence": [
+              {
+                "start": 46,
+                "end": 76,
+                "text": "Therefore room A has no desks."
+              }
+            ],
+            "requires": [],
+            "core_requires_for": [
+              "core-omitted_fact"
+            ]
+          }
+        ],
+        "candidate_ids": [
+          "core-omitted_fact"
+        ]
+      },
+      "cores": [
+        {
+          "candidate": {
+            "id": "core-omitted_fact",
+            "text": "Room A has no desks."
+          },
+          "output": {
+            "kind": "fact"
+          }
+        }
+      ],
+      "expected_accepted": false
+    }
+  ],
+  "declaration_mutations": [
+    {
+      "id": "facts_en-missing-local",
+      "source": "facts_en",
+      "field": "requires",
+      "target": "U3",
+      "units": []
+    },
+    {
+      "id": "facts_en-wrong-local",
+      "source": "facts_en",
+      "field": "requires",
+      "target": "U3",
+      "units": [
+        "U2"
+      ]
+    },
+    {
+      "id": "facts_en-missing-core",
+      "source": "facts_en",
+      "field": "core_requires_for",
+      "units": []
+    },
+    {
+      "id": "facts_ko-missing-local",
+      "source": "facts_ko",
+      "field": "requires",
+      "target": "U3",
+      "units": []
+    },
+    {
+      "id": "facts_ko-wrong-local",
+      "source": "facts_ko",
+      "field": "requires",
+      "target": "U3",
+      "units": [
+        "U2"
+      ]
+    },
+    {
+      "id": "facts_ko-missing-core",
+      "source": "facts_ko",
+      "field": "core_requires_for",
+      "units": []
+    }
+  ],
+  "owners": [
+    {
+      "id": "video_metadata_only",
+      "task": {
+        "id": "OPf34d3bd26e7fcc2ee71a76efe56d449331fa6a8ec57bf02478b91d6fd4776198",
+        "source": {
+          "id": "video_metadata_only",
+          "text": "Require public hearings.",
+          "parent": null,
+          "video_context": {
+            "artifact_kind": "snapshot-video-context-20261017-v1",
+            "video_id": "synthetic-civic-policy",
+            "title": "Fictional discussion: civic policy",
+            "primary_language": "en"
+          }
+        },
+        "owner_position": {
+          "id": "DNba224aa33b2f88ce795266051e0f74cd74445d5a6547f8d1add1f178d6c7ac5b",
+          "text": "Require public hearings."
+        },
+        "candidate": {
+          "id": "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416",
+          "text": "Require public hearings.",
+          "aliases": [
+            "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416"
+          ],
+          "nominees": {
+            "video_metadata_only": "f2137e45be0cb4214b538bc110101a0d62122dcf03fa252311a8cab533a63ba7"
+          },
+          "extraction_refs": [
+            "synthetic-video_metadata_only"
+          ],
+          "equivalence_refs": []
+        },
+        "world_context_policy": "source-linguistic-world-20261109-v1"
+      },
+      "expected_accepted": true
+    },
+    {
+      "id": "explicit_novel",
+      "task": {
+        "id": "OPf7c72f18c61666ae3943a7fb907a771b7320c0723344116251f228f0cdab3ce8",
+        "source": {
+          "id": "explicit_novel",
+          "text": "In the novel, public hearings must be held.",
+          "parent": null
+        },
+        "owner_position": {
+          "id": "DNdb2c924274b47f5765523c540821ddbdf2ddac3386606ccc671373fd96b6f277",
+          "text": "In the novel, public hearings must be held."
+        },
+        "candidate": {
+          "id": "MC8f7838567a4f6b6ec0de275aa387b58bc1577d2d0d574f79314e918deaa3e3ce",
+          "text": "Public hearings must be held.",
+          "aliases": [
+            "MC8f7838567a4f6b6ec0de275aa387b58bc1577d2d0d574f79314e918deaa3e3ce"
+          ],
+          "nominees": {
+            "explicit_novel": "83207256b7017982ea320fc2546cf3c2f604350886619b67f90493ea76f80fdd"
+          },
+          "extraction_refs": [
+            "synthetic-explicit_novel"
+          ],
+          "equivalence_refs": []
+        },
+        "world_context_policy": "source-linguistic-world-20261109-v1"
+      },
+      "expected_accepted": false
+    },
+    {
+      "id": "dropped_condition",
+      "task": {
+        "id": "OP6020072ddafbc0279f437814ee50d0cc638eb2fe3022ee543b6cca57a2d1f854",
+        "source": {
+          "id": "dropped_condition",
+          "text": "Require public hearings only if online access is provided.",
+          "parent": null
+        },
+        "owner_position": {
+          "id": "DN14dfdfab35459c6e9e2b3244e0a41d7819e72867e0d2e6d613c0dde12b6e985b",
+          "text": "Require public hearings only if online access is provided."
+        },
+        "candidate": {
+          "id": "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416",
+          "text": "Require public hearings.",
+          "aliases": [
+            "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416"
+          ],
+          "nominees": {
+            "dropped_condition": "ee04d51862c8061c645c45621ef225fad0627a4e03f0647b102a42ed351c8b23"
+          },
+          "extraction_refs": [
+            "synthetic-dropped_condition"
+          ],
+          "equivalence_refs": []
+        },
+        "world_context_policy": "source-linguistic-world-20261109-v1"
+      },
+      "expected_accepted": false
+    },
+    {
+      "id": "parent_only",
+      "task": {
+        "id": "OP18c7576161a71dfb4fd3a64f3319de09346e063544febab3c3ab992277c96293",
+        "source": {
+          "id": "parent_only",
+          "text": "I am undecided.",
+          "parent": {
+            "id": "parent-context",
+            "text": "Require public hearings."
+          }
+        },
+        "owner_position": {
+          "id": "DN4e94c3a6c66150f7ae10e5ed7c90a4b677bbef2b20706a486437404a2baf80f2",
+          "text": "I am undecided."
+        },
+        "candidate": {
+          "id": "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416",
+          "text": "Require public hearings.",
+          "aliases": [
+            "MC8e5f4440365aa55df67c2f6b76b89d82b74b1f0dea312e5c2fd7ca1b07133416"
+          ],
+          "nominees": {
+            "parent_only": "5b04afd8b9be7e94a67e83d03be35c57386e0903dcca04fdd98dff98d72724bf"
+          },
+          "extraction_refs": [
+            "synthetic-parent_only"
+          ],
+          "equivalence_refs": []
+        },
+        "world_context_policy": "source-linguistic-world-20261109-v1"
+      },
+      "expected_accepted": false
+    }
+  ]
+}

@@ -110,6 +110,18 @@ class MVPSpecTests(TestCase):
         self.assertIn('active task', errors)
         self.assertIn('unfinished dependency', errors)
 
+    def test_explicit_parallel_work_must_have_its_own_finished_dependencies(self):
+        second=self.spec['tasks'][1];second['status']='in_progress'
+        self.spec['resume']['parallel_tasks']=[second['id']]
+        self.assertIn('unfinished dependency',self.errors())
+        second['depends_on']=[]
+        self.assertEqual(self.errors(),'')
+
+    def test_parallel_resume_rejects_duplicate_primary_and_unknown_tasks(self):
+        for ids in ([self.spec['resume']['next_task']],['TASK-999'],['TASK-002','TASK-002']):
+            self.spec['resume']['parallel_tasks']=ids
+            self.assertIn('parallel_tasks',self.errors())
+
     def test_changed_r5_pin_is_rejected(self):
         self.spec['acceptance_contract']['digest'] = '0' * 64
         self.assertIn('r5', self.errors())

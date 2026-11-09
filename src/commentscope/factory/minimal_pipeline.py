@@ -11,7 +11,7 @@ from commentscope.factory.framed_corpus import sources as source_registry
 from commentscope.factory.pipeline_work import PipelineWork
 from commentscope.factory.automatic_contract import digest
 
-VERSION = 'minimal-factory-pipeline-20261109-v29'
+VERSION = 'minimal-factory-pipeline-20261109-v30'
 SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v1'
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
