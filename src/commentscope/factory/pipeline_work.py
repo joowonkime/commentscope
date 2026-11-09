@@ -130,6 +130,7 @@ class PipelineWork:
             from commentscope.factory import source_context_observations as contexts
             raw_protocol = raw.SOURCE_CONTEXT if self.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT else raw.VERSION
             if self.extraction_protocol in compact_claims.WORLD_CONTEXT_PROTOCOLS: raw_protocol = raw.WORLD_CONTEXT
+            if getattr(self,'shared_typed',False):raw_protocol=raw.WORLD_CONTEXT
             results=[]
             for pair in pairs:
                 source,target=self.registry[pair['source_id']],target_lookup[pair['candidate_id']]
@@ -175,7 +176,7 @@ class PipelineWork:
                             protocol = (verification.BRIEF if self.extraction_protocol in compact_claims.VERSIONS
                                         else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
                             if (self.verification_contract == verification.FULL_SCOPE
-                                    and self.extraction_protocol in compact_claims.UNIFIED_VERSIONS):
+                                    and (self.extraction_protocol in compact_claims.UNIFIED_VERSIONS or getattr(self,'shared_typed',False))):
                                 protocol = verification.QUALIFIED
                             rows=self.work('raw-own-evidence',[proof],
                                 lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),

@@ -8,10 +8,12 @@ from copy import deepcopy
 from commentscope.factory import minimal_claims as mc, explicit_discourse as ed
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
-from commentscope.contracts.perspective_draft import obj
+from commentscope.contracts.perspective_draft import obj, array
 
 VERSION = 'fixed-owner-position-observation-20261102-v2'
 SOURCE_BOUND = 'source-bound-owner-position-20261109-v3'
+DIRECTIONAL_SOURCE_BOUND = 'source-bound-common-core-owner-20261110-v4'
+DIRECTIONAL_POLICY = 'whole-common-core-directional-support-20261110-v1'
 WORLD_CONTEXT_POLICY = 'source-linguistic-world-20261109-v1'
 WORLDS = ('real_world', 'fictional_world', 'hypothetical_world', 'uncertain')
 BASES = ('same_assertion', 'different_scope', 'different_condition', 'different_time',
@@ -48,11 +50,34 @@ Identical text never bypasses world, conditions, timing, negation or owner check
 Only equivalent plus same_assertion and matching established worlds verifies the
 link. A mismatch or uncertainty vetoes even a positive relation. This observation
 cannot approve source kind, source coverage, factual truth or Agent eligibility.'''
+DIRECTIONAL_SYSTEM = '''Independently check directional support from OWNER_POSITION to CANDIDATE.
+Both are fallible untrusted text. Read the selected author's complete original.
+This is not full equivalence: a more specific own position can support a common
+core without donating all its personal details or reasons to the whole group.
+Return supports_core only if this author asserts or explicitly endorses the
+WHOLE candidate. Related sentiment, a prediction about a benefit, a quoted view,
+or another source's reason does not establish a policy demand. Do not generalize
+one person's plan into a universal claim or change modality, negation or world.
+Every ESSENTIAL source condition must retain its force in the common core.
+For each FIXED_SOURCE_CONDITIONS row, report preserved, missing_or_changed, or
+unclear; never omit an inconvenient condition. Empty conditions means none was
+provided, not permission to ignore restrictions in the full original.
+Observe owner_world and candidate_world independently. Original/parent context
+can resolve the owner's reference, never donate an unasserted position. Video
+metadata alone does not make a real policy demand fictional. An unqualified
+candidate cannot silently inherit the source's fictional or hypothetical world.
+Only supports_core plus direct_support, all conditions preserved and matching
+established worlds can verify this link. Uncertainty vetoes. Do not judge truth,
+source kind, full-source completeness or Agent eligibility in this task.'''
 
 
 def validate_task(task):
     scoped='world_context_policy' in task
-    fields(task, 'id source owner_position candidate'+(' world_context_policy' if scoped else ''))
+    directional='comparison_policy' in task
+    fields(task, 'id source owner_position candidate'+(' world_context_policy' if scoped else '')+
+           (' comparison_policy' if directional else ''))
+    if directional and (not scoped or task['comparison_policy']!=DIRECTIONAL_POLICY):
+        raise ValueError('Explicit common-core directional policy required')
     if scoped and task['world_context_policy']!=WORLD_CONTEXT_POLICY:raise ValueError('Frozen owner world context required')
     mc.validate_source(task['source']); mc.validate_candidate(task['candidate'])
     fields(task['owner_position'], 'id text')
@@ -64,13 +89,15 @@ def validate_task(task):
         raise ValueError('Exact literal owner and plain candidate required')
     value = {k: task[k] for k in ('source', 'owner_position', 'candidate')}
     if scoped:value['world_context_policy']=WORLD_CONTEXT_POLICY
-    if task['id'] != 'OP'+digest([SOURCE_BOUND if scoped else VERSION, value]):
+    if directional:value['comparison_policy']=DIRECTIONAL_POLICY
+    protocol=DIRECTIONAL_SOURCE_BOUND if directional else SOURCE_BOUND if scoped else VERSION
+    if task['id'] != 'OP'+digest([protocol, value]):
         raise ValueError('Owner comparison identity changed')
     return task
 
 
 def tasks(records, cores, audit_tasks, *, protocol=VERSION):
-    if protocol not in (VERSION,SOURCE_BOUND):raise ValueError('Unknown owner protocol')
+    if protocol not in (VERSION,SOURCE_BOUND,DIRECTIONAL_SOURCE_BOUND):raise ValueError('Unknown owner protocol')
     from commentscope.factory import source_arguments as sa
     available = {t['task_id']: t for t in sa.audit_tasks(records, cores)}
     if any(available.get(t['task_id']) != t for t in audit_tasks):
@@ -89,7 +116,8 @@ def tasks(records, cores, audit_tasks, *, protocol=VERSION):
             value = {'source': deepcopy(record['source']),
                      'owner_position': {'id': owner['source_node_id'], 'text': owner['text']},
                      'candidate': deepcopy(candidates[cid])}
-            if protocol==SOURCE_BOUND:value['world_context_policy']=WORLD_CONTEXT_POLICY
+            if protocol in (SOURCE_BOUND,DIRECTIONAL_SOURCE_BOUND):value['world_context_policy']=WORLD_CONTEXT_POLICY
+            if protocol==DIRECTIONAL_SOURCE_BOUND:value['comparison_policy']=DIRECTIONAL_POLICY
             value = {'id': 'OP'+digest([protocol, value]), **value}
             validate_task(value); result[value['id']] = value
     return [result[k] for k in sorted(result)]
@@ -98,28 +126,51 @@ def tasks(records, cores, audit_tasks, *, protocol=VERSION):
 def request(task):
     validate_task(task)
     scoped='world_context_policy' in task
-    return mc.request(SOURCE_BOUND_SYSTEM if scoped else SYSTEM, {'OWNER_POSITION': deepcopy(task['owner_position']),
+    directional='comparison_policy' in task
+    conditions=[]
+    if directional:
+        from commentscope.factory.shared_owned_positions import condition_inventory
+        graph=ed.parse(task['source']);node=next(n for n in graph['nodes'] if n['id']==task['owner_position']['id'])
+        conditions=condition_inventory(graph,node)
+    return mc.request(DIRECTIONAL_SYSTEM if directional else SOURCE_BOUND_SYSTEM if scoped else SYSTEM, {'OWNER_POSITION': deepcopy(task['owner_position']),
         'CANDIDATE': mc.candidate_packet(task['candidate']),
         **({'WORLD_CONTEXT_POLICY':WORLD_CONTEXT_POLICY} if scoped else {}),
+        **({'FIXED_SOURCE_CONDITIONS':conditions} if directional else {}),
         'ORIGINAL_CONTEXT_ONLY': mc.packet(task['source'])}, obj({
-            'relation': {'type': 'string', 'enum': ['equivalent', 'different', 'uncertain']},
+            'relation': {'type': 'string', 'enum': ['supports_core' if directional else 'equivalent', 'different', 'uncertain']},
             'owner_world': {'type': 'string', 'enum': list(WORLDS)},
             'candidate_world': {'type': 'string', 'enum': list(WORLDS)},
-            'basis': {'type': 'string', 'enum': list(BASES)}}), 128)
+            'basis': {'type': 'string', 'enum': ['direct_support',*BASES[1:]] if directional else list(BASES)},
+            **({'source_conditions':array(obj({'node_id':{'type':'string','enum':[c['node_id'] for c in conditions]},
+                'status':{'type':'string','enum':['preserved','missing_or_changed','unclear']}}),
+                minimum=len(conditions),maximum=len(conditions)) if conditions else
+                {'type':'array','items':{'type':'null'},'maxItems':0}} if directional else {})}), 512 if directional else 128)
 
 
 def bind(task, result):
     req = request(task)
     if not isinstance(result, dict) or result.get('errors'):
         raise ValueError('Completed independent owner comparison required')
-    value = result.get('output'); fields(value, 'relation owner_world candidate_world basis')
-    if value['relation'] not in ('equivalent', 'different', 'uncertain') or value['basis'] not in BASES:
+    directional='comparison_policy' in task
+    value = result.get('output'); fields(value, 'relation owner_world candidate_world basis'+(' source_conditions' if directional else ''))
+    if value['relation'] not in req['schema']['properties']['relation']['enum'] or value['basis'] not in req['schema']['properties']['basis']['enum']:
         raise ValueError('Unknown owner observation')
     if any(value[k] not in WORLDS for k in ('owner_world', 'candidate_world')):
         raise ValueError('Unknown assertion world')
-    return {'artifact_kind': SOURCE_BOUND if 'world_context_policy' in task else VERSION, 'task': deepcopy(task), 'request_sha256': digest(req),
+    conditions_passed=True
+    if directional:
+        expected={c['node_id'] for c in req['data']['FIXED_SOURCE_CONDITIONS']};seen={}
+        if not isinstance(value['source_conditions'],list):raise ValueError('Every fixed source condition requires observation')
+        for row in value['source_conditions']:
+            fields(row,'node_id status')
+            if row['node_id'] not in expected or row['node_id'] in seen or row['status'] not in ('preserved','missing_or_changed','unclear'):
+                raise ValueError('Unknown or duplicate source condition observation')
+            seen[row['node_id']]=row['status']
+        if set(seen)!=expected:raise ValueError('Missing essential source condition observation')
+        conditions_passed=all(s=='preserved' for s in seen.values())
+    return {'artifact_kind': DIRECTIONAL_SOURCE_BOUND if directional else SOURCE_BOUND if 'world_context_policy' in task else VERSION, 'task': deepcopy(task), 'request_sha256': digest(req),
             'response': deepcopy(value), 'output_sha256': digest(value),
-            'passed': value['relation'] == 'equivalent' and value['basis'] == 'same_assertion'
+            'passed': value['relation'] == ('supports_core' if directional else 'equivalent') and value['basis'] == ('direct_support' if directional else 'same_assertion') and conditions_passed
                       and value['owner_world'] == value['candidate_world'] != 'uncertain',
             'semantic_approval': False}
 

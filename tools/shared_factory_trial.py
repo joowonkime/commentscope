@@ -1,0 +1,239 @@
+"""One capped shared-discovery development trial; no formal gate admission."""
+import argparse
+from copy import deepcopy
+from datetime import datetime, timezone
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+ROOT=Path(__file__).resolve().parents[1]
+for item in (ROOT,ROOT/'src'):
+    if str(item) not in sys.path:sys.path.insert(0,str(item))
+
+from commentscope.factory import argument_observations as obs,candidate_consolidation as cc,minimal_pipeline
+from commentscope.factory.automatic_contract import digest
+from commentscope.factory.claim_clusters import read_json,sha
+from commentscope.file_integrity import source_code_hashes
+from commentscope.ingestion import load_snapshot
+from commentscope.providers import host_resources
+from commentscope.providers.checkpoint_calls import run_origin
+from commentscope.providers.execution_lock import experiment_lock
+from commentscope.providers.openrouter_budget import units
+from commentscope.agents.runtime_probe import runtime_probe,runtime_check
+from commentscope.storage import write_json_exclusive as write
+from experiments import remote_factory_pipeline as executor
+from tools import actual24_development
+
+VERSION='shared-factory-development-20261110-v1'
+MAXIMUM='1.50'
+TOOL_FILES=('tools/shared_factory_trial.py','tools/actual24_development.py')
+ALIASES={'shared-discovery':'core','shared-owned-position':'argument-position-alignment',
+         'nomination-raw':'membership-initial-raw','membership-expanded-raw':'membership-initial-raw'}
+
+
+def mapped_stage(stage):
+    family=re.sub(r'-[a-f0-9]{20}$','',stage)
+    return ALIASES[family]+stage[len(family):] if family in ALIASES else stage
+
+
+def authorize(path,authorization_file,*,user_request):
+    for name in (path,authorization_file):executor.private(name)
+    if Path(path).exists() or not isinstance(user_request,str) or not user_request.strip():
+        raise ValueError('Fresh explicit shared trial required')
+    auth=read_json(authorization_file);owner=read_json(auth['money_owner']['file'])
+    money=executor.ledger(read_json(owner['shared_policy_file']));summary=money.summary()
+    scope=money.summary(plan_sha256=auth['money_owner']['sha256'])
+    if (summary['reserved_calls'] or summary['uncertain_calls']
+            or units(MAXIMUM)>min(units(owner['maximum_additional_usd'])-units(scope['charged_usd']),units(summary['remaining_usd']))):
+        raise ValueError('Settled original scope/global money must cover the trial')
+    trial={'artifact_kind':VERSION+'-authorization','user_request':user_request,
+        'authorization_file':str(authorization_file),'authorization_sha256':sha(authorization_file),
+        'money_owner_sha256':auth['money_owner']['sha256'],'maximum_usd':MAXIMUM,
+        'opening_scope_charge_usd':scope['charged_usd'],'historical_charges_preserved':True,
+        'started_at':datetime.now(timezone.utc).isoformat()}
+    write(path,trial);return trial
+
+
+def guard(plan,*,call_seconds=0,allow_expired=False):
+    executor.guard(plan,call_seconds=call_seconds,allow_expired=allow_expired)
+    binding=plan['trial'];trial=read_json(binding['file'])
+    if (sha(binding['file'])!=binding['sha256'] or trial!=binding['authorization']
+            or trial['artifact_kind']!=VERSION+'-authorization' or not trial['user_request'].strip()
+            or trial['maximum_usd']!=MAXIMUM or trial['historical_charges_preserved'] is not True
+            or trial['authorization_sha256']!=plan['authorization']['sha256']
+            or trial['money_owner_sha256']!=plan['spend_scope_sha256']
+            or plan['opening_scope_charge_usd']!=trial['opening_scope_charge_usd']
+            or plan['subcap_usd']!=MAXIMUM or plan['artifact_kind']!=VERSION or plan['mode']!='development'
+            or plan['gate'] not in ('G1','G2','G3') or plan['formal_admission_eligible'] is not False
+            or plan['quality_gate_passed'] is not False or plan['admission_file'] is not None
+            or plan['discovery_mode']!='shared' or plan['membership_mode']!='raw'
+            or plan['extraction_protocol'] is not None or plan['argument_audit_protocol']!=obs.SHARED_TYPED_CHAT
+            or plan['agent_source_policy']!='candidate_verified_subset'
+            or plan['membership_retrieval_policy']!=cc.ALIAS_RETRIEVAL or plan['stage_aliases']!=ALIASES):
+        raise ValueError('Frozen shared development scope, roles or cumulative cap changed')
+
+
+def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None):
+    directory=Path(directory)
+    for name in (directory,template_file,trial_file):executor.private(name)
+    if directory.exists() or gate not in ('G1','G2','G3'):raise ValueError('Fresh supported shared run required')
+    old=read_json(template_file);old_dir=Path(template_file).parent
+    done=read_json(old_dir/'completed.json')
+    if (old['artifact_kind']!=executor.VERSION or old['gate']!='G1' or old['mode']!='factory'
+            or read_json(old_dir/'frozen.json')!={'plan_sha256':sha(template_file)}
+            or done['plan_sha256']!=sha(template_file)
+            or done['output_sha256']!=sha(old_dir/'artifacts/output.json')
+            or any(sha(old_dir/'frozen-code'/path)!=expected for path,expected in old['code_sha256'].items())
+            or old['classifier']!=executor.model_identity()):
+        raise ValueError('Immutable original configuration and compatible fact runtime required')
+    trial=read_json(trial_file);auth_file=Path(trial['authorization_file']);auth=read_json(auth_file)
+    if gate in ('G2','G3'):
+        if scope_refresh_file is None:raise ValueError('Fixed actual scope revalidation required')
+        original,scope,registered=executor.fixed_scope(gate)
+        snapshot,path,extra,binding=executor.revalidated_snapshot.bind(scope_refresh_file,original,sha(registered),scope)
+        extra={str(registered):sha(registered),**extra}
+    else:
+        snapshot,scope,_=executor.fixed_scope('G1');path=directory/'snapshot.json';extra={};binding=None
+        write(path,snapshot.to_dict())
+    plan=deepcopy(old);files={p:sha(ROOT/p) for p in TOOL_FILES}
+    inputs={**old['inputs'],**extra,str(template_file):sha(template_file),str(trial_file):sha(trial_file),
+        str(auth_file):sha(auth_file),**files}
+    plan.update(artifact_kind=VERSION,mode='development',gate=gate,run_directory=str(directory.resolve()),
+        formal_admission_eligible=False,admission_file=None,quality_gate_passed=False,
+        authorization={'file':str(auth_file),'sha256':sha(auth_file),'authorization':auth},
+        trial={'file':str(trial_file),'sha256':sha(trial_file),'authorization':trial},
+        subcap_usd=MAXIMUM,opening_scope_charge_usd=trial['opening_scope_charge_usd'],
+        discovery_mode='shared',membership_mode='raw',extraction_protocol=None,
+        argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset',
+        membership_retrieval_policy=cc.ALIAS_RETRIEVAL,stage_aliases=deepcopy(ALIASES),
+        snapshot=str(path),snapshot_sha256=sha(path),scope_ids=scope,scope_refresh=binding,
+        processing_count=len(scope),canonical_population=len(executor.sources(snapshot)),
+        expires_at=snapshot.usage.expires_at,code_sha256=source_code_hashes(),inputs=inputs,
+        shared_execution={'version':VERSION,'tool_files':files})
+    guard(plan);executor.replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
+    for d in plan['documents']:executor.fact_checks.live(d['expires_at'])
+    plan['providers_at_prepare']={'generation':executor.provider_preflight(plan['deployment']),
+        'verification':executor.provider_preflight(plan['verification_deployment']),
+        'embedding':executor.embedding_preflight()}
+    write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
+    executor.archive_sources(directory,plan['code_sha256']);executor.archive_sources(directory,files)
+    validate(directory);return plan
+
+
+def validate(directory):
+    directory=Path(directory);plan=read_json(directory/'plan.json')
+    if (read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
+            or plan['code_sha256']!=source_code_hashes() or any(sha(p)!=expected for p,expected in plan['inputs'].items())
+            or plan['shared_execution']!={'version':VERSION,'tool_files':{p:sha(ROOT/p) for p in TOOL_FILES}}
+            or plan['resource_policy']!=host_resources.HTTP_API_POLICY
+            or plan['artifact_storage_policy']!=executor.api_resources.STORAGE_POLICY
+            or plan['billing_policy']!=executor.remote.WIRE_BUDGET or plan['model_files']!={}
+            or plan['classifier']!=executor.model_identity()
+            or plan['verification_contract']!=executor.raw_membership_verification.FULL_SCOPE
+            or plan['questions']!=executor.QUESTIONS or plan['schedule']!=minimal_pipeline.SCHEDULE
+            or plan['reference_runtime_input'] is not False or plan['cross_run_response_reuse'] is not False):
+        raise ValueError('Shared development implementation or evidence changed')
+    guard(plan);run_origin(plan,directory,attempt=1)
+    snapshot=load_snapshot(Path(plan['snapshot']))
+    if snapshot.sha256!=plan['snapshot_sha256']:raise ValueError('Snapshot changed')
+    if plan['gate'] in ('G2','G3'):
+        original,scope,registered=executor.fixed_scope(plan['gate'])
+        _,path,_,binding=executor.revalidated_snapshot.bind(plan['scope_refresh']['file'],original,sha(registered),scope)
+        if (str(path)!=plan['snapshot'] or scope!=plan['scope_ids'] or binding!=plan['scope_refresh']):
+            raise ValueError('Fixed actual source IDs/context changed')
+    else:
+        original,scope,_=executor.fixed_scope('G1')
+        if original.to_dict()!=snapshot.snapshot.to_dict() or scope!=plan['scope_ids']:raise ValueError('Synthetic12 changed')
+    executor.replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
+    executor.acceptance.check_scope(executor.acceptance.from_plan(plan),plan['gate'],len(plan['scope_ids']),
+        19 if plan['gate']=='G2' else 74 if plan['gate']=='G3' else 12)
+    return plan
+
+
+class Session(executor.RemoteSession):
+    def __init__(self,directory,plan,dispatch):super().__init__(directory,plan,dispatch,authorization_guard=guard)
+    def call(self,stage,request):return super().call(mapped_stage(stage),request)
+
+
+class ProposalReady(Exception):pass
+
+
+def run(directory,*,proposals_only=False):
+    directory=Path(directory)
+    with experiment_lock(directory),executor.quota_watch():
+        plan=validate(directory)
+        if (directory/'completed.json').exists():
+            done=read_json(directory/'completed.json')
+            if (done.get('artifact_kind')!=VERSION or done.get('formal_admission_eligible') is not False
+                    or done.get('quality_gate_passed') is not False
+                    or done['plan_sha256']!=sha(directory/'plan.json') or done['output_sha256']!=sha(directory/'artifacts/output.json')
+                    or done['runtime_sha256']!=sha(directory/'artifacts/runtime.json')):raise ValueError('Completed artifacts changed')
+            return done
+        if proposals_only and (directory/'proposal-ready.json').exists():
+            ready=read_json(directory/'proposal-ready.json')
+            if (ready.get('artifact_kind')!=VERSION+'-proposal-ready' or ready.get('formal_admission_eligible') is not False
+                    or ready['plan_sha256']!=sha(directory/'plan.json')
+                    or ready['candidates_sha256']!=sha(directory/'artifacts/initial-candidates.json')
+                    or ready['candidate_count']!=len(read_json(directory/'artifacts/initial-candidates.json'))):
+                raise ValueError('Completed proposal artifacts changed')
+            return ready
+        attempt=len(list((directory/'attempts').glob('*.started.json')))+1
+        origin=run_origin(plan,directory,attempt=attempt);dispatch=host_resources.RemoteCallGuard();session=Session(directory,plan,dispatch)
+        write(directory/'attempts'/f'{attempt:04}.started.json',{'at':datetime.now(timezone.utc).isoformat(),**origin})
+        def save(name,value):
+            path=directory/'artifacts'/(name+'.json')
+            if not path.resolve().is_relative_to((directory/'artifacts').resolve()):raise ValueError('Invalid artifact path')
+            if path.exists():
+                if read_json(path)!=value:raise ValueError('Same-plan artifact changed')
+            else:session.storage.before_write(value);write(path,value)
+            if proposals_only and name=='initial-candidates':raise ProposalReady()
+        try:
+            for d in (plan['deployment'],plan['verification_deployment']):executor.provider_preflight(d)
+            executor.embedding_preflight()
+            with host_resources.watch(directory/'resources'/f'{attempt:04}',plan['resource_policy'],
+                    host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_api'):
+                output=minimal_pipeline.process(load_snapshot(Path(plan['snapshot'])).snapshot,
+                    session,session.embed,session.inspect,lambda req:session.call('facts-'+digest(req)[:20],req),
+                    model=plan['classifier'],documents=plan['documents'],selections=plan['selections'],scope_ids=plan['scope_ids'],save=save,
+                    discovery_mode='shared',membership_mode='raw',verification_contract=plan['verification_contract'],
+                    argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset')
+                save('output',output)
+                runtime=runtime_probe(output['agent_inputs']['bundle'],session,
+                    save_turn=lambda row:save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'],row))
+                save('runtime',runtime);runtime_check(runtime,output['agent_inputs']['compiled'],questions=plan['questions'])
+            done={'artifact_kind':VERSION,'execution_complete':True,'formal_admission_eligible':False,'quality_gate_passed':False,
+                'plan_sha256':sha(directory/'plan.json'),'compiled_agents':len(output['agent_inputs']['compiled']['profiles']),
+                'runtime_turns':len(runtime['turns']),'binding_errors':len(output['errors']),
+                'capacity_holds':len(output['capacity_holds']),'unextracted':len(output['unextracted_source_ids']),
+                'output_sha256':sha(directory/'artifacts/output.json'),'runtime_sha256':sha(directory/'artifacts/runtime.json'),
+                'spending':session.money.summary(),'run_spending':session.money.summary(plan_sha256=plan['spend_scope_sha256']),**origin}
+            write(directory/'completed.json',done);return done
+        except ProposalReady:
+            report={'artifact_kind':VERSION+'-proposal-ready','execution_complete':False,'formal_admission_eligible':False,
+                'plan_sha256':sha(directory/'plan.json'),'candidate_count':len(read_json(directory/'artifacts/initial-candidates.json')),
+                'candidates_sha256':sha(directory/'artifacts/initial-candidates.json'),'spending':session.money.summary()}
+            write(directory/'proposal-ready.json',report);return report
+        except BaseException as error:
+            write(directory/'attempts'/f'{attempt:04}.failed.json',{'exception':type(error).__name__,'spending':session.money.summary()})
+            raise
+
+
+def main():
+    p=argparse.ArgumentParser(description=__doc__);a=p.add_subparsers(dest='action',required=True)
+    q=a.add_parser('authorize');q.add_argument('file',type=Path);q.add_argument('--authorization',type=Path,required=True);q.add_argument('--user-request',required=True)
+    q=a.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--template',type=Path,required=True);q.add_argument('--trial',type=Path,required=True);q.add_argument('--gate',choices=('G1','G2','G3'),default='G2');q.add_argument('--scope-refresh',type=Path)
+    q=a.add_parser('run');q.add_argument('directory',type=Path);q.add_argument('--proposals-only',action='store_true');q.add_argument('--live',action='store_true',required=True);q.add_argument('--key-file',type=Path,required=True)
+    args=p.parse_args()
+    if args.action=='authorize':result=authorize(args.file,args.authorization,user_request=args.user_request)
+    elif args.action=='prepare':
+        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh)
+        result={'prepared':str(args.directory),'scope':len(plan['scope_ids']),'new_model_calls':0}
+    else:
+        os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()
+        result=run(args.directory,proposals_only=args.proposals_only)
+    print(json.dumps(result,ensure_ascii=False))
+
+
+if __name__=='__main__':main()

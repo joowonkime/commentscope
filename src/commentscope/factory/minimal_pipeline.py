@@ -26,8 +26,11 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         raise ValueError('Explicit supported membership retrieval policy required')
     from commentscope.factory import compact_claims
     from commentscope.factory import argument_observations
+    shared_typed=discovery_mode=='shared' and argument_audit_protocol==argument_observations.SHARED_TYPED_CHAT
+    if argument_audit_protocol==argument_observations.SHARED_TYPED_CHAT and not shared_typed:
+        raise ValueError('Common-core directional audits require shared discovery')
     if argument_audit_protocol is not None and (argument_audit_protocol not in argument_observations.GRAPH_SPLITS
-            or (discovery_mode,membership_mode)!=('free','raw') or extraction_protocol not in compact_claims.INDEPENDENT_CONTEXT
+            or membership_mode!='raw' or not (shared_typed or discovery_mode=='free' and extraction_protocol in compact_claims.INDEPENDENT_CONTEXT)
             or argument_audit_protocol==argument_observations.JEV_SPLIT and not callable(getattr(runner,'decide',None))):
         raise ValueError('Jev graph audit requires explicit free/raw protocol and typed runner')
     if extraction_protocol is not None and (discovery_mode != 'free' or extraction_protocol not in compact_claims.VERSIONS):
@@ -63,6 +66,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                              extraction_protocol=extraction_protocol, review_interpretations=review_interpretations,
                              source_review_protocol=source_review_protocol)
     execution.argument_audit_protocol=argument_audit_protocol
+    execution.shared_typed=shared_typed
     execution.membership_retrieval_policy=membership_retrieval_policy
     errors, holds, capacity = execution.errors, execution.holds, execution.capacity
     # Immutable syntax exists before any generated candidate or argument. This
@@ -119,5 +123,6 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
             'nomination_batches': nomination_batches, 'consolidation': merged, 'equivalences': equivalences,
             'arguments': arguments, 'cores': cores, 'audits': audits, 'agent_inputs': agent_inputs,
             'errors': errors, 'capacity_holds': holds, 'capacity_measurements': capacity,
-            'unextracted_source_ids': sorted(set(ids)-{r['source']['id'] for r in records}),
+            'unextracted_source_ids': sorted(set(ids)-({s['id'] for r in shared_discovery for s in r['sources']}
+                if shared_typed else {r['source']['id'] for r in records})),
             'runtime_reference_labels': False, 'quality_gate_passed': False}

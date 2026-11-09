@@ -14,7 +14,9 @@ DEPENDENCY_SCOPED = 'source-argument-observations-20261105-v6'
 JEV_SPLIT = 'source-argument-observations-jev-graph-20261106-v7'
 CHAT_SPLIT = 'source-argument-observations-chat-graph-20261106-v8'
 TYPED_CHAT = 'source-argument-observations-typed-graph-20261109-v9'
-GRAPH_SPLITS = (JEV_SPLIT, CHAT_SPLIT,TYPED_CHAT)
+SHARED_TYPED_CHAT = 'source-argument-observations-common-typed-20261110-v10'
+TYPED_PROTOCOLS = (TYPED_CHAT, SHARED_TYPED_CHAT)
+GRAPH_SPLITS = (JEV_SPLIT, CHAT_SPLIT,*TYPED_PROTOCOLS)
 # The candidate failed a missing-premise live control; keep the existing default.
 SPLIT = LEGACY_SPLIT
 SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED, *GRAPH_SPLITS)
@@ -340,9 +342,9 @@ def bind_source(records, cores, tasks, req, result, checks, *, protocol=VERSION,
     from commentscope.factory import owner_observations as owners
     if protocol not in PROTOCOLS: raise ValueError('Unknown source observation protocol')
     if protocol not in SPLIT_PROTOCOLS and owner_checks: raise ValueError('Separate owners require the split protocol')
-    typed=protocol==TYPED_CHAT
+    typed=protocol in TYPED_PROTOCOLS
     selected_owners = owners.select(records, cores, tasks, owner_checks,
-        protocol=owners.SOURCE_BOUND if typed else owners.VERSION) if protocol in SPLIT_PROTOCOLS else []
+        protocol=owners.DIRECTIONAL_SOURCE_BOUND if protocol==SHARED_TYPED_CHAT else owners.SOURCE_BOUND if typed else owners.VERSION) if protocol in SPLIT_PROTOCOLS else []
     relevant = select_checks(records, cores, tasks, checks)
     from commentscope.factory import argument_dependencies as deps
     if protocol not in GRAPH_SPLITS and dependency_checks:raise ValueError('Graph checks require their explicit protocol')
