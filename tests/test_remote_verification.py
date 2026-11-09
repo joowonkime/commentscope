@@ -223,6 +223,8 @@ class RemoteExecutorTests(unittest.TestCase):
         self.assertEqual(self.plan['model_files'],{})
         self.assertEqual(self.plan['resource_policy']['minimum_available_mb'],256)
         self.assertEqual(self.plan['classifier']['kind'],'remote_llm')
+        self.assertIsNone(self.plan['scope_refresh'])
+        self.assertEqual(self.plan['membership_retrieval_policy'],self.e.candidate_consolidation.ALIAS_RETRIEVAL)
         self.e.validate(self.run,self.plan)
         changed=deepcopy(self.plan);changed['verification_deployment']=self.gen
         with self.assertRaises(ValueError):self.e.guard(changed)
@@ -255,6 +257,12 @@ class RemoteExecutorTests(unittest.TestCase):
         sub=self.e.SubcapLedger(money,self.plan)
         with self.assertRaises(BudgetExhausted):sub.reserve(scope,'e'*64,Decimal('0.11'),run_limit_usd='8',key_remaining_usd='50')
         self.assertEqual(money.summary()['calls'],1)
+
+    def test_scope_refresh_cannot_replace_benchmark_or_synthetic_inputs(self):
+        for mode,gate in (('benchmark','G1'),('factory','G1')):
+            with self.subTest(mode=mode),self.assertRaises(ValueError):
+                self.e.prepare(self.root/('invalid-'+mode),self.auth,self.materials,mode=mode,gate=gate,
+                    scope_refresh_file=self.root/'untrusted.json')
 
     def test_storage_exhaustion_refuses_before_paid_intent_or_model_dispatch(self):
         base=Mock()

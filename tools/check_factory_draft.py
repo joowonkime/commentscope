@@ -27,6 +27,8 @@ MODULES = (
     "test_jev_audit_integration",
     "test_remote_verification",
     "test_api_resources",
+    "test_alias_retrieval",
+    "test_revalidated_snapshot",
     "test_scoped_factory_authorization",
     "test_component_diagnostic_policy",
     "test_selective_agent_sources",
