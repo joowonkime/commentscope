@@ -28,7 +28,17 @@ let server,browser,socket;
   let sequence=0;const pending=new Map();
   socket.on('message',bytes=>{const value=JSON.parse(bytes.toString());if(value.id&&pending.has(value.id)){const target=pending.get(value.id);pending.delete(value.id);clearTimeout(target.timer);value.error?target.reject(Error(value.error.message)):target.resolve(value.result);}
     if(value.method==='Runtime.exceptionThrown')report.page_errors.push(value.params.exceptionDetails.text);
-    if(value.method==='Network.requestWillBeSent'&&/^https?:/.test(value.params.request.url)&&!value.params.request.url.startsWith(origin+'/'))report.external_requests.push(value.params.request.url);
+    if(value.method==='Network.requestWillBeSent'&&/^https?:/.test(value.params.request.url)&&!value.params.request.url.startsWith(origin+'/')){
+      const url=value.params.request.url;
+      if(report.media_fixture_mode&&(/^https:\/\/i\.ytimg\.com\/vi\/ABCDEFGHIJK\//.test(url)||/^https:\/\/www\.youtube-nocookie\.com\/embed\/ABCDEFGHIJK\?/.test(url)))report.media_fixture_requests.push(url);
+      else report.external_requests.push(url);
+    }
+    if(value.method==='Fetch.requestPaused'){
+      const request=value.params.request,isVideo=request.url.startsWith('https://www.youtube-nocookie.com/');
+      if(isVideo)report.media_referer=request.headers.Referer||request.headers.referer||'';
+      const body=isVideo?Buffer.from('<!doctype html><title>Intercepted media fixture</title>').toString('base64'):'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6N8AAAAASUVORK5CYII=';
+      command('Fetch.fulfillRequest',{requestId:value.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:isVideo?'text/html':'image/png'}],body}).catch(error=>report.page_errors.push(error.message));
+    }
   });
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout'));},12000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
   const evaluate=async expression=>{const result=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error('Page expression failed: '+expression.slice(0,80));return result.result.value;};
@@ -114,6 +124,16 @@ let server,browser,socket;
   await submit('interject');
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===2&&document.querySelectorAll('.message.user').length===2"));
   report.checks.one_to_one_and_followup=true;
+  // Intercept media before dispatch. This checks browser request identity and layout, not YouTube playback.
+  report.media_fixture_mode=true;report.media_fixture_requests=[];report.youtube_playback_measured=false;
+  await command('Fetch.enable',{patterns:[{urlPattern:'https://i.ytimg.com/vi/ABCDEFGHIJK/*'},{urlPattern:'https://www.youtube-nocookie.com/embed/ABCDEFGHIJK*'}]});
+  await evaluate("state.analysis.video={video_id:'ABCDEFGHIJK',title:'Registered video fixture'};renderAnalysis();document.querySelector('#before').hidden=false;document.querySelector('#workspace').hidden=true;document.body.dataset.step='before'");
+  report.checks.registered_video_metadata=await evaluate("document.querySelector('#video-title').textContent==='Registered video fixture'&&document.querySelector('#original-video').href==='https://www.youtube.com/watch?v=ABCDEFGHIJK'");
+  await evaluate("document.querySelector('.video-play').click()");
+  await until(()=>report.media_referer);
+  report.checks.embedded_video_origin_referrer=report.media_referer===origin+'/';
+  report.checks.mobile_video_minimum_viewport=await evaluate("document.querySelector('#video-frame iframe').getBoundingClientRect().height>=200");
+  await command('Fetch.disable');
   report.synthetic_provider_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
   report.passed=Object.values(report.checks).every(Boolean)&&report.page_errors.length===0&&report.external_requests.length===0;
   if(!report.passed)throw Error('Product browser checks failed');

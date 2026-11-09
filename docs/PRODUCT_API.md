@@ -33,6 +33,20 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 만료된 cycle은 새 생성을 막지만 실행 중인 서버의 기존 기록 읽기와 수동 저장은 가능하다.
 변경된 코드/원본/동결 계획은 재사용을 거부한다. 유료 서버는 파일 진입점으로 실행한다.
 
+현재 `/mvp`는 기존 Figma의 세 과업을 구현한다. 관점 수·근거·처리 댓글 수는 API에서 읽으며
+댓글이 여러 관점에 속하면 구성 비율에 중복해서 더하지 않는다. 원문은 drawer에서 읽고,
+비교와 성찰의 강조 구간은 실제 의견 revision/구간을 사용한다. SVG·글꼴은 로컬 asset이다.
+
+영상은 등록된 video ID의 썸네일에서 사용자가 눌렀을 때만 iframe으로 연다. iframe만
+`strict-origin-when-cross-origin`을 사용해 앱 origin을 전달하며 기본 페이지의 `no-referrer`는 유지한다.
+[YouTube의 임베드 식별 안내](https://developers.google.com/youtube/terms/required-minimum-functionality#embedded-player-api-client-identity)에 따른 설정이다.
+모바일 player의 최소 높이는200px다. 브라우저 회귀의 미디어 요청은 전송 전에 fixture로 대체하며,
+참조 헤더와 layout을 검사한 결과를 실제 YouTube 재생 성공으로 보고하지 않는다.
+
+외부 HTTPS reverse proxy에서 실행할 때는 `serve --bind 0.0.0.0 --public-origin https://YOUR_HOST`를
+명시한다. host/origin이 일치하는 요청만 허용한다. 기본 실행은 loopback이며 호스팅 계정이나
+지속 배포 URL을 자동으로 생성하지 않는다. 공개 준비 시에도 비공개 실행 자료·키·장부를 서버의 정적 경로에 넣지 않는다.
+
 ## 공통 계약
 
 클라이언트가 생성한 URL-safe 32-byte token(패딩 없는 43자)을 `X-Session-Token`에 전달한다.
@@ -78,7 +92,8 @@ Agent는 현재 전체 allowlist를 사용하며 retrieval8 후보 설계는 미
 재시작 시 queued job은 취소하고 실행 중 job은 needs_reconciliation으로 남긴다. 자동 유료 재전송/복구 UI는 없다.
 충돌 응답은 오류 코드를 제공하며 최신 revision 상세는 GET으로 얻는다.
 source가 만료된 bundle로 서버를 새로 시작하는 read-only 모드는 아직 없다.
-개발 화면은 팀 프론트 통합 TASK-011과 최종 사용자/품질 검증 TASK-012를 대체하지 않는다.
+Figma 화면 연결의 합성 회귀는 실제 모델/댓글 E2E 및 최종 사용자/품질 검증 TASK-012와 구별한다.
+사용자 확인의 준비 절차는 [MVP 사용자 확인](MVP_USER_CHECK.md)에 있으며 아직 실제 참여자 결과는 없다.
 
 오프라인 검사는 `python -m unittest discover -s tests`와 기존 Node UI 검사로 실행한다.
 별도 Chromium이 있으면 다음 실제 브라우저 검사를 실행할 수 있다. provider는 합성이므로 비용은0이다.

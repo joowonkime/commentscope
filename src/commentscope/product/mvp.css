@@ -13,3 +13,5 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;transition:none!important}}
 
 .brand{gap:10px;font-weight:700;font-size:20px}.brand-symbol{display:grid;place-items:center;background:linear-gradient(148deg,#be54e8,#392f82);width:32px;height:32px;border-radius:8px}.initial-brand>img{background:#6554e8;border-radius:8px}.room-entry{flex-direction:column;align-items:flex-start;gap:3px}.message .bubble>small{display:block}.suggestion h3 small{font-size:11px;font-weight:500;margin-left:auto}.video-description{max-height:8em;overflow:auto}.composition-legend .multiple .legend-dot{background:#a69bc5}.composition-legend .other .legend-dot{background:#d0ccde}@media(max-width:760px){.brand>span:last-child{display:none}.brand-symbol{width:28px;height:28px;overflow:hidden}.step-nav{width:245px}}
+
+.video-frame{min-height:200px}
