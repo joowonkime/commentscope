@@ -21,6 +21,7 @@ from commentscope.factory.framed_corpus import sources
 from commentscope.file_integrity import source_code_hashes
 from commentscope.ingestion import load_snapshot
 from commentscope.providers import openrouter, remote_verification as remote, host_resources
+from commentscope.providers import api_resources
 from commentscope.providers import scoped_authorization
 from commentscope.providers.budget import InferenceBudget, BudgetExhausted
 from commentscope.providers.checkpoint_calls import CheckpointRunner, run_origin
@@ -35,7 +36,8 @@ from experiments.openrouter_factory_probe import private, key_metadata, validate
 from experiments.openrouter_factory_pipeline import fixed_scope, provider_preflight, archive_sources
 from experiments.compare_backend_discovery import check_quota, quota_watch
 
-VERSION='minimal-factory-remote-verification-20261106-v1'
+LEGACY_VERSION='minimal-factory-remote-verification-20261106-v1'
+VERSION='minimal-factory-remote-verification-20261106-v2'
 AUTH='remote-verification-linked-authorization-20261106-v1'
 FACT_SOURCE=Path('runs/fact-gate-40-20261013/plan.json')
 RUNTIME_FILES=('src/commentscope/factory/remote_fact_records.py',
@@ -142,7 +144,8 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'billing_policy':remote.WIRE_BUDGET,'classifier':model_identity(),
           'documents':materials['documents'],'selections':materials['selections'],'model_files':{},
           'inputs':inputs,'code_sha256':source_code_hashes(),
-          'resource_policy':deepcopy(host_resources.HTTP_ONLY_POLICY),
+          'resource_policy':deepcopy(host_resources.HTTP_API_POLICY),
+          'artifact_storage_policy':deepcopy(api_resources.STORAGE_POLICY),
           'limits':{'analysis_seconds':None,'call_seconds':180},
           'discovery_mode':'free','membership_mode':'raw','extraction_protocol':compact_claims.PROPOSALS,
           'verification_contract':raw_membership_verification.FULL_SCOPE,
@@ -188,6 +191,7 @@ class SubcapLedger:
 class RemoteSession:
     def __init__(self,directory,plan,dispatch):
         self.directory=Path(directory);self.plan=plan;self.dispatch=dispatch
+        self.storage=api_resources.SpaceGuard(directory,plan['artifact_storage_policy'])
         self.plan_sha=sha(self.directory/'plan.json');self.money=SubcapLedger(ledger(plan['spend_policy']),plan)
         self.time=InferenceBudget(self.directory/'inference.sqlite',VERSION,limit_seconds=None)
         self.clients={};self.checkpoints={}
@@ -216,7 +220,9 @@ class RemoteSession:
         self.dispatch.check();check_quota();guard(self.plan,call_seconds=180)
         measured=self.clients[key].measure(request)
         if not measured['fits']:raise ValueError('Remote request exceeds capacity')
+        self.storage.check()
         with self.dispatch.remote_call():result=self.checkpoints[key].call(key+'-'+stage,request)
+        self.storage.check()
         if result.get('errors'):raise ModelResponseUnavailable(stage,digest(request),digest(request['data']))
         remote.parsed_receipt(result,request,self.clients[key].deployment)
         count=(result.get('usage') or {}).get('prompt_tokens')
@@ -229,9 +235,11 @@ class RemoteSession:
         for batch in remote.batches(texts):
             req={'system':remote.VERSION,'data':{'input':[p['text'] for p in batch]},'schema':{},'max_tokens':1}
             self.dispatch.check();check_quota();guard(self.plan,call_seconds=180)
+            self.storage.check()
             with self.dispatch.remote_call():
                 result=self.checkpoints['embedding'].call('embedding-'+stage+'-'+digest(req)[:20],req,
                     provider=client.generate,maximum=180)
+            self.storage.check()
             remote.embedding_vectors(result,len(batch));responses.append(result)
         return remote.combine(texts,responses)
 
@@ -255,7 +263,7 @@ def benchmark_rows(plan,records):
 
 def replay_benchmark(directory,current_plan,actual_checks):
     private(directory);plan=read_json(directory/'plan.json');completed=read_json(directory/'completed.json')
-    if (plan.get('artifact_kind')!=VERSION or plan['mode']!='benchmark'
+    if (plan.get('artifact_kind') not in (VERSION,LEGACY_VERSION) or plan['mode']!='benchmark'
             or completed['plan_sha256']!=sha(directory/'plan.json')
             or completed['report_sha256']!=sha(directory/'artifacts/fact-report.json')
             or completed['records_sha256']!=sha(directory/'artifacts/fact-records.json')
@@ -278,7 +286,8 @@ def validate(directory,plan):
     if (read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
             or plan.get('artifact_kind')!=VERSION or plan['code_sha256']!=source_code_hashes()
             or any(sha(p)!=h for p,h in plan['inputs'].items())
-            or plan['resource_policy']!=host_resources.HTTP_ONLY_POLICY
+            or plan['resource_policy']!=host_resources.HTTP_API_POLICY
+            or plan.get('artifact_storage_policy')!=api_resources.STORAGE_POLICY
             or plan['classifier']!=model_identity() or plan['model_files']!={}
             or plan['billing_policy']!=remote.WIRE_BUDGET
             or plan['argument_audit_protocol']!=argument_observations.CHAT_SPLIT
@@ -309,12 +318,14 @@ def run(directory):
             if not path.resolve().is_relative_to((directory/'artifacts').resolve()):raise ValueError('Invalid artifact path')
             if path.exists():
                 if read_json(path)!=value:raise ValueError('Same-plan artifact changed')
-            else:write(path,value)
+            else:
+                session.storage.before_write(value)
+                write(path,value)
         try:
             for profile in (plan['deployment'],plan['verification_deployment']):provider_preflight(profile)
             embedding_preflight()
             with host_resources.watch(directory/'resources'/f'{attempt:04}',plan['resource_policy'],
-                    host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_only'):
+                    host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_api'):
                 if plan['mode']=='benchmark':
                     # Also exercises actual embedding HTTP/usage before Factory work.
                     vectors=session.embed('smoke',{'en':'Public education should be accessible.','ko':'교육은 누구나 접근할 수 있어야 한다.'})
@@ -350,6 +361,7 @@ def run(directory):
                         'unextracted':len(output['unextracted_source_ids']),
                         'output_sha256':sha(directory/'artifacts/output.json'),'runtime_sha256':sha(directory/'artifacts/runtime.json')}
             completion.update(artifact_kind=VERSION,quality_gate_passed=False,local_model_loaded=False,
+                artifact_storage=session.storage.summary(),
                 spending=session.money.summary(),run_spending=session.money.summary(plan_sha256=plan['spend_scope_sha256']),**origin)
             write(directory/'completed.json',completion);return completion
         except BaseException as exc:

@@ -19,6 +19,10 @@ POLICY = {'version': 'host-headroom-0.1', 'minimum_available_mb': 1536,
 # Keep the mixed Factory/local-model policy above unchanged. Callers must pin
 # this separate workload profile into their plan; it is not a fallback.
 HTTP_ONLY_POLICY = {**POLICY, 'version':'http-only-headroom-0.1','minimum_available_mb':256}
+# Explicit new execution profile. Old frozen local/HTTP policies retain their
+# 6GiB floor; this profile additionally requires per-call artifact admission.
+HTTP_API_POLICY = {**HTTP_ONLY_POLICY,'version':'http-api-headroom-0.1',
+                   'minimum_disk_free_bytes':1024**3}
 
 
 class ResourceStopRequested(RuntimeError):
@@ -69,7 +73,8 @@ class RemoteCallGuard:
 
 
 def validate(policy, *, workload='local_models'):
-    if workload not in ('local_models','http_only') or policy != (HTTP_ONLY_POLICY if workload=='http_only' else POLICY):
+    profiles={'local_models':POLICY,'http_only':HTTP_ONLY_POLICY,'http_api':HTTP_API_POLICY}
+    if workload not in profiles or policy != profiles[workload]:
         raise ValueError('Unknown host resource policy; freeze changes explicitly')
 
 
