@@ -1,5 +1,7 @@
 # Decision 계층과 모델 호출 상세 설계
 
+현재 책임·입출력 계층의 정본은 [구조v1](ARCHITECTURE_BASELINE.md), 실행전 비용검토는 [전체비용계획](FACTORY_COST_PLAN.md)이다. 아래 오래된 모델/단일deployment/로컬NLI 설명은 당시 기준선이며 최근 원격plan의 배정과 구별한다.
+
 설계 `commentscope-detailed-design-20261110-v19`, DEC-007, TASK-016/005.
 연결: REQ-001~010, [제품 명세](../MVP_SPEC.md), [Factory 계약](FACTORY.md), [실행 계약](EXECUTION.md).
 대조 코드 `227e3c9d1b8345f392a6dfe6aaba471290e44575`, 공식 자료 확인일 2026-11-05.

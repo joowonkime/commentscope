@@ -25,10 +25,12 @@ from commentscope.agents.runtime_probe import runtime_probe,runtime_check
 from commentscope.storage import write_json_exclusive as write
 from experiments import remote_factory_pipeline as executor
 from tools import actual24_development
+from tools import plan_factory_cost as cost_review
+from commentscope.providers.generation_limits import allocate
 
 VERSION='shared-factory-development-20261110-v1'
 MAXIMUM='1.50'
-TOOL_FILES=('tools/shared_factory_trial.py','tools/actual24_development.py')
+TOOL_FILES=('tools/shared_factory_trial.py','tools/actual24_development.py','tools/plan_factory_cost.py')
 ALIASES={'shared-discovery':'core','shared-owned-position':'argument-position-alignment',
          'nomination-raw':'membership-initial-raw','membership-expanded-raw':'membership-initial-raw'}
 
@@ -156,7 +158,22 @@ def validate(directory):
 
 class Session(executor.RemoteSession):
     def __init__(self,directory,plan,dispatch):super().__init__(directory,plan,dispatch,authorization_guard=guard)
-    def call(self,stage,request):return super().call(mapped_stage(stage),request)
+    def call(self,stage,request):
+        stage=mapped_stage(stage);limits=getattr(self,'cost_limits',None)
+        if limits is not None:
+            role=executor.remote.role(stage);key='generation' if role=='interaction' else role
+            field='deployment' if key=='generation' else 'verification_deployment'
+            actual=allocate(request,executor.openrouter.generation_allocation(self.plan[field],require_explicit=True))
+            limits.admit(key+'-'+stage,actual)
+        return super().call(stage,request)
+
+    def embed(self,stage,texts):
+        limits=getattr(self,'cost_limits',None)
+        if limits is not None:
+            for batch in executor.remote.batches(texts):
+                req={'system':executor.remote.VERSION,'data':{'input':[p['text'] for p in batch]},'schema':{},'max_tokens':1}
+                limits.admit('embedding-'+stage+'-'+digest(req)[:20],req)
+        return super().embed(stage,texts)
 
 
 class ProposalReady(Exception):pass
@@ -181,8 +198,10 @@ def run(directory,*,proposals_only=False):
                     or ready['candidate_count']!=len(read_json(directory/'artifacts/initial-candidates.json'))):
                 raise ValueError('Completed proposal artifacts changed')
             return ready
+        limits=None if proposals_only else cost_review.require_review(directory,plan)
         attempt=len(list((directory/'attempts').glob('*.started.json')))+1
         origin=run_origin(plan,directory,attempt=attempt);dispatch=host_resources.RemoteCallGuard();session=Session(directory,plan,dispatch)
+        session.cost_limits=limits
         write(directory/'attempts'/f'{attempt:04}.started.json',{'at':datetime.now(timezone.utc).isoformat(),**origin})
         def save(name,value):
             path=directory/'artifacts'/(name+'.json')

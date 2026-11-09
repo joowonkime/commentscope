@@ -1,0 +1,37 @@
+flowchart TB
+    subgraph productLayer["제품 계층"]
+        browserUi["P1 화면과 HTTP"]
+        productApp["P2 세션과 작업 제어"]
+        perspectiveRuntime["P3 관점 Runtime"]
+        browserUi --> productApp --> perspectiveRuntime
+    end
+    subgraph factoryLayer["Factory 계층"]
+        sourceRegistry["F1 원문 등록"]
+        discovery["F2 후보 제안과 검색"]
+        membership["F3 독립 지지 검증"]
+        argumentsFacts["F4 논거와 사실 검증"]
+        agentCompiler["F5 Agent Compiler"]
+        sourceRegistry --> discovery --> membership --> argumentsFacts --> agentCompiler
+    end
+    subgraph executionLayer["공통 실행 계층"]
+        costGuard["비용계획과 단계상한"]
+        modelRouter["고정 모델 역할"]
+        receipts["예약 정산과 checkpoint"]
+        costGuard --> modelRouter --> receipts
+    end
+    bundleStore[("검증 bundle")]
+    productStore[("사용자 SQLite")]
+    sourceStore[("원문과 검증 기록")]
+    externalDocs[("등록 외부 근거")]
+    apiModels["OpenRouter"]
+    agentCompiler --> bundleStore --> perspectiveRuntime
+    productApp --> productStore
+    sourceRegistry --> sourceStore
+    membership --> sourceStore
+    argumentsFacts --> sourceStore
+    externalDocs --> argumentsFacts
+    discovery -.-> costGuard
+    membership -.-> costGuard
+    argumentsFacts -.-> costGuard
+    perspectiveRuntime -.-> costGuard
+    modelRouter -.-> apiModels

@@ -1,5 +1,7 @@
 # Factory 상세 설계
 
+현재 책임·입출력 계층의 정본은 [구조v1](ARCHITECTURE_BASELINE.md), 실행전 비용검토는 [전체비용계획](FACTORY_COST_PLAN.md)이다. 아래 오래된 모델/단일deployment/로컬NLI 설명은 당시 기준선이며 최근 원격plan의 배정과 구별한다.
+
 설계 `commentscope-detailed-design-20261110-v19`, DEC-001/006, REQ-001/002/003/008.
 전체 구조는 **구현 후보 계약**이다. S1/S2의 typed 검토·source record는 첫 opt-in 구현이며,
 나머지 후보/관계/논거 교체는 미구현이다. 이전 기준 코드는 [기준선](BASELINE.md)에 있다.
