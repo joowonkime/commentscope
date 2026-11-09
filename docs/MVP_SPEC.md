@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261109-v17`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261109-v18`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261109-v14`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261109-v15`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -187,3 +187,7 @@ TASK-004/013/014의 새 의미 역할 채택은 보류한다. 별도 프론트�
 부품 진단의 실패1건을 모두 고칠 때까지 전체 작업을 중단하지 않는다. 현재 사용자가 재확인한60% 선별활용 목표에 따라 [진행 기준](design/JEV_AUDIT_INTEGRATION.md)의 명시적 record-and-continue 정책으로 fresh G1을 진행하며, 출력 검증과 기존r5는 유지한다.
 
 최신 사용자 지시로 [GPT-6.1 Sol 검증·외부 임베딩 경로](design/REMOTE_VERIFICATION.md)를 opt-in으로 구현한다. 로컬 모델의 검증 결과를 새 모델의 성적으로 승계하지 않으며 기존 60% 선별 활용·전체 예산을 유지한다.
+
+2026-11-09 원격 fact40은 기존 부품 기준을 통과했다. 동치 검색 수정 후 새G1의 집계 지지5/3은 보존됐으나
+검증 관측 간 유형/world 모순으로1Agent만 생성돼 정식G1은 실패했다. G2/G3 확대는 차단됐으며
+다음은 위 문서의 일반 경계 사례와 판정 연결 계약을 고정하는 작업이다. 검색 회귀나 CI를 전체 품질 합격으로 바꾸지 않는다.

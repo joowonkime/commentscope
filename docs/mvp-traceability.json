@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v17",
+  "spec_version": "commentscope-mvp-20261109-v18",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-005",
-    "paid_execution_hold": false,
-    "hold_reason": "사용자GPT6.1Sol검증전환지시: 생성/대화5.2,의미·논거·사실6.1Sol,임베딩remote로새opt-in경로구현. localLLM/weights로딩없음. 기존scope$8/종료시각/공유$50/과거차감유지. 첫확인subcap$0.50;60%선별활용기준유지."
+    "paid_execution_hold": true,
+    "hold_reason": "새G1: 지지5/3복원·1Agent/3응답·2Agent요건실패. G2/G3 admission거부. 다음은REMOTE_VERIFICATION의12종 유형/world경계 사례와 일관성 연결 계약부터 고정한다. 개별문구유료전체반복은 보류; 새component실험은 원 moneyowner/잔액/window/고정가설을 검사한 뒤에만. 원 scope$8/공유$50/과거차감유지; 이번window종료2026-11-09T14:26:51Z. 전체999재동결미결정."
   },
   "requirements": [
     {
@@ -103,7 +103,14 @@
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
         "집계 지지 전수 유효, 희소·조건부·미평가 보존, 전체 출력·비용·실패를 보고한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "formal_gate",
+          "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "fail"
+        }
+      ],
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
@@ -143,7 +150,14 @@
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
         "자기 허용 주장·인용·이력을 유지하고 모르는 이유·조건·숫자는 보류한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "formal_gate",
+          "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "fail"
+        }
+      ],
       "design_refs": [
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
@@ -381,6 +395,12 @@
           "kind": "limited_live",
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Same original money owner. Fresh G1 paused at host237MB after203settled/checkpointed responses; resumed same plan without repaying them. Final285actualrequests,0reserved/uncertain charges, no local model loaded. Single observed Python RSS80.9MiB is not whole-run peak. Internal total50USD budget and historical conservative charges preserved.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "pass"
         }
       ],
@@ -1165,6 +1185,12 @@
           "scope": "First all-HTTP Sol run: fact40 supported10/10, non-supported falseapproval0/30, exact sublabels39/40,41calls/$0.155939560. SyntheticG1 compiled2Agents, each3validsources,6runtime answers,0bindingerrors,253calls/$0.530922280. Full assistant review meets15/16 requirements; mandatory B/I support missed by representative-only retrieval. Formal G1 FAIL preserved; no larger gate admitted.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "fail"
+        },
+        {
+          "kind": "formal_gate",
+          "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
+          "reference": "docs/design/REMOTE_VERIFICATION.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -1647,8 +1673,12 @@
     {
       "spec_version": "commentscope-mvp-20261109-v17",
       "reason": "실측G1에서2Agent/6응답은 작동했지만 대표 문장만 검색해 동치 영어 표현이 사라지고2source가 미평가로 남았다. 이미 계산한 검증된 동치 표현의 벡터를 검색에만 유지하고 지지 투표는 옮기지 않는다. 고정24/96 표본은 원문·부모·영상 packet이 재조회 시에도 완전히 같은 경우에만 유효한 새 snapshot에 연결하며 분모19/74를 유지한다. 전체999모집단 변경은 별도 결정이다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v18",
+      "reason": "PR71 동치 검색과 고정 표본 재검증을 구현/회귀563개 후 실제 새G1을 평가했다. 지지5/3 복원은 확인했으나 local/value와 core/necessary_fact, 동일 owner/candidate world 관측 모순으로2Agent 미달. 84항목 검토·실패·동일plan203응답 재개·과거장부를 보존하고 G2/G3 확대를 차단했다. 다음 변경은12종의 유형/scope 경계 사례와 연결 계약을 먼저 고정하는 제안이며 아직 구현/채택하지 않았다. 기존r5와 예산을 낮추지 않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261109-v14",
+  "design_version": "commentscope-detailed-design-20261109-v15",
   "design_document": "docs/design/README.md"
 }
