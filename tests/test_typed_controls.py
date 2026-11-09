@@ -37,13 +37,20 @@ class TypedControlsTests(unittest.TestCase):
         session=SyntheticSession();saved={};report=controls.execute(session,lambda k,v:saved.update({k:v}))
         self.assertTrue(report['all_expected']);self.assertEqual(report['positive_kept'],8)
         self.assertEqual(report['false_approval'],0);self.assertEqual(report['negative_total'],10)
-        self.assertEqual(len(report['cases']),18);self.assertEqual(session.calls,14)
+        self.assertEqual(len(report['cases']),18);self.assertEqual(session.calls,13)
         self.assertFalse(report['quality_gate_passed']);self.assertIn('control-records',saved)
 
     def test_a_normal_type_conflict_is_recorded_without_claiming_all_pass(self):
         report=controls.execute(SyntheticSession(True),lambda k,v:None)
         self.assertFalse(report['all_expected']);self.assertEqual(report['false_approval'],0)
         self.assertEqual(report['positive_kept'],7)
+
+    def test_remaining_selection_does_not_repay_previously_observed_normative_sources(self):
+        session=SyntheticSession();session.plan={'controls_selection':{'graph_ids':['facts_en','facts_ko','prediction','omitted_fact'],
+            'owner_ids':['video_metadata_only','explicit_novel','dropped_condition','parent_only']}}
+        report=controls.execute(session,lambda k,v:None)
+        self.assertTrue(report['all_expected']);self.assertEqual(session.calls,9)
+        self.assertEqual(report['positive_total'],4);self.assertEqual(report['negative_total'],10)
 
 
 if __name__=='__main__':unittest.main()

@@ -101,6 +101,11 @@ class TypedGraphTests(unittest.TestCase):
         self.assertNotIn('requires',req['data']['state']);self.assertNotIn('output',req['data']['state'])
         self.assertIn('kind_C1',req['schema']['properties'])
 
+    def test_missing_literal_inventory_is_rejected_before_any_graph_request(self):
+        r,c=case();r['units']=r['units'][1:]
+        with self.assertRaisesRegex(ValueError,'Complete literal original inventory'):
+            deps.tasks(r,c,typed=True)
+
     def test_legacy_task_or_receipt_cannot_be_relabelled_as_typed(self):
         r,c=case();checks=graph(r,c)
         with self.assertRaises(ValueError):deps.select([r],c,[{'source_id':'synthetic'}],checks)

@@ -29,6 +29,12 @@ def tasks(record, cores, *, typed=False):
                 or e['text']!=u['text'] for e in u['evidence']):
             raise ValueError('Every premise must be a literal original unit')
         units.append({'id':'U'+str(i),'text':u['text'],'evidence':deepcopy(u['evidence'])})
+    if typed:
+        from commentscope.factory import explicit_discourse
+        covered={i for u in units for e in u['evidence'] for i in range(e['start'],e['end'])}
+        needed={i for n in explicit_discourse.parse(original)['nodes']
+                for i in range(n['span']['start'],n['span']['end']) if not original['text'][i].isspace()}
+        if not needed<=covered:raise ValueError('Complete literal original inventory required')
     base={'version':VERSION,'source_id':original['id'],
           'original':original['text'],'parent_context_only':deepcopy(original.get('parent')),'units':units}
     local={**deepcopy(base),'kind':'local','targets':{u['id']:{'text':u['text'],'unit_id':u['id']} for u in units}}

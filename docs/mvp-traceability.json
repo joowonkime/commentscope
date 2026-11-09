@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v19",
+  "spec_version": "commentscope-mvp-20261109-v20",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -1704,8 +1704,12 @@
     {
       "spec_version": "commentscope-mvp-20261109-v19",
       "reason": "사용자 나머지 MVP 전체 진행 지시. 기존모델/장부/r5를 유지하고 blind combined type/relation 그래프와 source-linguistic world 문맥을 별도 protocol로 구현한다. 과거관측승계/문자일치자동승인/사실전제삭제는 금지. component0.15·freshG1 1.50 이하로 동결하고 G1대기 중 Figma프론트를 구현한다. 전체999재동결 답변은 아직 대기하며 G4원가/자료는 G2/G3실측 후 동결한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v20",
+      "reason": "실제component4관측정상을보존. 모든요청최대예약 사전검사누락으로0.15상한중단을수정하고, 원scope8내component누적0.40에서기지출0.026629를빼나머지원문만실행. typed입력literal원문누락은host가과금전거부. 제품UI읽기metric/중복집계·정적asset/명시HTTPS origin·제품전용상한2 cycle을기존50공유장부에연결. r5/장부/구cycle유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261109-v16",
+  "design_version": "commentscope-detailed-design-20261109-v17",
   "design_document": "docs/design/README.md"
 }

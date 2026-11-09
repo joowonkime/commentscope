@@ -15,6 +15,8 @@ host는 선언과 관측을 대조하고 기존 source/owner/core/조건/사실 
 ## 그래프 입출력
 
 - 입력: 전체 원문·문맥 전용 부모·literal unit ID/구간·실제 core ID/본문. 최대32 units,16질문 단위 분할.
+- 모델 호출 전에 parser가 보존한 모든 literal node의 원문 구간이 unit inventory에 포함됐는지 검사한다.
+  원문 구간이 빠졌으면 host에서 보류하며 모델 비용을 쓰지 않는다. 이것은 의미상 전제 완전성의 대체물이 아니다.
 - 출력: 각 unit의 kind/authorship, 각 core의 kind, directed relation, factual coverage의 닫힌 enum.
 - 관계: `restatement / necessary_fact / personal_ground / condition / reported_context / none / uncertain`.
 - restatement는 같은 완전한 명제의 재진술이다. 규범·예측 재진술은 경험적 사실 전제가 아니다.
@@ -37,7 +39,10 @@ host는 선언과 관측을 대조하고 기존 source/owner/core/조건/사실 
 
 1. REMOTE_VERIFICATION의12종 유형/world 경계를 오프라인 정상/부정 사례로 고정한다.
 2. combined graph·restatement 구분·문맥 정책을 명시적 새 protocol로 연결하고 기존 protocol 회귀를 실행한다.
-3. 고정 합성 component에 한해 기존 money owner 안에서 최대$0.15를 동결해 비교한다.
+3. 고정 합성 component에 한해 기존 money owner 안에서 누적 최대$0.40를 동결해 비교한다.
+   최초$0.15 실행은4응답/$0.026629 후 가장 큰 요청의 예약액$0.15386을 수용하지 못해 중단됐다.
+   원래 plan·비용은 보존하고, 동일 wire의4관측은 component 증거로만 대조한다. 나머지 원문만 새로 실행하며
+   새 한도는 이미 쓴$0.026629를 차감한다. 모든 예정 요청의 최대 예약액을 준비 시 검사한다.
    정상 오거부를 모두 없애기 위한 전체 유료 반복은 하지 않는다. 실패/비용을 보존한다.
 4. 전체 Factory 회귀와 component 검토 후 새 G1을 최대$1.50로 실행한다.
    기존2Agent/각3지지·각3질문, 고정fact40, 원문 전수검토를 통과해야 G2/G3로 확대한다.

@@ -148,13 +148,14 @@ def admission(gate,path,profile):
 
 
 def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap_usd='0.5',
-            fact_benchmark=None,admission_file=None,scope_refresh_file=None):
+            fact_benchmark=None,admission_file=None,scope_refresh_file=None,controls_selection_file=None):
     directory=Path(directory);auth_file=Path(auth_file).resolve();materials_file=Path(materials_file)
     for p in (directory,auth_file,materials_file):private(p)
     if directory.exists() or mode not in ('factory','benchmark','controls') or gate not in ('G1','G2','G3'):
         raise ValueError('Fresh supported remote run required')
     if scope_refresh_file is not None and (mode!='factory' or gate not in ('G2','G3')):
         raise ValueError('Revalidated scope applies only to fixed actual G2/G3')
+    if controls_selection_file is not None and mode!='controls':raise ValueError('Controls selection is diagnostic-only')
     auth=read_json(auth_file);old=read_json(auth['money_owner']['file'])
     policy=validate_spend_policy(read_json(old['shared_policy_file']));money=ledger(policy)
     if money.summary()['reserved_calls'] or money.summary()['uncertain_calls']:raise BudgetExhausted('Existing money hold')
@@ -165,6 +166,8 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
         from tools import typed_verification_controls as controls
         inputs[str(controls.FIXTURE)]=sha(controls.FIXTURE)
         inputs['tools/typed_verification_controls.py']=sha('tools/typed_verification_controls.py')
+        if controls_selection_file is not None:
+            private(controls_selection_file);inputs[str(controls_selection_file)]=sha(controls_selection_file)
     for p in (fact_benchmark,admission_file):
         if p is not None:private(p);inputs[str(p)]=sha(p)
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),'mode':mode,'gate':gate,
@@ -190,6 +193,16 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'goal_revision':acceptance.R5,'acceptance_profile':acceptance.validate(read_json('tests/fixtures/factory-acceptance-r5.json'),acceptance.R5_DIGEST),
           'reference_runtime_input':False,'cross_run_response_reuse':False,'quality_gate_passed':False}
     plan['acceptance_profile_sha256']=digest(plan['acceptance_profile'])
+    if mode=='controls':
+        from commentscope.providers.generation_limits import allocate
+        selection=read_json(controls_selection_file) if controls_selection_file else None
+        plan['controls_selection']=selection
+        pricing=remote.WireBudget(None,None,plan_sha256='0'*64,deployment=remote.SOL,
+            maximum_run_usd=old['maximum_additional_usd'],paid_provider=None,key_metadata=None)
+        allocation=openrouter.generation_allocation(remote.SOL,require_explicit=True)
+        maximum=max(pricing.maximum_charge(allocate(req,allocation)) for req in controls.requests(selection))
+        if maximum>Decimal(subcap_usd):raise ValueError('Controls subcap cannot reserve the largest complete request')
+        plan['controls_maximum_reservation_usd']=str(maximum)
     guard(plan)
     plan['providers_at_prepare']={'generation':provider_preflight(plan['deployment']),
         'verification':provider_preflight(remote.SOL),'embedding':embedding_preflight()}
@@ -435,10 +448,11 @@ def main():
     p.add_argument('--fact-benchmark',type=Path);p.add_argument('--admission',type=Path)
     p.add_argument('--resume-request')
     p.add_argument('--scope-refresh-file',type=Path)
+    p.add_argument('--controls-selection-file',type=Path)
     a=p.parse_args()
     if a.action=='authorize':result=authorize(a.directory,a.owner,resume_request=a.resume_request)
     elif a.action=='prepare':result=prepare(a.directory,a.authorization,a.materials,mode=a.mode,gate=a.gate,
-        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission,scope_refresh_file=a.scope_refresh_file)
+        subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission,scope_refresh_file=a.scope_refresh_file,controls_selection_file=a.controls_selection_file)
     else:result=run(a.directory)
     print(json.dumps({k:v for k,v in result.items() if k not in ('code_sha256','inputs','documents','selections')},ensure_ascii=False))
 

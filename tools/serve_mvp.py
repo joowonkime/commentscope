@@ -171,6 +171,8 @@ def main(argv=None):
     p.add_argument('--session-ttl-seconds',type=int,required=True);p.add_argument('--room-maximum-usd',required=True)
     p=actions.add_parser('serve');p.add_argument('directory',type=Path)
     p.add_argument('--key-file',type=Path);p.add_argument('--port',type=int,default=8767)
+    p.add_argument('--bind',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1')
+    p.add_argument('--public-origin')
     p.add_argument('--experimental',action='store_true',required=True)
     args=parser.parse_args(argv)
     if args.action=='prepare':
@@ -180,7 +182,8 @@ def main(argv=None):
                           'quality_gate_passed':False,'inference_calls':0}));return
     if args.key_file is not None:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
     with experiment_lock(args.directory):
-        product,legacy,broker=build(args.directory);server=ProductServer(product,legacy,args.port)
+        product,legacy,broker=build(args.directory);server=ProductServer(product,legacy,args.port,
+            bind_host=args.bind,public_origin=args.public_origin)
         print(json.dumps({'origin':'http://127.0.0.1:'+str(server.server_address[1]),
                           'preview':'/mvp','quality_gate_passed':False}),flush=True)
         try:server.serve_forever()
