@@ -22,7 +22,7 @@ def project(record, candidate_id, cores, audits):
     address = 'AC' + digest(record)
     found = [(a, i) for a in audits for i, task in enumerate(a['tasks'])
              if task['kind'] == 'coverage' and task['task_id'] == address]
-    if len(found) != 1 or found[0][0].get('protocol') != obs.TYPED_CHAT:
+    if len(found) != 1 or found[0][0].get('protocol') not in obs.TYPED_PROTOCOLS:
         return None
     audit, index = found[0]
     row = next(r for r in audit['response']['observations'] if r['task_id'] == 'T' + str(index + 1))

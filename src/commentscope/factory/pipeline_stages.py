@@ -59,13 +59,14 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
         from commentscope.factory import literal_discovery
         records=literal_discovery.discover(sources,work,save)
     elif discovery_mode=='shared':
+        shared_version=shared_claims.COMMON_TYPED if getattr(execution,'shared_typed',False) else shared_claims.COMMON
         if shared_records is not None:
-            shared_discovery=shared_claims.for_scope(shared_records,sources)
+            shared_discovery=shared_claims.for_scope(shared_records,sources,version=shared_version)
         else:
             for group in shared_claims.batches(sources,vectors):
                 shared_discovery.extend(work('shared-discovery',group,
-                    lambda rows:shared_claims.request(rows,version=shared_claims.COMMON),
-                    lambda rows,result:shared_claims.bind(rows,result,version=shared_claims.COMMON),
+                    lambda rows:shared_claims.request(rows,version=shared_version),
+                    lambda rows,result:shared_claims.bind(rows,result,version=shared_version),
                     shared_claims.BATCH_SIZE,minimum=2))
         records=[]  # A common proposal is not a per-source extraction/completeness approval.
     elif getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS:
@@ -202,7 +203,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     eligible = [c for c in eligible if c['id'] in adaptable_ids]
     eligible_ids = adaptable_ids
     observed = all('meaning_context' not in c['candidate'] for c in cores)
-    split = observed and execution.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT
+    split = observed and (execution.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT or getattr(execution,'shared_typed',False))
     core_protocol = argument_observations.CORE_CODED if split else argument_observations.CORE_VERSION
     core_checks = (work('core-fidelity', [c for c in cores if c['candidate']['id'] in adaptable_ids],
                        lambda group: argument_observations.core_request(group[0], protocol=core_protocol),
@@ -262,8 +263,9 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     arguments = sorted([*(sa.bind_links(r) for r in no_facts), *linked], key=lambda r:r['source']['id'])
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
-    typed=getattr(execution,'argument_audit_protocol',None)==argument_observations.TYPED_CHAT
-    owner_protocol=owner_observations.SOURCE_BOUND if typed else owner_observations.VERSION
+    typed=getattr(execution,'argument_audit_protocol',None) in argument_observations.TYPED_PROTOCOLS
+    owner_protocol=(owner_observations.DIRECTIONAL_SOURCE_BOUND if getattr(execution,'shared_typed',False)
+                    else owner_observations.SOURCE_BOUND if typed else owner_observations.VERSION)
     owner_checks = work('argument-owner', owner_observations.tasks(arguments, cores, tasks,protocol=owner_protocol),
                         lambda group: owner_observations.request(group[0]),
                         lambda group, result: owner_observations.bind(group[0], result), 1) if split else []
@@ -275,7 +277,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
         from commentscope.providers import openrouter_decisions as decisions
         if not split:raise ValueError('Typed dependencies require split source audits')
         protocol=execution.argument_audit_protocol
-        chat=protocol in (argument_observations.CHAT_SPLIT,argument_observations.TYPED_CHAT)
+        chat=protocol in (argument_observations.CHAT_SPLIT,*argument_observations.TYPED_PROTOCOLS)
         for record in arguments:
             for task in deps.tasks(record,cores,typed=typed):
                 try:requests=deps.chat_requests(task) if chat else deps.requests(task)

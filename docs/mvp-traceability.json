@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v25",
+  "spec_version": "commentscope-mvp-20261110-v27",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-005",
-    "paid_execution_hold": true,
-    "hold_reason": "실제24개 개발실행 완료:412호출/$0.94319150·47후보(지원0개32/1개15)·Agent0·논거단계미진입. 추가유료실험보류. 후보별source coverage opt-in 수정은 무료합성G1 0→2Agent(5/3)·598Factory/46focused/최종10검사 통과(중복), 실제24는수정전후0. raw지원오류3건·정식G1 실패 보존. 다음은 Discovery→후보수용→공통관점 계약 정합화.",
+    "paid_execution_hold": false,
+    "hold_reason": "최신 전체Factory635 및 관련43검사 통과. 같은trial 합계1.50/원8/총50 안에서 등록96/74 개발제안부터 확인. 제안 모델Sol·typed common v3·source/owner/graph/fact 검증 보존. 다른실행 의미응답 재사용0, 정식G1/G2/G3 실패/차단은 유지.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -53,7 +53,8 @@
         "tools/actual24_development.py",
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
-        "src/commentscope/factory/candidate_source_coverage.py"
+        "src/commentscope/factory/candidate_source_coverage.py",
+        "tools/shared_factory_trial.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -69,7 +70,9 @@
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
-        "tests/test_candidate_source_coverage.py"
+        "tests/test_candidate_source_coverage.py",
+        "tests/test_shared_typed_pipeline.py",
+        "tests/test_shared_factory_trial.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -108,7 +111,8 @@
         "tools/actual24_development.py",
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
-        "src/commentscope/factory/candidate_source_coverage.py"
+        "src/commentscope/factory/candidate_source_coverage.py",
+        "tools/shared_factory_trial.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -124,7 +128,9 @@
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
-        "tests/test_candidate_source_coverage.py"
+        "tests/test_candidate_source_coverage.py",
+        "tests/test_shared_typed_pipeline.py",
+        "tests/test_shared_factory_trial.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -167,7 +173,8 @@
         "tools/actual24_development.py",
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
-        "src/commentscope/factory/candidate_source_coverage.py"
+        "src/commentscope/factory/candidate_source_coverage.py",
+        "tools/shared_factory_trial.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -183,7 +190,9 @@
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
-        "tests/test_candidate_source_coverage.py"
+        "tests/test_candidate_source_coverage.py",
+        "tests/test_shared_typed_pipeline.py",
+        "tests/test_shared_factory_trial.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -406,7 +415,8 @@
         "src/commentscope/providers/api_resources.py",
         "tools/actual24_development.py",
         "tools/complete_factory.py",
-        "tools/cohort_refresh.py"
+        "tools/cohort_refresh.py",
+        "tools/shared_factory_trial.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -424,7 +434,9 @@
         "tests/test_alias_retrieval.py",
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
-        "tests/test_cohort_refresh.py"
+        "tests/test_cohort_refresh.py",
+        "tests/test_shared_typed_pipeline.py",
+        "tests/test_shared_factory_trial.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -535,7 +547,8 @@
         "tools/actual24_development.py",
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
-        "src/commentscope/factory/candidate_source_coverage.py"
+        "src/commentscope/factory/candidate_source_coverage.py",
+        "tools/shared_factory_trial.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -554,7 +567,9 @@
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
-        "tests/test_candidate_source_coverage.py"
+        "tests/test_candidate_source_coverage.py",
+        "tests/test_shared_typed_pipeline.py",
+        "tests/test_shared_factory_trial.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1292,6 +1307,18 @@
           "scope": "Bound typed source observations say coverage complete for B/C/G/I; whole-source rejection was caused by other candidate missing its own position. New opt-in candidate_verified_subset preserves legacy policies/receipts and projects coverage by target.34 focused tests pass; saved entire G1 compiler replay yields0→2Agents with5/3 sources,0 new model calls. Raw map unchanged,3 invalid counted reporting supports and formal G1 failure remain. Required Factory598 pass;46 focused and final10 checks pass (overlapping). Actual24 remains0 because no candidate has two sources; this is not a fresh semantic gate.",
           "reference": "docs/design/CANDIDATE_SOURCE_COVERAGE.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Shared originals→directional owner→typed source/graph audit integrated opt-in; existing protocols preserved. Required Factory626 pass;36 related and32 final integration/budget/spec checks pass (overlap). Original scope/global history and single1.50 trial cap, proposal pause/read/full continuation verified. No fresh semantic quality claim.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Current typed common v3 and shared/owner/source/graph integration:required Factory635 and focused43 pass (overlap). Single-kind proposal schema and old protocol separation; same-plan proposal pause/read/full continuation, original scope/global money and cumulative1.50 cap verified. This is not live semantic admission.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1309,7 +1336,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/HIERARCHY_RETRIEVAL.md",
-        "docs/design/CANDIDATE_SOURCE_COVERAGE.md"
+        "docs/design/CANDIDATE_SOURCE_COVERAGE.md",
+        "docs/design/SHARED_DISCOVERY_DELIVERY.md"
       ]
     },
     {
@@ -1721,6 +1749,24 @@
           "scope": "Fixed24 development complete:412 requests/$0.94319150;47 candidates,32 with0 support/15 with1, no shared group or Agent/runtime.0 binding/capacity/unextracted errors. No argument records were created. New candidate-scoped compiler replay also0,0 new calls. Original failed output/cost retained; no product replacement or formal G2 admission.",
           "reference": "docs/design/ACTUAL24_DEVELOPMENT.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Shared originals→directional owner→typed source/graph audit integrated opt-in; existing protocols preserved. Required Factory626 pass;36 related and32 final integration/budget/spec checks pass (overlap). Original scope/global history and single1.50 trial cap, proposal pause/read/full continuation verified. No fresh semantic quality claim.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Shared v2 proposal-only actual24:3 physical calls (embedding+2 proposals),$0.02544198.2 candidates with2/3 nominees; one bundles normative need with predicted benefit. Stopped before membership/arguments, retained output and charge; no Agent or formal quality pass.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Current typed common v3 and shared/owner/source/graph integration:required Factory635 and focused43 pass (overlap). Single-kind proposal schema and old protocol separation; same-plan proposal pause/read/full continuation, original scope/global money and cumulative1.50 cap verified. This is not live semantic admission.",
+          "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1731,7 +1777,8 @@
         "DEC-007"
       ],
       "design_refs": [
-        "docs/design/ACTUAL24_DEVELOPMENT.md"
+        "docs/design/ACTUAL24_DEVELOPMENT.md",
+        "docs/design/SHARED_DISCOVERY_DELIVERY.md"
       ]
     }
   ],
@@ -1881,8 +1928,16 @@
     {
       "spec_version": "commentscope-mvp-20261110-v25",
       "reason": "미완성 source의 후보 연결 실패와 원문 완전성 관측의 영향범위를 분리하는 opt-in host compiler 수정. 역할/모델/r5 불변, 무료 전체G1 재생0→2Agent는 fresh 합격 아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v26",
+      "reason": "사용자 ㄱㄱㄱ 승인으로 기존 공통입장 제안 경로를 typed verification과 연결한다. 후보 합의/조건/r5/장부를 유지하고 새 개발실행 상한1.50를 동결한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v27",
+      "reason": "24개 공통제안의 혼합명제 오류를 고비용 후속검증 전 발견. 명시적 assertion_kind 계약과 기존Sol배정으로 고정하고 등록96/74 개발확인 추가. 동일trial상한1.50·모든과거비용·정식차단 유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v21",
+  "design_version": "commentscope-detailed-design-20261110-v23",
   "design_document": "docs/design/README.md"
 }
