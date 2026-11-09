@@ -39,11 +39,29 @@ from experiments.compare_backend_discovery import check_quota, quota_watch
 LEGACY_VERSION='minimal-factory-remote-verification-20261106-v1'
 VERSION='minimal-factory-remote-verification-20261106-v2'
 AUTH='remote-verification-linked-authorization-20261106-v1'
+RESUMED_AUTH='remote-verification-resume-authorization-20261109-v1'
 FACT_SOURCE=Path('runs/fact-gate-40-20261013/plan.json')
 RUNTIME_FILES=('src/commentscope/factory/remote_fact_records.py',
                'src/commentscope/factory/fact_checks.py','src/commentscope/providers/openai_schema.py',
                'src/commentscope/contracts/structured_output.py',
                'src/commentscope/providers/remote_verification.py','src/commentscope/providers/openrouter.py')
+
+
+def check_window(auth,original,*,call_seconds=0,allow_expired=False):
+    if auth['version']==AUTH:
+        if 'resume_window' in auth:raise ValueError('Legacy authorization cannot acquire an implicit resume')
+        scoped_authorization.guard(original,call_seconds=call_seconds,allow_expired=allow_expired)
+        return
+    window=auth.get('resume_window')
+    if (not isinstance(window,dict) or set(window)!={'started_at','deadline','user_request'}
+            or not isinstance(window['user_request'],str) or not window['user_request'].strip()):
+        raise ValueError('Explicit user resume and bounded execution window required')
+    start=datetime.fromisoformat(window['started_at']);end=datetime.fromisoformat(window['deadline'])
+    maximum=datetime.fromisoformat(original['deadline'])-datetime.fromisoformat(original['started_at'])
+    if (start.utcoffset() is None or end.utcoffset() is None or not timedelta(0)<end-start<=maximum
+            or start<datetime.fromisoformat(original['started_at'])):raise ValueError('Resume window exceeded original duration')
+    if not allow_expired and not start<=datetime.now(timezone.utc)<end-timedelta(seconds=call_seconds+3):
+        raise TimeoutError('Resume window cannot cover the next bounded operation')
 
 
 def guard(plan,*,call_seconds=0,allow_expired=False):
@@ -53,7 +71,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
     owner=auth['money_owner'];original=read_json(owner['file'])
     if sha(owner['file'])!=owner['sha256']:raise ValueError('Original money owner changed')
     scoped_authorization.guard(original,allow_expired=True)
-    if (auth.get('version')!=AUTH or auth['verification_deployment']!=remote.SOL
+    if (auth.get('version') not in (AUTH,RESUMED_AUTH) or auth['verification_deployment']!=remote.SOL
             or auth['embedding_deployment']!=remote.EMBEDDING or auth['role_registry']!=remote.ROLES
             or auth['generation_deployment']!=original['chat_deployment']
             or auth['deadline']!=original['deadline'] or auth['maximum_usd']!=original['maximum_additional_usd']
@@ -64,19 +82,25 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or plan['spend_policy']!=read_json(original['shared_policy_file'])
             or units(plan['subcap_usd'])>units(original['maximum_additional_usd'])
             or units(plan['subcap_usd'])<=0):raise ValueError('Remote roles, deadline or inherited money changed')
-    if not allow_expired:
-        scoped_authorization.guard(original,call_seconds=call_seconds)
+    check_window(auth,original,call_seconds=call_seconds,allow_expired=allow_expired)
 
 
-def authorize(path,owner_file):
+def authorize(path,owner_file,*,resume_request=None):
     private(path);owner_file=Path(owner_file).resolve();old=read_json(owner_file)
-    scoped_authorization.guard(old)
+    if resume_request is not None and (not isinstance(resume_request,str) or not resume_request.strip()):
+        raise ValueError('Explicit user resume request required')
+    scoped_authorization.guard(old,allow_expired=resume_request is not None)
     value={'version':AUTH,'user_request':'검증은 gpt6.1sol 사용; 로컬 정확성/메모리 문제 해소',
            'money_owner':{'file':str(owner_file),'sha256':sha(owner_file)},
            'deadline':old['deadline'],'maximum_usd':old['maximum_additional_usd'],
            'generation_deployment':old['chat_deployment'],'verification_deployment':deepcopy(remote.SOL),
            'embedding_deployment':deepcopy(remote.EMBEDDING),'role_registry':deepcopy(remote.ROLES),
            'retries':0,'fallback':None,'historical_charges_preserved':True}
+    if resume_request is not None:
+        started=datetime.now(timezone.utc)
+        duration=datetime.fromisoformat(old['deadline'])-datetime.fromisoformat(old['started_at'])
+        value.update(version=RESUMED_AUTH,resume_window={'started_at':started.isoformat(),
+            'deadline':(started+duration).isoformat(),'user_request':resume_request})
     write(path,value);return value
 
 
@@ -377,8 +401,9 @@ def main():
     p.add_argument('--materials',type=Path);p.add_argument('--mode',choices=('factory','benchmark'),default='factory')
     p.add_argument('--gate',choices=('G1','G2','G3'),default='G1');p.add_argument('--subcap-usd',default='0.5')
     p.add_argument('--fact-benchmark',type=Path);p.add_argument('--admission',type=Path)
+    p.add_argument('--resume-request')
     a=p.parse_args()
-    if a.action=='authorize':result=authorize(a.directory,a.owner)
+    if a.action=='authorize':result=authorize(a.directory,a.owner,resume_request=a.resume_request)
     elif a.action=='prepare':result=prepare(a.directory,a.authorization,a.materials,mode=a.mode,gate=a.gate,
         subcap_usd=a.subcap_usd,fact_benchmark=a.fact_benchmark,admission_file=a.admission)
     else:result=run(a.directory)

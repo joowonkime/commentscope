@@ -268,5 +268,48 @@ class RemoteExecutorTests(unittest.TestCase):
         self.assertEqual(list((self.run/'checkpoints').glob('*.intent.json')),[])
         self.assertEqual(session.money.summary()['calls'],0)
 
+    def test_explicit_resume_uses_same_money_owner_and_does_not_reset_charge(self):
+        owner=Path(self.plan['authorization']['authorization']['money_owner']['file'])
+        auth=self.root/'resumed.json'
+        self.e.authorize(auth,owner,resume_request='이거 이어 진행')
+        plan=self.e.prepare(self.root/'resumed-run',auth,self.materials,mode='benchmark')
+        self.e.guard(plan)
+        self.assertEqual(plan['spend_scope_sha256'],self.plan['spend_scope_sha256'])
+        self.assertEqual(plan['maximum_cost_usd'],'8')
+        self.assertEqual(plan['authorization']['authorization']['deadline'],self.plan['authorization']['authorization']['deadline'])
+        money=self.e.ledger(plan['spend_policy']);scope=plan['spend_scope_sha256']
+        call=money.reserve(scope,'d'*64,'7.95',run_limit_usd='8',key_remaining_usd='50');money.finish(call,'7.95')
+        with self.assertRaises(BudgetExhausted):money.reserve(scope,'e'*64,'0.1',run_limit_usd='8',key_remaining_usd='50')
+
+    def test_resume_requires_nonempty_request_and_bounded_window(self):
+        from datetime import datetime,timedelta
+        from commentscope.storage import write_json_exclusive as write
+        owner=Path(self.plan['authorization']['authorization']['money_owner']['file'])
+        with self.assertRaises(ValueError):self.e.authorize(self.root/'empty.json',owner,resume_request=' ')
+        auth=self.root/'resumed.json';value=self.e.authorize(auth,owner,resume_request='이어 진행')
+        plan=self.e.prepare(self.root/'resumed-run',auth,self.materials,mode='benchmark')
+        changed=deepcopy(value)
+        changed['resume_window']['deadline']=(datetime.fromisoformat(changed['resume_window']['started_at'])+timedelta(hours=8)).isoformat()
+        path=self.root/'invalid.json';write(path,changed)
+        plan['authorization']={'file':str(path),'sha256':self.e.sha(path),'authorization':changed}
+        with self.assertRaises(ValueError):self.e.guard(plan)
+
+    def test_legacy_expired_authorization_stays_expired_without_resume(self):
+        from datetime import datetime,timedelta,timezone
+        from commentscope.storage import write_json_exclusive as write
+        owner=Path(self.plan['authorization']['authorization']['money_owner']['file'])
+        old=self.e.read_json(owner);now=datetime.now(timezone.utc)
+        old.update(started_at=(now-timedelta(days=2)).isoformat(),deadline=(now-timedelta(days=2,hours=-1)).isoformat())
+        path=self.root/'expired-owner.json';write(path,old)
+        with self.assertRaises(TimeoutError):self.e.authorize(self.root/'legacy-expired.json',path)
+        value=self.e.authorize(self.root/'resume-expired.json',path,resume_request='이거 이어 진행')
+        plan=self.e.prepare(self.root/'resumed-expired-run',self.root/'resume-expired.json',self.materials,mode='benchmark')
+        self.e.guard(plan)
+        value['resume_window'].update(started_at=(now-timedelta(hours=2)).isoformat(),deadline=(now-timedelta(hours=1)).isoformat())
+        expired=self.root/'expired-resume.json';write(expired,value)
+        plan['authorization']={'file':str(expired),'sha256':self.e.sha(expired),'authorization':value}
+        with self.assertRaises(TimeoutError):self.e.guard(plan)
+        self.e.guard(plan,allow_expired=True)
+
 
 if __name__=='__main__':unittest.main()

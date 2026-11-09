@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261106-v15",
+  "spec_version": "commentscope-mvp-20261109-v16",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -1626,8 +1626,12 @@
     {
       "spec_version": "commentscope-mvp-20261106-v15",
       "reason": "사용자 요청: API 검증에 남아 있는 로컬 모델용 6GiB 디스크 기준을 분리한다. 기존 정책은 보존하고 API 디스크 floor1GiB·요청별 저장 여유64MiB·실행 산출물 검사1GiB를 명시적으로 동결한다. 모델/의미/r5/돈/종료시각은 변경하지 않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261109-v16",
+      "reason": "사용자가 2026-11-09 이어 진행을 명시했다. 만료된 원본 authorization은 보존하고 같은 money owner/상한/과거청구를 참조하는 재개 window를 별도 연결한다. 실제 댓글의 만료된 snapshot은 자동 연장/교체하지 않으며 유효한 fact40과 합성G1을 먼저 진행한다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261106-v12",
+  "design_version": "commentscope-detailed-design-20261109-v13",
   "design_document": "docs/design/README.md"
 }

@@ -1,6 +1,6 @@
 # 실행·비용·검증·전환 상세 설계
 
-설계 `commentscope-detailed-design-20261106-v12`, DEC-001/004/005/006, REQ-001~010.
+설계 `commentscope-detailed-design-20261109-v13`, DEC-001/004/005/006, REQ-001~010.
 이 문서는 실험을 실행하거나 예산 보류를 해제하지 않는다. 모든 수치 비교는 기존 품질 기준 안에서 한다.
 
 각 decision의 허용 입력·모델 역할·transport·확률/보류·배정 변경의 provenance는
