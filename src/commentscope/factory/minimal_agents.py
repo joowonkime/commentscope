@@ -24,12 +24,15 @@ def relation(claim, source, evidence, trace):
             'span': span, 'verdict': 'supported', 'trace_id': trace, 'origin': 'local_model'}
 
 
-def _source_reasons(record,cid,core,verdicts,observed,runtime_scope,*,multilingual_facts=False):
+def _source_reasons(record,cid,core,verdicts,observed,runtime_scope,*,multilingual_facts=False,coverage=None):
     if record is None or cid not in record['candidate_ids']:return ['member_arguments_unassessed']
     reasons=[]
-    if record['status']!='complete':reasons.append('member_arguments_incomplete')
-    if record['dependency_status']!='complete':reasons.append('member_dependencies_unresolved')
-    if verdicts.get('AC'+digest(record))!='supported':reasons.append('member_completeness_not_verified')
+    if coverage is not None:
+        reasons.extend(coverage['guards'])
+    else:
+        if record['status']!='complete':reasons.append('member_arguments_incomplete')
+        if record['dependency_status']!='complete':reasons.append('member_dependencies_unresolved')
+        if verdicts.get('AC'+digest(record))!='supported':reasons.append('member_completeness_not_verified')
     selected=[u for u in record['units'] if cid in u['candidate_ids'] and u.get('runtime_exposure')!='scope_annotation_only']
     by_local={u['local_id']:u for u in record['units']};expanded={u['local_id']:u for u in selected}
     def include(lid):
@@ -52,7 +55,7 @@ def _source_reasons(record,cid,core,verdicts,observed,runtime_scope,*,multilingu
 
 
 def prepare(snapshot, candidates, memberships, records, cores, audits, *, model, documents=(), checks=(), _draft_single_source=False, source_policy='all_members'):
-    if source_policy not in ('all_members','verified_subset') or _draft_single_source and source_policy!='all_members':
+    if source_policy not in ('all_members','verified_subset','candidate_verified_subset') or _draft_single_source and source_policy!='all_members':
         raise ValueError('Explicit supported Agent source policy required')
     mapped = mm.assemble_map(snapshot, candidates, memberships)
     fact_checks.model_identity(model)
@@ -64,6 +67,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     membership_lookup = {(r['candidate_id'], r['source_id']): r for r in membership_rows}
     cs = {c['id']: c for c in candidates}; rr = {}; cr = {}
     verdicts = sa.audit_verdicts(records, cores, audits)
+    coverage_audits={t['source_id']:[a] for a in audits for t in a['tasks'] if t['kind']=='coverage'}
     observed = any(a.get('protocol') in sa.OBSERVED_PROTOCOLS for a in audits)
     for record in records:
         sa.validate(record); sid = record['source']['id']
@@ -78,7 +82,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
                 or sa.validate_core(core) != core):
             raise ValueError('Core declaration differs from final candidate')
         cr[cid] = core
-    claims = {}; relations = {}; sources = {}; prepared = []; holds = []; runtime_scopes = {}; source_contexts = {};source_holds=[]
+    claims = {}; relations = {}; sources = {}; prepared = []; holds = []; runtime_scopes = {}; source_contexts = {};source_holds=[];projections=[]
     for cid, candidate in cs.items():
         sids = members[cid]; reasons = []
         runtime_scope=cr.get(cid,{}).get('runtime_scope')
@@ -96,15 +100,20 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
         original_sids=sids;verified=[]
         for sid in original_sids:
             record=rr.get(sid)
+            coverage=None
+            if source_policy=='candidate_verified_subset' and record is not None and cid in cr:
+                from commentscope.factory import candidate_source_coverage
+                coverage=candidate_source_coverage.project(record,cid,list(cr.values()),coverage_audits.get(sid,()))
+                if coverage is not None:projections.append(coverage)
             failures=_source_reasons(record,cid,cr.get(cid),verdicts,observed,runtime_scope,
-                multilingual_facts=model.get('kind')=='remote_llm' and model.get('language_scope')=='multilingual')
+                multilingual_facts=model.get('kind')=='remote_llm' and model.get('language_scope')=='multilingual',coverage=coverage)
             if not failures:verified.append(sid);continue
             if source_policy=='all_members':reasons.extend(failures);continue
             source_holds.append({'candidate_id':cid,'source_id':sid,'reasons':failures})
             core_required=(cid in cr and cr[cid]['output']['kind']=='fact'
                 or record is not None and any(cid in u['core_requires_for'] for u in record['units']))
             if core_required:reasons.extend([*failures,'core_required_source_held'])
-        if source_policy=='verified_subset':
+        if source_policy in ('verified_subset','candidate_verified_subset'):
             sids=verified
             if len(sids)<3:reasons.append('fewer_than_three_verified_core_sources')
         if reasons:
@@ -155,6 +164,7 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     if _draft_single_source and compiled['profiles']:
         raise ValueError('A source draft must never compile into an exposed Agent')
     return {'artifact_kind': VERSION, 'map': mapped, 'bundle': bundle, 'compiled': compiled,
+            **({'source_coverage_projections':projections} if source_policy=='candidate_verified_subset' else {}),
             **({'source_policy':source_policy,'source_holds':source_holds} if source_policy!='all_members' else {}),
             'argument_holds': holds, 'source_arguments_sha256': digest(records),
             'quality_gate_passed': False, 'runtime_verified': False}

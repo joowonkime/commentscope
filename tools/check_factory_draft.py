@@ -29,6 +29,7 @@ MODULES = (
     "test_api_resources",
     "test_alias_retrieval",
     "test_candidate_hierarchy",
+    "test_candidate_source_coverage",
     "test_cohort_refresh",
     "test_factory_completion",
     "test_actual24_development",
