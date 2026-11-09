@@ -12,6 +12,12 @@ from experiments import minimal_factory_review as review
 
 
 class R5ReviewTests(TestCase):
+    def test_data_renewal_cannot_replace_other_gate_or_use_unpinned_execution_tools(self):
+        self.assertIsNone(review.completion_reference({'gate':'G1'}))
+        extension={'version':'factory-completion-tools-20261110-v1','tool_files':{}}
+        with self.assertRaises(ValueError):review.completion_reference({'gate':'G1','completion_execution':extension})
+        with self.assertRaises(ValueError):review.completion_reference({'gate':'G4','completion_execution':extension})
+
     def evaluate(self, gate, preserved, *, legacy=False, wrong_support=False):
         count, meaningful = (24, 19) if gate == 'G2' else (96, 74)
         version = review.VERSION if legacy else review.R5_VERSION

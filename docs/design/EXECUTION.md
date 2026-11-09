@@ -1,6 +1,6 @@
 # 실행·비용·검증·전환 상세 설계
 
-설계 `commentscope-detailed-design-20261109-v17`, DEC-001/004/005/006, REQ-001~010.
+설계 `commentscope-detailed-design-20261110-v19`, DEC-001/004/005/006, REQ-001~010.
 이 문서는 실험을 실행하거나 예산 보류를 해제하지 않는다. 모든 수치 비교는 기존 품질 기준 안에서 한다.
 
 각 decision의 허용 입력·모델 역할·transport·확률/보류·배정 변경의 provenance는
@@ -32,6 +32,8 @@ plan은 K/E/P/A task 상한과 금액 상한을 선언하고 실제 값이 넘�
 실청구는 input/cache read/cache write/output/reasoning/request 비용을 포함한다.
 캐시 사용 여부가 실제 비용을 뒤집은 [과거 batch 결과](BASELINE.md#b-02-보존된-수치와-한계)를 보존한다.
 정적 input byte 감소·호출 수 감소를 달러 절감으로 간주하지 않는다.
+
+현재 all-HTTP 실행은 [원격실행계약](REMOTE_VERIFICATION.md)의 WireBudget으로 전체직렬화요청/schema 바이트와 provider margin·출력/추론배정·전체tier상한을 예약한다. 아래 최대context정책은 보존된legacy PaidBudget 경로다.
 
 요청 예약은 기존 `PaidBudget`의 최대 context×입력 상한+출력 한도×출력 상한+요청비를 유지한다.
 host 가격 상한은 cache-write와 모든 context tier를 포함하며 실제 metadata/단일 provider와 대조한다.

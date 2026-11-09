@@ -16,6 +16,7 @@ from urllib.request import build_opener, ProxyHandler
 from commentscope.factory import acceptance, argument_observations, compact_claims, minimal_pipeline
 from commentscope.factory import fact_checks, remote_fact_records, raw_membership_verification
 from commentscope.factory import candidate_consolidation
+from commentscope.factory import candidate_hierarchy
 from commentscope.ingestion import revalidated_snapshot
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -77,6 +78,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or auth['embedding_deployment']!=remote.EMBEDDING or auth['role_registry']!=remote.ROLES
             or auth['generation_deployment']!=original['chat_deployment']
             or auth['deadline']!=original['deadline'] or auth['maximum_usd']!=original['maximum_additional_usd']
+            or plan['gate'] not in original['gates']
             or plan['deployment']!=auth['generation_deployment'] or plan['verification_deployment']!=remote.SOL
             or plan['embedding_deployment']!=remote.EMBEDDING
             or plan['role_registry']!=remote.ROLES or plan['spend_scope_sha256']!=owner['sha256']
@@ -186,7 +188,7 @@ def prepare(directory,auth_file,materials_file,*,mode='factory',gate='G1',subcap
           'discovery_mode':'free','membership_mode':'raw','extraction_protocol':compact_claims.PROPOSALS,
           'verification_contract':raw_membership_verification.FULL_SCOPE,
           'argument_audit_protocol':argument_observations.TYPED_CHAT,'agent_source_policy':'verified_subset',
-          'membership_retrieval_policy':candidate_consolidation.ALIAS_RETRIEVAL,'scope_refresh':None,
+          'membership_retrieval_policy':candidate_hierarchy.VERSION,'scope_refresh':None,
           'component_diagnostic_policy':'record_and_continue','fact_benchmark':str(fact_benchmark) if fact_benchmark else None,
           'admission_file':str(admission_file) if admission_file else None,
           'questions':deepcopy(QUESTIONS),'schedule':deepcopy(minimal_pipeline.SCHEDULE),
@@ -243,8 +245,11 @@ class SubcapLedger:
 
 
 class RemoteSession:
-    def __init__(self,directory,plan,dispatch):
+    def __init__(self,directory,plan,dispatch,*,authorization_guard=None):
         self.directory=Path(directory);self.plan=plan;self.dispatch=dispatch
+        if authorization_guard is not None and not callable(authorization_guard):
+            raise ValueError('Explicit callable execution authorization required')
+        self.authorization_guard=guard if authorization_guard is None else authorization_guard
         self.storage=api_resources.SpaceGuard(directory,plan['artifact_storage_policy'])
         self.plan_sha=sha(self.directory/'plan.json');self.money=SubcapLedger(ledger(plan['spend_policy']),plan)
         self.time=InferenceBudget(self.directory/'inference.sqlite',VERSION,limit_seconds=None)
@@ -264,14 +269,14 @@ class RemoteSession:
             deployment_key='embedding_deployment'),{})
 
     def inspect(self,request):
-        self.dispatch.check();check_quota();guard(self.plan,call_seconds=180)
+        self.dispatch.check();check_quota();self.authorization_guard(self.plan,call_seconds=180)
         # Capacity partition must fit either potential route. Dispatch checks
         # the actual route independently, with its own allocation and receipt.
         return self.clients['generation'].measure(request)
 
     def call(self,stage,request):
         selected=remote.role(stage);key='generation' if selected=='interaction' else selected
-        self.dispatch.check();check_quota();guard(self.plan,call_seconds=180)
+        self.dispatch.check();check_quota();self.authorization_guard(self.plan,call_seconds=180)
         measured=self.clients[key].measure(request)
         if not measured['fits']:raise ValueError('Remote request exceeds capacity')
         self.storage.check()
@@ -288,7 +293,7 @@ class RemoteSession:
         responses=[];client=self.clients['embedding']
         for batch in remote.batches(texts):
             req={'system':remote.VERSION,'data':{'input':[p['text'] for p in batch]},'schema':{},'max_tokens':1}
-            self.dispatch.check();check_quota();guard(self.plan,call_seconds=180)
+            self.dispatch.check();check_quota();self.authorization_guard(self.plan,call_seconds=180)
             self.storage.check()
             with self.dispatch.remote_call():
                 result=self.checkpoints['embedding'].call('embedding-'+stage+'-'+digest(req)[:20],req,
@@ -345,7 +350,7 @@ def validate(directory,plan):
             or plan['classifier']!=model_identity() or plan['model_files']!={}
             or plan['billing_policy']!=remote.WIRE_BUDGET
             or plan['argument_audit_protocol']!=argument_observations.TYPED_CHAT
-            or plan.get('membership_retrieval_policy')!=candidate_consolidation.ALIAS_RETRIEVAL
+            or plan.get('membership_retrieval_policy')!=candidate_hierarchy.VERSION
             or plan['agent_source_policy']!='verified_subset'):
         raise ValueError('Frozen remote code/input/execution contract changed')
     run_origin(plan,directory,attempt=1);guard(plan)
@@ -419,7 +424,7 @@ def run(directory):
                         documents=plan['documents'],selections=plan['selections'],scope_ids=plan['scope_ids'],save=save,
                         discovery_mode='free',membership_mode='raw',verification_contract=plan['verification_contract'],
                         extraction_protocol=plan['extraction_protocol'],argument_audit_protocol=plan['argument_audit_protocol'],
-                        agent_source_policy=plan['agent_source_policy'])
+                        agent_source_policy=plan['agent_source_policy'],membership_retrieval_policy=plan['membership_retrieval_policy'])
                     save('output',output)
                     runtime=runtime_probe(output['agent_inputs']['bundle'],session,
                         save_turn=lambda row:save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'],row))

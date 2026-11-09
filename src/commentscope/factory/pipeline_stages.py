@@ -168,6 +168,14 @@ def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
         attempted = {(p['source_id'], p['candidate_id']) for p in first}
         extra_pairs = [p for p in extra_pairs if (p['source_id'], p['candidate_id']) not in attempted]
         memberships.extend(judge('membership-expanded', extra_pairs, candidates))
+        from commentscope.factory import candidate_hierarchy
+        if getattr(execution,'membership_retrieval_policy',cc.ALIAS_RETRIEVAL)==candidate_hierarchy.VERSION:
+            expansion=candidate_hierarchy.expansion(sources,list(index.values()),nomination_batches,
+                merged,equivalences,memberships,attempted=[*first,*extra_pairs])
+            save('membership-parent-retrieval',expansion)
+            # Same independent membership task and registered model role. The
+            # retrieval artifact records why these extra pairs were selected.
+            memberships.extend(judge('membership-expanded',expansion['pairs'],candidates))
     else:
         memberships = []; equivalences = []; merged = None
     save('candidates', candidates); save('memberships', memberships)

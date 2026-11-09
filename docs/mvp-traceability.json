@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261109-v21",
+  "spec_version": "commentscope-mvp-20261110-v23",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,10 +24,8 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": false,
-    "hold_reason": "같은 원money owner/총50/현window에서 component18 기대일치 후 freshG1 1.50 실행중. G2/G3는 각 선행정식gate 통과시에만. 전체999 자료갱신은 사용자응답대기.",
-    "parallel_tasks": [
-      "TASK-011"
-    ]
+    "hold_reason": "상하위검색 무과금전체G1재생에서누락2pair검사후보복원, 신규투표0. 필수Factory590 및 최종45검사 통과후같은원8/총50에서새G1 최대1.50. 사용자rr 승인999/755 자료갱신완료. G1→G2→G3합격후고정G4완료phase.",
+    "parallel_tasks": []
   },
   "requirements": [
     {
@@ -1224,6 +1222,18 @@
           "scope": "Fixed component18 cases:8 positive retained,10 negative held,0falseapproval;13physical requests/$0.072416 total across preserved prefix4 and remaining9. First prefix execution incomplete due reservation cap, not a single fresh Factory gate. No independent human gold. FreshG1 underway with1.50 subcap; no G2/G3 admission yet.",
           "reference": "docs/design/TYPED_VERIFICATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "formal_gate",
+          "scope": "Fresh typed/world G1:267physical calls/$0.563491540,2Agents with4/3 valid sources,6runtime answers,0bindingerrors. Assistant all88-task review meets15/16;17counted supports valid, all12sources retained, mandatory general group4/5 with B only in reason-specific subgroup. FormalFAIL preserved, no G2/G3. Resource stop at188settled replies resumed same plan with0repayment,0unknown.",
+          "reference": "docs/design/HIERARCHY_RETRIEVAL.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Supported-parent one-hop retrieval implemented with original/legacy default preserved. Fixed priorG1 replay adds only B→general mandatory and B→public-safety value targets,0embedding/model calls/derived votes. Source limit3, overflow visible, original attempts never retried, conditional parent still requires independent direct verdict. Required full590 tests passed; after the final adapter-key adjustment, completion/authorization45 tests also passed. Counts overlap. No fresh semantic pass yet.",
+          "reference": "docs/design/HIERARCHY_RETRIEVAL.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1239,7 +1249,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/JEV_AUDIT_INTEGRATION.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/TYPED_VERIFICATION.md"
+        "docs/design/TYPED_VERIFICATION.md",
+        "docs/design/HIERARCHY_RETRIEVAL.md"
       ]
     },
     {
@@ -1297,14 +1308,22 @@
         "snapshot 기한·원문 hash를 확인하고 분모를 바꾸지 않는다.",
         "수천 개 확장 성능과 전체 제품 완료는 별도임을 명시한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "User approved same-video current cohort renewal. Retain997 revalidated canonical originals and mechanically choose first2 unseen nonempty canonical roots in current official time order; both replacement sources individually labelled substantive before outputs. Raw1000/canonical999/meaningful755/minimum453 unchanged; old references/results retained,0OpenRoutercalls. G4 has not run.",
+          "reference": "docs/design/COHORT_COMPLETION.md",
+          "result": "partial"
+        }
+      ],
       "required_evidence": [
         "formal_gate"
       ],
       "decisions": [],
       "design_refs": [
         "docs/design/EXECUTION.md",
-        "docs/design/FACTORY.md"
+        "docs/design/FACTORY.md",
+        "docs/design/COHORT_COMPLETION.md"
       ]
     },
     {
@@ -1527,7 +1546,7 @@
         "TASK-009",
         "TASK-010"
       ],
-      "status": "in_progress",
+      "status": "done",
       "deliverables": [
         "기존 Figma의 세 과업을 구현한 프론트와 실제 자동 bundle/API 연결",
         "팀 언어 정책·오류/보류·대화/성찰 저장·원문 이동 결과"
@@ -1540,6 +1559,12 @@
         {
           "kind": "offline",
           "scope": "Existing Figma before/explore/comparison/1:1/group/reflection views connected to product API. Chromium19 checks pass,0paid calls/JS exceptions/external requests: full workflows, Unicode, modal dismissal, cached comparison, local assets, source drawer, reload/manual persistence. Current actual-model E2E remains pending.",
+          "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Figma API flow on current automatically generated synthetic G1 bundle:9 actual GPT-5.2/OpenAI calls/$0.05072025; comparison6/2 items,group4turns,1:1/followup2turns,reflection four categories/edit/reload revision2. Chromium actual-response reread5 checks pass,0new model calls. Synthetic UI22 pass. Not actual999 or independent human quality.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
         }
@@ -1556,7 +1581,7 @@
         "docs/design/EXECUTION.md",
         "docs/design/TYPED_VERIFICATION.md"
       ],
-      "design_status": "implemented_pending_evidence"
+      "design_status": "implemented"
     },
     {
       "id": "TASK-012",
@@ -1731,8 +1756,16 @@
     {
       "spec_version": "commentscope-mvp-20261109-v21",
       "reason": "typed component18 기대일치/오승인0과Factory580을 기록하고 같은 예산에서freshG1 시작. Figma프론트구현·합성browser19 증거를 추가하고 실제모델E2E·정식gate·999갱신대기는 미완료로 구별."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v22",
+      "reason": "완료된G1 15/16과제품 실제9호출/재열람0추론을기록해TASK011완료. 세부공유관점이면추가검색을생략하는일반누락을 재현하고, 검증된상하위후보를최대3개/원문 검색에만추가하는opt-in계약 고정. 지지표자동전파/조건손실/실패재시도 금지, r5·모델·기존장부·기한유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v23",
+      "reason": "질문설명후사용자rr로999자료갱신진행. 재검증997+시간순최초2를의미기준선택없이동결, 새참조도755/최소453. 원r5불변. 실행권한guard와고정G4도구/평가자료adapter경계를분리해공통의미코드G1~G4동결을유지. G4별도잔여예산phase는구8/총50장부초기화금지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261109-v17",
+  "design_version": "commentscope-detailed-design-20261110-v19",
   "design_document": "docs/design/README.md"
 }

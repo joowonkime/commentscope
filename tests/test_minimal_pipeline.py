@@ -223,10 +223,17 @@ class MinimalPipelineTests(unittest.TestCase):
         configurations = [('free', c) for c in (verification.LEGACY, verification.FOCUSED, verification.GROUNDED, verification.ALIGNED)]
         configurations.append(('shared', verification.ALIGNED))
         configurations.append(('literal', verification.FULL_SCOPE))
-        for mode, contract in configurations:
-            with self.subTest(mode=mode, contract=contract):
+        from commentscope.factory import candidate_hierarchy
+        configurations=[(mode,contract,cc.ALIAS_RETRIEVAL) for mode,contract in configurations]
+        configurations.append(('free',verification.ALIGNED,candidate_hierarchy.VERSION))
+        for mode, contract, policy in configurations:
+            with self.subTest(mode=mode, contract=contract, policy=policy):
                 self.saved = {}; self.embeddings = []
-                runner = RawRunner(); result = self.process(runner, discovery_mode=mode, membership_mode='raw', verification_contract=contract)
+                runner = RawRunner(); result = self.process(runner, discovery_mode=mode, membership_mode='raw', verification_contract=contract,
+                    membership_retrieval_policy=policy)
+                if policy==candidate_hierarchy.VERSION:
+                    self.assertEqual(self.saved['membership-parent-retrieval']['artifact_kind'],policy)
+                    self.assertEqual(self.saved['membership-parent-retrieval']['memberships'],[])
                 self.assertFalse(result['errors']); self.assertFalse(result['capacity_holds'])
                 self.assertEqual(len(result['arguments']), 6)
                 self.assertEqual(len(result['agent_inputs']['compiled']['profiles']), 2)

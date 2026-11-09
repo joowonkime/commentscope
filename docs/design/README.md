@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261109-v17`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261110-v19`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -18,6 +18,8 @@
 | 어떤 판단에 어떤 모델을 쓰며 실패하면 어떻게 하나? | [Decision 계층](DECISION_LAYERS.md) | 12개 논리 책임, 5개 논거 과제, 역할별 배정·transport·확률·오류·비용·채택 |
 | Jev 전제 관측을 기존 audit와 어떻게 결합하고 검증하나? | [audit 연결](JEV_AUDIT_INTEGRATION.md) | 기존 검증 보존·blind graph·새 scoped 예산·전이→G1→G2/G3 |
 | 로컬 모델 없이 Sol로 검증하려면? | [외부 검증 실행](REMOTE_VERIFICATION.md) | 생성/검증 역할 배정·외부 임베딩·기존 장부·새 사실 평가 |
+| 세부/일반 후보의 검색 누락을 어떻게 줄이나? | [상하위 검색](HIERARCHY_RETRIEVAL.md) | 실제 직접 지지 후보의 부모를 검색에만 추가 |
+| 갱신999와 전체 실행은 어떻게 구분하나? | [자료 갱신/전체 실행](COHORT_COMPLETION.md) | 원r5 유지·새자료 revision·G4 권한/예산 경계 |
 | 댓글에서 어떤 데이터와 절차로 Agent를 만드나? | [Factory 설계](FACTORY.md) | F-01~06, 데이터 계약, 모델 요청과 host 검사 |
 | 비교·1:1·그룹·성찰은 어떻게 동작하나? | [상호작용 설계](INTERACTIONS.md) | I-01~07, API, 상태·저장·동시성·화면 연결 |
 | 비용·캐시·평가·마이그레이션은 어떻게 통제하나? | [실행·검증 설계](EXECUTION.md) | X-01~06, 합성 사례, 비용식, 채택/폐기·배포 순서 |
@@ -31,7 +33,7 @@ Compact 후 전체 실험 이력을 읽는 대신 해당 TASK의 `design_refs`�
 
 Before Use → Explore → Converse → Reflect. 시청자의 의견 변화는 성공 조건이 아니다.
 관점 수는 자료에 따라 달라지고 서로 반대할 필요가 없다. 그룹은 Converse의 대안 경로다.
-기존 자동 결과의 제품 기능 연결은 개발 범위로 구현했다. 현재는 cluster→Agent 실제 생성·품질·비용을 확인한 후 프론트를 구현한다.
+기존 자동 결과의 제품 기능 연결은 개발 범위로 구현했다. Figma 프론트/API 연결과 제한된 실제 모델 E2E를 구현했다. Factory 정식G1~G4와 사용자 검증은 별도다.
 
 ```mermaid
 flowchart LR
@@ -55,7 +57,7 @@ flowchart LR
 
 - Python 3.12+ 단일 애플리케이션과 기존 provider/Factory/Agent 모듈을 유지한다.
 - Factory는 명시적 계획으로 실행하는 준비 작업이다. HTTP 요청에서 전체 Factory를 동기 실행하지 않는다.
-- 기존 MiniLM 검색과 NLI 사실 검사 부품은 재사용한다. 로컬 생성 모델이나 새 대형 다운로드를 요구하지 않는다.
+- 기본/legacy MiniLM·NLI 경로는 보존한다. 현재 선택한 all-HTTP 경로는 외부 embedding·Sol 검증을 사용하며 로컬 모델 가중치를 로드하지 않는다.
 - MVP 실행 worker는 한 개다. 전역 공유 장부의 직렬 예약 규칙을 유지하며 다중 worker/분산 큐를 도입하지 않는다.
 - 분석 artifact는 불변 파일로, 새 상호작용 상태는 SQLite 저장소로 관리한다. 지출 장부와 앱 저장소는 별개다.
 - 기존 `/api/session` 등은 그대로 유지한다. 새 `/api/v1/...`와 버전 있는 adapter를 추가할 후보 설계다.

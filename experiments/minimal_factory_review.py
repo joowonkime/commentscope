@@ -53,6 +53,31 @@ def private(path):
     if not Path(path).resolve().is_relative_to(Path('runs').resolve()): raise ValueError('Private review path required')
 
 
+def completion_reference(plan):
+    """A separately pinned G4 entry point may bind an approved data-only renewal.
+
+    The common semantic/model manifest stays identical across G1/G2/G3/G4.
+    Historical runs without this explicit extension retain the old reference.
+    """
+    extension=plan.get('completion_execution')
+    if extension is None:return None
+    names={'tools/complete_factory.py','tools/cohort_refresh.py'}
+    if (plan['gate'] not in ('G2','G3','G4') or not isinstance(extension,dict)
+            or set(extension)!={'version','tool_files'}
+            or extension['version']!='factory-completion-tools-20261110-v1'
+            or not isinstance(extension['tool_files'],dict) or set(extension['tool_files'])!=names):
+        raise ValueError('Explicit pinned G4 execution tools required')
+    try:
+        if any(plan['inputs'].get(p)!=h or sha(p)!=h for p,h in extension['tool_files'].items()):
+            raise ValueError('G4 execution tools changed')
+    except OSError:raise ValueError('Pinned G4 execution tool is unavailable') from None
+    from tools.complete_factory import review_reference
+    reference=review_reference(plan)
+    if plan['gate']!='G4' and reference is not None:
+        raise ValueError('Completion phase cannot replace fixed G2/G3 meaning references')
+    return reference
+
+
 def load_run(run):
     private(run); plan = read_json(run/'plan.json'); completion = read_json(run/'completed.json')
     if plan.get('artifact_kind') in ('minimal-factory-executor-20261102-v16',
@@ -84,6 +109,7 @@ def load_run(run):
             or completion['runtime_sha256'] != sha(run/'artifacts/runtime.json')):
         raise ValueError('Completed and immutable run required')
     profile = acceptance.from_plan(plan)
+    completion_reference(plan)
     if (plan['artifact_kind'] in EXECUTORS[2:]) != (profile is not None):
         raise ValueError('Cannot retroactively change a historical run acceptance contract')
     # Code may have since advanced. The run hashes identify its implementation;
@@ -202,9 +228,11 @@ def evaluate(directory, review_path, output_path):
         gates['two_distinct_agents'] = {'mandatory','voluntary'} <= agent_labels
         gates['all_agent_fixed_questions'] = len(rows('runtime')) == 3*len(rows('agent')) and len(rows('agent')) >= 2
     else:
-        samples = read_json(Path('runs/design-freeze-20261016/samples.json'))
-        reference = read_json(samples['meaning_reference'])
-        if sha(samples['meaning_reference']) != samples['meaning_reference_sha256']: raise ValueError('Fixed meaning reference changed')
+        reference=completion_reference(plan)
+        if reference is None:
+            samples = read_json(Path('runs/design-freeze-20261016/samples.json'))
+            reference = read_json(samples['meaning_reference'])
+            if sha(samples['meaning_reference']) != samples['meaning_reference_sha256']: raise ValueError('Fixed meaning reference changed')
         meaningful = {r['source_id'] for r in reference['rows'] if r['eligibility'] == 'meaningful'}
         if len(meaningful) != 755: raise ValueError('Meaning denominator changed')
         scope = set(plan['scope_ids']) & meaningful

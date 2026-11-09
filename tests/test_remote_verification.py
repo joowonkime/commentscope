@@ -224,10 +224,22 @@ class RemoteExecutorTests(unittest.TestCase):
         self.assertEqual(self.plan['resource_policy']['minimum_available_mb'],256)
         self.assertEqual(self.plan['classifier']['kind'],'remote_llm')
         self.assertIsNone(self.plan['scope_refresh'])
-        self.assertEqual(self.plan['membership_retrieval_policy'],self.e.candidate_consolidation.ALIAS_RETRIEVAL)
+        self.assertEqual(self.plan['membership_retrieval_policy'],self.e.candidate_hierarchy.VERSION)
         self.e.validate(self.run,self.plan)
         changed=deepcopy(self.plan);changed['verification_deployment']=self.gen
         with self.assertRaises(ValueError):self.e.guard(changed)
+
+    def test_explicit_execution_guard_blocks_all_transport_paths_before_dispatch(self):
+        session=object.__new__(self.e.RemoteSession);session.plan=self.plan
+        session.dispatch=Mock();session.clients={'embedding':None}
+        session.authorization_guard=Mock(side_effect=ValueError('authorization held'))
+        with patch.object(self.e,'check_quota'):
+            for operation in (lambda:session.inspect({}),lambda:session.call('extract',{}),
+                              lambda:session.embed('sources',{'a':'Toy source.'})):
+                with self.subTest(operation=operation),self.assertRaisesRegex(ValueError,'authorization held'):
+                    operation()
+        self.assertEqual(session.authorization_guard.call_count,3)
+        self.assertTrue(all(call.kwargs=={'call_seconds':180} for call in session.authorization_guard.call_args_list))
         changed=deepcopy(self.plan);changed['maximum_cost_usd']='9'
         with self.assertRaises(ValueError):self.e.guard(changed)
 

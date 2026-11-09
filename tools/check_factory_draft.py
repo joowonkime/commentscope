@@ -28,6 +28,7 @@ MODULES = (
     "test_remote_verification",
     "test_api_resources",
     "test_alias_retrieval",
+    "test_candidate_hierarchy",
     "test_revalidated_snapshot",
     "test_typed_verification",
     "test_typed_controls",
