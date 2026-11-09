@@ -1,0 +1,46 @@
+# 실제24개 개발 실행과 정식 품질 판정의 경계
+
+TASK-017, REQ-001/002/003/008/009/010. 두 질문의 설명 뒤 사용자 `rr`(ㄱㄱ)는
+현재999개 자료 갱신과 실제24개 개발 검증을 승인했다. G1 실패를 정식 합격으로 바꾸지 않는다.
+
+## 확인한 실패와 이번 변경
+
+상하위 검색의 새 G1은299호출/$0.618985150, 의무화5·자율3 지지 집계이나 Agent0이다.
+추가된 보고/인용 후보가 B/C/G/I의 source argument `status=unresolved`를 만들고,
+그 source의 다른 후보도 `member_arguments_incomplete/member_completeness_not_verified`로
+차단됐다. G에는 추가 유형/전제 관측 충돌도 있다. 검색 성공은 논거 검증 성공이 아니다.
+전체92항목 assistant 검토(독립사람gold 아님)에서 잘못된 보고 지지3건, 미완성논거4건, 비병합narrowing 오류1건을 기록했다. 정식13/16·실패다.
+원래 출력·응답·비용을 보존하고, 검증 실패를 지우거나 다른 실행의 좋은 응답과 섞지 않는다.
+
+이번 개발 실행은 역할·검증·compiler를 다시 교체하지 않는다. 실제 입력에서 관점→Agent 생성과
+제품 연결을 확인한다. 합성G1 추가 유료 반복은 보류한다. source 전체/후보별 완전성 경계 개선은
+검증된 source-target 계약과 부정 회귀 없이 넣지 않는다.
+
+## 실행 계약
+
+- 기존 등록24개 source ID를 그대로 사용한다. 현재 유효한 재검증 snapshot에 ID·본문·부모가
+  동일함을 receipt binding으로 확인한다. 19개 의미 있는 원문의 분모도 바꾸지 않는다.
+- 도구의 artifact kind는 `actual24-development-20261110-v1`, mode는 `development`다.
+  financial gate `G2`는 기존 $8 money owner에 이미 허용된 범위만 지정한다.
+  `formal_admission_eligible=false`, `quality_gate_passed=false`이며 정식 review의
+  executor 목록에 추가하지 않는다. 따라서 이 결과로 G3/G4 admission을 만들 수 없다.
+- 생성GPT-5.2, 검증GPT-6.1 Sol, 외부embedding과 기존 역할·조건·귀속·사실 검증을 유지한다.
+  source/공통코드/도구/부품fact40/입력/자료/현재 resume authorization을 hash로 동결한다.
+- 원래 $8 owner와 총$50 장부를 공유하며 이번 실행 추가 상한은 $1.50이다. 이미 사용한 비용,
+  보수 청구, 예약·미확정 hold를 보존한다. 자동 fallback/실패 재시도·다른 run 응답 재사용은0이다.
+- 동일 plan 재개는 이미 정산된 checkpoint만 읽는다. 미완료 intent는 자동 재호출하지 않는다.
+  HTTP 자원 기준과1GiB artifact 상한, 디스크 하한을 유지한다. 로컬 모델을 로드하지 않는다.
+- 전체 자동 출력·보류·오류·실제 모든 Agent의3질문·비용을 남긴다. Agent가2개 미만이어도
+  실패를 그대로 기록한다. 좋은 Agent만 수동 선택해 품질 합격으로 표시하지 않는다.
+
+## 검증과 다음 단계
+
+합성 검사에서 정식 review 거절, scope/도구/모델 변조 거절, $1.50 초과 거절,
+과거 지출 보존, 동일 plan 완료 재열람0호출을 확인한다. 실제 실행은 별도 limited_live 증거다.
+자동 bundle이 제품 계약을 충족하면 experimental 실제24개 화면에 연결하고 세 과업을 확인한다.
+실제24개 성공은 실제999개/60%/서비스 단가/사람의 이해 효과를 증명하지 않는다.
+정식 G1~G4, 사용자 확인, 지속 배포 URL은 각 작업의 완료 조건을 유지한다.
+
+현재 실행은 Jev 서비스/SDK 호출이 아니다. `TYPED_CHAT`/`TYPED_CHAT_VERSION` 프로토콜로
+GPT-6.1 Sol이 OpenRouter의 구조화 chat 응답을 반환하고 host가 결합한다.
+Jev 실험의 판정 책임 분리와 실제 Jev 도구 사용을 구별한다.

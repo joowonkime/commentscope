@@ -33,7 +33,8 @@ G4도 각 이전 정식gate·동일 공통 Python/model/provider/prompt/자료·
 명시적으로 주입받는다. 기본 경로는 기존 guard다. 새 phase도 같은 ledger와 강제 전체$50 한도를 사용한다.
 기존 G1~G3 권한으로G4를 시작할 수 없다. G4 guard는 자신의 cohort/기한/금액/공유policy를 확인한다.
 
-G4의 준비/권한/평가 자료 연결은 `tools/complete_factory.py`와 `tools/cohort_refresh.py`에서 별도 구현한다.
+G4의 준비/권한/평가 자료 연결은 `tools/complete_factory.py`와 `tools/cohort_refresh.py`에서 별도 구현했다.
+정식 선행gate가 실패한 현재는 G4 권한/실행을 만들지 않았다. 개발24개 경로는 ACTUAL24_DEVELOPMENT.md를 따른다.
 공통 의미 파이프라인과6개 사실 부품의 code manifest는 G1부터 동일하게 유지한다.
 G4 plan은 공통 코드에 더해 두 도구 자체의 hash를 동결하며, 변경된 도구로 완료 결과를 승인할 수 없다.
 평가 adapter도 고정된G4 도구와 새 참조를 검증하고, 다른 gate의 평가 자료를 교체하지 않는다.
