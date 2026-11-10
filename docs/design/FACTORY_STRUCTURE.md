@@ -267,16 +267,22 @@ Jev는 관점 문구, 새로운 근거 인용문, 세계 anchor 문자열, 자�
 Jev는 Decisions endpoint이고 Sol의 chat JSON/receipt binder와 형식이 다르므로, 요청 생성·배정·영수증 검증을 함께 분기해야 한다.
 이 배정표는 신규 plan의 비교안이며 현행 기본값의 변경은 아니다.
 
-### 현재 어댑터를 그대로 쓸 수 없는 이유
+### 기존 transport 제한과 새 membership adapter
 
 기존 `providers/openrouter_decisions.py`에는 실제 논거 실험용 Decisions·예약·정산 어댑터가 있다.
 그러나 첫 trial용으로 choice만, 질문당 최대8선택지, 최대16질문,28kB wire를 고정했다.
 현재 source-use enum은9개이므로 이 raw schema 전체를 그 validator에 그대로 넣을 수 없다.
 이것은 Jev 서비스가 지원하지 않는다는 뜻이 아니라 **저장소의 기존 첫 trial 계약 제한**이다.
 
-새 membership protocol/envelope 버전으로 필요한 선택지 수·질문 수·wire 한도를 명시한다.
-기존 trial의 전역 상수를 조용히 늘리지 않는다. 질문·선택지 순서·입력 hash와 모델/provider의 원본 영수증을 저장한다.
+새 membership protocol은9개 값을7개+other와 나머지+other의 두 질문으로 완전히 덮는다.
+정확히 한 질문에서만 실제 값을 선택해야 하며 모순/누락은 pair 전체를 보류한다.
+질문16개·선택지8개·wire28kB와 기존 최대 문맥 예약은 유지한다. 입력/질문 크기에 따라
+packet을 나누되 원문이나 필수 질문을 자르지 않는다. 질문·선택지 순서·입력 hash와 모델/provider의 원본 영수증을 저장한다.
 기존 Sol raw/chat batch나 논거 Jev 영수증을 새 membership 결과로 재태깅하지 않는다.
+
+이 첫 adapter와 pipeline opt-in은 [Jev membership 계약](JEV_MEMBERSHIP.md)에 구현 범위를 기록한다.
+기본 경로는 Sol이다. 구현·합성 회귀와 제한 component의 비용/정확도 측정을 구별하며,
+DEC-009 전체의 production 채택이나 새 발견 알고리즘의 구현 완료를 뜻하지 않는다.
 
 ### 질문 수와 근거 구간의 비용
 

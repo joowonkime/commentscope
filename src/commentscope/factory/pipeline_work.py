@@ -49,6 +49,8 @@ class PipelineWork:
         self.source_batch_cache = {}
         self.source_batch_attempted = set()
         self.source_batch_failed = set()
+        self.jev_membership_cache = {}
+        self.jev_membership_failed = set()
 
     def work(self, stage, items, build, bind, size, *, minimum=1):
         results = []
@@ -180,6 +182,49 @@ class PipelineWork:
                         results.append(verified)
         return results
 
+    def judge_jev(self, source, target, context, source_world, candidate_world):
+        from commentscope.factory import jev_membership as jev
+        from commentscope.providers import openrouter_decisions as decisions
+        key = digest([jev.VERSION,source,target,context,source_world,candidate_world])
+        if key in self.jev_membership_cache:
+            return [deepcopy(self.jev_membership_cache[key])]
+        from commentscope.factory import raw_membership as raw
+        logical_key = digest(raw.request(source,target,version=raw.WORLD_CONTEXT,source_context=context,
+                             source_world=source_world,candidate_world=candidate_world))
+        if logical_key in self.jev_membership_failed:
+            self.holds.append({'stage':'membership-jev','source_id':source['id'],'candidate_id':target['id'],
+                               'reason':'prior_typed_pair_unavailable_no_retry'})
+            return []
+        self.jev_membership_failed.add(logical_key)
+        try:
+            task = jev.task(source,target,source_context=context,source_world=source_world,candidate_world=candidate_world)
+        except ValueError as exc:
+            self.holds.append({'stage':'membership-jev','source_id':source['id'],'candidate_id':target['id'],
+                               'reason':'complete_typed_input_unavailable','message':str(exc)})
+            return []
+        responses=[]
+        from commentscope.factory.shared_admission import PriorRequestUnavailable
+        try:
+            for payload in task['requests']:
+                identity=decisions.wire_sha256(payload,decisions.DEPLOYMENT)
+                capacity=jev.measure(payload);self.capacity.append({'stage':'membership-jev',**capacity})
+                self.save('capacity/membership-jev-'+identity,capacity)
+                responses.append(self.runner.decide('membership-jev-'+identity[:20],payload))
+            proof=jev.bind(task,responses)
+        except PriorRequestUnavailable:
+            self.holds.append({'stage':'membership-jev','source_id':source['id'],'candidate_id':target['id'],
+                               'reason':'prior_typed_packet_unavailable_no_retry'})
+            return []
+        except (ValueError,KeyError,TypeError) as exc:
+            error={'stage':'membership-jev','task_sha256':digest(task),'exception':type(exc).__name__,
+                   'message':str(exc),'task':task,'responses':responses}
+            self.errors.append(error);self.save('errors/membership-jev-'+digest(task),error)
+            return []
+        self.jev_membership_failed.discard(logical_key)
+        self.jev_membership_cache[key]=deepcopy(proof)
+        self.save('bound/membership-jev-'+digest(task),proof)
+        return [proof]
+
     def verify_raw(self, proof):
         from commentscope.factory import raw_membership_verification as verification
         source, target = proof['source'], proof['candidate']
@@ -246,10 +291,13 @@ class PipelineWork:
                     if source_world is None or candidate_world is None:
                         self.holds.append({'stage': stage, **pair, 'reason': 'world_observation_unavailable'})
                         continue
-                proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target,version=raw_protocol,source_context=context,
-                                source_world=source_world,candidate_world=candidate_world),
-                            lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context,
-                                source_world=source_world,candidate_world=candidate_world),1)
+                if getattr(self, 'membership_judge_protocol', None):
+                    proofs = self.judge_jev(source,target,context,source_world,candidate_world)
+                else:
+                    proofs=self.work(stage+'-raw',[pair],lambda group:raw.request(source,target,version=raw_protocol,source_context=context,
+                                    source_world=source_world,candidate_world=candidate_world),
+                                lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context,
+                                    source_world=source_world,candidate_world=candidate_world),1)
                 for proof in proofs:
                     results.append(self.verify_raw(proof))
             return results

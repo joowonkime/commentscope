@@ -5,9 +5,9 @@ import re
 
 from commentscope.factory.automatic_contract import digest
 
-VERSION='factory-full-cost-plan-20261110-v2'
+VERSION='factory-full-cost-plan-20261110-v3'
 PROFILE=VERSION+'-profile'
-STAGES=('shared-discovery','source-context','source-world','candidate-world','membership-raw','membership-source-batch',
+STAGES=('shared-discovery','source-context','source-world','candidate-world','membership-raw','membership-source-batch','membership-jev',
         'raw-candidate-route','raw-own-evidence','core','core-fidelity','argument-node-metadata',
         'argument-position-alignment','argument-dependencies','argument-owner','argument-dependency',
         'argument-audit','facts','runtime','embedding-sources','embedding-candidates')
@@ -41,6 +41,7 @@ def canonical(stage,request=None):
 
 
 def deployment(plan,stage):
+    if stage=='membership-jev':return plan.get('membership_deployment',plan['verification_deployment'])
     field=('embedding_deployment' if stage.startswith('embedding-') else
            'deployment' if stage in GENERATION else 'verification_deployment')
     return plan[field]
@@ -95,9 +96,18 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
     protocol=plan.get('membership_batch_protocol')
     if protocol not in (None,BATCH_VERSION):raise CostPlanError('Unknown membership batch protocol')
     packets=packet_schedule(plan['scope_ids'],candidates) if protocol else None
+    from commentscope.factory import jev_membership
+    typed=plan.get('membership_judge_protocol')
+    if typed not in (None,jev_membership.VERSION) or typed and packets:
+        raise CostPlanError('Explicit exclusive membership protocol required')
+    if typed:
+        from commentscope.providers import openrouter_decisions
+        if plan.get('membership_deployment')!=openrouter_decisions.DEPLOYMENT:
+            raise CostPlanError('Frozen Jev membership deployment required')
     minimum={'shared-discovery':(n+11)//12,'source-context':n if k else 0,
-        'source-world':n if k else 0,'candidate-world':k,'membership-raw':0 if packets else schedule['total_upper_bound'],
+        'source-world':n if k else 0,'candidate-world':k,'membership-raw':0 if packets or typed else schedule['total_upper_bound'],
         'membership-source-batch':packets['total_upper_bound'] if packets else 0,
+        'membership-jev':schedule['total_upper_bound'] if typed else 0,
         'raw-candidate-route':k,'embedding-sources':1,'embedding-candidates':int(k>0)}
     if goal=='mvp':
         if k<2:issues.append('fewer_than_two_candidates')

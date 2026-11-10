@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v29`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261110-v30`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~017, DEC-001~009.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -19,6 +19,7 @@
 | 관점 수를 모르는 상태에서 어떤 구조로 만들까? | [Factory 구조 정본](FACTORY_STRUCTURE.md) | 현재/추천 도식, 책임·입출력·모델·미대응·원가·이전순서 |
 | 현재 무엇이 반복되고 무엇을 재사용하나? | [현행 기준선](BASELINE.md) | 코드/호출/비용/실패와 교체 표 |
 | 어떤 판단에 어떤 모델을 쓰며 실패하면 어떻게 하나? | [Decision 계층](DECISION_LAYERS.md) | 12개 논리 책임, 5개 논거 과제, 역할별 배정·transport·확률·오류·비용·채택 |
+| Jev로 raw membership을 판정하려면? | [Jev membership](JEV_MEMBERSHIP.md) | M1 opt-in·전체 질문/근거·Sol M2 유지·고정 component 비용/정확도 |
 | Jev 전제 관측을 기존 audit와 어떻게 결합하고 검증하나? | [audit 연결](JEV_AUDIT_INTEGRATION.md) | 기존 검증 보존·blind graph·새 scoped 예산·전이→G1→G2/G3 |
 | 로컬 모델 없이 Sol로 검증하려면? | [외부 검증 실행](REMOTE_VERIFICATION.md) | 생성/검증 역할 배정·외부 임베딩·기존 장부·새 사실 평가 |
 | 세부/일반 후보의 검색 누락을 어떻게 줄이나? | [상하위 검색](HIERARCHY_RETRIEVAL.md) | 실제 직접 지지 후보의 부모를 검색에만 추가 |

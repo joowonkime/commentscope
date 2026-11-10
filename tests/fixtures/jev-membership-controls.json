@@ -1,0 +1,11 @@
+{
+  "version": "jev-membership-controls-20261110-v1",
+  "cases": [
+    {"id":"positive-en","text":"I support making city buses free.","candidate":"City buses should be free.","source_use":"substantive_assertion","world":"real_world","expected_relation":"supported","expected_passed":true},
+    {"id":"positive-conditional-ko","text":"병원 예산을 줄이지 않는 경우에만 시내버스 무료화에 찬성합니다.","candidate":"City buses should be free only if hospital funding is not cut.","source_use":"substantive_assertion","world":"real_world","expected_relation":"supported","expected_passed":true},
+    {"id":"missing-condition","text":"I support making buses free only if hospital funding is protected.","candidate":"Buses should be free.","source_use":"substantive_assertion","world":"real_world","expected_relation":"conditional","expected_passed":false},
+    {"id":"opposed-ko","text":"도심 자동차 전면 금지 정책에 반대합니다.","candidate":"Cars should be completely banned from the city centre.","source_use":"substantive_assertion","world":"real_world","expected_relation":"opposed","expected_passed":false},
+    {"id":"reported-not-endorsed","text":"The headline says city buses should be free. I am only reporting that view, not endorsing it.","candidate":"City buses should be free.","source_use":"reported_substantive_content","world":"real_world","expected_relation":"unrelated","expected_passed":false},
+    {"id":"unresolved-reference","text":"I agree.","candidate":"City buses should be free.","source_use":"unclear","world":"mixed_or_unclear","expected_relation":"uncertain","expected_passed":false}
+  ]
+}

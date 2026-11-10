@@ -58,10 +58,17 @@ def audit(directory):
             row=other.setdefault(legacy,{'calls':0,'cost_usd':Decimal(0)})
             row['calls']+=1;row['cost_usd']+=charge;continue
         deployment=cost.deployment(plan,family)
-        raw=result if family.startswith('embedding-') else result.get('transport',{}).get('provider_response')
+        raw=result if family.startswith('embedding-') or family=='membership-jev' else result.get('transport',{}).get('provider_response')
+        if family=='membership-jev':
+            from commentscope.factory import jev_membership
+            from commentscope.providers import openrouter_decisions
+            if plan.get('membership_judge_protocol')!=jev_membership.VERSION or deployment!=openrouter_decisions.DEPLOYMENT:
+                raise cost.CostPlanError('Typed membership deployment/protocol differs from frozen plan')
+            openrouter_decisions.answers(request,result,deployment)
         model=(raw or {}).get('model','')
         allowed=deployment.get('response_models',[deployment['model']])
-        if (raw is None or raw.get('provider')!='OpenAI' and not family.startswith('embedding-')
+        provider='TypeSafe' if family=='membership-jev' else 'OpenAI'
+        if (raw is None or raw.get('provider')!=provider and not family.startswith('embedding-')
                 or not any(model==m or re.fullmatch(re.escape(m)+r'-\d{8}',model) for m in allowed)
                 or cost.amount(raw['usage']['cost'])!=charge):
             raise cost.CostPlanError('Original model/provider/cost receipt required')
@@ -72,6 +79,8 @@ def audit(directory):
         row['calls']+=1;row['cost_usd']+=charge;row['maximum_cost_usd']=max(row['maximum_cost_usd'],charge)
         if family=='membership-source-batch':
             row['maximum_batch_targets']=max(row.get('maximum_batch_targets',0),len(request['data']['CANDIDATE_TARGETS']))
+        if family=='membership-jev':
+            row['maximum_questions']=max(row.get('maximum_questions',0),len(request['questions']))
         usage=raw['usage']
         row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
         details=usage.get('prompt_tokens_details')
@@ -142,9 +151,13 @@ def template(directory):
         'embedding-sources':completed['embedding-sources'] or None,
         'embedding-candidates':len(batches({c['id']:c['text'] for c in candidates})) if k else 0})
     counts['membership-source-batch']=0
+    counts['membership-jev']=0
     if plan.get('membership_batch_protocol'):
         counts['membership-raw']=0
         counts['membership-source-batch']=cost.packet_schedule(plan['scope_ids'],candidates)['total_upper_bound']
+    if plan.get('membership_judge_protocol'):
+        counts['membership-raw']=0
+        counts['membership-jev']=None # Physical packet count depends on every segment/descriptor question.
     return {'version':cost.VERSION,'goal':'mvp','target_plan_sha256':sha(directory/'plan.json'),
         'candidate_sha256':sha(directory/'artifacts/initial-candidates.json'),
         'counts':counts,'multiplier':'1.25','headroom_usd':'0.15',

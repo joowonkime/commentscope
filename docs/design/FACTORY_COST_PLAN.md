@@ -93,3 +93,8 @@ python tools/plan_factory_cost.py preview runs/current \
 별도로통과해야한다. 거절견적은보존되며 무료로보완할수있고, 수락한계획/입력은동결한다.
 
 원문별 묶음 전송은 [SOURCE_MEMBERSHIP_BATCH](SOURCE_MEMBERSHIP_BATCH.md)의 opt-in 구현을 따른다. 별도 `membership-source-batch` stage와 최대 후보 수를 포함한 실제 profile이 필요하며 기존 scalar 단가를 승계하지 않는다.
+
+Jev M1 opt-in은 [JEV_MEMBERSHIP](JEV_MEMBERSHIP.md)을 따른다. 비용 계약v3의
+`membership-jev`는 별도 deployment·전체 physical packet 비용을 기록한다. 기존 Sol 단가를
+승계하지 않으며, 질문/packet 수가 확정되지 않은 전체 workload는 null로 보류한다.
+제한 component 비교가 전체 Factory의 미측정 단계나 실행 gate를 해제하지 않는다.

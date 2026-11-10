@@ -188,6 +188,9 @@ def bind(source, candidate, result, *, version=VERSION, source_context=None, sou
 
 
 def validate(record):
+    from commentscope.factory import jev_membership
+    if record.get('artifact_kind') == jev_membership.VERSION:
+        return jev_membership.validate(record)
     from commentscope.factory import source_membership_batch
     if record.get('artifact_kind') == source_membership_batch.PROJECTION:
         return source_membership_batch.validate(record)

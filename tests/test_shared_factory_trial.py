@@ -73,7 +73,21 @@ class SharedTrialTests(unittest.TestCase):
     def test_batched_development_flows_through_proposal_cost_gate_and_runtime(self):
         self.proposal_pause_and_full_continuation(batch_membership=True)
 
-    def proposal_pause_and_full_continuation(self,*,batch_membership=False):
+    def test_jev_role_binding_rejects_mixed_transports_or_foreign_deployment(self):
+        from commentscope.factory import jev_membership
+        from commentscope.providers import openrouter_decisions
+        plan=deepcopy(self.plan);plan.update(membership_judge_protocol=jev_membership.VERSION,
+            membership_deployment=deepcopy(openrouter_decisions.DEPLOYMENT))
+        trial.guard(plan)
+        changed=deepcopy(plan);changed['membership_deployment']['model']='different'
+        with self.assertRaises(ValueError):trial.guard(changed)
+        changed=deepcopy(plan);changed['membership_batch_protocol']=trial.source_membership_batch.VERSION
+        with self.assertRaises(ValueError):trial.guard(changed)
+
+    def test_jev_development_keeps_proposal_cost_gate_and_runtime(self):
+        self.proposal_pause_and_full_continuation(jev_judging=True)
+
+    def proposal_pause_and_full_continuation(self,*,batch_membership=False,jev_judging=False):
         import test_minimal_pipeline as pipeline_fixture
         from test_shared_typed_pipeline import SharedRunner
         from experiments.grounding_contract_demo import MODEL
@@ -92,6 +106,12 @@ class SharedTrialTests(unittest.TestCase):
                         stage_aliases=deepcopy(trial.BATCH_ALIASES),run_directory=str(directory.resolve()))
             write(directory/'plan.json',plan)
             runner=BatchRunner()
+        elif jev_judging:
+            from test_jev_membership import JevRunner
+            directory=self.f.root/'jev-run'
+            plan.update(membership_judge_protocol=trial.jev_membership.VERSION,
+                        membership_deployment=deepcopy(trial.decisions.DEPLOYMENT),run_directory=str(directory.resolve()))
+            write(directory/'plan.json',plan);runner=JevRunner()
         else:runner=SharedRunner()
         runner.embed=helper.embed;runner.inspect=helper.inspect
         runner.storage=SimpleNamespace(before_write=lambda value:None)
@@ -119,6 +139,7 @@ class SharedTrialTests(unittest.TestCase):
             output=read_json(directory/'artifacts/output.json')
             self.assertEqual(output['membership_evidence_protocol'],trial.executor.raw_membership_verification.QUALIFIED_CONTEXT)
             if batch_membership:self.assertEqual(output['membership_batch_protocol'],trial.source_membership_batch.VERSION)
+            if jev_judging:self.assertEqual(output['membership_judge_protocol'],trial.jev_membership.VERSION)
             self.assertTrue(done['same_plan_resume']);self.assertFalse(done['formal_admission_eligible'])
             self.assertEqual(trial.run(directory),done)
             self.assertEqual(sessions.call_count,2)

@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261110-v33`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261110-v34`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v29`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v30`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -100,7 +100,8 @@ DEC-009는 신규 발견/Jev 배정의 제안이며 구조v1의 책임이나 실
 
 모델 호출은 [Decision 계층 상세 설계](design/DECISION_LAYERS.md)의 입력·출력·권한별로 배정한다.
 생성·원문 관측·관계·논거·근거 기반 사실 검사와 host 승인을 구별한다. 기존 Jev 증거는 논거 component에 한정되고,
-현재 shared 원격 실행은 Sol을 사용한다. Jev raw membership 배정은 DEC-009의 새 비교 제안이다.
+현재 shared 원격 실행의 기본값은 Sol이다. Jev raw membership은
+[M1 opt-in 계약](design/JEV_MEMBERSHIP.md)으로 구현·제한 비교하며 production 채택은 DEC-009의 제안 상태다.
 기본 단일 deployment는 유지하며 opt-in 전제 관측 연결의 구현·검증은 [연결 계약](design/JEV_AUDIT_INTEGRATION.md)으로 구별한다.
 이 연결은 전체 역할별 배정이나 production Jev 채택을 뜻하지 않는다.
 과제별 registry/transport·확률 정책·오류·예산·채택 증거는 DEC-007에서 추적한다.
@@ -182,6 +183,8 @@ snapshot 사용기한과 원문 hash를 매 실행 전 확인하고, 기한 경�
 수동으로 좋은 Agent만 골라 자동 품질 합격 처리, CI로 모델 품질·시장 경쟁력을 입증했다는 주장.
 
 현재 TASK-001/002/003과 TASK-015/008/009/010/011은 기록된 개발 구현/검증 범위에서 완료했다.
+Lecture15 PDF4–6쪽의 M4 배점/일관성·직접 사용 기준과 현재 구현의 대조는
+[M4 검토](M4_PROTOTYPE_REVIEW.md)를 따른다. 강의 확인으로 내부 r5나 예산 한도를 변경하지 않는다.
 다음은 TASK-005의 기존 기본 cluster→Agent 전체 실행과 동일 설정의 실제 G2/G3/G4다.
 TASK-004/013/014의 새 의미 역할 채택은 보류한다. Figma 화면과 제품 API 연결은 구현됐고, 실제999개 품질과 사용자 검증은 남았다. 전체 품질/제품 완료 상태와 증거는 추적표를 따른다.
 
