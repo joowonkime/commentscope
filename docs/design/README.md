@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v27`. 대조 코드: `fff2260`.
+설계 버전: `commentscope-detailed-design-20261110-v28`. 대조 코드: `fff2260`.
 연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -146,3 +146,5 @@ TASK-005 [후보별 원문 완전성](CANDIDATE_SOURCE_COVERAGE.md)은 bound typ
 - TASK-017 / REQ-008·009: [개발 제품 시험의 동일 trial 예산](PRODUCT_TRIAL_BUDGET.md). 실제96 결과와 분리한 실행 준비이며 제품 완료 증거가 아니다.
 
 - 현재책임계층의정본: [구조v1와Mermaid](ARCHITECTURE_BASELINE.md), [전체단계비용계획](FACTORY_COST_PLAN.md). DEC-008은역할/입출력고정이며모델/의미품질/단가채택은별도다.
+
+원문별 전송 최적화 계약과 채택 조건은 [membership batch](SOURCE_MEMBERSHIP_BATCH.md)를 따른다. 구조v1의 책임은 유지한다.

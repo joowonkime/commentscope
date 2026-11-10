@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v31",
+  "spec_version": "commentscope-mvp-20261110-v32",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "구조v1의책임/입출력은고정. 공통개발경로전체비용gate·단계상한·실제archive비용profile검증구현. Factory665/관련81/집중28무료검사통과(중복). 999개453source시나리오는계산부분34.64~37.57+미측정비용으로현재보수잔액33.94보다높음. 현재trial잔여0.12720254와원8/총50/기존시간·formal차단유지. 새유료호출0; 같은구조안에서batch전송의영수증/품질/원가비교를준비하기전대량재실행하지않음.",
+    "hold_reason": "구조v1 책임 유지. 원문별 최대6후보 batch opt-in/Factory684 무료검사 통과. 한 영상 기존350쌍을137packet으로 구성·전송량55.6%감소: 실제달러/타자료 일반화/전체단가 미검증. 사용자 추가한도 검토는 승인된 증액이 아님. 기존trial1.50/잔여0.12720254·원8·총50·만료시간 유지. 신규유료호출0; 새batch단가 미측정시 cost gate 차단.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -56,7 +56,9 @@
         "src/commentscope/factory/candidate_source_coverage.py",
         "tools/shared_factory_trial.py",
         "src/commentscope/factory/raw_membership_verification.py",
-        "src/commentscope/factory/pipeline_work.py"
+        "src/commentscope/factory/pipeline_work.py",
+        "src/commentscope/factory/source_membership_batch.py",
+        "tools/compare_membership_transport.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -75,7 +77,8 @@
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
-        "tests/test_membership_reference_context.py"
+        "tests/test_membership_reference_context.py",
+        "tests/test_source_membership_batch.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -87,7 +90,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/TYPED_VERIFICATION.md"
+        "docs/design/TYPED_VERIFICATION.md",
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
       ]
     },
     {
@@ -117,7 +121,9 @@
         "src/commentscope/factory/candidate_source_coverage.py",
         "tools/shared_factory_trial.py",
         "src/commentscope/factory/raw_membership_verification.py",
-        "src/commentscope/factory/pipeline_work.py"
+        "src/commentscope/factory/pipeline_work.py",
+        "src/commentscope/factory/source_membership_batch.py",
+        "tools/compare_membership_transport.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -136,7 +142,8 @@
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
-        "tests/test_membership_reference_context.py"
+        "tests/test_membership_reference_context.py",
+        "tests/test_source_membership_batch.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -155,7 +162,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/TYPED_VERIFICATION.md"
+        "docs/design/TYPED_VERIFICATION.md",
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
       ]
     },
     {
@@ -429,7 +437,9 @@
         "tools/serve_mvp.py",
         "tools/product_trial_budget.py",
         "src/commentscope/factory/cost_planning.py",
-        "tools/plan_factory_cost.py"
+        "tools/plan_factory_cost.py",
+        "src/commentscope/factory/source_membership_batch.py",
+        "tools/compare_membership_transport.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -450,7 +460,8 @@
         "tests/test_cohort_refresh.py",
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
-        "tests/test_factory_cost_plan.py"
+        "tests/test_factory_cost_plan.py",
+        "tests/test_source_membership_batch.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -486,7 +497,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/README.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/REMOTE_VERIFICATION.md"
+        "docs/design/REMOTE_VERIFICATION.md",
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
       ]
     },
     {
@@ -576,7 +588,9 @@
         "src/commentscope/factory/raw_membership_verification.py",
         "src/commentscope/factory/pipeline_work.py",
         "src/commentscope/factory/cost_planning.py",
-        "tools/plan_factory_cost.py"
+        "tools/plan_factory_cost.py",
+        "src/commentscope/factory/source_membership_batch.py",
+        "tools/compare_membership_transport.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -599,7 +613,8 @@
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
         "tests/test_membership_reference_context.py",
-        "tests/test_factory_cost_plan.py"
+        "tests/test_factory_cost_plan.py",
+        "tests/test_source_membership_batch.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -624,7 +639,8 @@
         "docs/design/BASELINE.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/TYPED_VERIFICATION.md"
+        "docs/design/TYPED_VERIFICATION.md",
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
       ]
     }
   ],
@@ -1803,7 +1819,8 @@
         "실제 bundle 제품 테스트도 같은trial 누적상한을 공유하는 실행 연결; 새서버로 한도초기화 금지",
         "새명시적 근거검사 protocol에서 원문영상 식별문맥 연속성 보존·기존계약/부정검사 유지; 유료재검증 별도",
         "단계별실측/추정/미측정과누적예산을구별한무료비용preview·본실행gate·단계호출상한",
-        "현재구조v1의책임/입출력/코드매핑·Mermaid원본"
+        "현재구조v1의책임/입출력/코드매핑·Mermaid원본",
+        "원문별 최대6후보 전송·전체batch 영수증/행 결합·실패재시도차단·별도 원가stage·무료기존요청 비교"
       ],
       "done_when": [
         "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
@@ -1863,6 +1880,12 @@
           "scope": "Full-stage cost audit/template/preview/review and physical request caps implemented for shared-development runner. Required Factory665, related81 and focused28 pass (overlap); missing/infeasible/unknown cost plans, altered cost profiles, pending checkpoints and inherited spend stop before dispatch. Rejected estimates are preserved without sealing the proposal plan; accepted inputs are immutable.4 actual archived runs re-audited with0 new calls. Mermaid2 syntax checks pass; responsibility/input-output structurev1 fixed, scalar transport/batch quality and fresh96/999 remain unverified.",
           "reference": "docs/design/FACTORY_COST_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Required Factory684 pass. Source-wise batch row/whole receipt provenance, unchanged host/world/descriptor/evidence vetoes, failed pair no-retry across metadata changes, physical stage caps and unknown batch price block. Scripted development resumes through full cost gate to2 Agents/6 runtime turns; archived completed350 pairs size to137 packets with phase ambiguity kept singleton. Zero new paid calls; no dollar-saving/generalization/fresh quality approval.",
+          "reference": "tests/test_source_membership_batch.py",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1879,7 +1902,8 @@
         "docs/design/PRODUCT_TRIAL_BUDGET.md",
         "docs/design/ARCHITECTURE_BASELINE.md",
         "docs/design/FACTORY_COST_PLAN.md",
-        "docs/design/FACTORY_COST_RESULT.md"
+        "docs/design/FACTORY_COST_RESULT.md",
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
       ]
     }
   ],
@@ -2053,8 +2077,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v31",
       "reason": "사용자 해봐 및 구조가괜찮으면고정/mermaid요청. 유료호출0으로 전체단계 비용preview와제안후실행gate/단계호출상한을구현하고, 현재논리책임계층/입출력을구조v1로고정한다. batch전송·모델재배정·의미품질채택은별도미검증으로유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v32",
+      "reason": "사용자 최적화 요청. 구조v1 책임을 보존한 원문별 최대6후보 batch 전송·정확한 provenance·동일실행 pair 중복제거·별도 비용stage를 opt-in 구현. 유료시간 만료와 기존trial잔여 보존, 무료요청 비교만 수행."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v27",
+  "design_version": "commentscope-detailed-design-20261110-v28",
   "design_document": "docs/design/README.md"
 }

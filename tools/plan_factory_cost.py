@@ -70,6 +70,8 @@ def audit(directory):
             'prompt_tokens':0,'completion_tokens':0,'cached_prompt_tokens':0,'cache_write_tokens':0,
             'cache_detail_responses':0})
         row['calls']+=1;row['cost_usd']+=charge;row['maximum_cost_usd']=max(row['maximum_cost_usd'],charge)
+        if family=='membership-source-batch':
+            row['maximum_batch_targets']=max(row.get('maximum_batch_targets',0),len(request['data']['CANDIDATE_TARGETS']))
         usage=raw['usage']
         row['prompt_tokens']+=usage.get('prompt_tokens',0);row['completion_tokens']+=usage.get('completion_tokens',0)
         details=usage.get('prompt_tokens_details')
@@ -139,6 +141,10 @@ def template(directory):
         'raw-candidate-route':k,'core':k,'core-fidelity':k,'runtime':3*k,
         'embedding-sources':completed['embedding-sources'] or None,
         'embedding-candidates':len(batches({c['id']:c['text'] for c in candidates})) if k else 0})
+    counts['membership-source-batch']=0
+    if plan.get('membership_batch_protocol'):
+        counts['membership-raw']=0
+        counts['membership-source-batch']=cost.packet_schedule(plan['scope_ids'],candidates)['total_upper_bound']
     return {'version':cost.VERSION,'goal':'mvp','target_plan_sha256':sha(directory/'plan.json'),
         'candidate_sha256':sha(directory/'artifacts/initial-candidates.json'),
         'counts':counts,'multiplier':'1.25','headroom_usd':'0.15',

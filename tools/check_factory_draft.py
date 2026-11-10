@@ -15,6 +15,7 @@ MODULES = (
     "test_membership_reference_context",
     "test_approximation_evidence_scope",
     "test_raw_membership_source_context",
+    "test_source_membership_batch",
     "test_statement_world_membership",
     "test_minimal_pipeline",
     "test_minimal_agents",

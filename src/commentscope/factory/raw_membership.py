@@ -188,6 +188,9 @@ def bind(source, candidate, result, *, version=VERSION, source_context=None, sou
 
 
 def validate(record):
+    from commentscope.factory import source_membership_batch
+    if record.get('artifact_kind') == source_membership_batch.PROJECTION:
+        return source_membership_batch.validate(record)
     version = record.get('artifact_kind')
     if version not in VERSIONS or bind(record['source'], record['candidate'], {'output': record['output']},
                                       version=version, source_context=record.get('source_context'),

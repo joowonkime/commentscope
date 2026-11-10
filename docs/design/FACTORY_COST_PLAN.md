@@ -91,3 +91,5 @@ python tools/plan_factory_cost.py preview runs/current \
 누락된측정은모델을자동호출해서채우지않는다. 기존독립부품진단을향후승인된범위에서측정할수는
 있지만 이번작업은신규모델호출0이다. 유효한preflight가있어도실제실행은기존시간/금융/품질조건을
 별도로통과해야한다. 거절견적은보존되며 무료로보완할수있고, 수락한계획/입력은동결한다.
+
+원문별 묶음 전송은 [SOURCE_MEMBERSHIP_BATCH](SOURCE_MEMBERSHIP_BATCH.md)의 opt-in 구현을 따른다. 별도 `membership-source-batch` stage와 최대 후보 수를 포함한 실제 profile이 필요하며 기존 scalar 단가를 승계하지 않는다.

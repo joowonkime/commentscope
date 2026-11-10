@@ -13,6 +13,7 @@ for item in (ROOT,ROOT/'src'):
     if str(item) not in sys.path:sys.path.insert(0,str(item))
 
 from commentscope.factory import argument_observations as obs,candidate_consolidation as cc,minimal_pipeline
+from commentscope.factory import source_membership_batch
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
@@ -33,11 +34,12 @@ MAXIMUM='1.50'
 TOOL_FILES=('tools/shared_factory_trial.py','tools/actual24_development.py','tools/plan_factory_cost.py')
 ALIASES={'shared-discovery':'core','shared-owned-position':'argument-position-alignment',
          'nomination-raw':'membership-initial-raw','membership-expanded-raw':'membership-initial-raw'}
+BATCH_ALIASES={**ALIASES,'membership-source-batch':'membership-initial-raw'}
 
 
 def mapped_stage(stage):
     family=re.sub(r'-[a-f0-9]{20}$','',stage)
-    return ALIASES[family]+stage[len(family):] if family in ALIASES else stage
+    return BATCH_ALIASES[family]+stage[len(family):] if family in BATCH_ALIASES else stage
 
 
 def authorize(path,authorization_file,*,user_request):
@@ -74,11 +76,14 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or plan['extraction_protocol'] is not None or plan['argument_audit_protocol']!=obs.SHARED_TYPED_CHAT
             or plan['agent_source_policy']!='candidate_verified_subset'
             or plan.get('membership_evidence_protocol') not in (None,executor.raw_membership_verification.QUALIFIED_CONTEXT)
-            or plan['membership_retrieval_policy']!=cc.ALIAS_RETRIEVAL or plan['stage_aliases']!=ALIASES):
+            or plan.get('membership_batch_protocol') not in (None,source_membership_batch.VERSION)
+            or plan['membership_retrieval_policy']!=cc.ALIAS_RETRIEVAL
+            or plan['stage_aliases']!=(BATCH_ALIASES if plan.get('membership_batch_protocol') else ALIASES)):
         raise ValueError('Frozen shared development scope, roles or cumulative cap changed')
 
 
-def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None):
+def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None,batch_membership=False):
+    if type(batch_membership) is not bool:raise ValueError('Explicit batch membership flag required')
     directory=Path(directory)
     for name in (directory,template_file,trial_file):executor.private(name)
     if directory.exists() or gate not in ('G1','G2','G3'):raise ValueError('Fresh supported shared run required')
@@ -116,6 +121,10 @@ def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=No
         processing_count=len(scope),canonical_population=len(executor.sources(snapshot)),
         expires_at=snapshot.usage.expires_at,code_sha256=source_code_hashes(),inputs=inputs,
         shared_execution={'version':VERSION,'tool_files':files})
+    if batch_membership:
+        plan.update(membership_batch_protocol=source_membership_batch.VERSION,stage_aliases=deepcopy(BATCH_ALIASES))
+    else:
+        plan.pop('membership_batch_protocol',None)
     guard(plan);executor.replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
     for d in plan['documents']:executor.fact_checks.live(d['expires_at'])
     plan['providers_at_prepare']={'generation':executor.provider_preflight(plan['deployment']),
@@ -220,6 +229,7 @@ def run(directory,*,proposals_only=False):
                     model=plan['classifier'],documents=plan['documents'],selections=plan['selections'],scope_ids=plan['scope_ids'],save=save,
                     discovery_mode='shared',membership_mode='raw',verification_contract=plan['verification_contract'],
                     membership_evidence_protocol=plan.get('membership_evidence_protocol'),
+                    membership_batch_protocol=plan.get('membership_batch_protocol'),
                     argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset')
                 save('output',output)
                 runtime=runtime_probe(output['agent_inputs']['bundle'],session,
@@ -246,11 +256,12 @@ def main():
     p=argparse.ArgumentParser(description=__doc__);a=p.add_subparsers(dest='action',required=True)
     q=a.add_parser('authorize');q.add_argument('file',type=Path);q.add_argument('--authorization',type=Path,required=True);q.add_argument('--user-request',required=True)
     q=a.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--template',type=Path,required=True);q.add_argument('--trial',type=Path,required=True);q.add_argument('--gate',choices=('G1','G2','G3'),default='G2');q.add_argument('--scope-refresh',type=Path)
+    q.add_argument('--batch-membership',action='store_true')
     q=a.add_parser('run');q.add_argument('directory',type=Path);q.add_argument('--proposals-only',action='store_true');q.add_argument('--live',action='store_true',required=True);q.add_argument('--key-file',type=Path,required=True)
     args=p.parse_args()
     if args.action=='authorize':result=authorize(args.file,args.authorization,user_request=args.user_request)
     elif args.action=='prepare':
-        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh)
+        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh,batch_membership=args.batch_membership)
         result={'prepared':str(args.directory),'scope':len(plan['scope_ids']),'new_model_calls':0}
     else:
         os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()
