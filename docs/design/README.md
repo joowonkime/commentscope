@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v33`. 대조 코드: `7f1c5fa` (main `cbc025c`).
+설계 버전: `commentscope-detailed-design-20261110-v34`. 대조 코드: `7f1c5fa` (main `cbc025c`).
 연결: REQ-001~REQ-010, TASK-001~018, DEC-001~011.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -15,6 +15,8 @@
 [실험 계획](MINING_EXPERIMENT.md)에 고정했다.
 동일 설정 합성 fresh2회와 실제24 development의 완료 범위·생성 안정성·비용은
 [실측 결과](MINING_EXPERIMENT_RESULT.md)로 구별한다. 실행 완주와 정식 품질 합격은 다르다.
+실제24/상세12의 표본·검색상한은 생성 품질의 인과 해석을 제한한다. 무료 상한 대조와
+미검사 nominee의 정정도 같은 결과 문서에 기록했다. 더 넓은 입력의 실제 생성 성공은 아직 미검증이다.
 
 ## 1. 무엇을 결정하는가
 

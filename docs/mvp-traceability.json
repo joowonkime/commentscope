@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v37",
+  "spec_version": "commentscope-mvp-20261110-v38",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-10",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-018",
     "paid_execution_hold": true,
-    "hold_reason": "고정확대검증3회완료: 합성12 fresh A/B Agent1/2·runtime3/6, 실제24 Agent0·runtime0. 가격부품포함472물리요청/$0.662053282확정, 예약/미확정0, 팀한도150/잔액139.5112074관측. 두 합성의정렬보류변동과실제공통후보/범위누락을실패로보존. 전체추가3/owner8/운영50미초과. 다음은무료일반경계진단; 이번계획의추가유료재시도없음, production/정식admission보류.",
+    "hold_reason": "고정3회 Agent1/2/0·472요청/$0.662053282확정, 예약미확정0. 사용자지적후실제24/상세12의작은표본과검색예산을재검토. 무료원본재현/상한대조: 최초nominee pair7/9→9/9검색포함, 새의미판정/Agent없음. 도입현황답글은uncertain오류가아닌원문상한으로미검사였음을정정. Agent0만으로구조/모델실패인과확정불가. 다음은표본크기/검색예산분리비교계획과무료일반진단, 새유료실험미실행.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -2156,9 +2156,15 @@
         },
         {
           "kind": "limited_live",
-          "scope": "Frozen candidate-first/Jev development completed synthetic12 freshA/B and registered actual24 without code/prompt changes. Candidate4/4/8, Agent1/2/0, runtime3/6/0; physical164/167/140, costs$0.309097634/$0.222291634/$0.126367764. Separate price control1/$0.004296250 gives472/$0.662053282 total,0reserved/uncertain. All produced profiles/turns and counted supports compared by coding agent, not independent human gold. Actual24 selected12sources/72pairs,120/192 scope pairs unassessed;6 counted supports each in separate candidate,0 arguments/facts/runtime. Valid population-narrowing support held while fictional raw positive correctly held; single-case repair would not supply3 supports. Synthetic position/entity holds vary Agent count. Provider cache differs; no model adoption, architecture saving, formal admission or MVP completion.",
+          "scope": "Frozen candidate-first/Jev development completed synthetic12 freshA/B and registered actual24 without code/prompt changes. Candidate4/4/8, Agent1/2/0, runtime3/6/0; physical164/167/140, costs$0.309097634/$0.222291634/$0.126367764. Separate price control1/$0.004296250 gives472/$0.662053282 total,0reserved/uncertain. All produced profiles/turns and counted supports compared by coding agent, not independent human gold. Actual24 selected12sources/72pairs,120/192 scope pairs unassessed;6 counted supports each in separate candidate,0 arguments/facts/runtime. Valid population-narrowing support held while fictional raw positive correctly held; single-case repair would not supply3 supports. Synthetic position/entity holds vary Agent count. Provider cache differs; no model adoption, architecture saving, formal admission or MVP completion. Source-pool confound:24 discovery/12 detailed sources are not evidence of whole-video Agent failure. City-introduction nominee was never selected, not an observed Jev uncertainty error; corrected after exact request/source audit.",
           "reference": "docs/design/MINING_EXPERIMENT_RESULT.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Reproduced original24-source/8-candidate72-pair schedule from exact archived embedding receipts. Original selects12 sources,7/9 nominee pairs and leaves1 candidate with0pairs. Source-cap-only24 keeps72pairs and7/9 nominees but leaves2 candidates with0pairs. Raising source/pair bounds gives19sources/96pairs/9of9 nominees; full24-per-candidate yields192pairs. Pure host retrieval planning,0API calls/$0, no new semantic supports or Agents. Preserves all paid source/plan/output and thresholds. Corrects city nominee as unassessed, not model misclassification; requires sample-size/search-budget causal separation.",
+          "reference": "docs/design/MINING_EXPERIMENT_RESULT.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -2374,8 +2380,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v37",
       "reason": "사용자 요청으로 명세/구조/실제실행 상태를 대조. 고정합성12 fresh2회와실제24 개발실행 완료, Agent1/2/0·전체472요청/$0.662053282·예약미확정0을기록한다. 합성정렬보류변동/실제공통후보·범위누락과정식미합격을보존. 팀키150/기존운영50·owner8/이번추가3을구별하고과거이력의현재표현을활성지시와분리한다. 다음은무료일반진단, 결과맞춤유료재시도없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v38",
+      "reason": "사용자가 댓글후보풀이작아Agent가안나온것아니냐고지적. 원본선택/요청/벡터를재대조해표본24/상세12및복수검색상한의교란을명시하고, 미선정도입현황nominee를uncertain판정실패로서술한오류를정정. 무료상한대조만추가, 모델호출0/원실패와금액·기준보존. 다음은표본적정성/검색예산분리계획이며구조실패단정이나유료수정루프를하지않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v33",
+  "design_version": "commentscope-detailed-design-20261110-v34",
   "design_document": "docs/design/README.md"
 }
