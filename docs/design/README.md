@@ -1,20 +1,25 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v34`. 대조 코드: `7f1c5fa` (main `cbc025c`).
-연결: REQ-001~REQ-010, TASK-001~018, DEC-001~011.
+설계 버전: `commentscope-detailed-design-20261111-v36`. 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~018, DEC-001~012.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
 이 단계의 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
 
 현재/추천 구조를 이해하려면 [Factory 구조 정본](FACTORY_STRUCTURE.md)을 먼저 읽는다. 관점 발견·Jev 판정·미대응 원문·Agent 조립과 Mermaid 원본, 실제 코드 이전순서를 한 문서로 정리했다. DEC-009는 제안 상태다.
 
+**현재 실험 설계:** 사용자 입력 풀 확대 지시에 따른 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md).
+이전 MINING_EXPERIMENT의 합성12/실제24 범위는 종료된 소규모 계획이다. snapshot3000 상한을
+실제 입력3000개로 오해하지 않는다. 새 실행기는999개 전체 입력과 형식적 gate 불승격을 검사한다.
+
 사용자 승인한 선정 영상 사전 분석·관점 발굴 우선 운영, 현재 embedding/군집화와 root/reply 처리,
 새 선택 검증/2천~3천 규모의 구현 경계는 [발굴 중심 MVP](PREPARED_VIDEO_MINING.md)를 따른다.
 운영 방향과 새 알고리즘의 실제 채택/품질 증거를 구별한다.
-사용자 증액/실행·테스트 확대 지시의 실제 통합 범위·전체추가3.00/각배정1.50·누적 장부 계승은
-[실험 계획](MINING_EXPERIMENT.md)에 고정했다.
-동일 설정 합성 fresh2회와 실제24 development의 완료 범위·생성 안정성·비용은
-[실측 결과](MINING_EXPERIMENT_RESULT.md)로 구별한다. 실행 완주와 정식 품질 합격은 다르다.
+현재 확대 범위·추가상한15.00/7시간·누적 장부 계승은 [전체 댓글 풀 계획](WIDE_MINING_EXPERIMENT.md)을 따른다.
+진행 단계·확정 비용·자원 중단은 [중간 결과](WIDE_MINING_EXPERIMENT_RESULT.md)에 기록한다.
+이전 추가3.00/각배정1.50 범위의 동일 설정 합성 fresh2회와 실제24 development는
+[종료된 계획](MINING_EXPERIMENT.md)과 [당시 결과](MINING_EXPERIMENT_RESULT.md)로 보존한다.
+실행 완주와 정식 품질 합격은 다르다.
 실제24/상세12의 표본·검색상한은 생성 품질의 인과 해석을 제한한다. 무료 상한 대조와
 미검사 nominee의 정정도 같은 결과 문서에 기록했다. 더 넓은 입력의 실제 생성 성공은 아직 미검증이다.
 
