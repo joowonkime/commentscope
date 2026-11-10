@@ -19,8 +19,10 @@ VERSION = 'whole-framed-corpus-factory-0.1'
 RETRIEVAL = {'initial': 2, 'fallback': 2}
 
 
-def sources(snapshot, *, include_video_context=False):
-    if len(snapshot.comments) > 1000: raise ValueError('MVP snapshot cap exceeded')
+def sources(snapshot, *, include_video_context=False, maximum_comments=1000):
+    if type(maximum_comments) is not int or not 1 <= maximum_comments <= 3000:
+        raise ValueError('Finite snapshot bound required')
+    if len(snapshot.comments) > maximum_comments: raise ValueError('MVP snapshot cap exceeded')
     if len({c.comment_id for c in snapshot.comments}) != len(snapshot.comments):
         raise ValueError('Duplicate raw source identity')
     canonical = {c.comment_id for c in normalize_snapshot(snapshot) if c.text_analysis and c.duplicate_of is None}

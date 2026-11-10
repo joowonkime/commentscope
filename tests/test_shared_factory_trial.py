@@ -87,7 +87,10 @@ class SharedTrialTests(unittest.TestCase):
     def test_jev_development_keeps_proposal_cost_gate_and_runtime(self):
         self.proposal_pause_and_full_continuation(jev_judging=True)
 
-    def proposal_pause_and_full_continuation(self,*,batch_membership=False,jev_judging=False):
+    def test_mining_proposal_resume_keeps_same_cost_gate_and_runtime(self):
+        self.proposal_pause_and_full_continuation(jev_judging=True,mining=True)
+
+    def proposal_pause_and_full_continuation(self,*,batch_membership=False,jev_judging=False,mining=False):
         import test_minimal_pipeline as pipeline_fixture
         from test_shared_typed_pipeline import SharedRunner
         from experiments.grounding_contract_demo import MODEL
@@ -111,7 +114,12 @@ class SharedTrialTests(unittest.TestCase):
             directory=self.f.root/'jev-run'
             plan.update(membership_judge_protocol=trial.jev_membership.VERSION,
                         membership_deployment=deepcopy(trial.decisions.DEPLOYMENT),run_directory=str(directory.resolve()))
-            write(directory/'plan.json',plan);runner=JevRunner()
+            if mining:
+                from test_perspective_mining import MiningRunner,policy
+                plan['membership_search_policy']=policy()
+                runner=MiningRunner()
+            else:runner=JevRunner()
+            write(directory/'plan.json',plan)
         else:runner=SharedRunner()
         runner.embed=helper.embed;runner.inspect=helper.inspect
         runner.storage=SimpleNamespace(before_write=lambda value:None)
@@ -140,6 +148,7 @@ class SharedTrialTests(unittest.TestCase):
             self.assertEqual(output['membership_evidence_protocol'],trial.executor.raw_membership_verification.QUALIFIED_CONTEXT)
             if batch_membership:self.assertEqual(output['membership_batch_protocol'],trial.source_membership_batch.VERSION)
             if jev_judging:self.assertEqual(output['membership_judge_protocol'],trial.jev_membership.VERSION)
+            if mining:self.assertEqual(output['membership_search_policy'],plan['membership_search_policy'])
             self.assertTrue(done['same_plan_resume']);self.assertFalse(done['formal_admission_eligible'])
             self.assertEqual(trial.run(directory),done)
             self.assertEqual(sessions.call_count,2)

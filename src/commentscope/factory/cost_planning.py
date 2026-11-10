@@ -92,6 +92,9 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
     if factor<1 or headroom<=0:raise CostPlanError('Safety factor >=1 and positive next-request headroom required')
     completed=completed or {};schedule=pair_schedule(plan['scope_ids'],candidates)
     n,k=schedule['sources'],schedule['candidates'];issues=[];unknown=[];rows=[]
+    from commentscope.factory import perspective_mining
+    mining = plan.get('membership_search_policy')
+    search_bounds = perspective_mining.bounds(mining,n,k) if mining is not None else None
     from commentscope.factory.source_membership_batch import VERSION as BATCH_VERSION
     protocol=plan.get('membership_batch_protocol')
     if protocol not in (None,BATCH_VERSION):raise CostPlanError('Unknown membership batch protocol')
@@ -100,14 +103,18 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
     typed=plan.get('membership_judge_protocol')
     if typed not in (None,jev_membership.VERSION) or typed and packets:
         raise CostPlanError('Explicit exclusive membership protocol required')
+    if search_bounds and packets:
+        raise CostPlanError('Candidate-first search does not use source-batch transport')
     if typed:
         from commentscope.providers import openrouter_decisions
         if plan.get('membership_deployment')!=openrouter_decisions.DEPLOYMENT:
             raise CostPlanError('Frozen Jev membership deployment required')
-    minimum={'shared-discovery':(n+11)//12,'source-context':n if k else 0,
-        'source-world':n if k else 0,'candidate-world':k,'membership-raw':0 if packets or typed else schedule['total_upper_bound'],
+    observed_sources = search_bounds['source_upper_bound'] if search_bounds else n
+    raw_pairs = search_bounds['pair_upper_bound'] if search_bounds else schedule['total_upper_bound']
+    minimum={'shared-discovery':(n+11)//12,'source-context':observed_sources if k else 0,
+        'source-world':observed_sources if k else 0,'candidate-world':k,'membership-raw':0 if packets or typed else raw_pairs,
         'membership-source-batch':packets['total_upper_bound'] if packets else 0,
-        'membership-jev':schedule['total_upper_bound'] if typed else 0,
+        'membership-jev':raw_pairs if typed else 0,
         'raw-candidate-route':k,'embedding-sources':1,'embedding-candidates':int(k>0)}
     if goal=='mvp':
         if k<2:issues.append('fewer_than_two_candidates')
@@ -148,7 +155,7 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
     if total is None and known*factor+(headroom if needs_calls else 0)>available:
         issues.append('known_subtotal_exceeds_remaining_budget')
     if required is not None and required>available:issues.append('insufficient_remaining_budget')
-    return {'artifact_kind':VERSION,'schedule':schedule,'goal':goal,'stages':rows,
+    return {'artifact_kind':VERSION,'schedule':schedule,**({'mining_bounds':search_bounds} if search_bounds else {}),'goal':goal,'stages':rows,
         'known_remaining_estimate_usd':str(known),'estimated_remaining_usd':str(total) if total is not None else None,
         'required_with_margin_usd':str(required) if required is not None else None,
         'available_usd':str(available),'multiplier':str(factor),'headroom_usd':str(headroom),

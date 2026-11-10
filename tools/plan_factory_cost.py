@@ -152,6 +152,12 @@ def template(directory):
         'embedding-candidates':len(batches({c['id']:c['text'] for c in candidates})) if k else 0})
     counts['membership-source-batch']=0
     counts['membership-jev']=0
+    if plan.get('membership_search_policy') is not None:
+        from commentscope.factory import perspective_mining
+        selected=perspective_mining.bounds(plan['membership_search_policy'],n,k)
+        counts['source-context']=selected['source_upper_bound']
+        counts['source-world']=selected['source_upper_bound']
+        counts['membership-raw']=selected['pair_upper_bound']
     if plan.get('membership_batch_protocol'):
         counts['membership-raw']=0
         counts['membership-source-batch']=cost.packet_schedule(plan['scope_ids'],candidates)['total_upper_bound']

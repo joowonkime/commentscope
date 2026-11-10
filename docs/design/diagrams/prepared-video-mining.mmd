@@ -1,0 +1,32 @@
+flowchart TB
+    subgraph preparation["사전 분석: 운영자가 선정한 영상"]
+        sourceLedger["F1: root·reply·원문·수집 범위 보존"]
+        searchIndex["F2: 원문과 parent를 구분한 검색 인덱스"]
+        discovery["F2 Sol: 공통·소수·조건부 관점 가설 발견"]
+        candidates["가변 관점 후보 장부"]
+        sourceSearch["F2: 후보별 근거 원문과 thread 문맥 검색"]
+        sourceContext["F3 Sol: 선택 원문의 문맥 관측"]
+        jev["F3 Jev M1: 관계·조건·귀속·근거 구간 판정"]
+        evidence["F3 Sol M2: 긍정 근거의 독립 검사"]
+        arguments["F4: 출처별 논거·조건·필수 사실 검증"]
+        compiler{"F5 Python: Agent 자격 충족"}
+        bundle[("검증 bundle와 분석 revision")]
+        held["후보·미평가·보류 사유 보존"]
+        sourceLedger --> searchIndex --> discovery --> candidates --> sourceSearch
+        searchIndex --> sourceSearch
+        sourceSearch --> sourceContext --> jev
+        candidates --> jev
+        jev -->|"긍정"| evidence --> arguments --> compiler
+        jev -->|"그 외"| held
+        compiler -->|"충족"| bundle
+        compiler -->|"미달"| held
+    end
+    subgraph interaction["TA 사용: 저장 Agent로 실제 입력 처리"]
+        videoSelect["등록 영상 선택"] --> explore["Explore: 내 의견과 관점 비교"]
+        explore --> converse["Converse: 질문·그룹 대화·근거 확인"]
+        converse --> reflect["Reflect: 생각 정리·편집·저장"]
+    end
+    bundle --> videoSelect
+    execution["X: 공유 예산·상한·정산·품질·지연 기록"] -.-> sourceContext
+    execution -.-> arguments
+    execution -.-> converse
