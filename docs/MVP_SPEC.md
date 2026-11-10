@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261110-v38`. 대조 코드: `7f1c5fa` (main `cbc025c`).
+버전: `commentscope-mvp-20261111-v39`. 대조 코드: `7f1c5fa` (main `cbc025c`), 확대 실행기 별도 검증 중.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v34`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261111-v35`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -63,6 +63,12 @@ Before Use → Explore → Converse → Reflect를 제품 과업의 기준으로
 관점·Agent 품질/원가와 최종 G1~G4 검증은 유지하며 기능 개발을999개 합격 이후로 미루지 않는다.
 새 의미 역할 교체는 보류하고 [제품 구현 경로](design/PRODUCT_DELIVERY.md)를 따른다.
 Factory 완료와 전체 MVP 완료를 별도로 판정한다. 두 Agent 동일 질문 API로 그룹 토론·성찰을 대체하지 않는다.
+
+현재 사용자는 확대의 대상이 댓글 입력 풀이라고 재확인하고 실험 설계의 불일치를 지적했다.
+이전 합성12/실제24 계획은 종료된 소규모 범위이며, 현재 실행 계약은
+[등록999 전체 발견·Agent 검증](design/WIDE_MINING_EXPERIMENT.md)이다. 전체 입력과 상세검증 상한을
+구별하고, 새 확대 단계 추가15/기존 운영장부50/실제팀150·과거 차감을 따로 보존한다(DEC-012).
+모델/prompt·판정 기준을 바꾸기 전에 실제 입력999를 사용한다. 구현/실행 완료는 별도 증거로 기록한다.
 
 | 요구사항 | 현재 구현에서 확인한 범위 | 남은 증거/구현 |
 | --- | --- | --- |

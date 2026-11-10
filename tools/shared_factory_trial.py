@@ -239,8 +239,8 @@ def validate(directory):
 
 
 class Session(executor.RemoteSession):
-    def __init__(self,directory,plan,dispatch):
-        super().__init__(directory,plan,dispatch,authorization_guard=guard)
+    def __init__(self,directory,plan,dispatch,*,authorization_guard=None):
+        super().__init__(directory,plan,dispatch,authorization_guard=guard if authorization_guard is None else authorization_guard)
         if plan.get('membership_judge_protocol'):
             self.membership_client,self.membership_checkpoint=typed_membership_runner.build(
                 self.directory,plan,self.time,self.money,executor.key_metadata)
@@ -249,7 +249,7 @@ class Session(executor.RemoteSession):
         if (not self.plan.get('membership_judge_protocol')
                 or stage!='membership-jev-'+decisions.wire_sha256(payload,decisions.DEPLOYMENT)[:20]):
             raise ValueError('Typed membership is not selected in the frozen plan')
-        self.dispatch.check();executor.check_quota();guard(self.plan,call_seconds=decisions.DEPLOYMENT['call_seconds'])
+        self.dispatch.check();executor.check_quota();self.authorization_guard(self.plan,call_seconds=decisions.DEPLOYMENT['call_seconds'])
         if not jev_membership.measure(payload)['fits']:raise ValueError('Typed membership context exceeded')
         limits=getattr(self,'cost_limits',None)
         if limits is not None:limits.admit(stage,payload)
@@ -279,20 +279,25 @@ class Session(executor.RemoteSession):
 class ProposalReady(Exception):pass
 
 
-def run(directory,*,proposals_only=False):
+def run(directory,*,proposals_only=False,_validate=None,_kind=None,_session=None):
+    # Registered development entry points supply their own closed scope/phase
+    # validator. CLI callers retain this module's original fixed-sample guard.
+    validate_plan=validate if _validate is None else _validate
+    kind=VERSION if _kind is None else _kind
+    session_type=Session if _session is None else _session
     directory=Path(directory)
     with experiment_lock(directory),executor.quota_watch():
-        plan=validate(directory)
+        plan=validate_plan(directory)
         if (directory/'completed.json').exists():
             done=read_json(directory/'completed.json')
-            if (done.get('artifact_kind')!=VERSION or done.get('formal_admission_eligible') is not False
+            if (done.get('artifact_kind')!=kind or done.get('formal_admission_eligible') is not False
                     or done.get('quality_gate_passed') is not False
                     or done['plan_sha256']!=sha(directory/'plan.json') or done['output_sha256']!=sha(directory/'artifacts/output.json')
                     or done['runtime_sha256']!=sha(directory/'artifacts/runtime.json')):raise ValueError('Completed artifacts changed')
             return done
         if proposals_only and (directory/'proposal-ready.json').exists():
             ready=read_json(directory/'proposal-ready.json')
-            if (ready.get('artifact_kind')!=VERSION+'-proposal-ready' or ready.get('formal_admission_eligible') is not False
+            if (ready.get('artifact_kind')!=kind+'-proposal-ready' or ready.get('formal_admission_eligible') is not False
                     or ready['plan_sha256']!=sha(directory/'plan.json')
                     or ready['candidates_sha256']!=sha(directory/'artifacts/initial-candidates.json')
                     or ready['candidate_count']!=len(read_json(directory/'artifacts/initial-candidates.json'))):
@@ -300,7 +305,7 @@ def run(directory,*,proposals_only=False):
             return ready
         limits=None if proposals_only else cost_review.require_review(directory,plan)
         attempt=len(list((directory/'attempts').glob('*.started.json')))+1
-        origin=run_origin(plan,directory,attempt=attempt);dispatch=host_resources.RemoteCallGuard();session=Session(directory,plan,dispatch)
+        origin=run_origin(plan,directory,attempt=attempt);dispatch=host_resources.RemoteCallGuard();session=session_type(directory,plan,dispatch)
         session.cost_limits=limits
         write(directory/'attempts'/f'{attempt:04}.started.json',{'at':datetime.now(timezone.utc).isoformat(),**origin})
         def save(name,value):
@@ -328,7 +333,7 @@ def run(directory,*,proposals_only=False):
                 runtime=runtime_probe(output['agent_inputs']['bundle'],session,
                     save_turn=lambda row:save('runtime-turns/'+row['candidate_id']+'/'+row['question_id'],row))
                 save('runtime',runtime);runtime_check(runtime,output['agent_inputs']['compiled'],questions=plan['questions'])
-            done={'artifact_kind':VERSION,'execution_complete':True,'formal_admission_eligible':False,'quality_gate_passed':False,
+            done={'artifact_kind':kind,'execution_complete':True,'formal_admission_eligible':False,'quality_gate_passed':False,
                 'plan_sha256':sha(directory/'plan.json'),'compiled_agents':len(output['agent_inputs']['compiled']['profiles']),
                 'runtime_turns':len(runtime['turns']),'binding_errors':len(output['errors']),
                 'capacity_holds':len(output['capacity_holds']),'unextracted':len(output['unextracted_source_ids']),
@@ -336,7 +341,7 @@ def run(directory,*,proposals_only=False):
                 'spending':session.money.summary(),'run_spending':session.money.summary(plan_sha256=plan['spend_scope_sha256']),**origin}
             write(directory/'completed.json',done);return done
         except ProposalReady:
-            report={'artifact_kind':VERSION+'-proposal-ready','execution_complete':False,'formal_admission_eligible':False,
+            report={'artifact_kind':kind+'-proposal-ready','execution_complete':False,'formal_admission_eligible':False,
                 'plan_sha256':sha(directory/'plan.json'),'candidate_count':len(read_json(directory/'artifacts/initial-candidates.json')),
                 'candidates_sha256':sha(directory/'artifacts/initial-candidates.json'),'spending':session.money.summary()}
             write(directory/'proposal-ready.json',report);return report
