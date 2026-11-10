@@ -5,9 +5,9 @@ import re
 
 from commentscope.factory.automatic_contract import digest
 
-VERSION='factory-full-cost-plan-20261110-v1'
+VERSION='factory-full-cost-plan-20261110-v2'
 PROFILE=VERSION+'-profile'
-STAGES=('shared-discovery','source-context','source-world','candidate-world','membership-raw',
+STAGES=('shared-discovery','source-context','source-world','candidate-world','membership-raw','membership-source-batch',
         'raw-candidate-route','raw-own-evidence','core','core-fidelity','argument-node-metadata',
         'argument-position-alignment','argument-dependencies','argument-owner','argument-dependency',
         'argument-audit','facts','runtime','embedding-sources','embedding-candidates')
@@ -28,9 +28,13 @@ def amount(value):
 def canonical(stage,request=None):
     family=re.sub(r'^(?:generation|verification)-','',stage)
     family=re.sub(r'-[a-f0-9]{20}$','',family)
-    if family=='core' and isinstance((request or {}).get('data',{}).get('ORIGINALS'),list):
+    data=(request or {}).get('data',{})
+    if not isinstance(data,dict):data={}
+    if family=='core' and isinstance(data.get('ORIGINALS'),list):
         family='shared-discovery'
     if family in ('nomination-raw','membership-initial-raw','membership-expanded-raw'):family='membership-raw'
+    if family=='membership-raw' and isinstance(data.get('CANDIDATE_TARGETS'),list):
+        family='membership-source-batch'
     if family=='shared-owned-position':family='argument-position-alignment'
     if family not in STAGES:raise CostPlanError('Unplanned cost stage: '+family)
     return family
@@ -58,6 +62,25 @@ def pair_schedule(source_ids,candidates):
             'nomination_edges':sum(nominations.values()),'semantic_approval':False}
 
 
+def packet_schedule(source_ids, candidates):
+    """Safe physical upper bound across nomination, initial and expansion phases.
+
+    Exact pair cache hits may reduce this bound; they are never assumed to
+    survive consolidation's changes to candidate provenance.
+    """
+    from commentscope.factory.source_membership_batch import MAX_TARGETS
+    pair_schedule(source_ids,candidates)
+    nominations=Counter(sid for c in candidates for sid in c['nominees'])
+    k=len(candidates);width=MAX_TARGETS
+    counts=[nominations[sid] for sid in source_ids]
+    initial=[min(k,3+count) for count in counts]
+    expand=[min(k,3)]*len(source_ids)
+    sizes=counts+initial+expand
+    return {'total_upper_bound':sum((count+width-1)//width for count in sizes),
+            'maximum_targets':max((min(width,count) for count in sizes),default=0),
+            'semantic_approval':False}
+
+
 def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
              multiplier='1.25',headroom_usd='0.15',goal='mvp'):
     if set(counts)!=set(STAGES):raise CostPlanError('Every cost stage must be explicit, including unknown/null')
@@ -68,8 +91,13 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
     if factor<1 or headroom<=0:raise CostPlanError('Safety factor >=1 and positive next-request headroom required')
     completed=completed or {};schedule=pair_schedule(plan['scope_ids'],candidates)
     n,k=schedule['sources'],schedule['candidates'];issues=[];unknown=[];rows=[]
+    from commentscope.factory.source_membership_batch import VERSION as BATCH_VERSION
+    protocol=plan.get('membership_batch_protocol')
+    if protocol not in (None,BATCH_VERSION):raise CostPlanError('Unknown membership batch protocol')
+    packets=packet_schedule(plan['scope_ids'],candidates) if protocol else None
     minimum={'shared-discovery':(n+11)//12,'source-context':n if k else 0,
-        'source-world':n if k else 0,'candidate-world':k,'membership-raw':schedule['total_upper_bound'],
+        'source-world':n if k else 0,'candidate-world':k,'membership-raw':0 if packets else schedule['total_upper_bound'],
+        'membership-source-batch':packets['total_upper_bound'] if packets else 0,
         'raw-candidate-route':k,'embedding-sources':1,'embedding-candidates':int(k>0)}
     if goal=='mvp':
         if k<2:issues.append('fewer_than_two_candidates')
@@ -87,6 +115,8 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
             observed=profile['stages'].get(stage)
             if observed is None:continue
             if observed['deployment_sha256']!=digest(deployment(plan,stage)):continue
+            if (stage=='membership-source-batch' and packets
+                    and observed.get('maximum_batch_targets',0)<packets['maximum_targets']):continue
             if type(observed['calls']) is not int or observed['calls']<=0:raise CostPlanError('Measured sample count required')
             mean=amount(observed['cost_usd'])/observed['calls'];maximum=amount(observed['maximum_cost_usd'])
             if mean<=0 or maximum<mean:raise CostPlanError('Positive measured costs and consistent maximum required')

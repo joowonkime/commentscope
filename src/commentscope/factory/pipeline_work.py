@@ -46,6 +46,9 @@ class PipelineWork:
         self.raw_routes = {}
         self.source_contexts = {}
         self.statement_worlds = {}
+        self.source_batch_cache = {}
+        self.source_batch_attempted = set()
+        self.source_batch_failed = set()
 
     def work(self, stage, items, build, bind, size, *, minimum=1):
         results = []
@@ -120,7 +123,97 @@ class PipelineWork:
             self.statement_worlds[key] = rows[0] if rows else None
         return self.statement_worlds[key]
 
+    def judge_source_batches(self, stage, pairs, targets):
+        from commentscope.factory import source_membership_batch as packets
+        from commentscope.factory import source_context_observations as contexts
+        target_lookup = {c['id']: c for c in targets}
+        grouped = {}
+        for pair in pairs:
+            grouped.setdefault(pair['source_id'], {})[pair['candidate_id']] = target_lookup[pair['candidate_id']]
+        results = []
+        for sid, target_map in grouped.items():
+            source = self.registry[sid]; source_key = digest(source)
+            if source_key not in self.source_contexts:
+                rows = self.work('source-context', [source], lambda g: contexts.request(g[0]),
+                                 lambda g, r: contexts.bind(g[0], r), 1)
+                self.source_contexts[source_key] = rows[0] if rows else None
+            context = self.source_contexts[source_key]
+            parent = source['parent']['text'] if source.get('parent') else None
+            source_world = self.observe_world(source['text'], parent, 'source-world')
+            pending = []; worlds = {}; keys = {}; logical_keys = {}
+            for target in target_map.values():
+                world = self.observe_world(target['text'], None, 'candidate-world')
+                if context is None or source_world is None or world is None:
+                    self.holds.append({'stage': stage, 'source_id': sid, 'candidate_id': target['id'],
+                                       'reason': 'independent_source_or_world_unavailable'})
+                    continue
+                key = digest([packets.VERSION, source, target, context, source_world, world])
+                logical_key = digest(packets.logical_requests(source,[target],context,source_world,{target['id']:world})[0])
+                if key in self.source_batch_cache:
+                    results.append(deepcopy(self.source_batch_cache[key]))
+                elif key in self.source_batch_attempted or logical_key in self.source_batch_failed:
+                    self.holds.append({'stage': stage, 'source_id': sid, 'candidate_id': target['id'],
+                                       'reason': 'prior_source_packet_unavailable_no_retry'})
+                else:
+                    pending.append(target); worlds[target['id']] = world; keys[target['id']] = key
+                    logical_keys[target['id']] = logical_key
+            for offset in range(0, len(pending), packets.MAX_TARGETS):
+                chunk = pending[offset:offset+packets.MAX_TARGETS]
+                # Mark attempted before dispatch: regrouping in a later phase
+                # cannot turn malformed or unavailable packets into paid retries.
+                self.source_batch_attempted.update(keys[c['id']] for c in chunk)
+                def build(group):
+                    return packets.request(source, group, source_context=context, source_world=source_world,
+                                           candidate_worlds={c['id']: worlds[c['id']] for c in group})
+                def bind(group, response):
+                    deployment = (getattr(self.runner, 'plan', {}).get('verification_deployment')
+                                  if 'transport' in response else None)
+                    return packets.bind(source, group, response, source_context=context, source_world=source_world,
+                                        candidate_worlds={c['id']: worlds[c['id']] for c in group}, deployment=deployment)
+                batches = self.work('membership-source-batch', chunk, build, bind, packets.MAX_TARGETS)
+                completed_ids = {proof['candidate']['id'] for proofs in batches for proof in proofs}
+                self.source_batch_failed.update(logical_keys[c['id']] for c in chunk if c['id'] not in completed_ids)
+                for proofs in batches:
+                    for proof in proofs:
+                        verified = self.verify_raw(proof)
+                        self.source_batch_cache[keys[proof['candidate']['id']]] = deepcopy(verified)
+                        results.append(verified)
+        return results
+
+    def verify_raw(self, proof):
+        from commentscope.factory import raw_membership_verification as verification
+        source, target = proof['source'], proof['candidate']
+        route=None;evidence=None
+        if proof['passed']:
+            target_key=digest(target)
+            if target_key not in self.raw_routes:
+                origin_id=min(target['nominees'])
+                if self.verification_contract in verification.INDEPENDENT and 'meaning_context' in target:
+                    origin_id=target['meaning_context']['source']['id']
+                origin=self.registry[origin_id] if self.verification_contract in (verification.VERSION,*verification.INDEPENDENT) else None
+                route_version=self.verification_contract if self.verification_contract in verification.INDEPENDENT else None
+                rows=self.work('raw-candidate-route',[target],lambda group:verification.route_request(group[0],origin,version=route_version),
+                    lambda group,result:verification.bind_route(group[0],result,origin,version=route_version),1)
+                self.raw_routes[target_key]=rows[0] if rows else None
+            route=self.raw_routes[target_key]
+            if route and route['passed']:
+                from commentscope.factory import compact_claims
+                protocol = (verification.BRIEF if self.extraction_protocol in compact_claims.VERSIONS
+                            else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
+                if (self.verification_contract == verification.FULL_SCOPE
+                        and (self.extraction_protocol in compact_claims.UNIFIED_VERSIONS or getattr(self,'shared_typed',False))):
+                    protocol = verification.QUALIFIED
+                protocol=getattr(self,'membership_evidence_protocol',None) or protocol
+                rows=self.work('raw-own-evidence',[proof],
+                    lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
+                    lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)
+                evidence=rows[0] if rows else None
+        verified=verification.assessment(proof,route,evidence,version=self.verification_contract)
+        return verification.batch([source],[target],[verified],version=self.verification_contract)
+
     def judge(self, stage, pairs, targets):
+        if getattr(self, 'membership_batch_protocol', None):
+            return self.judge_source_batches(stage, pairs, targets)
         if self.engine is not None:return self.engine.judge(pairs,targets)
         target_lookup = {c['id']: c for c in targets}
         if self.membership_mode=='raw':
@@ -158,33 +251,7 @@ class PipelineWork:
                             lambda group,result:raw.bind(source,target,result,version=raw_protocol,source_context=context,
                                 source_world=source_world,candidate_world=candidate_world),1)
                 for proof in proofs:
-                    route=None;evidence=None
-                    if proof['passed']:
-                        target_key=digest(target)
-                        if target_key not in self.raw_routes:
-                            origin_id=min(target['nominees'])
-                            if self.verification_contract in verification.INDEPENDENT and 'meaning_context' in target:
-                                origin_id=target['meaning_context']['source']['id']
-                            origin=self.registry[origin_id] if self.verification_contract in (verification.VERSION,*verification.INDEPENDENT) else None
-                            route_version=self.verification_contract if self.verification_contract in verification.INDEPENDENT else None
-                            rows=self.work('raw-candidate-route',[target],lambda group:verification.route_request(group[0],origin,version=route_version),
-                                lambda group,result:verification.bind_route(group[0],result,origin,version=route_version),1)
-                            self.raw_routes[target_key]=rows[0] if rows else None
-                        route=self.raw_routes[target_key]
-                        if route and route['passed']:
-                            from commentscope.factory import compact_claims
-                            protocol = (verification.BRIEF if self.extraction_protocol in compact_claims.VERSIONS
-                                        else verification.EXPLAINED) if self.verification_contract == verification.FULL_SCOPE else None
-                            if (self.verification_contract == verification.FULL_SCOPE
-                                    and (self.extraction_protocol in compact_claims.UNIFIED_VERSIONS or getattr(self,'shared_typed',False))):
-                                protocol = verification.QUALIFIED
-                            protocol=getattr(self,'membership_evidence_protocol',None) or protocol
-                            rows=self.work('raw-own-evidence',[proof],
-                                lambda group:verification.evidence_request(group[0],self.verification_contract,protocol=protocol),
-                                lambda group,result:verification.bind_evidence(group[0],result,self.verification_contract,protocol=protocol),1)
-                            evidence=rows[0] if rows else None
-                    verified=verification.assessment(proof,route,evidence,version=self.verification_contract)
-                    results.append(verification.batch([source],[target],[verified],version=self.verification_contract))
+                    results.append(self.verify_raw(proof))
             return results
         def args(group):
             return ([self.registry[sid] for sid in sorted({p['source_id'] for p in group})],

@@ -133,3 +133,5 @@ reasoning은 매실행plan의 배정이다. 이 이름들을 구조v1의 영구 
 구조/CI 합격과 실제96/999개 품질·서비스단가·경쟁력·사용자효과를 별도로 보고한다.
 
 [현재전송의비용검토](FACTORY_COST_RESULT.md)는역할고정과별개로개별호출의원가가미해결임을기록한다. Mermaid두원본은로컬Mermaid파서로구문검증했다.
+
+원문별 [membership batch](SOURCE_MEMBERSHIP_BATCH.md)는 이 구조 안의 선택 전송 방식이다. 독립 관측·긍정 근거검사·사실·Compiler·runtime 책임을 유지한다. 실제 원가/품질 채택은 별도다.
