@@ -10,6 +10,10 @@
 
 현재 구현과 신규 추천 흐름/모델 배정의 자세한 비교는 [Factory 구조 정본](FACTORY_STRUCTURE.md)을 먼저 읽는다. DEC-009의 제안은 아래 책임v1의 수락 범위를 변경하지 않는다.
 
+아래 전송/모델 상태는 PR81 대조 시점의 기준선이다. PR84의 신규 선택 검색·Jev M1 opt-in과
+그 이후 실제 Agent 생성 결과는 [발굴 설계](PREPARED_VIDEO_MINING.md)와
+[고정 실측](MINING_EXPERIMENT_RESULT.md)을 따른다. 책임 계층의 변경이나 기본 모델 전환은 아니다.
+
 ## 구조 검토의 결론
 
 원문에서 Agent를 만드는 Factory와, 완성된 bundle로 사용자와 대화하는 Runtime을 분리하는

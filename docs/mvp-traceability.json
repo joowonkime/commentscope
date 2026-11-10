@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v36",
+  "spec_version": "commentscope-mvp-20261110-v37",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
-  "observed_date": "2026-11-06",
+  "observed_date": "2026-11-10",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-018",
-    "paid_execution_hold": false,
-    "hold_reason": "팀150/원owner8/운영장부50/전체추가3.00/각배정1.50로고정검증중. Factory727통과, 가격부품1회$0.00429625와G1후보4개/비용계획통과. 첫전체G1은Windows커밋여유1GiB미달로일시중단,완료응답보존/예약·미확정0. 원한도·기한·자원·정식admission guard유지. 합성12 fresh2회+실제24 development1회예정,반복간prompt/정답변경없음.",
+    "paid_execution_hold": true,
+    "hold_reason": "고정확대검증3회완료: 합성12 fresh A/B Agent1/2·runtime3/6, 실제24 Agent0·runtime0. 가격부품포함472물리요청/$0.662053282확정, 예약/미확정0, 팀한도150/잔액139.5112074관측. 두 합성의정렬보류변동과실제공통후보/범위누락을실패로보존. 전체추가3/owner8/운영50미초과. 다음은무료일반경계진단; 이번계획의추가유료재시도없음, production/정식admission보류.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -501,7 +501,7 @@
         "tests/test_perspective_mining.py"
       ],
       "acceptance": [
-        "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
+        "현재 금전권한(DEC-011: 팀키$150, 기존운영장부$50/owner$8, 이번추가검증$3/각배정$1.50)을 지키며 과거지출·실행별상한·가격상한·예약·미확정비용·중복재개를 통제한다.",
         "최초 분석·증분·재열람·1:1·그룹·성찰 비용을 분리 측정하며 서비스 단가 목표는 결정 기록으로 확정한다."
       ],
       "evidence": [
@@ -2153,6 +2153,12 @@
           "scope": "Explicit team150 observation and user request allow bounded extensions. Original trial body/SHA/opening and owner preserved; each new grant<=1.50 and expanded test total<=3.00. Old caps, changed metadata/history, missing request and additional overspend rejected. Factory727 and budget/shared/spec34 pass (overlap). No semantic quality approval.",
           "reference": "tests/test_trial_budget_extension.py",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Frozen candidate-first/Jev development completed synthetic12 freshA/B and registered actual24 without code/prompt changes. Candidate4/4/8, Agent1/2/0, runtime3/6/0; physical164/167/140, costs$0.309097634/$0.222291634/$0.126367764. Separate price control1/$0.004296250 gives472/$0.662053282 total,0reserved/uncertain. All produced profiles/turns and counted supports compared by coding agent, not independent human gold. Actual24 selected12sources/72pairs,120/192 scope pairs unassessed;6 counted supports each in separate candidate,0 arguments/facts/runtime. Valid population-narrowing support held while fictional raw positive correctly held; single-case repair would not supply3 supports. Synthetic position/entity holds vary Agent count. Provider cache differs; no model adoption, architecture saving, formal admission or MVP completion.",
+          "reference": "docs/design/MINING_EXPERIMENT_RESULT.md",
+          "result": "fail"
         }
       ],
       "required_evidence": [
@@ -2169,7 +2175,8 @@
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/JEV_MEMBERSHIP_RESULT.md",
         "docs/design/FACTORY_COST_PLAN.md",
-        "docs/design/MINING_EXPERIMENT.md"
+        "docs/design/MINING_EXPERIMENT.md",
+        "docs/design/MINING_EXPERIMENT_RESULT.md"
       ]
     }
   ],
@@ -2363,8 +2370,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v36",
       "reason": "사용자가 예산 증액을 확인하고 현재 실험 검증 진행을 지시했다. 공급자한도150 확인. 원장부50/owner8/oldtrial opening·과거차감 보존하는추가1.50 extension과고정합성12원문 development 통합을승인범위로기록; 전체3천/r5품질은별도."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v37",
+      "reason": "사용자 요청으로 명세/구조/실제실행 상태를 대조. 고정합성12 fresh2회와실제24 개발실행 완료, Agent1/2/0·전체472요청/$0.662053282·예약미확정0을기록한다. 합성정렬보류변동/실제공통후보·범위누락과정식미합격을보존. 팀키150/기존운영50·owner8/이번추가3을구별하고과거이력의현재표현을활성지시와분리한다. 다음은무료일반진단, 결과맞춤유료재시도없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v32",
+  "design_version": "commentscope-detailed-design-20261110-v33",
   "design_document": "docs/design/README.md"
 }
