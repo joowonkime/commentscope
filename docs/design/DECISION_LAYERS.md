@@ -14,6 +14,8 @@ J4-L/K의 opt-in Factory 연결은 구현했다. source fidelity/owner/core/fact
 이 문서는 기존 source S1/S2 교체나 전체 파이프라인 재작성을 채택하지 않는다.
 역할 하나가 반드시 모델 요청 하나를 뜻하지 않는다. 같은 원문을 읽더라도 다른 판단은 별도로 구별한다.
 
+현재 구조와 추천 이전순서는 [Factory 구조 정본](FACTORY_STRUCTURE.md)을 따른다. 이 문서의 기존 Jev 실험은 논거 component이고 현재 shared 실행은 Sol이다. 원문↔후보 Jev M1 연결은 DEC-009 proposed로 별도 구분한다.
+
 ## D-01. 현재 호출과 변경할 경계
 
 기본 [Factory 실행기](../../experiments/openrouter_factory_pipeline.py)는 `plan.deployment` 하나를
