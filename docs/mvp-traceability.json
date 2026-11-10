@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v33",
+  "spec_version": "commentscope-mvp-20261110-v34",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "구조v1과 PR81 batch 구현 유지. 문서화 요청에 따라 가변 관점 발견·Jev raw M1·제한 추가발견 추천을 DEC-009 proposed로 정리. 현재 실행은 Sol이며 Jev membership/신규발견루프 미구현·품질/원가 미검증. 기존trial1.50/잔여0.12720254·원8·총50·만료시간/과거차감/정식gate차단 유지. 이번 작업은 문서·도식 검증만, 신규유료호출0.",
+    "hold_reason": "전체Factory/정식gate 확대는 보류. 승인된 Jev M1 opt-in 구현과 기존trial 잔여 내11건 component 완료: $0.001672902, 관계8/11·유효지지2/3, 실제5건3/5 vs과거Sol4/5. 비용은낮으나정확도개선미확인으로 기본Sol유지/production채택보류. Lecture15 PDF4–6쪽의 M4 배점·3과업·일관성·직접사용 기준을 현재구현과 대조했다. 원금전한도/과거차감/r5 유지; 추가유료실행 없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -58,7 +58,10 @@
         "src/commentscope/factory/raw_membership_verification.py",
         "src/commentscope/factory/pipeline_work.py",
         "src/commentscope/factory/source_membership_batch.py",
-        "tools/compare_membership_transport.py"
+        "tools/compare_membership_transport.py",
+        "src/commentscope/factory/jev_membership.py",
+        "src/commentscope/providers/typed_membership_runner.py",
+        "tools/jev_membership_probe.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -78,7 +81,9 @@
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
         "tests/test_membership_reference_context.py",
-        "tests/test_source_membership_batch.py"
+        "tests/test_source_membership_batch.py",
+        "tests/test_jev_membership.py",
+        "tests/test_jev_membership_probe.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -92,7 +97,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
-        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
+        "docs/design/JEV_MEMBERSHIP.md"
       ]
     },
     {
@@ -124,7 +130,10 @@
         "src/commentscope/factory/raw_membership_verification.py",
         "src/commentscope/factory/pipeline_work.py",
         "src/commentscope/factory/source_membership_batch.py",
-        "tools/compare_membership_transport.py"
+        "tools/compare_membership_transport.py",
+        "src/commentscope/factory/jev_membership.py",
+        "src/commentscope/providers/typed_membership_runner.py",
+        "tools/jev_membership_probe.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -144,7 +153,9 @@
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
         "tests/test_membership_reference_context.py",
-        "tests/test_source_membership_batch.py"
+        "tests/test_source_membership_batch.py",
+        "tests/test_jev_membership.py",
+        "tests/test_jev_membership_probe.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -165,7 +176,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
-        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
+        "docs/design/JEV_MEMBERSHIP.md"
       ]
     },
     {
@@ -192,7 +204,10 @@
         "src/commentscope/factory/candidate_source_coverage.py",
         "tools/shared_factory_trial.py",
         "src/commentscope/factory/raw_membership_verification.py",
-        "src/commentscope/factory/pipeline_work.py"
+        "src/commentscope/factory/pipeline_work.py",
+        "src/commentscope/factory/jev_membership.py",
+        "src/commentscope/providers/typed_membership_runner.py",
+        "tools/jev_membership_probe.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -211,7 +226,9 @@
         "tests/test_candidate_source_coverage.py",
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
-        "tests/test_membership_reference_context.py"
+        "tests/test_membership_reference_context.py",
+        "tests/test_jev_membership.py",
+        "tests/test_jev_membership_probe.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -231,7 +248,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/TYPED_VERIFICATION.md"
+        "docs/design/TYPED_VERIFICATION.md",
+        "docs/design/JEV_MEMBERSHIP.md"
       ]
     },
     {
@@ -442,7 +460,10 @@
         "src/commentscope/factory/cost_planning.py",
         "tools/plan_factory_cost.py",
         "src/commentscope/factory/source_membership_batch.py",
-        "tools/compare_membership_transport.py"
+        "tools/compare_membership_transport.py",
+        "src/commentscope/factory/jev_membership.py",
+        "src/commentscope/providers/typed_membership_runner.py",
+        "tools/jev_membership_probe.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -464,7 +485,9 @@
         "tests/test_shared_typed_pipeline.py",
         "tests/test_shared_factory_trial.py",
         "tests/test_factory_cost_plan.py",
-        "tests/test_source_membership_batch.py"
+        "tests/test_source_membership_batch.py",
+        "tests/test_jev_membership.py",
+        "tests/test_jev_membership_probe.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -502,7 +525,8 @@
         "docs/design/README.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
-        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
+        "docs/design/JEV_MEMBERSHIP.md"
       ]
     },
     {
@@ -594,7 +618,10 @@
         "src/commentscope/factory/cost_planning.py",
         "tools/plan_factory_cost.py",
         "src/commentscope/factory/source_membership_batch.py",
-        "tools/compare_membership_transport.py"
+        "tools/compare_membership_transport.py",
+        "src/commentscope/factory/jev_membership.py",
+        "src/commentscope/providers/typed_membership_runner.py",
+        "tools/jev_membership_probe.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -618,7 +645,9 @@
         "tests/test_shared_factory_trial.py",
         "tests/test_membership_reference_context.py",
         "tests/test_factory_cost_plan.py",
-        "tests/test_source_membership_batch.py"
+        "tests/test_source_membership_batch.py",
+        "tests/test_jev_membership.py",
+        "tests/test_jev_membership_probe.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -645,7 +674,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
-        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
+        "docs/design/JEV_MEMBERSHIP.md"
       ]
     }
   ],
@@ -966,13 +996,27 @@
           "scope": "Documentation only: code-backed current/proposed structures,2 Mermaid diagrams parsed and identical to embedded source,18 spec tests pass. No Factory/adapter behavior, thresholds, money/time authority or semantic quality changed; no paid calls.",
           "reference": "docs/design/FACTORY_STRUCTURE.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Opt-in Jev M1 transport/projection and full scripted shared pipeline retain Sol M2 veto, condition/world/attribution checks and two Agents with three sources each. Required Factory716 passed (includes imported fixture tests); focused61 passed before test-discovery cleanup, final isolated component4 passed. Original trial/owner/global money, source-bound question IDs, full packet/enum coverage, no paid retry and distinct typed cost profiles verified. Not actual accuracy or formal gate approval.",
+          "reference": "tests/test_jev_membership.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Frozen M1 component completed:6 synthetic controls +5 stratified actual pairs,126 questions/11 physical responses/$0.001672902. Predeclared relation8/11; host support decisions10/11, valid support2/3 retained, invalid approval0/8, raw false supported1 held by scope guards, binding0. Actual5 Jev relation3/5 vs historical Sol4/5; paired raw costs$0.000794136 vs$0.0110568 (different time/cache). Authored development annotations, not independent human gold or population estimate. Completed replay0calls; original1.50/owner8/global50 preserved, reserved/uncertain0. Default remains Sol; no fresh Factory/production adoption.",
+          "reference": "docs/design/JEV_MEMBERSHIP_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
         "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/ARCHITECTURE_BASELINE.md",
         "docs/design/DECISION_LAYERS.md",
-        "docs/design/FACTORY_COST_PLAN.md"
+        "docs/design/FACTORY_COST_PLAN.md",
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/JEV_MEMBERSHIP_RESULT.md"
       ]
     }
   ],
@@ -1441,6 +1485,18 @@
           "scope": "Current typed common v3 and shared/owner/source/graph integration:required Factory635 and focused43 pass (overlap). Single-kind proposal schema and old protocol separation; same-plan proposal pause/read/full continuation, original scope/global money and cumulative1.50 cap verified. This is not live semantic admission.",
           "reference": "docs/design/SHARED_DISCOVERY_DELIVERY.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Opt-in Jev M1 transport/projection and full scripted shared pipeline retain Sol M2 veto, condition/world/attribution checks and two Agents with three sources each. Required Factory716 passed (includes imported fixture tests); focused61 passed before test-discovery cleanup, final isolated component4 passed. Original trial/owner/global money, source-bound question IDs, full packet/enum coverage, no paid retry and distinct typed cost profiles verified. Not actual accuracy or formal gate approval.",
+          "reference": "tests/test_jev_membership.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Frozen M1 component completed:6 synthetic controls +5 stratified actual pairs,126 questions/11 physical responses/$0.001672902. Predeclared relation8/11; host support decisions10/11, valid support2/3 retained, invalid approval0/8, raw false supported1 held by scope guards, binding0. Actual5 Jev relation3/5 vs historical Sol4/5; paired raw costs$0.000794136 vs$0.0110568 (different time/cache). Authored development annotations, not independent human gold or population estimate. Completed replay0calls; original1.50/owner8/global50 preserved, reserved/uncertain0. Default remains Sol; no fresh Factory/production adoption.",
+          "reference": "docs/design/JEV_MEMBERSHIP_RESULT.md",
+          "result": "partial"
         }
       ],
       "required_evidence": [
@@ -1461,7 +1517,9 @@
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/HIERARCHY_RETRIEVAL.md",
         "docs/design/CANDIDATE_SOURCE_COVERAGE.md",
-        "docs/design/SHARED_DISCOVERY_DELIVERY.md"
+        "docs/design/SHARED_DISCOVERY_DELIVERY.md",
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/JEV_MEMBERSHIP_RESULT.md"
       ]
     },
     {
@@ -1832,7 +1890,8 @@
       ],
       "design_refs": [
         "docs/design/EXECUTION.md",
-        "docs/design/README.md"
+        "docs/design/README.md",
+        "docs/M4_PROTOTYPE_REVIEW.md"
       ],
       "design_status": "written_unimplemented"
     },
@@ -1933,6 +1992,18 @@
           "scope": "Documentation only: code-backed current/proposed structures,2 Mermaid diagrams parsed and identical to embedded source,18 spec tests pass. No Factory/adapter behavior, thresholds, money/time authority or semantic quality changed; no paid calls.",
           "reference": "docs/design/FACTORY_STRUCTURE.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Opt-in Jev M1 transport/projection and full scripted shared pipeline retain Sol M2 veto, condition/world/attribution checks and two Agents with three sources each. Required Factory716 passed (includes imported fixture tests); focused61 passed before test-discovery cleanup, final isolated component4 passed. Original trial/owner/global money, source-bound question IDs, full packet/enum coverage, no paid retry and distinct typed cost profiles verified. Not actual accuracy or formal gate approval.",
+          "reference": "tests/test_jev_membership.py",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Frozen M1 component completed:6 synthetic controls +5 stratified actual pairs,126 questions/11 physical responses/$0.001672902. Predeclared relation8/11; host support decisions10/11, valid support2/3 retained, invalid approval0/8, raw false supported1 held by scope guards, binding0. Actual5 Jev relation3/5 vs historical Sol4/5; paired raw costs$0.000794136 vs$0.0110568 (different time/cache). Authored development annotations, not independent human gold or population estimate. Completed replay0calls; original1.50/owner8/global50 preserved, reserved/uncertain0. Default remains Sol; no fresh Factory/production adoption.",
+          "reference": "docs/design/JEV_MEMBERSHIP_RESULT.md",
+          "result": "partial"
         }
       ],
       "required_evidence": [
@@ -1952,7 +2023,9 @@
         "docs/design/ARCHITECTURE_BASELINE.md",
         "docs/design/FACTORY_COST_PLAN.md",
         "docs/design/FACTORY_COST_RESULT.md",
-        "docs/design/SOURCE_MEMBERSHIP_BATCH.md"
+        "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/JEV_MEMBERSHIP_RESULT.md"
       ]
     }
   ],
@@ -2134,8 +2207,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v33",
       "reason": "사용자가 Mermaid를 대화가 아닌 문서로 요청하고 추천 구조의 상세 설명을 요구. 현재 구현과 DEC-009 제안을 분리한 구조 정본/도식/입출력·Jev 전용 adapter·미대응/종료·원가/검증 순서를 작성한다. 책임v1·기존 성공/실패·지출/기한과 품질 기준은 유지; 코드변경/유료실행/모델채택 승인 아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v34",
+      "reason": "사용자 실제 진행 및 돈+정확도 모두 검증 요청. F3 M1 Jev prototype/기존 guard·Sol M2/고정 component 비교를 구현. 9값 enum은 기존8선택지 wire의 완전한 분할로 관측. 기존trial/owner/총50 누적한도를 유지하고 새 요청의 bounded resume만 별도 기록; 작은 진단을 전체/production 품질로 승격하지 않음.; actual frozen M1 cost/accuracy result and Lecture15 M4 rubric review recorded without production/budget/r5 change."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v29",
+  "design_version": "commentscope-detailed-design-20261110-v30",
   "design_document": "docs/design/README.md"
 }

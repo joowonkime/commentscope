@@ -14,6 +14,8 @@ for item in (ROOT,ROOT/'src'):
 
 from commentscope.factory import argument_observations as obs,candidate_consolidation as cc,minimal_pipeline
 from commentscope.factory import source_membership_batch
+from commentscope.factory import jev_membership
+from commentscope.providers import openrouter_decisions as decisions,typed_membership_runner
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
@@ -77,12 +79,17 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or plan['agent_source_policy']!='candidate_verified_subset'
             or plan.get('membership_evidence_protocol') not in (None,executor.raw_membership_verification.QUALIFIED_CONTEXT)
             or plan.get('membership_batch_protocol') not in (None,source_membership_batch.VERSION)
+            or plan.get('membership_judge_protocol') not in (None,jev_membership.VERSION)
+            or plan.get('membership_deployment')!=(decisions.DEPLOYMENT if plan.get('membership_judge_protocol') else None)
+            or plan.get('membership_judge_protocol') and plan.get('membership_batch_protocol')
             or plan['membership_retrieval_policy']!=cc.ALIAS_RETRIEVAL
             or plan['stage_aliases']!=(BATCH_ALIASES if plan.get('membership_batch_protocol') else ALIASES)):
         raise ValueError('Frozen shared development scope, roles or cumulative cap changed')
 
 
-def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None,batch_membership=False):
+def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None,batch_membership=False,jev_judging=False):
+    if type(jev_judging) is not bool or jev_judging and batch_membership:
+        raise ValueError('Choose one explicit membership transport')
     if type(batch_membership) is not bool:raise ValueError('Explicit batch membership flag required')
     directory=Path(directory)
     for name in (directory,template_file,trial_file):executor.private(name)
@@ -125,11 +132,16 @@ def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=No
         plan.update(membership_batch_protocol=source_membership_batch.VERSION,stage_aliases=deepcopy(BATCH_ALIASES))
     else:
         plan.pop('membership_batch_protocol',None)
+    if jev_judging:
+        plan.update(membership_judge_protocol=jev_membership.VERSION,membership_deployment=deepcopy(decisions.DEPLOYMENT))
+    else:
+        plan.pop('membership_judge_protocol',None);plan.pop('membership_deployment',None)
     guard(plan);executor.replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
     for d in plan['documents']:executor.fact_checks.live(d['expires_at'])
     plan['providers_at_prepare']={'generation':executor.provider_preflight(plan['deployment']),
         'verification':executor.provider_preflight(plan['verification_deployment']),
         'embedding':executor.embedding_preflight()}
+    if jev_judging:plan['providers_at_prepare']['membership']=decisions.preflight(decisions.DEPLOYMENT)
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
     executor.archive_sources(directory,plan['code_sha256']);executor.archive_sources(directory,files)
     validate(directory);return plan
@@ -166,7 +178,25 @@ def validate(directory):
 
 
 class Session(executor.RemoteSession):
-    def __init__(self,directory,plan,dispatch):super().__init__(directory,plan,dispatch,authorization_guard=guard)
+    def __init__(self,directory,plan,dispatch):
+        super().__init__(directory,plan,dispatch,authorization_guard=guard)
+        if plan.get('membership_judge_protocol'):
+            self.membership_client,self.membership_checkpoint=typed_membership_runner.build(
+                self.directory,plan,self.time,self.money,executor.key_metadata)
+
+    def decide(self,stage,payload):
+        if (not self.plan.get('membership_judge_protocol')
+                or stage!='membership-jev-'+decisions.wire_sha256(payload,decisions.DEPLOYMENT)[:20]):
+            raise ValueError('Typed membership is not selected in the frozen plan')
+        self.dispatch.check();executor.check_quota();guard(self.plan,call_seconds=decisions.DEPLOYMENT['call_seconds'])
+        if not jev_membership.measure(payload)['fits']:raise ValueError('Typed membership context exceeded')
+        limits=getattr(self,'cost_limits',None)
+        if limits is not None:limits.admit(stage,payload)
+        self.storage.check()
+        with self.dispatch.remote_call():
+            result=self.membership_checkpoint.call(stage,payload,provider=self.membership_client.generate)
+        self.storage.check();decisions.answers(payload,result,decisions.DEPLOYMENT)
+        return result
     def call(self,stage,request):
         stage=mapped_stage(stage);limits=getattr(self,'cost_limits',None)
         if limits is not None:
@@ -230,6 +260,7 @@ def run(directory,*,proposals_only=False):
                     discovery_mode='shared',membership_mode='raw',verification_contract=plan['verification_contract'],
                     membership_evidence_protocol=plan.get('membership_evidence_protocol'),
                     membership_batch_protocol=plan.get('membership_batch_protocol'),
+                    membership_judge_protocol=plan.get('membership_judge_protocol'),
                     argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset')
                 save('output',output)
                 runtime=runtime_probe(output['agent_inputs']['bundle'],session,
@@ -257,11 +288,12 @@ def main():
     q=a.add_parser('authorize');q.add_argument('file',type=Path);q.add_argument('--authorization',type=Path,required=True);q.add_argument('--user-request',required=True)
     q=a.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--template',type=Path,required=True);q.add_argument('--trial',type=Path,required=True);q.add_argument('--gate',choices=('G1','G2','G3'),default='G2');q.add_argument('--scope-refresh',type=Path)
     q.add_argument('--batch-membership',action='store_true')
+    q.add_argument('--jev-membership',action='store_true')
     q=a.add_parser('run');q.add_argument('directory',type=Path);q.add_argument('--proposals-only',action='store_true');q.add_argument('--live',action='store_true',required=True);q.add_argument('--key-file',type=Path,required=True)
     args=p.parse_args()
     if args.action=='authorize':result=authorize(args.file,args.authorization,user_request=args.user_request)
     elif args.action=='prepare':
-        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh,batch_membership=args.batch_membership)
+        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh,batch_membership=args.batch_membership,jev_judging=args.jev_membership)
         result={'prepared':str(args.directory),'scope':len(plan['scope_ids']),'new_model_calls':0}
     else:
         os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()
