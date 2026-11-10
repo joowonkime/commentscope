@@ -68,21 +68,20 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
                 threads.append(group)
         queues[cid] = ranked
     pairs = []; selected = set(); counts = dict.fromkeys(cs, 0)
-    while len(pairs) < configuration['maximum_pairs']:
-        added = False
-        for cid in sorted(cs):
-            if counts[cid] >= configuration['sources_per_candidate']:
+    order = sorted(cs, key=lambda cid: (-len({thread(sid) for sid in cs[cid]['nominees']}),
+                                       -len(cs[cid]['nominees']), cid))
+    # Fund an evidence-search batch before opening the next candidate. Spreading
+    # one pair to every hypothesis can leave all of them below the 3-source gate.
+    # Priority is retrieval only; low-priority hypotheses remain unassessed.
+    for cid in order:
+        while (queues[cid] and counts[cid] < configuration['sources_per_candidate']
+               and len(pairs) < configuration['maximum_pairs']):
+            sid = queues[cid].popleft()
+            if sid not in selected and len(selected) >= configuration['maximum_sources']:
                 continue
-            while queues[cid]:
-                sid = queues[cid].popleft()
-                if sid not in selected and len(selected) >= configuration['maximum_sources']:
-                    continue
-                pairs.append({'source_id': sid, 'candidate_id': cid})
-                selected.add(sid); counts[cid] += 1; added = True
-                break
-            if len(pairs) >= configuration['maximum_pairs']:
-                break
-        if not added:
+            pairs.append({'source_id': sid, 'candidate_id': cid})
+            selected.add(sid); counts[cid] += 1
+        if len(pairs) >= configuration['maximum_pairs']:
             break
     stops = []
     if len(pairs) == configuration['maximum_pairs']: stops.append('pair_limit')
@@ -96,6 +95,7 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
     return {'artifact_kind': VERSION, 'policy': configuration,
             'input_sha256': digest([sources, candidates, source_vectors, candidate_vectors]),
             'source_count': len(ss), 'candidate_count': len(cs), 'pairs': pairs,
+            'candidate_search_order': order,
             'pair_retrieval': [retrieval(p) for p in pairs],
             'selected_source_ids': sorted(selected), 'selected_pair_count': len(pairs),
             'unassessed_pair_count': len(ss) * len(cs) - len(pairs),

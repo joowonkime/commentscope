@@ -153,7 +153,9 @@ sources_per_candidate는1~64, maximum_pairs는1~1000000, maximum_sources와 maxi
 1~3000이며 maximum_sources는 maximum_snapshot_comments 이하다. 실제 snapshot이 선언 상한을 넘으면
 시작 전에 거절한다. 기존 경로의1000 상한은 유지한다. 새 선택 경로만 명시한 상한을 쓴다.
 후보별 nominee/본문/가용 parent vector 검색을 수행하고 thread를 번갈아 골라 큰 thread 쏠림을 줄인다.
-후보 간에도 한 쌍씩 번갈아 선택해 앞 후보가 전체 예산을 독점하지 않게 한다. 이것은 검색 순서이며 의미 승인이 아니다.
+후보는 nominee가 나온 thread 수/원문 수로 검색 우선순위를 정하고, 후보별 한 묶음씩 예산을 배정한다.
+모든 후보에 한 쌍씩만 분산해 어느 후보도 Agent 최소지지를 모으지 못하는 구조를 피한다.
+한 후보의 상한은 sources_per_candidate이고, 후순위 가설은 미평가로 보존한다. 이것은 검색 순서이며 의미 승인이 아니다.
 총 source/pair/후보별 상한 때문에 빠진 nominee도 미평가로 기록한다. parent vector가 없으면
 없는 값을 만들지 않고 자기 본문과 알려진 지칭문맥만 사용한다.
 새 discovery protocol `original-mining-hypotheses-20261110-v4`는 최대4개의 단일유형 가설과
@@ -233,20 +235,23 @@ Factory가3천개를 지원하지는 않는다. 새 mining policy만 최대3천�
 | 실행 환경 | CLI/회귀는 현재 ROOT/src를 고정. 무료 보관자료 검사도 실제 module 파일 경로를 확인 |
 | 예산/품질 | 새 정책도 전체 cost gate·원trial/owner/global을 공유. 새 후보/모델의 성적을 과거 성적으로 승계하지 않음 |
 
-집중17개, 관련54개, 필수 Factory722개, 명세18개가 통과했다(범위 중복).
+첫 집중17개/관련54개 후, 후보별 근거 묶음 배정과 예산 extension까지 포함한 최종 Factory727개,
+집중18개/예산·재개·명세34개가 통과했다(범위 중복).
 Mermaid 구문과 embedded/원본 동일성도 확인했다. 합성 end-to-end는2Agent/각3지지와
 M2 veto·실패 Jev 보류·같은 proposal/cost gate 재개를 검사했다. 합성2천/3천은 source 목록/선택 상한을 검사했다.
 
 현재 실제96개의 원래 embedding 영수증과5개 후보를 검증해 무료로 새 검색 계획을 계산했다.
-설정은 위 예시12/60/30/3000이다. **30source·56쌍·28개 thread 문맥**, reply10개를 선택했고
-424쌍은 미평가로 남겼다. 이는480쌍 원래 계획과의 작업량 비교이며 비용 절감률이나 새 정확도가 아니다.
+설정은 위 예시12/60/30/3000이다. 최종 후보별 배정으로 **30source·58쌍·28개 thread 문맥**,
+reply10개를 선택했고422쌍은 미평가로 남겼다. 이는480쌍 원래 계획과의 작업량 비교이며 비용 절감률이나 새 정확도가 아니다.
 이96 scope에는 선택 reply의 parent vector가 없어 parent similarity 적용은0쌍이었다.
 parent 텍스트는 기존 원문 packet에 남지만, 추가 parent embedding과 실제 효과는 아직 검증하지 않았다.
 
-동일 원trial 잔여는$0.125529638이다. 새96 선택 계획도 측정된 단계의 역사적 단가로 계산한 부분만
+증액 전 무료검토 시 동일 원trial 잔여는$0.125529638였다. 새96 선택 계획도 측정된 단계의 역사적 단가로 계산한 부분만
 $0.2474024425이고 M1 packet/논거/사실/runtime 등은 미측정이다. 따라서 비용 gate가 거절했다.
 **신규 모델 호출0/추가 지출$0.** 총계정 보수잔여$33.939361082와 별개로 기존trial1.50 상한을 유지했다.
-전체계획·유효기간·원 한도 문제가 해결되기 전 실제96/3천/새 production 배정으로 확대하지 않는다.
+이 무료검토의 비용 거절을 보존한다. 이후 사용자가150 증액/실행 및 테스트 확대를 지시한
+[고정 통합 검증](MINING_EXPERIMENT.md)은 별도 누적 extension과 전체3.00 상한으로 진행한다.
+실제96/3천/새 production 배정의 성능 채택은 아직 하지 않았다.
 
 비공개 증거는 `runs/perspective-mining-20261110-v1/`의 검사 로그, archive-readiness,
 원본입력 fingerprint/선택 장부/cost-readiness다. 원문·벡터·개인 장부는 공유하지 않는다.

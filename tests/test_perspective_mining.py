@@ -45,7 +45,7 @@ class RetrievalTests(unittest.TestCase):
         result = self.schedule(sources=[self.root, child, self.other])
         row = next(r for r in result['pair_retrieval'] if r['source_id']=='reply')
         self.assertIsNone(row['parent_similarity'])
-    def test_global_limits_preserve_unassessed_nominees_and_candidate_fairness(self):
+    def test_global_limits_preserve_unassessed_nominees(self):
         c2 = candidate(self.other, 'Keep fares.'); cs = [self.target, c2]
         result = self.schedule(candidates=cs, cv={c['id']: [1.,0.] for c in cs},
                                configuration=policy(maximum_pairs=2, maximum_sources=1))
@@ -54,6 +54,14 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(result['unassessed_pair_count'], 6-len(result['pairs']))
         self.assertTrue(any(s['unassessed_source_count'] for s in result['candidate_states']))
         self.assertEqual(len(result['source_states']), 3)
+    def test_many_candidates_do_not_spread_the_budget_below_every_agent_support_minimum(self):
+        cs = [candidate(self.root,'Distinct policy option '+str(i)+'.') for i in range(20)]
+        result = self.schedule(candidates=cs,cv={c['id']:[1.,0.] for c in cs},
+                               configuration=policy(maximum_pairs=6,sources_per_candidate=3))
+        funded = [s for s in result['candidate_states'] if s['selected_source_count']]
+        self.assertEqual(len(funded),2)
+        self.assertTrue(all(s['selected_source_count']==3 for s in funded))
+        self.assertEqual(result['unassessed_pair_count'],54)
     def test_changed_original_invalidates_nomination_before_judging(self):
         bad = deepcopy(self.target); bad['nominees']['root'] = '0'*64
         with self.assertRaises(ValueError): self.schedule(candidates=[bad], cv={bad['id']: [1.,0.]})

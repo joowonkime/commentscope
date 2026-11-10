@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v35",
+  "spec_version": "commentscope-mvp-20261110-v36",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-018",
-    "paid_execution_hold": true,
-    "hold_reason": "TASK-018 첫 opt-in 구현/무료 검증 완료: Factory722·실제보관96입력의 선택계획30source/56쌍. 새96계획은 알려진단계$0.2474024425+미측정으로 원trial잔여$0.125529638 초과해 비용gate거절. 추가모델0/$0. 기존1.50/owner8/global50·기한·정식r5실패보존. 실제의미/3천전체/production채택은미완료. 다음은 미측정전체비용/기한/금융상한을해결한 고정검증계획이며 자동증액/유료재시도없음.",
+    "paid_execution_hold": false,
+    "hold_reason": "팀150/원owner8/운영장부50/전체추가3.00/각배정1.50로고정검증중. Factory727통과, 가격부품1회$0.00429625와G1후보4개/비용계획통과. 첫전체G1은Windows커밋여유1GiB미달로일시중단,완료응답보존/예약·미확정0. 원한도·기한·자원·정식admission guard유지. 합성12 fresh2회+실제24 development1회예정,반복간prompt/정답변경없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -1067,6 +1067,34 @@
       "design_refs": [
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/M4_PROTOTYPE_REVIEW.md"
+      ]
+    },
+    {
+      "id": "DEC-011",
+      "title": "팀 증액 확인과 발굴 통합검증 확대 배정",
+      "status": "accepted",
+      "requirements": [
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "확인한 팀 한도150 안에서 과거 지출/원trial을 보존하며 현재 실험을 어떻게 재개하는가?",
+      "options": [
+        "팀 한도150 확인·기존 운영장부50/owner8 안에서 전체추가3.00/각배정1.50만 사용",
+        "원trial opening/SHA/body를 계승한 별도 누적 extension·새 bounded resume",
+        "고정 합성12원문 전체 development 통합과 필요 가격부품, 실제3천/정식품질 승격은 별도"
+      ],
+      "selection": "사용자가 증액 확인 후 검증 진행 및 Agent 생성 테스트 확대를 지시했다. 한도150 확인. 고정합성12 fresh2회+실제24 development1회를 전체추가3.00/각배정최대1.50/원owner8/기존운영장부50 안에서 진행하며 과거차감/원trial개시차감을초기화하지않는다.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Explicit user instruction plus current key metadata confirms150 limit; bounded extension preserves original trial file/body/SHA/opening and owner. This is execution authority, not semantic quality approval.",
+          "reference": "docs/design/MINING_EXPERIMENT.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/MINING_EXPERIMENT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     }
   ],
@@ -2116,8 +2144,14 @@
         },
         {
           "kind": "offline",
-          "scope": "Candidate-first opt-in implemented: one-source typed hypotheses, bounded thread/candidate-fair retrieval, optional available-parent vector, selected-source-only context/world judging, explicit max3000 registry. Existing Sol/default/legacy/M2/argument/fact/compiler and original cost gate preserved. Focused17, related54, Factory722, spec18 pass (overlap); Mermaid parse/source equality pass. Archived actual96 inputs produce30sources/56pairs,28thread contexts/10replies,424unassessed,0parent-vector pairs; no fresh semantic claim. New plan known historical subtotal$0.2474024425 plus unknown stages exceeds original trial remaining$0.125529638: paid preflight rejected. New model calls0/$0; no r5/production admission.",
+          "scope": "Candidate-first opt-in implemented: one-source typed hypotheses, bounded thread/candidate-fair retrieval, optional available-parent vector, selected-source-only context/world judging, explicit max3000 registry. Existing Sol/default/legacy/M2/argument/fact/compiler and original cost gate preserved. Focused18, related54, Factory727, budget/shared/spec34 (overlap) pass (overlap); Mermaid parse/source equality pass. Archived actual96 inputs produce30sources/58pairs,28thread contexts/10replies,422unassessed,0parent-vector pairs; no fresh semantic claim. New plan known historical subtotal$0.2474024425 plus unknown stages exceeds original trial remaining$0.125529638: paid preflight rejected. New model calls0/$0; no r5/production admission.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Explicit team150 observation and user request allow bounded extensions. Original trial body/SHA/opening and owner preserved; each new grant<=1.50 and expanded test total<=3.00. Old caps, changed metadata/history, missing request and additional overspend rejected. Factory727 and budget/shared/spec34 pass (overlap). No semantic quality approval.",
+          "reference": "tests/test_trial_budget_extension.py",
           "result": "pass"
         }
       ],
@@ -2134,7 +2168,8 @@
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/JEV_MEMBERSHIP_RESULT.md",
-        "docs/design/FACTORY_COST_PLAN.md"
+        "docs/design/FACTORY_COST_PLAN.md",
+        "docs/design/MINING_EXPERIMENT.md"
       ]
     }
   ],
@@ -2324,8 +2359,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v35",
       "reason": "사용자가 사전선정영상/저장Agent 운영을 승인하고, root/reply·embedding/현재군집화·Jev 직접판정·2천~3천 규모를 질문한 뒤 노이즈 전수분류보다 관점발굴 우선 및 구조 검증 후 실제 진행을 지시. DEC-010은 운영/우선순위만채택; TASK-018을주작업으로등록하고 기존정식실패/돈/시간/r5보존. 소수발견·선택검증/검색은새opt-in으로검증한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v36",
+      "reason": "사용자가 예산 증액을 확인하고 현재 실험 검증 진행을 지시했다. 공급자한도150 확인. 원장부50/owner8/oldtrial opening·과거차감 보존하는추가1.50 extension과고정합성12원문 development 통합을승인범위로기록; 전체3천/r5품질은별도."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v31",
+  "design_version": "commentscope-detailed-design-20261110-v32",
   "design_document": "docs/design/README.md"
 }
