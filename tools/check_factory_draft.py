@@ -17,6 +17,8 @@ MODULES = (
     "test_raw_membership_source_context",
     "test_source_membership_batch",
     "test_jev_membership",
+    "test_perspective_mining",
+    "test_trial_budget_extension",
     "test_jev_membership_probe",
     "test_statement_world_membership",
     "test_minimal_pipeline",

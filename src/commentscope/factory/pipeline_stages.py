@@ -15,7 +15,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory import argument_observations
 from commentscope.factory import compact_claims
 from commentscope.factory import owner_observations
-from commentscope.factory import assertion_counterexamples
+from commentscope.factory import assertion_counterexamples, perspective_mining
 
 
 @dataclass
@@ -59,7 +59,8 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
         from commentscope.factory import literal_discovery
         records=literal_discovery.discover(sources,work,save)
     elif discovery_mode=='shared':
-        shared_version=shared_claims.COMMON_TYPED if getattr(execution,'shared_typed',False) else shared_claims.COMMON
+        shared_version=(shared_claims.MINING if getattr(execution,'membership_search_policy',None)
+                        else shared_claims.COMMON_TYPED if getattr(execution,'shared_typed',False) else shared_claims.COMMON)
         if shared_records is not None:
             shared_discovery=shared_claims.for_scope(shared_records,sources,version=shared_version)
         else:
@@ -67,7 +68,7 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
                 shared_discovery.extend(work('shared-discovery',group,
                     lambda rows:shared_claims.request(rows,version=shared_version),
                     lambda rows,result:shared_claims.bind(rows,result,version=shared_version),
-                    shared_claims.BATCH_SIZE,minimum=2))
+                    shared_claims.BATCH_SIZE,minimum=1 if shared_version==shared_claims.MINING else 2))
         records=[]  # A common proposal is not a per-source extraction/completeness approval.
     elif getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS:
         records = compact_claims.discover(sources, work, protocol=execution.extraction_protocol)
@@ -95,6 +96,17 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
 def memberships(sources, ids, candidates, records, vectors, embed, execution, *,
                 discovery_mode, shared_memberships, source_entailment_required):
     """Proposals -> final wording, verified support and explicit merge evidence."""
+    search_policy = getattr(execution, 'membership_search_policy', None)
+    if search_policy is not None:
+        candidate_vectors = embed('candidates', {c['id']: c['text'] for c in candidates}) if candidates else {}
+        search = perspective_mining.schedule(sources, candidates, vectors, candidate_vectors,
+                                            configuration=search_policy)
+        execution.save('membership-search', search)
+        # No all-source nomination pass. Context/world observations remain lazy
+        # inside judge(), so only selected sources cause those model calls.
+        memberships = execution.judge('membership-initial', search['pairs'], candidates) if candidates else []
+        execution.save('candidates', candidates); execution.save('memberships', memberships)
+        return MembershipResult(candidates, memberships, [], None, [])
     engine, verification_contract = execution.engine, execution.verification_contract
     work, qualify, judge = execution.work, execution.qualify, execution.judge
     save, SCHEDULE = execution.save, execution.schedule

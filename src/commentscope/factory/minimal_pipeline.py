@@ -5,7 +5,7 @@ Providers and per-run bookkeeping live behind PipelineWork; stage algorithms
 remain in pipeline_stages and the existing focused domain modules.
 """
 from commentscope.factory import candidate_consolidation as cc, explicit_discourse
-from commentscope.factory import fact_checks, pipeline_stages
+from commentscope.factory import fact_checks, pipeline_stages, perspective_mining
 from commentscope.factory import raw_membership_verification as raw_verification
 from commentscope.factory.framed_corpus import sources as source_registry
 from commentscope.factory.pipeline_work import PipelineWork
@@ -16,7 +16,7 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None,membership_search_policy=None):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     if membership_evidence_protocol is not None and (membership_evidence_protocol!=raw_verification.QUALIFIED_CONTEXT
@@ -42,6 +42,12 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
             or verification_contract != raw_verification.FULL_SCOPE or shared_memberships is not None):
         raise ValueError('Batched membership requires fresh shared typed/full-scope raw judging')
     from commentscope.factory import jev_membership
+    if membership_search_policy is not None:
+        membership_search_policy = perspective_mining.policy(membership_search_policy)
+        if (not shared_typed or membership_mode != 'raw' or verification_contract != raw_verification.FULL_SCOPE
+                or shared_memberships is not None or membership_batch_protocol is not None
+                or membership_retrieval_policy != cc.ALIAS_RETRIEVAL):
+            raise ValueError('Mining search requires fresh shared typed/full-scope raw inputs')
     if membership_judge_protocol is not None and (membership_judge_protocol != jev_membership.VERSION
             or not shared_typed or membership_mode != 'raw' or verification_contract != raw_verification.FULL_SCOPE
             or shared_memberships is not None or membership_batch_protocol is not None
@@ -71,7 +77,8 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     if verification_contract in raw_verification.TARGETED_CONTRACTS and (discovery_mode, membership_mode) != ('contextual', 'raw'):
         raise ValueError('Experimental target eligibility requires contextual discovery and raw membership')
     fact_checks.live(snapshot.usage.expires_at)
-    registry = source_registry(snapshot, include_video_context=True)
+    registry = source_registry(snapshot, include_video_context=True,
+        maximum_comments=membership_search_policy['maximum_snapshot_comments'] if membership_search_policy else 1000)
     ids = sorted(registry) if scope_ids is None else sorted(scope_ids)
     if len(ids) != len(set(ids)) or any(sid not in registry for sid in ids) or not ids:
         raise ValueError('Nonempty unique canonical processing scope required')
@@ -86,6 +93,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     execution.membership_evidence_protocol=membership_evidence_protocol
     execution.membership_batch_protocol=membership_batch_protocol
     execution.membership_judge_protocol=membership_judge_protocol
+    execution.membership_search_policy=membership_search_policy
     execution.membership_retrieval_policy=membership_retrieval_policy
     errors, holds, capacity = execution.errors, execution.holds, execution.capacity
     # Immutable syntax exists before any generated candidate or argument. This
@@ -130,6 +138,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
             'canonical_population': len(registry), 'processing_ids': ids,
             **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
             **({'membership_judge_protocol':membership_judge_protocol} if membership_judge_protocol else {}),
+            **({'membership_search_policy':membership_search_policy} if membership_search_policy else {}),
             **({'membership_batch_protocol':membership_batch_protocol} if membership_batch_protocol else {}),
             **({'membership_evidence_protocol':membership_evidence_protocol} if membership_evidence_protocol else {}),
             **({'agent_source_policy':agent_source_policy} if agent_source_policy!='all_members' else {}),

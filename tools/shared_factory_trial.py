@@ -14,7 +14,7 @@ for item in (ROOT,ROOT/'src'):
 
 from commentscope.factory import argument_observations as obs,candidate_consolidation as cc,minimal_pipeline
 from commentscope.factory import source_membership_batch
-from commentscope.factory import jev_membership
+from commentscope.factory import jev_membership, perspective_mining
 from commentscope.providers import openrouter_decisions as decisions,typed_membership_runner
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json,sha
@@ -23,7 +23,7 @@ from commentscope.ingestion import load_snapshot
 from commentscope.providers import host_resources
 from commentscope.providers.checkpoint_calls import run_origin
 from commentscope.providers.execution_lock import experiment_lock
-from commentscope.providers.openrouter_budget import units
+from commentscope.providers.openrouter_budget import units,dollars
 from commentscope.agents.runtime_probe import runtime_probe,runtime_check
 from commentscope.storage import write_json_exclusive as write
 from experiments import remote_factory_pipeline as executor
@@ -62,16 +62,70 @@ def authorize(path,authorization_file,*,user_request):
     write(path,trial);return trial
 
 
+def validate_trial(trial):
+    if trial.get('artifact_kind')==VERSION+'-authorization':
+        if trial.get('maximum_usd')!=MAXIMUM:raise ValueError('Original trial cap changed')
+        return trial
+    if trial.get('artifact_kind')!=VERSION+'-budget-extension':raise ValueError('Registered trial authorization required')
+    parent=trial['base_trial'];original=read_json(parent['file'])
+    if sha(parent['file'])!=parent['sha256'] or original!=parent['authorization']:
+        raise ValueError('Original trial budget history changed')
+    validate_trial(original)
+    evidence=trial['budget_increase_evidence'];observed=read_json(evidence['file'])
+    if sha(evidence['file'])!=evidence['sha256'] or observed!=evidence['observation']:
+        raise ValueError('Budget-increase observation changed')
+    additional=units(trial['additional_maximum_usd'])
+    if (original['artifact_kind']!=VERSION+'-authorization' or not 0<additional<=units(MAXIMUM)
+            or trial['money_owner_sha256']!=original['money_owner_sha256']
+            or trial['opening_scope_charge_usd']!=original['opening_scope_charge_usd']
+            or units(trial['authorized_scope_charge_usd'])<units(original['opening_scope_charge_usd'])
+            or units(trial['maximum_usd'])!=units(trial['authorized_scope_charge_usd'])-units(original['opening_scope_charge_usd'])+additional
+            or units(observed['key_metadata']['limit'])<=units('50')
+            or units(observed['key_metadata']['limit_remaining'])<additional):
+        raise ValueError('Explicit bounded extension must preserve original money history')
+    return trial
+
+
+def extend_budget(path,trial_file,authorization_file,budget_observation_file,*,additional_usd,user_request):
+    for name in (path,trial_file,authorization_file,budget_observation_file):executor.private(name)
+    if Path(path).exists() or not isinstance(user_request,str) or not user_request.strip():
+        raise ValueError('Fresh explicit budget-increase request required')
+    original=validate_trial(read_json(trial_file));auth=read_json(authorization_file)
+    if original['artifact_kind']!=VERSION+'-authorization' or auth['money_owner']['sha256']!=original['money_owner_sha256']:
+        raise ValueError('Budget extension must retain its original money owner')
+    owner=read_json(auth['money_owner']['file']);money=executor.ledger(read_json(owner['shared_policy_file']))
+    shared=money.summary();scope=money.summary(plan_sha256=original['money_owner_sha256']);additional=units(additional_usd)
+    if (not 0<additional<=units(MAXIMUM) or shared['reserved_calls'] or shared['uncertain_calls']
+            or units(scope['charged_usd'])<units(original['opening_scope_charge_usd'])
+            or additional>min(units(owner['maximum_additional_usd'])-units(scope['charged_usd']),units(shared['remaining_usd']))):
+        raise ValueError('Settled original owner/global money must cover the additional bound')
+    observed=read_json(budget_observation_file)
+    value={'artifact_kind':VERSION+'-budget-extension','user_request':user_request,
+        'authorization_file':str(authorization_file),'authorization_sha256':sha(authorization_file),
+        'money_owner_sha256':original['money_owner_sha256'],
+        'maximum_usd':dollars(units(scope['charged_usd'])-units(original['opening_scope_charge_usd'])+additional),
+        'opening_scope_charge_usd':original['opening_scope_charge_usd'],
+        'authorized_scope_charge_usd':scope['charged_usd'],'additional_maximum_usd':dollars(additional),
+        'base_trial':{'file':str(trial_file),'sha256':sha(trial_file),'authorization':original},
+        'budget_increase_evidence':{'file':str(budget_observation_file),'sha256':sha(budget_observation_file),'observation':observed},
+        'historical_charges_preserved':True,'started_at':datetime.now(timezone.utc).isoformat()}
+    validate_trial(value);write(path,value);return value
+
+
 def guard(plan,*,call_seconds=0,allow_expired=False):
+    if plan.get('membership_search_policy') is not None:
+        perspective_mining.policy(plan['membership_search_policy'])
+        if plan.get('membership_batch_protocol'):
+            raise ValueError('Candidate-first search requires scalar or typed membership')
     executor.guard(plan,call_seconds=call_seconds,allow_expired=allow_expired)
     binding=plan['trial'];trial=read_json(binding['file'])
+    validate_trial(trial)
     if (sha(binding['file'])!=binding['sha256'] or trial!=binding['authorization']
-            or trial['artifact_kind']!=VERSION+'-authorization' or not trial['user_request'].strip()
-            or trial['maximum_usd']!=MAXIMUM or trial['historical_charges_preserved'] is not True
+            or not trial['user_request'].strip() or trial['historical_charges_preserved'] is not True
             or trial['authorization_sha256']!=plan['authorization']['sha256']
             or trial['money_owner_sha256']!=plan['spend_scope_sha256']
             or plan['opening_scope_charge_usd']!=trial['opening_scope_charge_usd']
-            or plan['subcap_usd']!=MAXIMUM or plan['artifact_kind']!=VERSION or plan['mode']!='development'
+            or plan['subcap_usd']!=trial['maximum_usd'] or plan['artifact_kind']!=VERSION or plan['mode']!='development'
             or plan['gate'] not in ('G1','G2','G3') or plan['formal_admission_eligible'] is not False
             or plan['quality_gate_passed'] is not False or plan['admission_file'] is not None
             or plan['discovery_mode']!='shared' or plan['membership_mode']!='raw'
@@ -87,7 +141,10 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
         raise ValueError('Frozen shared development scope, roles or cumulative cap changed')
 
 
-def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None,batch_membership=False,jev_judging=False):
+def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=None,batch_membership=False,jev_judging=False,membership_search_policy=None):
+    if membership_search_policy is not None:
+        membership_search_policy = perspective_mining.policy(membership_search_policy)
+        if batch_membership: raise ValueError('Candidate-first search cannot select chat batch')
     if type(jev_judging) is not bool or jev_judging and batch_membership:
         raise ValueError('Choose one explicit membership transport')
     if type(batch_membership) is not bool:raise ValueError('Explicit batch membership flag required')
@@ -119,7 +176,7 @@ def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=No
         formal_admission_eligible=False,admission_file=None,quality_gate_passed=False,
         authorization={'file':str(auth_file),'sha256':sha(auth_file),'authorization':auth},
         trial={'file':str(trial_file),'sha256':sha(trial_file),'authorization':trial},
-        subcap_usd=MAXIMUM,opening_scope_charge_usd=trial['opening_scope_charge_usd'],
+        subcap_usd=trial['maximum_usd'],opening_scope_charge_usd=trial['opening_scope_charge_usd'],
         discovery_mode='shared',membership_mode='raw',extraction_protocol=None,
         argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset',
         membership_retrieval_policy=cc.ALIAS_RETRIEVAL,stage_aliases=deepcopy(ALIASES),
@@ -136,6 +193,10 @@ def prepare(directory,template_file,trial_file,*,gate='G2',scope_refresh_file=No
         plan.update(membership_judge_protocol=jev_membership.VERSION,membership_deployment=deepcopy(decisions.DEPLOYMENT))
     else:
         plan.pop('membership_judge_protocol',None);plan.pop('membership_deployment',None)
+    if membership_search_policy is not None:
+        plan['membership_search_policy']=deepcopy(membership_search_policy)
+    else:
+        plan.pop('membership_search_policy',None)
     guard(plan);executor.replay_benchmark(Path(plan['fact_benchmark']).parent,plan,[])
     for d in plan['documents']:executor.fact_checks.live(d['expires_at'])
     plan['providers_at_prepare']={'generation':executor.provider_preflight(plan['deployment']),
@@ -261,6 +322,7 @@ def run(directory,*,proposals_only=False):
                     membership_evidence_protocol=plan.get('membership_evidence_protocol'),
                     membership_batch_protocol=plan.get('membership_batch_protocol'),
                     membership_judge_protocol=plan.get('membership_judge_protocol'),
+                    membership_search_policy=plan.get('membership_search_policy'),
                     argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset')
                 save('output',output)
                 runtime=runtime_probe(output['agent_inputs']['bundle'],session,
@@ -289,11 +351,12 @@ def main():
     q=a.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--template',type=Path,required=True);q.add_argument('--trial',type=Path,required=True);q.add_argument('--gate',choices=('G1','G2','G3'),default='G2');q.add_argument('--scope-refresh',type=Path)
     q.add_argument('--batch-membership',action='store_true')
     q.add_argument('--jev-membership',action='store_true')
+    q.add_argument('--mining-policy',type=Path)
     q=a.add_parser('run');q.add_argument('directory',type=Path);q.add_argument('--proposals-only',action='store_true');q.add_argument('--live',action='store_true',required=True);q.add_argument('--key-file',type=Path,required=True)
     args=p.parse_args()
     if args.action=='authorize':result=authorize(args.file,args.authorization,user_request=args.user_request)
     elif args.action=='prepare':
-        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh,batch_membership=args.batch_membership,jev_judging=args.jev_membership)
+        plan=prepare(args.directory,args.template,args.trial,gate=args.gate,scope_refresh_file=args.scope_refresh,batch_membership=args.batch_membership,jev_judging=args.jev_membership,membership_search_policy=read_json(args.mining_policy) if args.mining_policy else None)
         result={'prepared':str(args.directory),'scope':len(plan['scope_ids']),'new_model_calls':0}
     else:
         os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v34",
+  "spec_version": "commentscope-mvp-20261110-v36",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -22,9 +22,9 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-005",
-    "paid_execution_hold": true,
-    "hold_reason": "전체Factory/정식gate 확대는 보류. 승인된 Jev M1 opt-in 구현과 기존trial 잔여 내11건 component 완료: $0.001672902, 관계8/11·유효지지2/3, 실제5건3/5 vs과거Sol4/5. 비용은낮으나정확도개선미확인으로 기본Sol유지/production채택보류. Lecture15 PDF4–6쪽의 M4 배점·3과업·일관성·직접사용 기준을 현재구현과 대조했다. 원금전한도/과거차감/r5 유지; 추가유료실행 없음.",
+    "next_task": "TASK-018",
+    "paid_execution_hold": false,
+    "hold_reason": "팀150/원owner8/운영장부50/전체추가3.00/각배정1.50로고정검증중. Factory727통과, 가격부품1회$0.00429625와G1후보4개/비용계획통과. 첫전체G1은Windows커밋여유1GiB미달로일시중단,완료응답보존/예약·미확정0. 원한도·기한·자원·정식admission guard유지. 합성12 fresh2회+실제24 development1회예정,반복간prompt/정답변경없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -61,7 +61,8 @@
         "tools/compare_membership_transport.py",
         "src/commentscope/factory/jev_membership.py",
         "src/commentscope/providers/typed_membership_runner.py",
-        "tools/jev_membership_probe.py"
+        "tools/jev_membership_probe.py",
+        "src/commentscope/factory/perspective_mining.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -83,7 +84,8 @@
         "tests/test_membership_reference_context.py",
         "tests/test_source_membership_batch.py",
         "tests/test_jev_membership.py",
-        "tests/test_jev_membership_probe.py"
+        "tests/test_jev_membership_probe.py",
+        "tests/test_perspective_mining.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -98,7 +100,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
-        "docs/design/JEV_MEMBERSHIP.md"
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -133,7 +136,8 @@
         "tools/compare_membership_transport.py",
         "src/commentscope/factory/jev_membership.py",
         "src/commentscope/providers/typed_membership_runner.py",
-        "tools/jev_membership_probe.py"
+        "tools/jev_membership_probe.py",
+        "src/commentscope/factory/perspective_mining.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -155,7 +159,8 @@
         "tests/test_membership_reference_context.py",
         "tests/test_source_membership_batch.py",
         "tests/test_jev_membership.py",
-        "tests/test_jev_membership_probe.py"
+        "tests/test_jev_membership_probe.py",
+        "tests/test_perspective_mining.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -177,7 +182,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
-        "docs/design/JEV_MEMBERSHIP.md"
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -207,7 +213,8 @@
         "src/commentscope/factory/pipeline_work.py",
         "src/commentscope/factory/jev_membership.py",
         "src/commentscope/providers/typed_membership_runner.py",
-        "tools/jev_membership_probe.py"
+        "tools/jev_membership_probe.py",
+        "src/commentscope/factory/perspective_mining.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -228,7 +235,8 @@
         "tests/test_shared_factory_trial.py",
         "tests/test_membership_reference_context.py",
         "tests/test_jev_membership.py",
-        "tests/test_jev_membership_probe.py"
+        "tests/test_jev_membership_probe.py",
+        "tests/test_perspective_mining.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -249,7 +257,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
-        "docs/design/JEV_MEMBERSHIP.md"
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -463,7 +472,8 @@
         "tools/compare_membership_transport.py",
         "src/commentscope/factory/jev_membership.py",
         "src/commentscope/providers/typed_membership_runner.py",
-        "tools/jev_membership_probe.py"
+        "tools/jev_membership_probe.py",
+        "src/commentscope/factory/perspective_mining.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -487,7 +497,8 @@
         "tests/test_factory_cost_plan.py",
         "tests/test_source_membership_batch.py",
         "tests/test_jev_membership.py",
-        "tests/test_jev_membership_probe.py"
+        "tests/test_jev_membership_probe.py",
+        "tests/test_perspective_mining.py"
       ],
       "acceptance": [
         "총$50·추가 충전 없음·기존 장부를 유지하고 실행별 상한·가격 상한·예약·미확정 비용·중복 재개를 통제한다.",
@@ -526,7 +537,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
-        "docs/design/JEV_MEMBERSHIP.md"
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -581,7 +593,8 @@
       "design_refs": [
         "docs/design/INTERACTIONS.md",
         "docs/design/EXECUTION.md",
-        "docs/design/DECISION_LAYERS.md"
+        "docs/design/DECISION_LAYERS.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -621,7 +634,8 @@
         "tools/compare_membership_transport.py",
         "src/commentscope/factory/jev_membership.py",
         "src/commentscope/providers/typed_membership_runner.py",
-        "tools/jev_membership_probe.py"
+        "tools/jev_membership_probe.py",
+        "src/commentscope/factory/perspective_mining.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -647,7 +661,8 @@
         "tests/test_factory_cost_plan.py",
         "tests/test_source_membership_batch.py",
         "tests/test_jev_membership.py",
-        "tests/test_jev_membership_probe.py"
+        "tests/test_jev_membership_probe.py",
+        "tests/test_perspective_mining.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -675,7 +690,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
-        "docs/design/JEV_MEMBERSHIP.md"
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     }
   ],
@@ -969,7 +985,8 @@
       ],
       "design_refs": [
         "docs/design/ARCHITECTURE_BASELINE.md",
-        "docs/design/FACTORY_COST_PLAN.md"
+        "docs/design/FACTORY_COST_PLAN.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -1016,7 +1033,68 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/FACTORY_COST_PLAN.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/JEV_MEMBERSHIP_RESULT.md"
+        "docs/design/JEV_MEMBERSHIP_RESULT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
+      ]
+    },
+    {
+      "id": "DEC-010",
+      "title": "선정 영상 사전 분석과 관점 발굴 우선 운영",
+      "status": "accepted",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "question": "TA의 세 과업에서 생성 대기를 줄이고 노이즈 전수 분류보다 근거 있는 다양한 관점 발굴에 개발 자원을 쓰는가?",
+      "options": [
+        "선정 영상 사전 분석→검증 bundle 등록→실제 입력으로 세 과업",
+        "원문/parent를 보존하고 후보별 근거 검색·선택 검증을 새 opt-in으로 개발",
+        "기존 r5 전체 품질과 원 금전/시간 한도는 별도 유지"
+      ],
+      "selection": "사용자가 선정 영상 사전 준비를 승인하고 관점 발굴을 우선한다고 명시했다. 운영/우선순위를 채택한다. 새 검색·3천 처리·Jev 기본 배정의 실제 품질 채택이나 전체 gate 통과는 아니다.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "User-approved operating direction. Existing registered-analysis API and stored bundle flow inspected; current source-only embeddings, fixed12 discovery batches and raw membership path checked. No new runtime or semantic success claimed.",
+          "reference": "docs/PRODUCT_API.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/M4_PROTOTYPE_REVIEW.md"
+      ]
+    },
+    {
+      "id": "DEC-011",
+      "title": "팀 증액 확인과 발굴 통합검증 확대 배정",
+      "status": "accepted",
+      "requirements": [
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "확인한 팀 한도150 안에서 과거 지출/원trial을 보존하며 현재 실험을 어떻게 재개하는가?",
+      "options": [
+        "팀 한도150 확인·기존 운영장부50/owner8 안에서 전체추가3.00/각배정1.50만 사용",
+        "원trial opening/SHA/body를 계승한 별도 누적 extension·새 bounded resume",
+        "고정 합성12원문 전체 development 통합과 필요 가격부품, 실제3천/정식품질 승격은 별도"
+      ],
+      "selection": "사용자가 증액 확인 후 검증 진행 및 Agent 생성 테스트 확대를 지시했다. 한도150 확인. 고정합성12 fresh2회+실제24 development1회를 전체추가3.00/각배정최대1.50/원owner8/기존운영장부50 안에서 진행하며 과거차감/원trial개시차감을초기화하지않는다.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Explicit user instruction plus current key metadata confirms150 limit; bounded extension preserves original trial file/body/SHA/opening and owner. This is execution authority, not semantic quality approval.",
+          "reference": "docs/design/MINING_EXPERIMENT.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/MINING_EXPERIMENT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     }
   ],
@@ -1348,7 +1426,7 @@
         "TASK-003",
         "TASK-016"
       ],
-      "status": "in_progress",
+      "status": "todo",
       "deliverables": [
         "현행 설정의 G1 전체 산출물·원문 검토·Agent 로딩/각3질문",
         "정확한 code/model/provider/prompt/자료/평가 hash",
@@ -1519,7 +1597,8 @@
         "docs/design/CANDIDATE_SOURCE_COVERAGE.md",
         "docs/design/SHARED_DISCOVERY_DELIVERY.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/JEV_MEMBERSHIP_RESULT.md"
+        "docs/design/JEV_MEMBERSHIP_RESULT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {
@@ -1891,7 +1970,8 @@
       "design_refs": [
         "docs/design/EXECUTION.md",
         "docs/design/README.md",
-        "docs/M4_PROTOTYPE_REVIEW.md"
+        "docs/M4_PROTOTYPE_REVIEW.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ],
       "design_status": "written_unimplemented"
     },
@@ -2025,7 +2105,71 @@
         "docs/design/FACTORY_COST_RESULT.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/JEV_MEMBERSHIP_RESULT.md"
+        "docs/design/JEV_MEMBERSHIP_RESULT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
+      ]
+    },
+    {
+      "id": "TASK-018",
+      "title": "관점 발굴 중심 선택 검색·검증 경로 구현",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "depends_on": [
+        "TASK-003",
+        "TASK-016"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "사용자 의도/현행 코드/제안/실측을 구별한 구조 검증과 Mermaid",
+        "기존 shared 경로를 보존한 소수 가설·후보별 근거 검색·선택 문맥 관측 opt-in",
+        "root/reply 지칭·귀속·반론·조건·미평가 일반 회귀 및2천/3천 무료 처리 상한 검사",
+        "모든 단계 비용·시간·기존 잔여 한도를 확인한 실제 검증 가능/보류 판단"
+      ],
+      "done_when": [
+        "기존 계약/정식 실패를 보존하고 선택 검색·모든 공개 근거·출처별 이유의 회귀가 통과한다.",
+        "현재 기본값과 새 opt-in, 무료/실제/전체 품질의 증거를 구별한다.",
+        "실제 채택은 고정 표본/기대값/모델/전체 비용·시간 계획 안에서 판단하며 개별 오류 유료 수정 반복을 하지 않는다."
+      ],
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Closed opt-in mining policy/hypothesis discovery/shared runner/cost bounds implemented; existing default unchanged. Source/parent retrieval does not approve support. Actual model validation and complete3000 pipeline remain pending.",
+          "reference": "src/commentscope/factory/perspective_mining.py",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Candidate-first opt-in implemented: one-source typed hypotheses, bounded thread/candidate-fair retrieval, optional available-parent vector, selected-source-only context/world judging, explicit max3000 registry. Existing Sol/default/legacy/M2/argument/fact/compiler and original cost gate preserved. Focused18, related54, Factory727, budget/shared/spec34 (overlap) pass (overlap); Mermaid parse/source equality pass. Archived actual96 inputs produce30sources/58pairs,28thread contexts/10replies,422unassessed,0parent-vector pairs; no fresh semantic claim. New plan known historical subtotal$0.2474024425 plus unknown stages exceeds original trial remaining$0.125529638: paid preflight rejected. New model calls0/$0; no r5/production admission.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Explicit team150 observation and user request allow bounded extensions. Original trial body/SHA/opening and owner preserved; each new grant<=1.50 and expanded test total<=3.00. Old caps, changed metadata/history, missing request and additional overspend rejected. Factory727 and budget/shared/spec34 pass (overlap). No semantic quality approval.",
+          "reference": "tests/test_trial_budget_extension.py",
+          "result": "pass"
+        }
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "decisions": [
+        "DEC-008",
+        "DEC-009",
+        "DEC-010"
+      ],
+      "design_refs": [
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/JEV_MEMBERSHIP.md",
+        "docs/design/JEV_MEMBERSHIP_RESULT.md",
+        "docs/design/FACTORY_COST_PLAN.md",
+        "docs/design/MINING_EXPERIMENT.md"
       ]
     }
   ],
@@ -2211,8 +2355,16 @@
     {
       "spec_version": "commentscope-mvp-20261110-v34",
       "reason": "사용자 실제 진행 및 돈+정확도 모두 검증 요청. F3 M1 Jev prototype/기존 guard·Sol M2/고정 component 비교를 구현. 9값 enum은 기존8선택지 wire의 완전한 분할로 관측. 기존trial/owner/총50 누적한도를 유지하고 새 요청의 bounded resume만 별도 기록; 작은 진단을 전체/production 품질로 승격하지 않음.; actual frozen M1 cost/accuracy result and Lecture15 M4 rubric review recorded without production/budget/r5 change."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v35",
+      "reason": "사용자가 사전선정영상/저장Agent 운영을 승인하고, root/reply·embedding/현재군집화·Jev 직접판정·2천~3천 규모를 질문한 뒤 노이즈 전수분류보다 관점발굴 우선 및 구조 검증 후 실제 진행을 지시. DEC-010은 운영/우선순위만채택; TASK-018을주작업으로등록하고 기존정식실패/돈/시간/r5보존. 소수발견·선택검증/검색은새opt-in으로검증한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v36",
+      "reason": "사용자가 예산 증액을 확인하고 현재 실험 검증 진행을 지시했다. 공급자한도150 확인. 원장부50/owner8/oldtrial opening·과거차감 보존하는추가1.50 extension과고정합성12원문 development 통합을승인범위로기록; 전체3천/r5품질은별도."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v30",
+  "design_version": "commentscope-detailed-design-20261110-v32",
   "design_document": "docs/design/README.md"
 }
