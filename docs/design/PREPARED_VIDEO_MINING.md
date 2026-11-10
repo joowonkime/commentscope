@@ -254,7 +254,10 @@ parent 텍스트는 기존 원문 packet에 남지만, 추가 parent embedding�
 $0.2474024425이고 M1 packet/논거/사실/runtime 등은 미측정이다. 따라서 비용 gate가 거절했다.
 **신규 모델 호출0/추가 지출$0.** 총계정 보수잔여$33.939361082와 별개로 기존trial1.50 상한을 유지했다.
 이 무료검토의 비용 거절을 보존한다. 이후 사용자가150 증액/실행 및 테스트 확대를 지시한
-[고정 통합 검증](MINING_EXPERIMENT.md)은 별도 누적 extension과 전체3.00 상한으로 진행한다.
+[소규모 통합 검증](MINING_EXPERIMENT.md)은 별도 누적 extension과 전체3.00 상한으로 완료했다.
+이후 댓글 입력 풀 확대 지시에 따른 현재 실행은 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md)이며,
+기존 지출을 계승한 새 확대 단계 추가상한15.00을 적용한다. [중간 결과](WIDE_MINING_EXPERIMENT_RESULT.md)는
+전체 발견과 선택 상세검증, 실제 생성 완료 여부를 구별한다.
 실제96/3천/새 production 배정의 성능 채택은 아직 하지 않았다.
 
 비공개 증거는 `runs/perspective-mining-20261110-v1/`의 검사 로그, archive-readiness,

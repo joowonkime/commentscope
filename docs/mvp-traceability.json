@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v39",
+  "spec_version": "commentscope-mvp-20261111-v40",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-018",
-    "paid_execution_hold": false,
-    "hold_reason": "사용자가 범위확대는댓글풀확대라고재확인하고현재실험설계불일치를지적. 이전12/24계획은종료이력, 새계약은등록canonical999전체발견→후보별16/최대120source·1536pair→기존검사·모든Agent3질문. 새명시적확대단계추가상한15/운영장부50/팀150, 과거owner8·소규모3·472요청0.662053282는보존. 현재넓은입력실행기/금융/회귀검사준비; 기존모델/prompt/기준유지. 비용·자료·자원guard통과후에만실행.",
+    "paid_execution_hold": true,
+    "hold_reason": "등록999 전체발견/303가설/120상세원문·1536선택쌍 완료, membership 중 Windows host commit 여유<1GiB로 두 차례 중단. 983응답/$1.900659992 모두정산·checkpoint,0pending/reserved/uncertain. source096cb98/plan4a7ec 동결, 새호출없이같은plan재개대기. 자원여유확보후 원deadline/추가15/전역50/팀150 검사를통과할때만재개. 이전12/24·추가3은종료이력이며 문서잔존현재형을정정. Agent/runtime/정식품질은미완료.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -536,6 +536,12 @@
           "scope": "Shared development cost plan and request caps:Factory665,related81,focused28 pass (overlap). Actual saved fees/cache audited; unknown downstream stages stay null and cannot admit full execution. Original trial/owner/global history unchanged,0 new paid calls. Current999 scenarios are not an admitted run or a service-price guarantee.",
           "reference": "tests/test_factory_cost_plan.py",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -546,7 +552,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
       ]
     },
     {
@@ -690,6 +697,12 @@
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -701,7 +714,8 @@
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
       ]
     }
   ],
@@ -1131,12 +1145,19 @@
           "scope": "User instruction reconciled against upper-level mining intent, retired12/24 plan and hardcoded G1/G2 sample executor. New closed whole999 development authorization/validator reuses the existing execution/checkpoint/cost pipeline without changing semantic prompts. Execution evidence pending.",
           "reference": "docs/design/WIDE_MINING_EXPERIMENT.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
         "docs/design/WIDE_MINING_EXPERIMENT.md",
         "docs/design/MINING_EXPERIMENT.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
       ]
     }
   ],
@@ -2213,6 +2234,12 @@
           "scope": "Whole registered999 development runner now separates the full discovery pool from120-source/1536-pair/16-per-candidate search bounds. Scope substitution24, formal promotion, old-owner refunds, changed funding/model, expired typed guard and foreign completed artifact rejected. Full Factory735 plus focused/spec42 pass (overlap). Frozen live preparation has exactly999 IDs and no model calls yet. Original fixed-sample runner remains closed; no semantic prompt or r5 threshold changes.",
           "reference": "tests/test_wide_mining_trial.py",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
         }
       ],
       "required_evidence": [
@@ -2232,7 +2259,8 @@
         "docs/design/FACTORY_COST_PLAN.md",
         "docs/design/MINING_EXPERIMENT.md",
         "docs/design/MINING_EXPERIMENT_RESULT.md",
-        "docs/design/WIDE_MINING_EXPERIMENT.md"
+        "docs/design/WIDE_MINING_EXPERIMENT.md",
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
       ]
     }
   ],
@@ -2438,8 +2466,12 @@
     {
       "spec_version": "commentscope-mvp-20261111-v39",
       "reason": "사용자가 범위확대는댓글풀확대이며비용문제도해결됐다고재확인하고실험설계불일치를지적. 상위넓은발굴의도와소규모12/24계획·스크립트의차이를기록하고현재명세를등록999전체발견/별도상세검색으로일치시킨다. 과거계획/돈/출력보존, 새확대단계추가15·7h는원장부/실제키안에서제어하고정식admission과분리한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v40",
+      "reason": "명세 비용절·설계색인·발굴문서·재개절차에 남아있던 소규모12/24/추가3 현재형을 종료이력으로 정정하고 현재999/추가15 계약과일치시킨다. 실제999발견303가설·983응답/$1.900659992와host자원중단을부분증거로기록하며 Agent/runtime/전체품질완료로승격하지않는다. source/model/plan/금융역사는변경하지않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v35",
+  "design_version": "commentscope-detailed-design-20261111-v36",
   "design_document": "docs/design/README.md"
 }
