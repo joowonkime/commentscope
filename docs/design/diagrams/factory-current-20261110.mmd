@@ -1,0 +1,35 @@
+flowchart TB
+    originals["댓글 원문·부모·영상 문맥"] --> registry["Python: 원문 ID·구간 보존"]
+    subgraph discovery["관점 발견: 현재 구현"]
+        embeddings["외부 임베딩: 유사 원문 검색"] --> groups["원문 12개씩 묶기"]
+        groups --> proposals["Sol: 공통 관점 후보 제안"]
+        proposals --> candidates["후보 집합 K: 관점 수 가변"]
+    end
+    registry --> embeddings
+    subgraph judging["지지 검증: 현재 구현"]
+        observations["Sol: 원문 성격·인용·세계 관측"]
+        candidateWorld["Sol: 후보 세계 관측"]
+        retrieval["Python: 검토할 원문·후보 쌍 검색"]
+        membership["Sol: 후보별 지지 관계 판정"]
+        evidence["Sol: 긍정 판정의 독립 근거 검사"]
+        records["관계 기록: 지지·조건부·반대·무관·보류"]
+        retrieval --> membership
+        observations --> membership
+        candidateWorld --> membership
+        membership -->|"긍정"| evidence
+        membership -->|"그 외"| records
+        evidence --> records
+    end
+    registry --> observations
+    registry --> membership
+    candidates --> candidateWorld
+    candidates --> retrieval
+    embeddings --> retrieval
+    records -->|"적격 지지 원문"| arguments["GPT-5.2: 출처별 논거·조건 구성"]
+    arguments --> audits["Sol: 귀속·전제·사실 검증"]
+    externalDocs["등록한 외부 사실 근거"] --> audits
+    audits --> compiler{"Python: Agent 자격 검사"}
+    compiler -->|"충족"| bundle["검증 bundle·Agent"]
+    compiler -->|"미달"| held["원문과 보류 사유 보존"]
+    records -->|"미대응·미평가"| held
+    bundle --> runtime["GPT-5.2: Explore·Converse·Reflect"]

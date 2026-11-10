@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261110-v32",
+  "spec_version": "commentscope-mvp-20261110-v33",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-06",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-005",
     "paid_execution_hold": true,
-    "hold_reason": "구조v1 책임 유지. 원문별 최대6후보 batch opt-in/Factory684 무료검사 통과. 한 영상 기존350쌍을137packet으로 구성·전송량55.6%감소: 실제달러/타자료 일반화/전체단가 미검증. 사용자 추가한도 검토는 승인된 증액이 아님. 기존trial1.50/잔여0.12720254·원8·총50·만료시간 유지. 신규유료호출0; 새batch단가 미측정시 cost gate 차단.",
+    "hold_reason": "구조v1과 PR81 batch 구현 유지. 문서화 요청에 따라 가변 관점 발견·Jev raw M1·제한 추가발견 추천을 DEC-009 proposed로 정리. 현재 실행은 Sol이며 Jev membership/신규발견루프 미구현·품질/원가 미검증. 기존trial1.50/잔여0.12720254·원8·총50·만료시간/과거차감/정식gate차단 유지. 이번 작업은 문서·도식 검증만, 신규유료호출0.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -86,6 +86,7 @@
       ],
       "evidence": [],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
@@ -158,6 +159,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
@@ -224,6 +226,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/FACTORY.md",
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
@@ -494,6 +497,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/EXECUTION.md",
         "docs/design/README.md",
         "docs/design/DECISION_LAYERS.md",
@@ -635,6 +639,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/README.md",
         "docs/design/BASELINE.md",
         "docs/design/DECISION_LAYERS.md",
@@ -934,6 +939,39 @@
       ],
       "design_refs": [
         "docs/design/ARCHITECTURE_BASELINE.md",
+        "docs/design/FACTORY_COST_PLAN.md"
+      ]
+    },
+    {
+      "id": "DEC-009",
+      "title": "가변 관점 발견과 Jev membership의 단계적 연결",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "초기 관점 종류/수를 모르는 댓글에서 소수/조건부 가설을 보존하고 Jev로 원문↔후보 판정을 수행하면서 발견 누락·질문/근거 계약·원가/종료를 어떻게 통제할 것인가?",
+      "options": [
+        "구조v1 F1~F5/P/X 책임 유지; 전체 원문 묶음 발견과 가변 후보 장부, 후보 보존/Agent 자격 구분",
+        "기존 후보/입력을 고정한 Jev raw M1 부품 비교부터 수행; 독립 Sol 근거/논거/사실/Compiler 유지",
+        "발견 protocol의1명 이상 원문근거 가설·명시적 미처리 목록을 별도 비교하고 추가발견은 고정한 예산/회차 안에서만 연결",
+        "현재 Sol 경로 유지 대안과 전체 질문·실제 비용·기존 r5 품질을 비교; 미검증 배정은 채택하지 않음"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Documentation only: code-backed current/proposed structures,2 Mermaid diagrams parsed and identical to embedded source,18 spec tests pass. No Factory/adapter behavior, thresholds, money/time authority or semantic quality changed; no paid calls.",
+          "reference": "docs/design/FACTORY_STRUCTURE.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
+        "docs/design/ARCHITECTURE_BASELINE.md",
+        "docs/design/DECISION_LAYERS.md",
         "docs/design/FACTORY_COST_PLAN.md"
       ]
     }
@@ -1409,9 +1447,11 @@
         "formal_gate"
       ],
       "decisions": [
-        "DEC-007"
+        "DEC-007",
+        "DEC-009"
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/EXECUTION.md",
         "docs/design/FACTORY.md",
         "docs/design/FACTORY_DELIVERY.md",
@@ -1820,7 +1860,8 @@
         "새명시적 근거검사 protocol에서 원문영상 식별문맥 연속성 보존·기존계약/부정검사 유지; 유료재검증 별도",
         "단계별실측/추정/미측정과누적예산을구별한무료비용preview·본실행gate·단계호출상한",
         "현재구조v1의책임/입출력/코드매핑·Mermaid원본",
-        "원문별 최대6후보 전송·전체batch 영수증/행 결합·실패재시도차단·별도 원가stage·무료기존요청 비교"
+        "원문별 최대6후보 전송·전체batch 영수증/행 결합·실패재시도차단·별도 원가stage·무료기존요청 비교",
+        "관점 수 미정의 발견·다대다 Jev 관계·제한된 추가발견을 현재 구현/추천안/코드 이전순서와 함께 문서화한 구조 정본·Mermaid 원본"
       ],
       "done_when": [
         "고정24개 전체 처리·보류·모든 자동Agent 실행을 기록하고 실험적 제품 연결 가능 여부를 확인한다.",
@@ -1886,6 +1927,12 @@
           "scope": "Required Factory684 pass. Source-wise batch row/whole receipt provenance, unchanged host/world/descriptor/evidence vetoes, failed pair no-retry across metadata changes, physical stage caps and unknown batch price block. Scripted development resumes through full cost gate to2 Agents/6 runtime turns; archived completed350 pairs size to137 packets with phase ambiguity kept singleton. Zero new paid calls; no dollar-saving/generalization/fresh quality approval.",
           "reference": "tests/test_source_membership_batch.py",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Documentation only: code-backed current/proposed structures,2 Mermaid diagrams parsed and identical to embedded source,18 spec tests pass. No Factory/adapter behavior, thresholds, money/time authority or semantic quality changed; no paid calls.",
+          "reference": "docs/design/FACTORY_STRUCTURE.md",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -1894,9 +1941,11 @@
       ],
       "decisions": [
         "DEC-007",
-        "DEC-008"
+        "DEC-008",
+        "DEC-009"
       ],
       "design_refs": [
+        "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/ACTUAL24_DEVELOPMENT.md",
         "docs/design/SHARED_DISCOVERY_DELIVERY.md",
         "docs/design/PRODUCT_TRIAL_BUDGET.md",
@@ -2081,8 +2130,12 @@
     {
       "spec_version": "commentscope-mvp-20261110-v32",
       "reason": "사용자 최적화 요청. 구조v1 책임을 보존한 원문별 최대6후보 batch 전송·정확한 provenance·동일실행 pair 중복제거·별도 비용stage를 opt-in 구현. 유료시간 만료와 기존trial잔여 보존, 무료요청 비교만 수행."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261110-v33",
+      "reason": "사용자가 Mermaid를 대화가 아닌 문서로 요청하고 추천 구조의 상세 설명을 요구. 현재 구현과 DEC-009 제안을 분리한 구조 정본/도식/입출력·Jev 전용 adapter·미대응/종료·원가/검증 순서를 작성한다. 책임v1·기존 성공/실패·지출/기한과 품질 기준은 유지; 코드변경/유료실행/모델채택 승인 아님."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261110-v28",
+  "design_version": "commentscope-detailed-design-20261110-v29",
   "design_document": "docs/design/README.md"
 }

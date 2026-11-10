@@ -1,10 +1,12 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261110-v28`. 대조 코드: `fff2260`.
-연결: REQ-001~REQ-010, TASK-001~016, DEC-001~007.
+설계 버전: `commentscope-detailed-design-20261110-v29`. 대조 코드: `fff2260`.
+연결: REQ-001~REQ-010, TASK-001~017, DEC-001~009.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
 이 단계의 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
+
+현재/추천 구조를 이해하려면 [Factory 구조 정본](FACTORY_STRUCTURE.md)을 먼저 읽는다. 관점 발견·Jev 판정·미대응 원문·Agent 조립과 Mermaid 원본, 실제 코드 이전순서를 한 문서로 정리했다. DEC-009는 제안 상태다.
 
 ## 1. 무엇을 결정하는가
 
@@ -14,6 +16,7 @@
 
 | 구현 질문 | 읽을 문서 | 산출물 |
 | --- | --- | --- |
+| 관점 수를 모르는 상태에서 어떤 구조로 만들까? | [Factory 구조 정본](FACTORY_STRUCTURE.md) | 현재/추천 도식, 책임·입출력·모델·미대응·원가·이전순서 |
 | 현재 무엇이 반복되고 무엇을 재사용하나? | [현행 기준선](BASELINE.md) | 코드/호출/비용/실패와 교체 표 |
 | 어떤 판단에 어떤 모델을 쓰며 실패하면 어떻게 하나? | [Decision 계층](DECISION_LAYERS.md) | 12개 논리 책임, 5개 논거 과제, 역할별 배정·transport·확률·오류·비용·채택 |
 | Jev 전제 관측을 기존 audit와 어떻게 결합하고 검증하나? | [audit 연결](JEV_AUDIT_INTEGRATION.md) | 기존 검증 보존·blind graph·새 scoped 예산·전이→G1→G2/G3 |
@@ -80,7 +83,9 @@ flowchart LR
 | DEC-006 언어 | 기존 Figma의 영문 UI를 기본으로 유지. 한국어·영어 입력 원문 보존, 답변은 자기 원문 주장 표시. 생성 번역은 별도 검증 전 비활성 | 한국어·영어의 조건/귀속/수량/시점 부정 사례 및 팀 화면 확인. 한국어 UI 안내는 정적 번역의 팀 검토로 추가 |
 
 DEC-007의 [Decision 계층](DECISION_LAYERS.md)은 현재 단일 deployment와 후보 role map을 구별한다.
-J4 논거 검토부터 비교하며 비용0 adapter 회귀·고정 정상/부정·미사용 전이·fresh gate를 거쳐 배정을 판단한다.
+최초 J4 논거 component의 비교 계약과 기록은 보존한다. 현재 shared 실행은 Sol이며,
+새 raw membership Jev 배정/소수 가설 발견의 추천 순서는 DEC-009와 [구조 정본](FACTORY_STRUCTURE.md)을 따른다.
+모든 새 배정은 무료 adapter 회귀·고정 정상/부정·제한 비교·fresh gate로 구현/채택 범위를 구분한다.
 
 특정 외부 모델을 영구 선택하지 않는다. `factory_extract / factory_review / interaction` 역할별 deployment를
 계획에 고정하며, 기본 비교에서는 같은 모델을 써서 구조 효과부터 구별한다. 더 저렴한 모델의 배정은 별도 비교다.

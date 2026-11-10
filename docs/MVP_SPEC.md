@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261110-v32`. 대조 코드: `fff2260`.
+버전: `commentscope-mvp-20261110-v33`. 대조 코드: `fff2260`.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v28`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261110-v29`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -95,8 +95,12 @@ Factory 완료와 전체 MVP 완료를 별도로 판정한다. 두 Agent 동일 
 온라인 Auditor라는 이름만으로 추가 유료 검사를 매 턴 넣지 않는다. 기존 host 검증과 생성 전 검사를
 유지하며, 별도 온라인 수정 루프의 필요성과 책임은 DEC-004에서 결정한다.
 
+관점 수가 미정일 때의 현재 구조와 추천 변경은 [Factory 구조 정본](design/FACTORY_STRUCTURE.md)을 먼저 읽는다.
+DEC-009는 신규 발견/Jev 배정의 제안이며 구조v1의 책임이나 실행 권한을 변경하지 않는다.
+
 모델 호출은 [Decision 계층 상세 설계](design/DECISION_LAYERS.md)의 입력·출력·권한별로 배정한다.
-생성·원문 관측·관계·논거·근거 기반 사실 검사와 host 승인을 구별하고, Jev는 논거 component의 비교 후보로 둔다.
+생성·원문 관측·관계·논거·근거 기반 사실 검사와 host 승인을 구별한다. 기존 Jev 증거는 논거 component에 한정되고,
+현재 shared 원격 실행은 Sol을 사용한다. Jev raw membership 배정은 DEC-009의 새 비교 제안이다.
 기본 단일 deployment는 유지하며 opt-in 전제 관측 연결의 구현·검증은 [연결 계약](design/JEV_AUDIT_INTEGRATION.md)으로 구별한다.
 이 연결은 전체 역할별 배정이나 production Jev 채택을 뜻하지 않는다.
 과제별 registry/transport·확률 정책·오류·예산·채택 증거는 DEC-007에서 추적한다.
