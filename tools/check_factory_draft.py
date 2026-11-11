@@ -20,6 +20,8 @@ MODULES = (
     "test_perspective_mining",
     "test_trial_budget_extension",
     "test_wide_mining_trial",
+    "test_wide_mining_recovery",
+    "test_wide_cached_recovery",
     "test_jev_membership_probe",
     "test_statement_world_membership",
     "test_minimal_pipeline",

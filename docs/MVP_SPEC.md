@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261111-v40`. 확대 실행 코드: `096cb98`, 실제 실행은 [중간 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)를 따른다.
+버전: `commentscope-mvp-20261111-v45`. 확대 실행 코드: `096cb98`, 실제 실행은 [중간 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)를 따른다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261111-v36`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261111-v40`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 ## 1. 이 문서의 역할과 읽는 순서
@@ -211,8 +211,12 @@ $0.662053282다. 합성의 후속 정렬 보류 변동과 실제 자료의 유�
 무료 검색계획 대조에서 최초 nominee pair는7/9→9/9 포함됐지만 새 의미 판정/Agent는 없다.
 서로 다른3개 결과를 정식 품질 합격이나 단가 개선으로 합치지 않는다.
 현재는 [등록999 전체 검증의 중간 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)처럼
-999개 발견/303가설/120상세원문·1536선택쌍을 확인했고, 관계 판정 중 host 자원 보호로 중단됐다.
-983응답/$1.900659992 정산·checkpoint를 보존했으며 최종 Agent/runtime 검증은 아직 미완료다.
+999개 발견/303가설/120상세원문·1536선택쌍을 확인했다. 관계 판정 중 host 자원 보호로 중단됐던
+983응답/$1.900659992 정산·checkpoint를 보존했고, 사용자 지시와 자원 회복 후 같은 plan으로 재개했다.
+이후 논거 정렬 중 공급자 HTTP503으로 중단돼 [종료 오류 복구](design/TRANSPORT_RECOVERY.md)를 별도로 구현한다.
+원 실행 파일·자료·모델·의미 기준·예산·기한을 유지하고, 감사·보수 정산한 실패 요청만 재호출 없이 보류한다.
+추가 복구 launcher는 별도 hash/사본/manifest로 공개 추적하며 원래 실행과 완전히 동일하다고 보고하지 않는다.
+현재 단계별 실행 상태는 비공개 progress/실제 프로세스로 확인하며 최종 Agent/runtime 검증은 아직 미완료다.
 
 ### 이전 실행 이력
 

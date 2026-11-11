@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v40",
+  "spec_version": "commentscope-mvp-20261111-v45",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-018",
     "paid_execution_hold": true,
-    "hold_reason": "등록999 전체발견/303가설/120상세원문·1536선택쌍 완료, membership 중 Windows host commit 여유<1GiB로 두 차례 중단. 983응답/$1.900659992 모두정산·checkpoint,0pending/reserved/uncertain. source096cb98/plan4a7ec 동결, 새호출없이같은plan재개대기. 자원여유확보후 원deadline/추가15/전역50/팀150 검사를통과할때만재개. 이전12/24·추가3은종료이력이며 문서잔존현재형을정정. Agent/runtime/정식품질은미완료.",
+    "hold_reason": "999동일plan실제실행02:32UTC완료. Agent1/지지3원문/허용value4개/3질문(입장answered·이유/없는수치abstain). 성공3199비용3.913137840+503보수차감.042015750=단계3.955153590; 예약/미확정0. 최종모든원문/허용주장/3runtime대조,span오류0이나최소2Agent/이유유용성미달·fresh사실검증0. 후보별projection9이미존재. 다음무료회귀는Sol chat에Jev28KB가전파되는용량경계분리이며새모델호출보류; 기존결과/모델/prompt/한도/기한/정식기준변경없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -480,7 +480,9 @@
         "src/commentscope/providers/typed_membership_runner.py",
         "tools/jev_membership_probe.py",
         "src/commentscope/factory/perspective_mining.py",
-        "tools/wide_mining_trial.py"
+        "tools/wide_mining_trial.py",
+        "tools/wide_mining_recovery.py",
+        "tools/wide_cached_recovery.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -506,7 +508,9 @@
         "tests/test_jev_membership.py",
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
-        "tests/test_wide_mining_trial.py"
+        "tests/test_wide_mining_trial.py",
+        "tests/test_wide_mining_recovery.py",
+        "tests/test_wide_cached_recovery.py"
       ],
       "acceptance": [
         "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
@@ -542,6 +546,18 @@
           "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
           "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Terminal HTTP recovery:10 focused controls plus existing wide8/spec18 give36 pass; required Factory745 pass372.299s. Actual failed request reconstructed from frozen source graph/candidate matches exact original wire identity; unavailable hold fires with0provider calls. Original source355/tool4/input hashes unchanged; new launcher separately hashed/archived. Audited original request/checkpoint/error/owner ledger, retained entire$0.04201575 as conservative charge,0reserved/uncertain and no refund. Existing phases/caps/deadline preserved; no new model inference or semantic approval.",
+          "reference": "tests/test_wide_mining_recovery.py",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
+          "reference": "tests/test_wide_cached_recovery.py",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -553,7 +569,8 @@
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
-        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+        "docs/design/TRANSPORT_RECOVERY.md"
       ]
     },
     {
@@ -651,7 +668,9 @@
         "src/commentscope/providers/typed_membership_runner.py",
         "tools/jev_membership_probe.py",
         "src/commentscope/factory/perspective_mining.py",
-        "tools/wide_mining_trial.py"
+        "tools/wide_mining_trial.py",
+        "tools/wide_mining_recovery.py",
+        "tools/wide_cached_recovery.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -679,7 +698,9 @@
         "tests/test_jev_membership.py",
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
-        "tests/test_wide_mining_trial.py"
+        "tests/test_wide_mining_trial.py",
+        "tests/test_wide_mining_recovery.py",
+        "tests/test_wide_cached_recovery.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -703,6 +724,18 @@
           "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
           "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Terminal HTTP recovery:10 focused controls plus existing wide8/spec18 give36 pass; required Factory745 pass372.299s. Actual failed request reconstructed from frozen source graph/candidate matches exact original wire identity; unavailable hold fires with0provider calls. Original source355/tool4/input hashes unchanged; new launcher separately hashed/archived. Audited original request/checkpoint/error/owner ledger, retained entire$0.04201575 as conservative charge,0reserved/uncertain and no refund. Existing phases/caps/deadline preserved; no new model inference or semantic approval.",
+          "reference": "tests/test_wide_mining_recovery.py",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
+          "reference": "tests/test_wide_cached_recovery.py",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -715,7 +748,8 @@
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
-        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+        "docs/design/TRANSPORT_RECOVERY.md"
       ]
     }
   ],
@@ -1151,13 +1185,38 @@
           "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
           "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "After explicit user proceed instruction and recovered host5064MB available/6257299456bytes commit headroom, same frozen999 plan resumed without closing other apps or changing guards. Original983 calls restored in790.055seconds at0extra model cost; first new call22:52:07UTC. Observation23:27:43UTC:1967saved responses/$2.228665932, Jev953complete observations/21error holds, pipeline still running. No final support/Agent/runtime or formal admission. Main672c40c/PR87 after Ubuntu+Windows CI; execution semantics remain source096cb98. Public resume status reconciled to live private process state.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
+        },
+        {
+          "kind": "code",
+          "scope": "Closed terminal-HTTP recovery launcher and separate manifest/archive preserve all original source355/tool4/plan/models/prompts/inputs/financial limits/deadline. Only audited terminal failed requests with full retained conservative reservation become existing PriorRequestUnavailable holds, with0provider retries; new errors still halt. Source-level admission remains unchanged. Offline validation and live recovery pending.",
+          "reference": "docs/design/TRANSPORT_RECOVERY.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Terminal HTTP recovery:10 focused controls plus existing wide8/spec18 give36 pass; required Factory745 pass372.299s. Actual failed request reconstructed from frozen source graph/candidate matches exact original wire identity; unavailable hold fires with0provider calls. Original source355/tool4/input hashes unchanged; new launcher separately hashed/archived. Audited original request/checkpoint/error/owner ledger, retained entire$0.04201575 as conservative charge,0reserved/uncertain and no refund. Existing phases/caps/deadline preserved; no new model inference or semantic approval.",
+          "reference": "tests/test_wide_mining_recovery.py",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
+          "reference": "tests/test_wide_cached_recovery.py",
+          "result": "pass"
         }
       ],
       "design_refs": [
         "docs/design/WIDE_MINING_EXPERIMENT.md",
         "docs/design/MINING_EXPERIMENT.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
-        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+        "docs/design/TRANSPORT_RECOVERY.md"
       ]
     }
   ],
@@ -2240,6 +2299,30 @@
           "scope": "Whole registered999 actually read once in84 discovery batches;303 hypotheses,120 selected sources/1536 selected pairs,222 candidates have selected pairs and81 have none,301161 scope pairs unassessed. Cost/request/hash/checkpoint audit confirms983 settled responses/$1.900659992,0pending/reserved/uncertain. Source-context/world each120 complete; membership-jev499 physical packets and independent M2 remain partial;8 contradictory/missing closed-enum errors held without paid retry. No argument/fact/Compiler/runtime completion or final Agent count. Two host commit-headroom stops under1GiB, same-plan restart made0new paid responses; allocator change not proven fix. Formal/model/MVP admission absent. Current/old-plan cost-reference contradictions corrected in spec40/design36.",
           "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "After explicit user proceed instruction and recovered host5064MB available/6257299456bytes commit headroom, same frozen999 plan resumed without closing other apps or changing guards. Original983 calls restored in790.055seconds at0extra model cost; first new call22:52:07UTC. Observation23:27:43UTC:1967saved responses/$2.228665932, Jev953complete observations/21error holds, pipeline still running. No final support/Agent/runtime or formal admission. Main672c40c/PR87 after Ubuntu+Windows CI; execution semantics remain source096cb98. Public resume status reconciled to live private process state.",
+          "reference": "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+          "result": "partial"
+        },
+        {
+          "kind": "code",
+          "scope": "Closed terminal-HTTP recovery launcher and separate manifest/archive preserve all original source355/tool4/plan/models/prompts/inputs/financial limits/deadline. Only audited terminal failed requests with full retained conservative reservation become existing PriorRequestUnavailable holds, with0provider retries; new errors still halt. Source-level admission remains unchanged. Offline validation and live recovery pending.",
+          "reference": "docs/design/TRANSPORT_RECOVERY.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Terminal HTTP recovery:10 focused controls plus existing wide8/spec18 give36 pass; required Factory745 pass372.299s. Actual failed request reconstructed from frozen source graph/candidate matches exact original wire identity; unavailable hold fires with0provider calls. Original source355/tool4/input hashes unchanged; new launcher separately hashed/archived. Audited original request/checkpoint/error/owner ledger, retained entire$0.04201575 as conservative charge,0reserved/uncertain and no refund. Existing phases/caps/deadline preserved; no new model inference or semantic approval.",
+          "reference": "tests/test_wide_mining_recovery.py",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
+          "reference": "tests/test_wide_cached_recovery.py",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -2260,7 +2343,8 @@
         "docs/design/MINING_EXPERIMENT.md",
         "docs/design/MINING_EXPERIMENT_RESULT.md",
         "docs/design/WIDE_MINING_EXPERIMENT.md",
-        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md"
+        "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
+        "docs/design/TRANSPORT_RECOVERY.md"
       ]
     }
   ],
@@ -2470,8 +2554,28 @@
     {
       "spec_version": "commentscope-mvp-20261111-v40",
       "reason": "명세 비용절·설계색인·발굴문서·재개절차에 남아있던 소규모12/24/추가3 현재형을 종료이력으로 정정하고 현재999/추가15 계약과일치시킨다. 실제999발견303가설·983응답/$1.900659992와host자원중단을부분증거로기록하며 Agent/runtime/전체품질완료로승격하지않는다. source/model/plan/금융역사는변경하지않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v41",
+      "reason": "사용자의그냥진행지시와실제자원회복후같은999 plan이실행중인상태를공유resume에반영. 과거자원보류와새실행을구별하고scope/model/prompt/source/기준/예산/deadline을변경하지않는다. 관측시각이있는부분증거이며전체품질합격아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v42",
+      "reason": "실제공급자503이정산미확정/동일실패checkpoint재중단으로전파되는일반복구문제를명시. 원파일과모델판정경로는고치지않고추가launcher/불변manifest를공개추적해감사된실패만보수차감·항목보류한다. 재시도/성공변조/새한도/deadline연장/정식admission없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v43",
+      "reason": "정산후캐시복원만하다host자원보호로재중단(추가유료0). 유료dispatch와완료결과의로컬검증읽기를분리하는추가control을명시한다. 원파이프라인단계/의미검증/모델입력/기존돈·시간·자원경계유지; 캐시miss는원모든guard통과, pending/변조/실패결과는성공으로승격하지않음. 부모503보류manifest와신규캐시launcher의SHA/사본을분리추적."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v44",
+      "reason": "현재정본의자원보류를최종755검사/양OS CI통과와01:47UTC동일plan재개에맞게정정. SQLite연결수정은새해시manifest0002로보존하며이전manifest0001을덮어쓰지않음. 새예산/기한/모델/품질채택아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v45",
+      "reason": "전체999실제실행완주와Agent1/이유부족/사실호출0의실패한품질결과를운영복구성공과구별한다. 모든최종주장·3원문·3질문대조/비용/키150실관측/독립gold아님을기록. 후보별구제는이미존재하며단순재도입하지않는다. 다음무료일반수정은Sol/Jev전송용량분리; 새유료실험없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v36",
+  "design_version": "commentscope-detailed-design-20261111-v40",
   "design_document": "docs/design/README.md"
 }
