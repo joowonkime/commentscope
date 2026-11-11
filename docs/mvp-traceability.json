@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v47",
-  "baseline_commit": "3b4069ab9d88dd2f88ac21da2a0ce094523d5849",
+  "spec_version": "commentscope-mvp-20261111-v48",
+  "baseline_commit": "8777756db85c84e2f8886806bba498e51a6a64f6",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -22,10 +22,10 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-020",
+    "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "설계 검토/구현 인계 완료. 다음TASK020의 무료 실패지도·평가계약 고정이며 새B1구현은021. 실제999는Agent1/이유없음,PR89는양OS CI통과/main3b4069a이나fresh품질미측정. 원15달러plan기한만료. 새B1·5달러비교는제안;신규유료권한·모델호출·자동재개없음."
+    "hold_reason": "TASK020 평가자료와TASK021 B1 opt-in/무료회귀 완료. 실제999는기존1Agent/이유부족결과유지. 다음022는후보별정답·검토provenance·신규wire/profile·현재가격·합계비용/기한동결부터. 원15달러실행기한만료,5달러비교는제안/새paid권한아님. 신규OpenRouter0/실행중모델없음;새유료호출·기존plan재개없음."
   },
   "requirements": [
     {
@@ -61,7 +61,11 @@
         "src/commentscope/providers/typed_membership_runner.py",
         "tools/jev_membership_probe.py",
         "src/commentscope/factory/perspective_mining.py",
-        "tools/wide_mining_trial.py"
+        "tools/wide_mining_trial.py",
+        "src/commentscope/factory/source_evidence_graph.py",
+        "src/commentscope/factory/source_evidence_requests.py",
+        "src/commentscope/factory/source_evidence_adapter.py",
+        "tools/prepare_source_evidence_review.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -86,13 +90,22 @@
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
         "tests/test_wide_mining_trial.py",
-        "tests/test_chat_dependency_capacity.py"
+        "tests/test_chat_dependency_capacity.py",
+        "tests/test_source_evidence_graph.py",
+        "tests/test_source_evidence_pipeline.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
         "조건·반대·인용·불확실·미평가를 실제 지지와 구분하며 자동 산출물에서 확인한다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/FACTORY_STRUCTURE.md",
         "docs/design/FACTORY.md",
@@ -106,7 +119,8 @@
         "docs/design/CHAT_DEPENDENCY_CAPACITY.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -143,7 +157,11 @@
         "src/commentscope/providers/typed_membership_runner.py",
         "tools/jev_membership_probe.py",
         "src/commentscope/factory/perspective_mining.py",
-        "tools/wide_mining_trial.py"
+        "tools/wide_mining_trial.py",
+        "src/commentscope/factory/source_evidence_graph.py",
+        "src/commentscope/factory/source_evidence_requests.py",
+        "src/commentscope/factory/source_evidence_adapter.py",
+        "tools/prepare_source_evidence_review.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -167,7 +185,9 @@
         "tests/test_jev_membership.py",
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
-        "tests/test_wide_mining_trial.py"
+        "tests/test_wide_mining_trial.py",
+        "tests/test_source_evidence_graph.py",
+        "tests/test_source_evidence_pipeline.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -179,6 +199,12 @@
           "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -193,7 +219,8 @@
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -225,7 +252,11 @@
         "src/commentscope/providers/typed_membership_runner.py",
         "tools/jev_membership_probe.py",
         "src/commentscope/factory/perspective_mining.py",
-        "tools/wide_mining_trial.py"
+        "tools/wide_mining_trial.py",
+        "src/commentscope/factory/source_evidence_graph.py",
+        "src/commentscope/factory/source_evidence_requests.py",
+        "src/commentscope/factory/source_evidence_adapter.py",
+        "tools/prepare_source_evidence_review.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -249,7 +280,9 @@
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
         "tests/test_wide_mining_trial.py",
-        "tests/test_chat_dependency_capacity.py"
+        "tests/test_chat_dependency_capacity.py",
+        "tests/test_source_evidence_graph.py",
+        "tests/test_source_evidence_pipeline.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -261,6 +294,12 @@
           "scope": "Fresh all-HTTP G1 on d17eb66: 285requests/$0.570143520; mandatory5/voluntary3/conditional2 retained,0bindingerrors. Full assistant84-task review:18counted supports valid,1Agent/4validsources/3actualruntimeanswers valid,14/16requirements pass; two-Agent and all-Agent fixed-question requirements FAIL after contradictory dependency and world observations held sources. Not independent human gold; G2 admission rejected without new calls. Previous failure and charges preserved.",
           "reference": "docs/design/REMOTE_VERIFICATION.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -275,7 +314,8 @@
         "docs/design/CHAT_DEPENDENCY_CAPACITY.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -501,7 +541,11 @@
         "src/commentscope/factory/perspective_mining.py",
         "tools/wide_mining_trial.py",
         "tools/wide_mining_recovery.py",
-        "tools/wide_cached_recovery.py"
+        "tools/wide_cached_recovery.py",
+        "src/commentscope/factory/source_evidence_graph.py",
+        "src/commentscope/factory/source_evidence_requests.py",
+        "src/commentscope/factory/source_evidence_adapter.py",
+        "tools/prepare_source_evidence_review.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -530,7 +574,9 @@
         "tests/test_wide_mining_trial.py",
         "tests/test_wide_mining_recovery.py",
         "tests/test_wide_cached_recovery.py",
-        "tests/test_chat_dependency_capacity.py"
+        "tests/test_chat_dependency_capacity.py",
+        "tests/test_source_evidence_graph.py",
+        "tests/test_source_evidence_pipeline.py"
       ],
       "acceptance": [
         "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
@@ -578,6 +624,12 @@
           "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
           "reference": "tests/test_wide_cached_recovery.py",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -594,7 +646,8 @@
         "docs/design/CHAT_DEPENDENCY_CAPACITY.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -697,7 +750,11 @@
         "src/commentscope/factory/perspective_mining.py",
         "tools/wide_mining_trial.py",
         "tools/wide_mining_recovery.py",
-        "tools/wide_cached_recovery.py"
+        "tools/wide_cached_recovery.py",
+        "src/commentscope/factory/source_evidence_graph.py",
+        "src/commentscope/factory/source_evidence_requests.py",
+        "src/commentscope/factory/source_evidence_adapter.py",
+        "tools/prepare_source_evidence_review.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -728,7 +785,9 @@
         "tests/test_wide_mining_trial.py",
         "tests/test_wide_mining_recovery.py",
         "tests/test_wide_cached_recovery.py",
-        "tests/test_chat_dependency_capacity.py"
+        "tests/test_chat_dependency_capacity.py",
+        "tests/test_source_evidence_graph.py",
+        "tests/test_source_evidence_pipeline.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -764,6 +823,12 @@
           "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
           "reference": "tests/test_wide_cached_recovery.py",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -781,7 +846,8 @@
         "docs/design/CHAT_DEPENDENCY_CAPACITY.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     }
   ],
@@ -1276,12 +1342,19 @@
           "scope": "Design review only: current code and prior negative results cross-checked; 18 spec tests pass; new Mermaid parsed and embedded source identical; local document links checked. No code implementation, paid model calls, fresh semantic result or acceptance change.",
           "reference": "docs/design/MVP_DESIGN_REVIEW.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -2538,7 +2611,7 @@
       "depends_on": [
         "TASK-019"
       ],
-      "status": "next",
+      "status": "done",
       "deliverables": [
         "17record/52관계/34enum/4용량 사례의 중복 없는 실패지도",
         "private 개발/holdout manifest와 공개 합성 정상·부정 controls",
@@ -2546,16 +2619,25 @@
       ],
       "done_when": [
         "원문/부모를 보는 검토자의 provenance와 의미 기대·분모·paired 선택 규칙을 실행 전에 고정한다.",
-        "기존 음성 사례를 포함하고 r5·전체 eligible-support·기존 admission을 유지한다."
+        "기존 음성 사례를 포함하고 r5·전체 eligible-support·기존 admission을 유지한다.",
+        "Source-level preservation expectations and comparison rules are frozen offline; candidate-specific semantic gold must be completed before TASK022 dispatch, not claimed ready from this source review."
       ],
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Frozen private development48 source windows/source-level coding-agent preservation notes and thread-disjoint same-corpus transfer48 selection;17 argument records/96 units/52 map edges/34 enum events/10 capacity events retained.16 authored synthetic controls source-bound. No independent human gold; candidate relation labels and actual wire/profile preflight remain required before TASK022. No inference.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -2574,7 +2656,7 @@
       "depends_on": [
         "TASK-020"
       ],
-      "status": "todo",
+      "status": "done",
       "deliverables": [
         "versioned graph/proposal/observation/certificate와 손실 없는 legacy lowering",
         "기존 의미 의무를 대응 교체하는 adapter와 비용·무효화·재개 계약"
@@ -2586,11 +2668,19 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
+          "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -2609,7 +2699,7 @@
       "depends_on": [
         "TASK-021"
       ],
-      "status": "todo",
+      "status": "next",
       "deliverables": [
         "같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구"
@@ -2625,7 +2715,8 @@
       "design_refs": [
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -2936,8 +3027,12 @@
     {
       "spec_version": "commentscope-mvp-20261111-v47",
       "reason": "사용자가 모델전환 후 본격 설계 검토와 하위모델 구현 인계를 요청. 실제999/PR89/과거해석·전제실패/CI·TA초행조건을대조해F1~F5/P/X유지·F4 B1표현교체제안·B2보류·A/B/C비교·120cap과453활용의간극·eligible전체지지심층규칙·제품경쟁/복구를명시. 과거실행중문구정정,새TASK019~024와DEC013/014추가. 구현/paid/fresh품질/합격기준·장부변경없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v48",
+      "reason": "사용자 진행 지시로TASK020의 원인/평가자료를 실제 원실험에서 동결하고16개 합성통제와B1 closed graph/observer/candidate/Compiler opt-in을 구현. legacy·B2보류·기존원문/조건/전체eligible-source/fact/최소지지기준유지. 새stage등록과unknown-profile거절,무료합성통합2Agent/각3지지. candidate gold/실제 품질·비용은미검증,모델호출0·신규paid권한없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v42",
+  "design_version": "commentscope-detailed-design-20261111-v43",
   "design_document": "docs/design/README.md"
 }

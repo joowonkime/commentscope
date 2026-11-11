@@ -12,6 +12,16 @@ STAGES=('shared-discovery','source-context','source-world','candidate-world','me
         'argument-position-alignment','argument-dependencies','argument-owner','argument-dependency',
         'argument-audit','facts','runtime','embedding-sources','embedding-candidates')
 GENERATION={'argument-node-metadata','argument-position-alignment','argument-dependencies','runtime'}
+GRAPH_STAGES=('source-evidence-proposal','source-evidence-observation','source-evidence-candidates')
+GENERATION.add('source-evidence-proposal')
+
+
+def stages(plan):
+    protocol=plan.get('source_evidence_protocol')
+    if protocol is None:return STAGES
+    from commentscope.factory.source_evidence_graph import VERSION as GRAPH_VERSION
+    if protocol!=GRAPH_VERSION:raise CostPlanError('Unknown source evidence cost protocol')
+    return (*STAGES,*GRAPH_STAGES)
 
 
 class CostPlanError(ValueError):pass
@@ -36,7 +46,7 @@ def canonical(stage,request=None):
     if family=='membership-raw' and isinstance(data.get('CANDIDATE_TARGETS'),list):
         family='membership-source-batch'
     if family=='shared-owned-position':family='argument-position-alignment'
-    if family not in STAGES:raise CostPlanError('Unplanned cost stage: '+family)
+    if family not in (*STAGES,*GRAPH_STAGES):raise CostPlanError('Unplanned cost stage: '+family)
     return family
 
 
@@ -84,7 +94,7 @@ def packet_schedule(source_ids, candidates):
 
 def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
              multiplier='1.25',headroom_usd='0.15',goal='mvp'):
-    if set(counts)!=set(STAGES):raise CostPlanError('Every cost stage must be explicit, including unknown/null')
+    if set(counts)!=set(stages(plan)):raise CostPlanError('Every cost stage must be explicit, including unknown/null')
     if goal not in ('mvp','development'):raise CostPlanError('Explicit cost goal required')
     if any(v is not None and (type(v) is not int or v<0) for v in counts.values()):
         raise CostPlanError('Nonnegative integer stage cap or null required')
@@ -121,6 +131,10 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
         minimum.update(core=2,**{'core-fidelity':2,'raw-own-evidence':6,'argument-node-metadata':3,
             'argument-position-alignment':6,'argument-owner':6,'argument-dependency':3,
             'argument-audit':6,'runtime':6})
+        if plan.get('source_evidence_protocol'):
+            for stage in ('argument-node-metadata','argument-position-alignment','argument-dependencies','argument-owner','argument-dependency','argument-audit'):
+                minimum.pop(stage,None)
+            minimum.update({stage:6 for stage in GRAPH_STAGES})
     for stage,cap in counts.items():
         done=completed.get(stage,0)
         if type(done) is not int or done<0:raise CostPlanError('Invalid completed call count')
@@ -167,7 +181,7 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
 class CallLimits:
     """Count physical request identities; same-stage checkpoint reuse costs zero."""
     def __init__(self,counts,existing=()):
-        if set(counts)!=set(STAGES) or any(type(v) is not int or v<0 for v in counts.values()):
+        if set(counts) not in (set(STAGES),set(STAGES)|set(GRAPH_STAGES)) or any(type(v) is not int or v<0 for v in counts.values()):
             raise CostPlanError('Complete finite stage caps required')
         self.caps=dict(counts);self.seen=set();self.used=Counter()
         for stage,req in existing:self.admit(stage,req)
@@ -175,5 +189,6 @@ class CallLimits:
     def admit(self,stage,request):
         family=canonical(stage,request);key=(stage,digest(request))
         if key in self.seen:return
+        if family not in self.caps:raise CostPlanError('Stage absent from frozen call caps: '+family)
         if self.used[family]>=self.caps[family]:raise CostPlanError('Stage call cap reached: '+family)
         self.seen.add(key);self.used[family]+=1
