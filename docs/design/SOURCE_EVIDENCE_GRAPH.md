@@ -1,7 +1,8 @@
 # 원문 증거 그래프와 후보 연결 계약
 
 계약 후보: `source-evidence-graph-20261111-v1` / DEC-013 / TASK-020~022.
-상태: **B1 구현 명세, 미구현·미채택**. [검토 결론](MVP_DESIGN_REVIEW.md)의 F4만 교체한다.
+상태: **B1 opt-in 첫 구현·합성 회귀, 실제 의미 채택은 미완료**. [첫 구현 범위](SOURCE_EVIDENCE_IMPLEMENTATION.md)를 함께 읽는다.
+[검토 결론](MVP_DESIGN_REVIEW.md)의 F4만 교체한다.
 현재 `explicit_discourse`의 parser graph와 새로운 graph는 서로 다른 artifact다.
 이 문서의 필드를 과거 응답에 추가해 새 검증을 받은 것처럼 사용하지 않는다.
 
@@ -137,6 +138,7 @@ SourceObservation = {
     missing_refs: SpanRef[], issue_codes: str[]}],
   missing_units: [{own_spans: SpanRef[], obligation: str}],
   scope_coverage: Verdict, ownership_coverage: Verdict, dependency_coverage: Verdict,
+  source_language: en|ko|other|unknown,
   issues: Issue[]
 }
 ```
@@ -155,6 +157,7 @@ observer는 제안 edge에 yes/no만 답하지 않고, 원문에서 관계·필�
 host 검사는 정확한 inventory·응답 질문 전체성·span 범위·관측 매칭과 비교를 담당한다.
 의미 일치를 문자열/embedding 유사도로 대신 승인하지 않는다. 서로 다른 관측은 disagreement hold다.
 관측이 맞다고 해서 원문 속 경험적 주장이 사실임을 뜻하지 않는다.
+원문 언어도 observer가 별도로 관측한다. unknown은 기존 언어 보류로 연결하며 ASCII 여부로 추정하지 않는다.
 host는 unit ID로 관측을 결합하고, 각 enum 및 정렬·중복검사한 scope span 집합을 정확 비교한다.
 edge는 `(from,to,relation,sorted cue_refs)`로 canonical 비교하고 local edge ID 차이만 무시한다.
 proposal/observer의 다른 unit 경계나 scope 선택은 자동 동치로 합치지 않는다. 해당 불일치/보존 손실도 측정한다.
@@ -227,6 +230,7 @@ scope·required-premise·citation 계약으로 빠짐없이 동반해야 한다.
 연속 구간+기존 scope/인용 경로로 의미를 손실 없이 전달할 수 없으면 `unrepresentable_hold`다.
 전체 envelope를 단일 fact/value로 다시 분류하거나, 조건을 삭제하거나, generated paraphrase를
 literal claim처럼 게시하지 않는다. fragment-aware runtime 확장은 별도 DEC이며 B1 밖이다.
+중첩 조건을 기존 flat scope로 옮겨 의미를 보장할 수 없으면 첫 구현은 같은 unrepresentable_hold로 보류한다.
 B1의 표현 개선이 이 lowering 한계 때문에 실제 게시 개선으로 이어지는지도 비교 지표에 포함한다.
 
 ## 7. 판정 의무의 이전
@@ -283,3 +287,9 @@ B1의 **자동 재해석0회,모델 재시도0회**로 표현 변경의 효과�
 nested 조건,수량/근사,이중부정,인용,가정세계,policy bundle,정정,동일source중복,
 empty/fact0,Unicode offset,32초과unit,edge순환,oldreceipt 재사용,missing observation도 확인한다.
 negative를 보류하는 능력과 대응 valid positive를 보존하는 능력을 함께 검사한다.
+
+첫 구현의 host record는 `artifact_kind`와 원래 source/envelope,request hash,output을 보존하는 wrapper를 쓴다.
+위 타입 표는 논리 필드 계약이다. 실제 생성 schema와 host wrapper의 정확한 필드는
+`source_evidence_graph`/`source_evidence_requests`의 request/bind/validate 함수가 함께 고정한다.
+snapshot/root/parent/video 식별은 immutable envelope의 원래 source와 snapshot hash에 보존하며
+graph가 기존 registry의 별도 사본을 새 사실로 생성하지 않는다.

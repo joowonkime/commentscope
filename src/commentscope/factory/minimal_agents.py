@@ -68,11 +68,12 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
     cs = {c['id']: c for c in candidates}; rr = {}; cr = {}
     verdicts = sa.audit_verdicts(records, cores, audits)
     coverage_audits={t['source_id']:[a] for a in audits for t in a['tasks'] if t['kind']=='coverage'}
-    observed = any(a.get('protocol') in sa.OBSERVED_PROTOCOLS for a in audits)
+    from commentscope.factory import source_evidence_adapter
+    observed = any(a.get('protocol') in sa.OBSERVED_PROTOCOLS or a.get('artifact_kind')==source_evidence_adapter.AUDIT for a in audits)
     for record in records:
         sa.validate(record); sid = record['source']['id']
         validate_snapshot_source(snapshot, record['source'])
-        if record['artifact_kind'] != sa.VERSION+'-linked': raise ValueError('Unassessed argument dependencies cannot compile')
+        if record['artifact_kind'] not in (sa.VERSION+'-linked',source_evidence_adapter.VERSION): raise ValueError('Unassessed argument dependencies cannot compile')
         if (sid in rr or any(cid not in cs or sid not in members[cid] for cid in record['candidate_ids'])):
             raise ValueError('Arguments require unique current member originals')
         rr[sid] = record

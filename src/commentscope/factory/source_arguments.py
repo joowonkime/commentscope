@@ -307,6 +307,9 @@ def bind_links(record, result=None):
 
 
 def validate(record):
+    from commentscope.factory import source_evidence_adapter
+    if record.get('artifact_kind')==source_evidence_adapter.VERSION:
+        return source_evidence_adapter.validate(record)
     if record['artifact_kind']==VERSION:
         return validate_extraction(record)
     if record['artifact_kind']!=VERSION+'-linked': raise ValueError('Unknown source argument contract')
@@ -408,6 +411,14 @@ def audit_verdicts(records, cores, audits):
     verdicts = {}; core_checks = {}
     records_sha256, cores_sha256 = digest(records), digest(cores)
     for audit in audits:
+        from commentscope.factory import source_evidence_adapter
+        if audit.get('artifact_kind')==source_evidence_adapter.AUDIT:
+            scoped_ids={t['source_id'] for t in audit['tasks']}
+            scoped=[r for r in records if r['source']['id'] in scoped_ids]
+            extra=source_evidence_adapter.verdicts(scoped,cores,audit)
+            if set(extra)&set(verdicts):raise ValueError('Duplicate source evidence audit')
+            verdicts.update(extra)
+            continue
         scoped_records=records;scoped_cores=cores
         if audit['records_sha256']!=records_sha256 or audit['cores_sha256']!=cores_sha256:
             # Independently closed originals keep their actual audit request;

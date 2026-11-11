@@ -27,12 +27,13 @@ EMBEDDING = {'version':'openrouter-embeddings-0.2', 'model':'openai/text-embeddi
              'provider':{'only':['openai'],'allow_fallbacks':False,
                          'max_price':{'prompt':0.02,'completion':0,'request':0}}}
 GENERATION = ('extract','extract-additional','argument-node-metadata',
-              'argument-position-alignment','argument-dependencies')
+              'argument-position-alignment','argument-dependencies','source-evidence-proposal')
 VERIFICATION = ('source-context','source-world','candidate-world','nomination-raw',
                 'raw-candidate-route','raw-own-evidence','equivalence','qualification-inventory',
                 'qualification-detail','qualification-ownership','assertion-counterexample',
                 'membership-initial-raw','membership-expanded-raw','core','core-fidelity',
-                'argument-owner','argument-audit','argument-dependency','facts')
+                'argument-owner','argument-audit','argument-dependency','facts',
+                'source-evidence-observation','source-evidence-candidates')
 ROLES = {**dict.fromkeys(GENERATION,'generation'), **dict.fromkeys(VERIFICATION,'verification'),
          'runtime':'interaction'}
 

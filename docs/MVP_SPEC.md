@@ -1,15 +1,15 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261111-v47`. 현재 검토 코드: `3b4069a`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261111-v48`. 현재 검토 코드: `3b4069a`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261111-v42`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261111-v43`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
-[구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). 다음 작업은 TASK-020의 실패/평가 계약 고정이다.
-새 구현·유료 실험은 시작하지 않았다. DEC-013/014는 제안이며 r5·제품 의도·예산 권한은 유지한다.
+[구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). TASK-020의 무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. 다음은 TASK-022의 고정 비교 준비다.
+[첫 구현/검증 범위](design/SOURCE_EVIDENCE_IMPLEMENTATION.md)를 확인한다. 새 유료 실험은 시작하지 않았다. DEC-013/014는 제안이며 r5·제품 의도·예산 권한은 유지한다.
 
 ## 1. 이 문서의 역할과 읽는 순서
 
@@ -205,7 +205,7 @@ snapshot 사용기한과 원문 hash를 매 실행 전 확인하고, 기한 경�
 현재 TASK-001/002/003과 TASK-015/008/009/010/011은 기록된 개발 구현/검증 범위에서 완료했다.
 Lecture15 PDF4–6쪽의 M4 배점/일관성·직접 사용 기준과 현재 구현의 대조는
 [M4 검토](M4_PROTOTYPE_REVIEW.md)를 따른다. 강의 확인으로 내부 r5나 예산 한도를 변경하지 않는다.
-TASK-019의 구조 감사 후 다음은 TASK-020의 고정 평가 계약이다. TASK-017/018은 이력·미완료 품질을
+TASK-019/020의 감사·무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. 다음은 TASK-022의 별도 동결 비교다. TASK-017/018은 이력·미완료 품질을
 보존한 deferred 상태다. TASK-021~024가 표현 비교·검색 규모·제품 복구를 분리한다.
 TASK-005와 동일 설정 G2/G3/G4는 기존 실패/기준과 새 선택 설정의 선행 조건을 유지하는 정식 품질 작업이다.
 TASK-004/013/014의 새 의미 역할 채택은 보류한다. Figma 화면과 제품 API 연결은 구현됐고, 실제999개 품질과 사용자 검증은 남았다. 전체 품질/제품 완료 상태와 증거는 추적표를 따른다.

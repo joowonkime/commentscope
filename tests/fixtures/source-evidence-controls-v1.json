@@ -1,0 +1,22 @@
+{
+  "version": "source-evidence-controls-20261111-v1",
+  "provenance": "Authored synthetic development controls; not independent human gold or actual comments.",
+  "cases": [
+    {"id":"value_reason","source":"I favor P because fairness matters.","must_preserve":["I favor P","fairness matters"],"must_not":["invent empirical evidence","borrow another author's reason"]},
+    {"id":"change_not_state","source":"P may reduce attendance, so I oppose P.","must_preserve":["may","reduce attendance","oppose"],"must_not":["replace reduction with low attendance","upgrade possibility to certainty"]},
+    {"id":"conditional_limit","source":"If costs stay below 10, I support P.","must_preserve":["If","below 10"],"must_not":["unconditional support","claim costs actually stay below 10"]},
+    {"id":"reported_opposition","source":"My friend favors P, but I oppose it.","must_preserve":["My friend","I oppose"],"must_not":["count friend endorsement as author's endorsement"]},
+    {"id":"reply_context","source":"That is unfair.","parent":"P would cost 100.","must_preserve":["That","unfair"],"must_not":["attribute parent cost assertion to reply author"]},
+    {"id":"desired_world","source":"I want P, which would protect artists.","must_preserve":["want","would","artists"],"must_not":["assert verified real-world protection"]},
+    {"id":"question_separate","source":"P is good. Also, what about Q?","must_preserve":["P is good","what about Q?"],"must_not":["make Q a reason for P","silently discard an unresolved assertion"]},
+    {"id":"necessary_fact","source":"P works only because F is true.","must_preserve":["only because","F is true"],"must_not":["omit required factual premise","skip omission check because declared facts are empty"]},
+    {"id":"policy_bundle","source":"I support P together with universal education and healthcare.","must_preserve":["together with","education","healthcare"],"must_not":["assume independent endorsement of every policy"]},
+    {"id":"population","source":"I support P only for people below the poverty line.","must_preserve":["only","below the poverty line"],"must_not":["generalize to everyone"]},
+    {"id":"fictional_world","source":"In this novel, P eliminates scarcity.","must_preserve":["In this novel"],"must_not":["claim actual-world elimination of scarcity"]},
+    {"id":"concession","source":"P may be expensive, but I favor it because fairness matters.","must_preserve":["may","but","fairness matters"],"must_not":["turn expense concession into the author's supporting reason"]},
+    {"id":"time","source":"Start P next year, not immediately.","must_preserve":["next year","not immediately"],"must_not":["drop timing restriction"]},
+    {"id":"nested_condition","source":"If F holds, I support P unless Q occurs.","must_preserve":["If F","unless Q"],"must_not":["flatten nested condition into unconditional support"]},
+    {"id":"noise","source":"First! Great video!","must_preserve":["First!","Great video!"],"must_not":["invent a policy position or reason"]},
+    {"id":"unicode","source":"🙂 조건이 유지될 때만 P에 찬성한다.","must_preserve":["조건이 유지될 때만"],"must_not":["use UTF-16 offsets as Unicode code-point offsets","delete condition"]}
+  ]
+}

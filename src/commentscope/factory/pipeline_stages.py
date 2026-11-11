@@ -222,6 +222,10 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
                        lambda group, result: argument_observations.bind_core(group[0], result, protocol=core_protocol), 1)
                    if observed else [])
     save('core-fidelity-checks', core_checks)
+    if getattr(execution,'source_evidence_protocol',None):
+        from commentscope.factory import source_evidence_adapter
+        scoped_cores=[c for c in cores if c['candidate']['id'] in adaptable_ids]
+        return source_evidence_adapter.process(snapshot,eligible,memberships,execution,scoped_cores,core_checks)
     supporting = sorted({sid for cid in eligible_ids for sid in members[cid]})
     arguments = []
     for sid in supporting:

@@ -16,13 +16,17 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None,membership_search_policy=None):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None,membership_search_policy=None,source_evidence_protocol=None):
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     if membership_evidence_protocol is not None and (membership_evidence_protocol!=raw_verification.QUALIFIED_CONTEXT
             or membership_mode!='raw' or verification_contract!=raw_verification.FULL_SCOPE):
         raise ValueError('Source-context evidence requires explicit full-scope raw verification')
     if agent_source_policy not in ('all_members','verified_subset','candidate_verified_subset'):raise ValueError('Unknown Agent source policy')
+    from commentscope.factory import source_evidence_graph
+    if source_evidence_protocol is not None and (source_evidence_protocol!=source_evidence_graph.VERSION
+            or discovery_mode!='shared' or membership_mode!='raw' or verification_contract!=raw_verification.FULL_SCOPE):
+        raise ValueError('Source evidence requires explicit shared/raw/full-scope protocol')
     from commentscope.factory import candidate_hierarchy
     if (membership_retrieval_policy not in (cc.ALIAS_RETRIEVAL,candidate_hierarchy.VERSION)
             or membership_retrieval_policy==candidate_hierarchy.VERSION and (discovery_mode,membership_mode)!=('free','raw')):
@@ -89,6 +93,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                              extraction_protocol=extraction_protocol, review_interpretations=review_interpretations,
                              source_review_protocol=source_review_protocol)
     execution.argument_audit_protocol=argument_audit_protocol
+    execution.source_evidence_protocol=source_evidence_protocol
     execution.shared_typed=shared_typed
     execution.membership_evidence_protocol=membership_evidence_protocol
     execution.membership_batch_protocol=membership_batch_protocol
@@ -137,6 +142,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
     return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
             'canonical_population': len(registry), 'processing_ids': ids,
             **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
+            **({'source_evidence_protocol':source_evidence_protocol} if source_evidence_protocol else {}),
             **({'membership_judge_protocol':membership_judge_protocol} if membership_judge_protocol else {}),
             **({'membership_search_policy':membership_search_policy} if membership_search_policy else {}),
             **({'membership_batch_protocol':membership_batch_protocol} if membership_batch_protocol else {}),
