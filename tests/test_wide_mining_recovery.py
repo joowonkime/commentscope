@@ -1,4 +1,5 @@
 """Terminal transport recovery preserves money and never resends a failed call."""
+from contextlib import closing
 from copy import deepcopy
 import json
 from pathlib import Path
@@ -47,7 +48,7 @@ class WideMiningRecoveryTests(TestCase):
         self.write(self.intent, identity)
         self.checkpoint = self.intent.with_name(self.intent.name.replace('.intent.json', '.result.json'))
         self.write(self.checkpoint, {'identity': identity, 'result': self.result, 'result_sha256': digest(self.result)})
-        with sqlite3.connect(self.root/'inference.sqlite') as db:
+        with closing(sqlite3.connect(self.root/'inference.sqlite')) as db, db:
             db.execute('CREATE TABLE calls(id INTEGER,plan_sha TEXT,request_sha TEXT,state TEXT,error TEXT)')
             db.execute('INSERT INTO calls VALUES(1,?,?,?,?)',
                        (sha(self.root/'plan.json'), self.req_sha, 'error',
@@ -93,7 +94,7 @@ class WideMiningRecoveryTests(TestCase):
         provider.assert_called_once_with()
 
     def test_active_or_foreign_uncertain_charge_blocks_preparation(self):
-        with sqlite3.connect(self.money.path) as db:
+        with closing(sqlite3.connect(self.money.path)) as db, db:
             db.execute("UPDATE calls SET state='reserved' WHERE id=?", (self.cid,))
         with self.assertRaises(ValueError):
             self.prepare()
@@ -103,7 +104,7 @@ class WideMiningRecoveryTests(TestCase):
         for error, state in [({'type': 'HTTPError', 'http_status': 401}, 'error'),
                              ({'type': 'Interrupted'}, 'error'),
                              ({'type': 'HTTPError', 'http_status': 503}, 'reserved')]:
-            with sqlite3.connect(self.root/'inference.sqlite') as db:
+            with closing(sqlite3.connect(self.root/'inference.sqlite')) as db, db:
                 db.execute('UPDATE calls SET error=?,state=?', (json.dumps(error), state))
             with self.assertRaises(ValueError):
                 recovery.terminal_evidence(self.root, self.plan, self.request_file)
@@ -144,7 +145,7 @@ class WideMiningRecoveryTests(TestCase):
             recovery.terminal_evidence(self.root, self.plan, self.request_file)
 
     def test_foreign_uncertain_charge_cannot_be_cleared_by_this_recovery(self):
-        with sqlite3.connect(self.money.path) as db:
+        with closing(sqlite3.connect(self.money.path)) as db, db:
             db.execute("INSERT INTO calls(plan_sha,request_sha,reserved,charged,state) VALUES(?,?,?,?,?)",
                        ('b'*64, 'c'*64, 100, 100, 'unknown'))
         with self.assertRaises(ValueError):
@@ -154,11 +155,11 @@ class WideMiningRecoveryTests(TestCase):
 
     def test_plan_change_or_unsettled_reservation_cannot_continue(self):
         self.prepare()
-        with sqlite3.connect(self.money.path) as db:
+        with closing(sqlite3.connect(self.money.path)) as db, db:
             db.execute("UPDATE calls SET state='unknown' WHERE id=?", (self.cid,))
         with self.assertRaises(ValueError):
             recovery.validate(self.root, self.manifest, self.plan)
-        with sqlite3.connect(self.money.path) as db:
+        with closing(sqlite3.connect(self.money.path)) as db, db:
             db.execute("UPDATE calls SET state='conservative' WHERE id=?", (self.cid,))
         self.write('plan.json', {**self.plan, 'changed': True})
         with self.assertRaises(ValueError):

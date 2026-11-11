@@ -5,6 +5,7 @@ immutable. A separate manifest binds this additional control and its archive.
 Only development-wide runs are supported; formal admission remains disabled.
 """
 import argparse
+from contextlib import contextmanager
 from copy import deepcopy
 from datetime import datetime, timezone
 import json
@@ -34,8 +35,13 @@ trial = wide.trial
 executor = wide.executor
 
 
+@contextmanager
 def database(path):
-    return sqlite3.connect('file:'+str(Path(path).resolve())+'?mode=ro', uri=True)
+    connection = sqlite3.connect('file:'+str(Path(path).resolve())+'?mode=ro', uri=True)
+    try:
+        yield connection
+    finally:
+        connection.close()
 
 
 def terminal_evidence(directory, plan, request_file):
