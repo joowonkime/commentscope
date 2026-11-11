@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261111-v40`. 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261111-v41`. 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~018, DEC-001~012.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -172,3 +172,5 @@ TASK-005 [후보별 원문 완전성](CANDIDATE_SOURCE_COVERAGE.md)은 bound typ
 - 현재책임계층의정본: [구조v1와Mermaid](ARCHITECTURE_BASELINE.md), [전체단계비용계획](FACTORY_COST_PLAN.md). DEC-008은역할/입출력고정이며모델/의미품질/단가채택은별도다.
 
 원문별 전송 최적화 계약과 채택 조건은 [membership batch](SOURCE_MEMBERSHIP_BATCH.md)를 따른다. 구조v1의 책임은 유지한다.
+
+Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 용량 분리](CHAT_DEPENDENCY_CAPACITY.md)를 따른다.

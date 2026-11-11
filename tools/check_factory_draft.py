@@ -33,6 +33,7 @@ MODULES = (
     "test_argument_observations",
     "test_argument_dependency_contract",
     "test_decision_controls",
+    "test_chat_dependency_capacity",
     "test_jev_audit_integration",
     "test_remote_verification",
     "test_api_resources",
