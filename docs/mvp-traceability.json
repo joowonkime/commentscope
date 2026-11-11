@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v45",
+  "spec_version": "commentscope-mvp-20261111-v46",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-018",
     "paid_execution_hold": true,
-    "hold_reason": "999동일plan실제실행02:32UTC완료. Agent1/지지3원문/허용value4개/3질문(입장answered·이유/없는수치abstain). 성공3199비용3.913137840+503보수차감.042015750=단계3.955153590; 예약/미확정0. 최종모든원문/허용주장/3runtime대조,span오류0이나최소2Agent/이유유용성미달·fresh사실검증0. 후보별projection9이미존재. 다음무료회귀는Sol chat에Jev28KB가전파되는용량경계분리이며새모델호출보류; 기존결과/모델/prompt/한도/기한/정식기준변경없음.",
+    "hold_reason": "999원실행완료결과Agent1/3질문/총3.955153590은별도동결worktree와report에보존. 새코드는Solchat/Jev용량경계분리무료수정:관련41검사통과,실제저장입력17개중기존13요청동일/이전보류4개Sol용량적합(요청구성만,모델호출0). 최종Factory759검사755.239초통과,Ubuntu·Windows CI확인중. 실제Agent증가/사실정확도/MVP합격미검증;새유료실험/기존계획재사용/한도·기한연장없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -87,7 +87,8 @@
         "tests/test_jev_membership.py",
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
-        "tests/test_wide_mining_trial.py"
+        "tests/test_wide_mining_trial.py",
+        "tests/test_chat_dependency_capacity.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -103,7 +104,8 @@
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/SOURCE_MEMBERSHIP_BATCH.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/CHAT_DEPENDENCY_CAPACITY.md"
       ]
     },
     {
@@ -242,7 +244,8 @@
         "tests/test_jev_membership.py",
         "tests/test_jev_membership_probe.py",
         "tests/test_perspective_mining.py",
-        "tests/test_wide_mining_trial.py"
+        "tests/test_wide_mining_trial.py",
+        "tests/test_chat_dependency_capacity.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -264,7 +267,8 @@
         "docs/design/REMOTE_VERIFICATION.md",
         "docs/design/TYPED_VERIFICATION.md",
         "docs/design/JEV_MEMBERSHIP.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/CHAT_DEPENDENCY_CAPACITY.md"
       ]
     },
     {
@@ -510,7 +514,8 @@
         "tests/test_perspective_mining.py",
         "tests/test_wide_mining_trial.py",
         "tests/test_wide_mining_recovery.py",
-        "tests/test_wide_cached_recovery.py"
+        "tests/test_wide_cached_recovery.py",
+        "tests/test_chat_dependency_capacity.py"
       ],
       "acceptance": [
         "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
@@ -570,7 +575,8 @@
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
-        "docs/design/TRANSPORT_RECOVERY.md"
+        "docs/design/TRANSPORT_RECOVERY.md",
+        "docs/design/CHAT_DEPENDENCY_CAPACITY.md"
       ]
     },
     {
@@ -700,7 +706,8 @@
         "tests/test_perspective_mining.py",
         "tests/test_wide_mining_trial.py",
         "tests/test_wide_mining_recovery.py",
-        "tests/test_wide_cached_recovery.py"
+        "tests/test_wide_cached_recovery.py",
+        "tests/test_chat_dependency_capacity.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -749,7 +756,8 @@
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
-        "docs/design/TRANSPORT_RECOVERY.md"
+        "docs/design/TRANSPORT_RECOVERY.md",
+        "docs/design/CHAT_DEPENDENCY_CAPACITY.md"
       ]
     }
   ],
@@ -2323,6 +2331,18 @@
           "scope": "Completed-checkpoint fast reads:10 cache controls + terminal10 + wide8 + spec18=46 pass (overlap). Actual original2965request records independently reconstructed through checkpoint identity:2964successful outputs byte/data-equal,1terminal unavailable not promoted, provider calls0,16.121245608seconds for file verification/read only. Cache misses still invoke original guarded Session; pending/changed records fail; capacity/receipt/typed validation/resource latch/originalphasewindow retained. Whole pipeline replay timing and real Agent results remain pending.",
           "reference": "tests/test_wide_cached_recovery.py",
           "result": "pass"
+        },
+        {
+          "kind": "code",
+          "scope": "Sol chat dependency construction now shares bounded Choice structure but uses its actual transport capacity; Jev requests retain the original28000-byte check. Full originals/units/questions/order and existing semantic/accounting/dispatch gates preserved. No model execution.",
+          "reference": "docs/design/CHAT_DEPENDENCY_CAPACITY.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Synthetic regression4 plus typed/decision/shared integration41 tests pass. Read-only construction of all17 saved source tasks:13 formerly admitted payload sets byte-identical;4 previous28KB failures fit actual Sol capacity without dropping originals/units.115 constructed requests, no provider calls and no demonstrated Agent count/quality gain. Final Factory759 check passes in755.239s; CI pending on the follow-up PR. No additional model calls.",
+          "reference": "tests/test_chat_dependency_capacity.py",
+          "result": "pass"
         }
       ],
       "required_evidence": [
@@ -2344,7 +2364,8 @@
         "docs/design/MINING_EXPERIMENT_RESULT.md",
         "docs/design/WIDE_MINING_EXPERIMENT.md",
         "docs/design/WIDE_MINING_EXPERIMENT_RESULT.md",
-        "docs/design/TRANSPORT_RECOVERY.md"
+        "docs/design/TRANSPORT_RECOVERY.md",
+        "docs/design/CHAT_DEPENDENCY_CAPACITY.md"
       ]
     }
   ],
@@ -2574,8 +2595,12 @@
     {
       "spec_version": "commentscope-mvp-20261111-v45",
       "reason": "전체999실제실행완주와Agent1/이유부족/사실호출0의실패한품질결과를운영복구성공과구별한다. 모든최종주장·3원문·3질문대조/비용/키150실관측/독립gold아님을기록. 후보별구제는이미존재하며단순재도입하지않는다. 다음무료일반수정은Sol/Jev전송용량분리; 새유료실험없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v46",
+      "reason": "Jev의닫힌질문구조검증과28000바이트전송제한을분리해Solchat의실제payload용량을해당transport가검사하게수정. 기존작은요청13개byte동일/실제보류4개전체원문구성가능/합성4+통합41무료검사. 원실험과새코드결과를분리하고품질/Agent증가는주장하지않는다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v40",
+  "design_version": "commentscope-detailed-design-20261111-v41",
   "design_document": "docs/design/README.md"
 }

@@ -48,7 +48,8 @@ def tasks(record, cores, *, typed=False):
     return [local]+([core] if selected else [])
 
 
-def requests(task):
+def _choice_batches(task):
+    """Build complete blind questions without selecting a wire capacity policy."""
     typed=task.get('version')==TYPED_VERSION
     if not (typed and task.get('kind')=='combined' or task.get('version')==VERSION and task.get('kind') in ('local','core')):
         raise ValueError('Bound graph task required')
@@ -83,8 +84,14 @@ def requests(task):
     for offset in range(0,len(pairs),od.DEPLOYMENT['max_questions']):
         payload={'model':od.DEPLOYMENT['model'],'provider':od.routing(od.DEPLOYMENT),
                  'state':deepcopy(state),'questions':dict(pairs[offset:offset+od.DEPLOYMENT['max_questions']])}
-        od.validate_request(payload,od.DEPLOYMENT);out.append(payload)
+        od.validate_choice_structure(payload,od.DEPLOYMENT);out.append(payload)
     return out
+
+
+def requests(task):
+    payloads=_choice_batches(task)
+    for payload in payloads:od.validate_request(payload,od.DEPLOYMENT)
+    return payloads
 
 
 def bind(task, responses):
@@ -108,7 +115,7 @@ def chat_requests(task):
              'data':{'state':p['state'],'questions':p['questions']},
              'schema':{'type':'object','properties':{k:{'type':'string','enum':list(q['criteria'])}
                        for k,q in p['questions'].items()},'required':list(p['questions']),'additionalProperties':False},
-             'max_tokens':600} for p in requests(task)]
+             'max_tokens':600} for p in _choice_batches(task)]
 
 
 def bind_chat(task,responses,deployment):

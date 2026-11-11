@@ -33,7 +33,8 @@ def routing(deployment):
             'max_price':{k:float(v) for k,v in deployment['prices'].items()}}
 
 
-def validate_request(payload,deployment):
+def validate_choice_structure(payload,deployment):
+    """Validate complete Choice structure; typed dispatch still needs validate_request."""
     validate(deployment)
     if (not isinstance(payload,dict) or set(payload)!={'model','state','questions','provider'}
             or payload['model']!=deployment['model'] or payload['provider']!=routing(deployment)
@@ -49,6 +50,11 @@ def validate_request(payload,deployment):
                 or any(not isinstance(k,str) or not k or not isinstance(v,str) or not v for k,v in q['criteria'].items())):
             raise ValueError('First trial supports only explicit bounded Choice questions')
     raw=json.dumps(payload,ensure_ascii=False,allow_nan=False).encode()
+    return raw
+
+
+def validate_request(payload,deployment):
+    raw=validate_choice_structure(payload,deployment)
     if len(raw)>deployment['maximum_wire_bytes']:raise ValueError('Complete request exceeds short-state limit')
     return raw
 
