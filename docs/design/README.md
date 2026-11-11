@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261111-v36`. 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261111-v37`. 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~018, DEC-001~012.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
@@ -17,6 +17,8 @@
 운영 방향과 새 알고리즘의 실제 채택/품질 증거를 구별한다.
 현재 확대 범위·추가상한15.00/7시간·누적 장부 계승은 [전체 댓글 풀 계획](WIDE_MINING_EXPERIMENT.md)을 따른다.
 진행 단계·확정 비용·자원 중단은 [중간 결과](WIDE_MINING_EXPERIMENT_RESULT.md)에 기록한다.
+종료된 공급자 오류를 원 예약 전액 정산·재호출 없는 항목 보류로 이어가는
+[복구 계약](TRANSPORT_RECOVERY.md)은 원 실행 코드와 구별한 별도 launcher/manifest로 검증한다.
 이전 추가3.00/각배정1.50 범위의 동일 설정 합성 fresh2회와 실제24 development는
 [종료된 계획](MINING_EXPERIMENT.md)과 [당시 결과](MINING_EXPERIMENT_RESULT.md)로 보존한다.
 실행 완주와 정식 품질 합격은 다르다.
