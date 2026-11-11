@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v43",
+  "spec_version": "commentscope-mvp-20261111-v44",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-018",
-    "paid_execution_hold": true,
-    "hold_reason": "공급자503은예약0.04201575전액보수차감으로정산,감사된원요청만재호출없이보류하는부모manifest0001유지. 복원중hostcommit여유734683136bytes로다시중단했으나추가모델호출0. 완료캐시읽기에도유료dispatch검사를반복하는운영병목을별도해시/사본/부모결합manifest의캐시launcher로분리구현. 원모델파이프라인/판정/355source/4tools/자료/전체한도/deadline/자원watcher유지; 캐시miss는원Session전체검사를거치며pending/변조파일은재호출금지. 검사후자원조건충족시에만재개. 최종Agent/runtime미완료.",
+    "paid_execution_hold": false,
+    "hold_reason": "01:47UTC 최종관련46/Factory755검사와Ubuntu·Windows CI통과후 기존자원기준을재검사하고 동일plan으로재개. 부모복구manifest0001은보존하고SQLite연결종료수정은새0002/캐시자식manifest에SHA·사본으로결합. 이전503예약전액보수차감/해당요청재시도0, 완료응답만동일identity로재사용. 02:03UTC2250캐시복원, 새모델호출0. 원355source/4tools/자료/모델/기준/전체돈·시간·자원경계/deadline유지. 최종Agent/fact/runtime미완료이며formal승격없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -2566,8 +2566,12 @@
     {
       "spec_version": "commentscope-mvp-20261111-v43",
       "reason": "정산후캐시복원만하다host자원보호로재중단(추가유료0). 유료dispatch와완료결과의로컬검증읽기를분리하는추가control을명시한다. 원파이프라인단계/의미검증/모델입력/기존돈·시간·자원경계유지; 캐시miss는원모든guard통과, pending/변조/실패결과는성공으로승격하지않음. 부모503보류manifest와신규캐시launcher의SHA/사본을분리추적."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v44",
+      "reason": "현재정본의자원보류를최종755검사/양OS CI통과와01:47UTC동일plan재개에맞게정정. SQLite연결수정은새해시manifest0002로보존하며이전manifest0001을덮어쓰지않음. 새예산/기한/모델/품질채택아님."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v38",
+  "design_version": "commentscope-detailed-design-20261111-v39",
   "design_document": "docs/design/README.md"
 }
