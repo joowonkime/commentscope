@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v44",
+  "spec_version": "commentscope-mvp-20261111-v45",
   "baseline_commit": "fff2260561c958a01fb831d127bb1affb0f8f085",
   "observed_date": "2026-11-11",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,8 +23,8 @@
   },
   "resume": {
     "next_task": "TASK-018",
-    "paid_execution_hold": false,
-    "hold_reason": "01:47UTC 최종관련46/Factory755검사와Ubuntu·Windows CI통과후 기존자원기준을재검사하고 동일plan으로재개. 부모복구manifest0001은보존하고SQLite연결종료수정은새0002/캐시자식manifest에SHA·사본으로결합. 이전503예약전액보수차감/해당요청재시도0, 완료응답만동일identity로재사용. 02:03UTC2250캐시복원, 새모델호출0. 원355source/4tools/자료/모델/기준/전체돈·시간·자원경계/deadline유지. 최종Agent/fact/runtime미완료이며formal승격없음.",
+    "paid_execution_hold": true,
+    "hold_reason": "999동일plan실제실행02:32UTC완료. Agent1/지지3원문/허용value4개/3질문(입장answered·이유/없는수치abstain). 성공3199비용3.913137840+503보수차감.042015750=단계3.955153590; 예약/미확정0. 최종모든원문/허용주장/3runtime대조,span오류0이나최소2Agent/이유유용성미달·fresh사실검증0. 후보별projection9이미존재. 다음무료회귀는Sol chat에Jev28KB가전파되는용량경계분리이며새모델호출보류; 기존결과/모델/prompt/한도/기한/정식기준변경없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -2570,8 +2570,12 @@
     {
       "spec_version": "commentscope-mvp-20261111-v44",
       "reason": "현재정본의자원보류를최종755검사/양OS CI통과와01:47UTC동일plan재개에맞게정정. SQLite연결수정은새해시manifest0002로보존하며이전manifest0001을덮어쓰지않음. 새예산/기한/모델/품질채택아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261111-v45",
+      "reason": "전체999실제실행완주와Agent1/이유부족/사실호출0의실패한품질결과를운영복구성공과구별한다. 모든최종주장·3원문·3질문대조/비용/키150실관측/독립gold아님을기록. 후보별구제는이미존재하며단순재도입하지않는다. 다음무료일반수정은Sol/Jev전송용량분리; 새유료실험없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v39",
+  "design_version": "commentscope-detailed-design-20261111-v40",
   "design_document": "docs/design/README.md"
 }

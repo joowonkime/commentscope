@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261111-v39`. 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261111-v40`. 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~018, DEC-001~012.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 첫 S1/S2 host 계약은 opt-in으로 구현하며 상태·검증 범위는 추적표로 확인한다.
