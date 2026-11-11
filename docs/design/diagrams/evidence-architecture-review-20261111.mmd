@@ -1,0 +1,22 @@
+flowchart TB
+    sources["F1 불변 댓글과 부모 문맥"] --> discover["F2 전체 발견과 후보 장부"]
+    discover --> retrieve["F2 후보별 근거 검색"]
+    sources --> retrieve
+    retrieve --> mOne["F3 Jev M1 관계 관측"]
+    mOne --> mTwo["F3 Sol M2 독립 근거 검사"]
+    mTwo --> opinionMap["검토된 관점 지도와 미평가 장부"]
+    opinionMap --> eligible["Agent 적격 후보의 전체 지지 출처"]
+    eligible --> proposal["F4 원문 증거 그래프 제안"]
+    sources --> proposal
+    proposal --> observe["F4 원문 기반 유형 귀속 조건 전제 관측"]
+    observe --> align["F4 후보 연결과 기존 완전성 검사"]
+    align --> facts["F4 필수 사실과 의존 closure 검사"]
+    facts --> compile{"F5 기존 자격과 게시 검사"}
+    compile -->|"통과"| bundle["불변 Agent bundle"]
+    compile -->|"미달"| holds["보류 원인과 누락 범위 보존"]
+    bundle --> product["P Explore Converse Reflect"]
+    opinionMap --> coverage["별도 r5 활용과 보존 평가"]
+    execution["X 계획 예산 영수증 캐시 복구"] -.-> discover
+    execution -.-> mOne
+    execution -.-> proposal
+    execution -.-> product
