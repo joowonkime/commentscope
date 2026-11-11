@@ -24,7 +24,7 @@
   "resume": {
     "next_task": "TASK-018",
     "paid_execution_hold": true,
-    "hold_reason": "999원실행완료결과Agent1/3질문/총3.955153590은별도동결worktree와report에보존. 새코드는Solchat/Jev용량경계분리무료수정:관련41검사통과,실제저장입력17개중기존13요청동일/이전보류4개Sol용량적합(요청구성만,모델호출0). 최종Factory검사중. 실제Agent증가/사실정확도/MVP합격미검증;새유료실험/기존계획재사용/한도·기한연장없음.",
+    "hold_reason": "999원실행완료결과Agent1/3질문/총3.955153590은별도동결worktree와report에보존. 새코드는Solchat/Jev용량경계분리무료수정:관련41검사통과,실제저장입력17개중기존13요청동일/이전보류4개Sol용량적합(요청구성만,모델호출0). 최종Factory759검사755.239초통과,Ubuntu·Windows CI확인중. 실제Agent증가/사실정확도/MVP합격미검증;새유료실험/기존계획재사용/한도·기한연장없음.",
     "parallel_tasks": [
       "TASK-017"
     ]
@@ -2340,7 +2340,7 @@
         },
         {
           "kind": "offline",
-          "scope": "Synthetic regression4 plus typed/decision/shared integration41 tests pass. Read-only construction of all17 saved source tasks:13 formerly admitted payload sets byte-identical;4 previous28KB failures fit actual Sol capacity without dropping originals/units.115 constructed requests, no provider calls and no demonstrated Agent count/quality gain. Final Factory check in progress.",
+          "scope": "Synthetic regression4 plus typed/decision/shared integration41 tests pass. Read-only construction of all17 saved source tasks:13 formerly admitted payload sets byte-identical;4 previous28KB failures fit actual Sol capacity without dropping originals/units.115 constructed requests, no provider calls and no demonstrated Agent count/quality gain. Final Factory759 check passes in755.239s; CI pending on the follow-up PR. No additional model calls.",
           "reference": "tests/test_chat_dependency_capacity.py",
           "result": "pass"
         }
