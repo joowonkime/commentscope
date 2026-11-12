@@ -146,6 +146,7 @@ def estimate(plan,candidates,counts,profiles,*,completed=None,available_usd,
             observed=profile['stages'].get(stage)
             if observed is None:continue
             if observed['deployment_sha256']!=digest(deployment(plan,stage)):continue
+            if stage in GRAPH_STAGES and observed.get('source_evidence_protocol')!=plan.get('source_evidence_protocol'):continue
             if (stage=='membership-source-batch' and packets
                     and observed.get('maximum_batch_targets',0)<packets['maximum_targets']):continue
             if type(observed['calls']) is not int or observed['calls']<=0:raise CostPlanError('Measured sample count required')

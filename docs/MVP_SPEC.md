@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261112-v52`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261112-v53`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v47`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v48`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -13,6 +13,10 @@
 
 후속 수정은 정상 상태 코드/자원 로그와 [통과 불가 출처의 후속 호출 생략](design/SOURCE_AUDIT_PREFLIGHT.md)이다.
 실제 v2 품질·전체 비교·MVP 완료는 미검증이며 추가 유료 호출은 하지 않는다.
+TASK-025의 [v3 원문 대조 감사](design/SOURCE_FIDELITY_AUDIT.md)는 opt-in 구현·무료 검증을 완료했다.
+주석 완전 일치를 원문 충실성 감사로 교체하고, 세계/확신 강도와 희소 관계·누락 의무를 분리한다.
+DEC-016의 구현은 실제 의미 품질 채택이 아니며 기본 legacy 경로와 기존 합격 기준을 유지한다.
+다음 TASK-022는 v3 무료 재계획이다. 종료된5달러 plan을 재개하지 않고 신규 유료 실행은 보류한다.
 
 ## 1. 이 문서의 역할과 읽는 순서
 

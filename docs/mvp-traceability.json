@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v52",
-  "baseline_commit": "b361afce2e09e65421bcf1ef1465d2f666711986",
+  "spec_version": "commentscope-mvp-20261112-v53",
+  "baseline_commit": "922e60e4d0b120e421b9b5f4f59680ddd5ed8987",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "실제비교합계4.7406401에서예산보호중단. B완료0Agent/A322응답미완료/C미실행. 추가유료실행없음. 현재격리worktree에서기존승인상불가능한출처의후속호출생략/무료회귀/PR정리중."
+    "hold_reason": "TASK025의 v3 무료 구현/Factory/양OS CI 완료. 다음TASK022는 무료 재계획만 한다. 기존 공유5달러 실험은4.7406401에서닫힘; 기존 plan/잔액 재개 금지. 실제v3품질·전이·r5·3천개 원가/속도 미검증, 신규유료권한 없음."
   },
   "requirements": [
     {
@@ -93,7 +93,8 @@
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
-        "tests/test_source_audit_preflight.py"
+        "tests/test_source_audit_preflight.py",
+        "tests/test_source_fidelity_audit.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -189,7 +190,8 @@
         "tests/test_wide_mining_trial.py",
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
-        "tests/test_source_audit_preflight.py"
+        "tests/test_source_audit_preflight.py",
+        "tests/test_source_fidelity_audit.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -285,7 +287,8 @@
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
-        "tests/test_source_audit_preflight.py"
+        "tests/test_source_audit_preflight.py",
+        "tests/test_source_fidelity_audit.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -584,7 +587,8 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_evidence_trial.py",
         "tests/test_source_evidence_recovery.py",
-        "tests/test_source_audit_preflight.py"
+        "tests/test_source_audit_preflight.py",
+        "tests/test_source_fidelity_audit.py"
       ],
       "acceptance": [
         "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
@@ -800,7 +804,8 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_evidence_trial.py",
         "tests/test_source_evidence_recovery.py",
-        "tests/test_source_audit_preflight.py"
+        "tests/test_source_audit_preflight.py",
+        "tests/test_source_fidelity_audit.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1434,6 +1439,35 @@
       "design_refs": [
         "docs/design/SOURCE_EVIDENCE_TRIAL.md",
         "docs/design/MVP_REDESIGN_PLAN.md"
+      ]
+    },
+    {
+      "id": "DEC-016",
+      "title": "원문 대조 fidelity audit와 희소 관계 완전성 검사",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "주석 exact equality와 U² 관계 질문을 무엇으로 대체하고 의미 누락·동조 위험을 어떻게 검증할 것인가?",
+      "options": [
+        "제안된 typed graph에 대한 원문 대조 감사와 단위별 관계 완전성",
+        "blind 추출 후 별도 호환성 adjudication(추가 호출/비용 필요)"
+      ],
+      "selection": "첫 opt-in은 기존 observer를 직접 fidelity audit로 교체. world와확신강도분리, edgeID선택, unit별 이유/조건/전제/양보 누락 검사. 원문/필수fact/최소지지와B1전체완전성은 유지. 구현/무료검증만 진행하며 실제 품질 채택은 proposed.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Implementation source922e60e passed exact-head CI43159174627: Ubuntu2612 tests330.209s (0 skips), Windows2612 tests489.657s (12 existing POSIX skips). All33 source-fidelity/graph/pipeline/new cost-wire cases executed with ok on both OS. Local Factory809/related80 passed. CI/host delivery only, not actual semantic adoption; no paid calls.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/43159174627",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SOURCE_FIDELITY_AUDIT.md"
       ]
     }
   ],
@@ -2729,7 +2763,7 @@
     },
     {
       "id": "TASK-022",
-      "title": "고정 A/B1/C 비교와 전이·채택 판단",
+      "title": "F4 고정 비교·전이 — v1 종료 이력과 v3 재계획",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -2739,17 +2773,20 @@
       ],
       "decisions": [
         "DEC-013",
-        "DEC-015"
+        "DEC-015",
+        "DEC-016"
       ],
       "depends_on": [
-        "TASK-021"
+        "TASK-021",
+        "TASK-025"
       ],
-      "status": "in_progress",
+      "status": "next",
       "deliverables": [
-        "같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
-        "고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
-        "새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
-        "승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
+        "다음 행동은 v3 고정 통제/비교/전이의 무료 재계획이다. 옛5달러 plan은 종료됐으며 잔액/원기한을 새 호출 권한으로 쓰지 않는다. 신규 실행은 새 protocol·자료·가격·상한·중단 조건/권한을 별도로 동결한다.",
+        "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
+        "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
+        "[종료된 v1 단계/보존] 새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
+        "[종료된 v1 단계/보존] 승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
       ],
       "done_when": [
         "새 실행권한·가격·wire 상한/기한을 먼저 고정하고 모든 arm 결과·실패를 기록한다.",
@@ -2785,6 +2822,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/SOURCE_FIDELITY_AUDIT.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
@@ -2865,6 +2903,61 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/INTERACTIONS.md"
+      ]
+    },
+    {
+      "id": "TASK-025",
+      "title": "F4 v3 원문 대조 감사·희소 관계 계약의 opt-in 구현과 무료 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "decisions": [
+        "DEC-013",
+        "DEC-016"
+      ],
+      "depends_on": [
+        "TASK-021"
+      ],
+      "status": "done",
+      "deliverables": [
+        "주석 exact equality를 대체하는 source fidelity audit와 orthogonal world/strength 계약",
+        "단위/관계/coverage 누락 검사를 갖는 선형 inventory와 기존 Compiler 연결",
+        "정상/반대/old receipt/unknown 비용·schema·전체 Factory 무료 회귀"
+      ],
+      "done_when": [
+        "선언된 의미/출처/필수fact/전체source/최소지지 기준과 legacy 기본값을 유지하고 새 protocol만 명시적으로 선택한다.",
+        "고정 정상/반대 사례·비용/inventory·전체 Factory 회귀 및 양OS CI 범위를 기록한다. 실제 모델 품질·새 유료권한·r5 완료로 승격하지 않는다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Initial TDD8 failed on old contract (7 schema errors/1 stale graph cost profile reuse); first Factory808 passed279.286s. Added reported nonactual context positive counterexample failed before narrowing guard to exposed claims; final related80 passed5.156s. Scripted host controls only; full Factory/CI followed, no paid calls/semantic approval.",
+          "reference": "docs/design/SOURCE_FIDELITY_AUDIT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Final related80 passed5.156s (including spec18); full Factory809 passed278.773s. Synthetic two Agents/3 supports/owned reasons, no legacy dependency all-pairs calls, complete audit inventory, nonactual asserted facts held while reported context remains scope-only, stale wire/profile/receipt rejected. No paid calls; exact-head OS CI subsequently verified.",
+          "reference": "docs/design/SOURCE_FIDELITY_AUDIT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Implementation source922e60e passed exact-head CI43159174627: Ubuntu2612 tests330.209s (0 skips), Windows2612 tests489.657s (12 existing POSIX skips). All33 source-fidelity/graph/pipeline/new cost-wire cases executed with ok on both OS. Local Factory809/related80 passed. CI/host delivery only, not actual semantic adoption; no paid calls.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/43159174627",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SOURCE_FIDELITY_AUDIT.md",
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
       ]
     }
   ],
@@ -3122,8 +3215,12 @@
     {
       "spec_version": "commentscope-mvp-20261112-v52",
       "reason": "한정비교는공유5달러한도의다음요청예약전에4.7406401에서중단(B0Agent완료/A322응답미완료/C미실행). 정상코드v2와별도로기존Compiler규칙상모든후보가불가능한owned record의후속owner/dependency/audit만생략. 원records/map/보류/필수fact/최소3지지/다른후보가가능한SCOPABLE출처를보존. 기존A의18출처1731질문116요청을확인했으며일반가격·품질개선으로외삽하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v53",
+      "reason": "사용자가F4내부재설계설명에동의. 계층/기준을유지한원문대조감사·희소관계완전성·world/확신강도분리 계약을TASK025로구체화. TASK022의기존실패/예산중단은완료처리하지않고deferred, v3무료구현후별도새계획/검증으로연결. 새기본값/유료권한/품질채택아님."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v47",
+  "design_version": "commentscope-detailed-design-20261112-v48",
   "design_document": "docs/design/README.md"
 }
