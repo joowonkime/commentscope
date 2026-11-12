@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v65",
-  "baseline_commit": "e6f031949fe1e6d886ea2ad1f72389b418d28b9c",
+  "spec_version": "commentscope-mvp-20261113-v66",
+  "baseline_commit": "18b0030395e9fa6759c7b586d7d44152ca90873f",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "발화역할/영수증결합무료구현/관련100·Factory884통과,C전체14graph재검사7→8/후보1대기/Agent1유지. 검색확대신규104쌍69출처계획만준비/호출0. 기존유료기한만료보존,새실행미등록."
+    "hold_reason": "PR98양OS2687/병합및별도runtime3완료:입장/이유응답·없는수치보류,신규3회0.0106315USD,과거금융행불변/미정산0. 활성API없음. Agent1/4지지유지. 다음신규104쌍69출처는계획만있고실행기/새계약미등록;원C/B재개안함."
   },
   "requirements": [
     {
@@ -1674,6 +1674,34 @@
       "design_refs": [
         "docs/design/SOURCE_SEARCH_EXPANSION.md"
       ]
+    },
+    {
+      "id": "DEC-025",
+      "title": "고정1Agent3질문의별도실제실행",
+      "status": "proposed",
+      "requirements": [
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "저장응답재검사와실제질문응답을구별하며종료된실험을재개하지않고무엇을확인할것인가?",
+      "options": [
+        "고정bundle기존3질문만새runtime시간계약으로검증",
+        "원C전체재실행",
+        "104쌍확대와동시에변경"
+      ],
+      "selection": "현재계속지시를현재1Agent기존3질문/새최대1시간/신규API최대3으로구체화한다. 같은금융owner/누적150/과거차감보존,원C기한결과유지. 소스재생성/재시도/fallback없고양OS검증된동일소스/고정입력/독립plan과정산증거를결합한다.",
+      "evidence": [
+        {
+          "kind": "limited_live",
+          "scope": "Current fixed1Agent/4sources/7entries bundle actual3standardquestions:position/reasons answered,missing abstain. Exactly3newSolcalls/0.0106315USD,0source/graph/embedding/fact inference. All returned spans and all3exact execution receipt bindings reviewed;historical finance hash unchanged,no new money owner,reserved/uncertain0. Not independent gold/multi-Agent/fresh Factory/r5. Earlier pre-checkout import failure occurred before plan/provider/reservation,not model retry.",
+          "reference": "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md"
+      ]
     }
   ],
   "tasks": [
@@ -2987,7 +3015,8 @@
         "DEC-021",
         "DEC-022",
         "DEC-023",
-        "DEC-024"
+        "DEC-024",
+        "DEC-025"
       ],
       "depends_on": [
         "TASK-021",
@@ -3105,6 +3134,12 @@
           "scope": "Original42embeddingrequest/response pairs restored with exact request/plan/model/usage checks; entire original999/303 retrieval artifact reproduced exactly. Same6cores32source search yields104newpairs69sources incl46previously unselected; original1536 attempted pairs excluded,0newembedding/model calls. Execution cost/latency unknown and no new financial/runtime authorization.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Current fixed1Agent/4sources/7entries bundle actual3standardquestions:position/reasons answered,missing abstain. Exactly3newSolcalls/0.0106315USD,0source/graph/embedding/fact inference. All returned spans and all3exact execution receipt bindings reviewed;historical finance hash unchanged,no new money owner,reserved/uncertain0. Not independent gold/multi-Agent/fresh Factory/r5. Earlier pre-checkout import failure occurred before plan/provider/reservation,not model retry.",
+          "reference": "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3126,7 +3161,8 @@
         "docs/design/SCOPED_SOURCE_QUOTES.md",
         "docs/design/SOURCE_ROLE_APPLICABILITY.md",
         "docs/design/EXECUTION_RECEIPT_BINDING.md",
-        "docs/design/SOURCE_SEARCH_EXPANSION.md"
+        "docs/design/SOURCE_SEARCH_EXPANSION.md",
+        "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md"
       ]
     },
     {
@@ -3564,8 +3600,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v65",
       "reason": "PR97후속계속진행: 질문문과실제주장의필드적용분리및동일owner다른실행/모델의정산결합을먼저명세. 이전결과/만료plan/금융이력보존,무료합성/전체저장C재검사와실제품질증가구별. 현재형으로남은v3/v4/C대기문구를이력링크로정리하고현재무료작업과원실패/미검증을첫화면에서구별한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v66",
+      "reason": "사용자중단후재시작지시를고정3질문실제검증으로구체화한다. PR98소스양OS2687및tree일치후새runtime시간창만고정하고같은금융집계를유지. 원C/B전체재개/새source추론/소액한도승인루프없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v60",
+  "design_version": "commentscope-detailed-design-20261113-v61",
   "design_document": "docs/design/README.md"
 }

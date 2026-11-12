@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v65`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v66`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v60`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v61`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -17,7 +17,7 @@
 - 실제 v5 B: 고정19출처에서 Agent1개/유효 지지3개, 입장·이유 응답과 없는 정보 보류3턴.
 - 실제 v5 C: 동일19출처의 Sol 생성 비교에서 Agent0개/질문0턴. 원 결과는 변경하지 않는다.
 - PR97의 별도 무료 재변환: C 전체7개 기록에서 Agent1개/유효 지지4개/허용 항목7개.
-  새 프로필의 실제 질문 검증은 미실행이다. 최소2 Agent·전체 r5·MVP 완료는 미달/미검증이다.
+  후속 고정3질문 실검증에서 입장/이유 응답과 없는 수치 보류를 확인했다(0.0106315달러). 최소2 Agent·전체 r5·MVP 완료는 미달/미검증이다.
 - 현재 무료 후속: [발화 역할별 적용](design/SOURCE_ROLE_APPLICABILITY.md)과
   [실행별 정산 결합](design/EXECUTION_RECEIPT_BINDING.md). 비명제 문맥의 필드 미적용과
   실제 주장/조건절의 불확실성을 구별하며 원문 전체 감사·필수 사실·최소 지지는 유지한다.
@@ -25,7 +25,7 @@
   같은6후보의 검색 범위 확대는 저장된 임베딩으로 먼저 준비한다. 미평가는 반대나 노이즈가 아니다.
 
 팀 누적150달러와 과거 지출/보수 차감은 유지한다. 이전 실행의5달러 owner·종료 기한을
-재개하지 않으며,6달러 제안은 철회된 상태다. 현재 작업은 무료이고 활성 유료 실행은 없다.
+재개하지 않으며,6달러 제안은 철회된 상태다. 무료 수정은 PR98로 병합됐고 [고정3질문 실검증](design/FIXED_PROFILE_RUNTIME_CHECK.md)도 별도 plan으로 완료했다. 새 source/지지/embedding 실험은 이 범위에 포함하지 않는다.
 새 모델 검증은 원 계획을 덮어쓰지 않는 별도 고정 실행 계약에 결합한다.
 주석 완전 일치→원문 대조 감사·조건 구분·quote 주소 결합·B/C 생성 배정 비교의
 이력과 근거는 [결과 문서](design/SOURCE_FIDELITY_RESULT.md) 및 추적표 DEC-013~024에 보존한다.
@@ -285,3 +285,5 @@ C 고정 비교는 Agent0/68회/1.760652달러로 종료됐다. 같은 C의 전�
 후속 무료 계약: [발화 역할별 적용 의무](design/SOURCE_ROLE_APPLICABILITY.md), [실행별 정산 영수증 결합](design/EXECUTION_RECEIPT_BINDING.md). 원 C/B 결과와 종료된 유료 기한을 유지하며 전체 저장 응답의 재검사는 fresh 품질 합격이 아니다.
 
 [검색 확대 준비](design/SOURCE_SEARCH_EXPANSION.md)는 같은6후보·999풀에서 신규104쌍/69출처를 계산했다. 기존 검색을 정확히 재현한 무료 계획이며 실제 호출·지지·Agent 증가를 뜻하지 않는다.
+
+[고정1Agent의 실제3질문 검증](design/FIXED_PROFILE_RUNTIME_CHECK.md)은 저장응답replay와구별한별도runtime실행이다. 원C기한을바꾸지않고현재계속지시의한정된시간권한/같은누적금융장부를결합한다.
