@@ -8,10 +8,11 @@ from commentscope.factory.automatic_contract import digest
 
 def observation_example(proposal):
     out=proposal['output']
-    return dict(unit_observations=[dict(unit_id=u['local_id'],typing={k:deepcopy(u[k]) for k in graph.SEMANTIC_FIELDS},
-        boundary_fidelity='pass',qualifiers_complete='pass',issue_codes=[]) for u in out['units']],
-        observed_edges=deepcopy(out['edges']),coverage_observations=[dict(coverage_index=str(i),no_substantive_omission='pass',
-        missing_refs=[],issue_codes=[]) for i in range(len(out['coverage']))],missing_units=[],scope_coverage='pass',
+    return dict(unit_observations=[dict(unit_id=u['local_id'],**dict.fromkeys(graph.UNIT_CHECKS,'pass'),
+        issue_codes=[]) for u in out['units']],
+        edge_observations=[dict(edge_id=e['local_id'],fidelity='pass',issue_codes=[]) for e in out['edges']],
+        coverage_observations=[dict(coverage_index=str(i),no_substantive_omission='pass',
+        missing_refs=[],issue_codes=[]) for i in range(len(out['coverage']))],missing_units=[],missing_edges=[],scope_coverage='pass',
         ownership_coverage='pass',dependency_coverage='pass',issues=[],source_language='en')
 
 
@@ -28,7 +29,7 @@ def example(text='Adopt P because fairness matters.'):
         scope.update(subject_refs=refs, predicate_refs=refs, polarity='affirmative', change_or_state='neither')
         units.append(dict(local_id=lid, own_spans=refs, envelope_spans=[span(text)],
                           speech_act='preference', kind='value', commitment='endorsed',
-                          epistemic='categorical', assertion_mode='assertion', scope=scope, interpretation='resolved'))
+                          epistemic='categorical', world='unspecified', assertion_mode='assertion', scope=scope, interpretation='resolved'))
     output = dict(units=units, edges=[dict(local_id='E1', from_unit='U2', to_unit='U1',
         relation='reason_for', cue_refs=[span('because')], interpretation='resolved')],
         coverage=[dict(span=span(text), disposition='represented', unit_ids=['U1', 'U2'], reason_code='represented')], issues=[])
@@ -59,7 +60,7 @@ class SourceEvidenceGraphTests(TestCase):
         for mutate in (
             lambda x:x['unit_observations'][0].update(boundary_fidelity='fail'),
             lambda x:x['unit_observations'][0].update(qualifiers_complete='unknown'),
-            lambda x:x['unit_observations'][0]['typing'].update(kind='prediction'),
+            lambda x:x['unit_observations'][0].update(typing_fidelity='fail'),
             lambda x:x['coverage_observations'][0].update(no_substantive_omission='unknown'),
             lambda x:x['coverage_observations'][0]['issue_codes'].append('coverage_missing'),
             lambda x:x.update(dependency_coverage='unknown'),
@@ -68,11 +69,11 @@ class SourceEvidenceGraphTests(TestCase):
             result=graph.verify(proposal,graph.bind_observation(proposal,{'output':value}))
             self.assertEqual(result['status'],'unresolved')
 
-    def test_exact_source_and_independent_observation_are_required(self):
+    def test_exact_source_and_full_proposal_fidelity_audit_are_required(self):
         _, env, _, proposal, output = example()
         request = graph.observation_request(proposal)
-        self.assertNotIn('commitment', request['data']['UNITS'][0])
-        self.assertNotIn('edges', request['data'])
+        self.assertEqual(request['data']['UNITS'],proposal['output']['units'])
+        self.assertEqual(request['data']['SOURCE_EDGES'],proposal['output']['edges'])
         self.assertNotIn('CANDIDATES', request['data'])
         observed = graph.bind_observation(proposal, {'output': output})
         verified = graph.verify(proposal, observed)
@@ -85,11 +86,11 @@ class SourceEvidenceGraphTests(TestCase):
     def test_disagreement_missing_premise_and_scope_loss_hold_full_source(self):
         _, _, _, proposal, output = example()
         for mutate in [
-            lambda x: x['unit_observations'][0]['typing'].update(kind='prediction'),
+            lambda x: x['unit_observations'][0].update(typing_fidelity='fail'),
             lambda x: x.update(dependency_coverage='unknown'),
             lambda x: x['coverage_observations'][0].update(no_substantive_omission='fail'),
             lambda x: x['missing_units'].append({'own_spans': proposal['output']['units'][0]['own_spans'], 'obligation':'dependency'}),
-            lambda x: x.update(observed_edges=[]),
+            lambda x: x['edge_observations'][0].update(fidelity='unknown'),
         ]:
             value = deepcopy(output); mutate(value)
             result = graph.verify(proposal, graph.bind_observation(proposal, {'output':value}))
@@ -112,7 +113,7 @@ class SourceEvidenceGraphTests(TestCase):
         _, env, output, proposal, observed = example()
         invalid = deepcopy(output); invalid['units'] = [dict(output['units'][0], local_id=f'U{i}') for i in range(1,34)]
         with self.assertRaises(ValueError): graph.bind_proposal(env, {'output':invalid})
-        for key in ['unit_observations','coverage_observations']:
+        for key in ['unit_observations','edge_observations','coverage_observations']:
             value=deepcopy(observed);value[key].pop()
             with self.assertRaises(ValueError): graph.bind_observation(proposal, {'output':value})
 

@@ -14,7 +14,7 @@ import test_minimal_pipeline as fixture
 
 def candidate_output(candidates):
     return {'candidates':[dict(candidate_id=c['id'],position_unit_ids=['U1'],alignment='supports_core',
-        reason_unit_ids=['U2'],concession_unit_ids=[],essential_condition_unit_ids=[],dependency_edges=[],core_required_fact_unit_ids=[],
+        reason_unit_ids=['U2'],concession_unit_ids=[],essential_condition_unit_ids=[],dependency_edge_ids=[],core_required_fact_unit_ids=[],
         full_original_coverage='pass',ownership='pass',scope_preserved='pass',issue_codes=[]) for c in candidates]}
 
 
@@ -63,7 +63,7 @@ class CandidateEvidenceTests(TestCase):
         _,_,out,_,_=example()
         source={'id':'s','text':'Adopt P because fairness matters. Costs are high.','parent':None}
         env=g.envelope(source,snapshot_id='synthetic',snapshot_sha256=digest('synthetic'),language='en')
-        fact=deepcopy(out['units'][1]);fact.update(local_id='U3',kind='fact',speech_act='assertion')
+        fact=deepcopy(out['units'][1]);fact.update(local_id='U3',kind='fact',world='actual',speech_act='assertion')
         ref=dict(source_id='s',start=source['text'].index('Costs'),end=len(source['text']))
         fact.update(own_spans=[ref],envelope_spans=[ref]);fact['scope'].update(subject_refs=[ref],predicate_refs=[ref])
         out['units'].append(fact);out['coverage'][0]['span']['end']=len(source['text']);out['coverage'][0]['unit_ids'].append('U3')
@@ -71,12 +71,12 @@ class CandidateEvidenceTests(TestCase):
         out['edges'].append(edge)
         p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         members=[membership([source],self.cs,[dict(source_id='s',candidate_id=self.cs[0]['id'])])]
-        output=candidate_output(self.cs);output['candidates'][0]['dependency_edges']=[edge]
+        output=candidate_output(self.cs);output['candidates'][0]['dependency_edge_ids']=[edge['local_id']]
         b=reqs.bind_candidates(v,self.cs,members,{'output':output});record=adapter.lower([b])
         self.assertEqual(record['status'],'complete')
         self.assertEqual(record['units'][1]['requires'],['U3'])
         self.assertEqual(record['units'][2]['core_requires_for'],[])
-        output['candidates'][0]['dependency_edges']=[]
+        output['candidates'][0]['dependency_edge_ids']=[]
         self.assertEqual(adapter.lower([reqs.bind_candidates(v,self.cs,members,{'output':output})])['status'],'unresolved')
 
     def test_discontinuous_or_external_qualifier_is_held_instead_of_rewritten(self):
@@ -95,7 +95,7 @@ class CandidateEvidenceTests(TestCase):
         env=g.envelope(source,snapshot_id='synthetic',snapshot_sha256=digest('synthetic'),language='en')
         for lid,fragment in [('U3','If funded.'),('U4','Unless Q.')]:
             ref=dict(source_id='s',start=source['text'].index(fragment),end=source['text'].index(fragment)+len(fragment))
-            unit=deepcopy(out['units'][1]);unit.update(local_id=lid,kind='fact',assertion_mode='conditional_antecedent',own_spans=[ref],envelope_spans=[ref])
+            unit=deepcopy(out['units'][1]);unit.update(local_id=lid,kind='fact',world='hypothetical',assertion_mode='conditional_antecedent',own_spans=[ref],envelope_spans=[ref])
             unit['scope'].update(subject_refs=[ref],predicate_refs=[ref]);out['units'].append(unit)
         out['coverage'][0]['span']['end']=len(source['text']);out['coverage'][0]['unit_ids']+=['U3','U4']
         last=out['units'].pop();out['coverage'][0]['unit_ids'].remove('U4')
@@ -104,7 +104,7 @@ class CandidateEvidenceTests(TestCase):
         members=[membership([source],self.cs,[dict(source_id='s',candidate_id=self.cs[0]['id'])])]
         def lower():
             p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
-            value=candidate_output(self.cs);value['candidates'][0].update(essential_condition_unit_ids=[e['from_unit'] for e in out['edges'] if e['relation']=='necessary_condition_for'],dependency_edges=[e for e in out['edges'] if e['relation']=='necessary_condition_for'])
+            value=candidate_output(self.cs);value['candidates'][0].update(essential_condition_unit_ids=[e['from_unit'] for e in out['edges'] if e['relation']=='necessary_condition_for'],dependency_edge_ids=[e['local_id'] for e in out['edges'] if e['relation']=='necessary_condition_for'])
             return adapter.lower([reqs.bind_candidates(v,self.cs,members,{'output':value})])
         simple=lower();self.assertEqual(simple['status'],'complete')
         self.assertEqual(simple['units'][2]['runtime_exposure'],'scope_annotation_only')
@@ -162,6 +162,11 @@ class SourceEvidencePipelineTests(TestCase):
         self.assertFalse(any(s.startswith(('argument-node-metadata','shared-owned-position','argument-owner','argument-dependency','argument-audit')) for s in stages))
         self.assertTrue(any(s.startswith('raw-own-evidence') for s in stages))
         self.assertEqual(sum(s.startswith('source-evidence-proposal') for s in stages),6)
+        self.assertEqual(sum(s.startswith('source-evidence-observation') for s in stages),6)
+        self.assertEqual(sum(s.startswith('source-evidence-candidates') for s in stages),6)
+        inventories=[v for k,v in self.h.saved.items() if k.startswith('source-evidence-workloads/')]
+        self.assertEqual(len(inventories),6)
+        self.assertTrue(all(r['audit_verdicts']==25 for r in inventories))
         self.assertFalse(result['quality_gate_passed'])
 
     def test_unresolved_source_or_omitted_reason_cannot_be_rescued_by_subset_policy(self):

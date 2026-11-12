@@ -166,14 +166,15 @@ class CostReviewTests(unittest.TestCase):
         self.review();write(self.run/'checkpoints/orphan.intent.json',{'pending':True})
         with self.assertRaisesRegex(c.CostPlanError,'Pending'):tool.require_review(self.run,self.plan)
 
-    def archived_response(self):
+    def archived_response(self,*,family='source-world',protocol=None):
         source=self.run/'frozen-code/synthetic.py';source.parent.mkdir(parents=True,exist_ok=True)
         source.write_text('# Synthetic archived source\n')
         self.plan['code_sha256']={'synthetic.py':sha(source)}
         (self.run/'plan.json').write_text(json.dumps(self.plan))
         write(self.run/'frozen.json',{'plan_sha256':sha(self.run/'plan.json')})
         req={'system':'Synthetic source observation','data':{},'schema':{},'max_tokens':20}
-        stage='verification-source-world-'+'a'*20
+        if protocol is not None:req['data']['EVIDENCE_PROTOCOL']=protocol
+        stage='verification-'+family+'-'+'a'*20
         request_file=self.run/'calls'/('0001-'+stage+'.request.json')
         write(request_file,{'plan_sha256':sha(self.run/'plan.json'),'request_sha256':digest(req),'request':req})
         result={'usage':{'cost':0.001},'transport':{'provider_response':{'model':remote.SOL['model'],
@@ -184,6 +185,28 @@ class CostReviewTests(unittest.TestCase):
         write(self.run/'checkpoints/original.intent.json',identity)
         write(self.run/'checkpoints/original.result.json',{'identity':identity,'result':result,'result_sha256':digest(result)})
         return request_file,result_file
+
+    def test_new_graph_cost_profile_binds_wire_protocol_and_frozen_plan(self):
+        from commentscope.factory import source_evidence_graph as graph
+        self.plan['source_evidence_protocol']=graph.VERSION
+        request_file,_=self.archived_response(family='source-evidence-observation',protocol=graph.VERSION)
+        report=tool.audit(self.run)
+        self.assertEqual(report['stages']['source-evidence-observation']['source_evidence_protocol'],graph.VERSION)
+        for protocol in (None,'source-evidence-graph-20261112-v2'):
+            saved=read_json(request_file)
+            saved['request']['data']={} if protocol is None else {'EVIDENCE_PROTOCOL':protocol}
+            saved['request_sha256']=digest(saved['request']);request_file.write_text(json.dumps(saved))
+            checkpoint=read_json(self.run/'checkpoints/original.result.json')
+            checkpoint['identity']['request_sha256']=saved['request_sha256']
+            (self.run/'checkpoints/original.intent.json').write_text(json.dumps(checkpoint['identity']))
+            (self.run/'checkpoints/original.result.json').write_text(json.dumps(checkpoint))
+            with self.assertRaisesRegex(c.CostPlanError,'protocol'):tool.audit(self.run)
+
+    def test_historical_untagged_graph_costs_keep_their_old_protocol(self):
+        self.plan['source_evidence_protocol']='source-evidence-graph-20261111-v1'
+        self.archived_response(family='source-evidence-observation')
+        report=tool.audit(self.run)
+        self.assertEqual(report['stages']['source-evidence-observation']['source_evidence_protocol'],self.plan['source_evidence_protocol'])
 
     def test_audit_binds_real_receipt_cost_cache_and_archive_without_any_model_call(self):
         request_file,_=self.archived_response()

@@ -47,18 +47,22 @@ def lower(batches):
             if any(not any(s['start']<=r['start'] and r['end']<=s['end'] for s in u['own_spans']) for r in u['scope'][field]):
                 holds.append('unrepresentable_hold')
         annotation=u['assertion_mode']=='conditional_antecedent'
-        context=u['commitment']!='endorsed' or u['assertion_mode'] in ('quoted_content','question') or u['kind']=='not_applicable'
+        context=u['commitment']!='endorsed' or u['assertion_mode'] in ('quoted_content','question','non_assertive') or u['kind']=='not_applicable'
+        if u['kind']=='fact' and not annotation and not context and u['world']!='actual':
+            holds.append('nonactual_fact_unrepresentable')
         if (not literal.strip() or len(literal)>600 or any(len(v)>600 for v in scope.values())):
             holds.append('unrepresentable_hold')
         factual=[e['from_unit'] for e in edges if e['to_unit']==lid and e['relation']=='required_premise_for']
-        if any(units[d]['kind']!='fact' or units[d]['assertion_mode']!='assertion' or units[d]['commitment']!='endorsed' for d in factual):
+        if any(units[d]['kind']!='fact' or units[d]['assertion_mode']!='assertion' or units[d]['commitment']!='endorsed'
+               or units[d]['world']!='actual' for d in factual):
             holds.append('required_premise_not_fact')
         lowered.append(dict(local_id=lid,id='SE'+digest([VERSION,digest(verified),lid]),
             text=literal,kind='uncertain' if annotation or context else u['kind'],scope=scope,
             role=next(iter(roles.values()),'additional_position'),candidate_roles=roles,
             candidate_ids=[] if context else sorted(candidate_ids),source_id=source['id'],source_sha256=digest(source),
             authorship='asserted_or_endorsed' if u['commitment']=='endorsed' else 'not_asserted',
-            assertion_mode=u['assertion_mode'],runtime_exposure='scope_annotation_only' if annotation or context else 'claim',
+            assertion_mode=u['assertion_mode'],epistemic=u['epistemic'],world=u['world'],
+            runtime_exposure='scope_annotation_only' if annotation or context else 'claim',
             evidence=[dict(start=r['start'],end=r['end'],text=source['text'][r['start']:r['end']]) for r in u['own_spans']],
             requires=sorted(set(factual)),core_requires_for=sorted(c['candidate']['id'] for c in certificates if lid in c['output']['core_required_fact_unit_ids'])))
     language=verified['observation']['output']['source_language']
@@ -113,6 +117,7 @@ def process(snapshot, candidates, memberships, execution, cores, core_checks):
         proposals=execution.work('source-evidence-proposal',[env],lambda a:g.proposal_request(a[0]),lambda a,r:g.bind_proposal(a[0],r),1)
         if not proposals:continue
         proposal=proposals[0]
+        execution.save('source-evidence-workloads/'+sid,g.audit_workload(proposal,candidate_count=len(needed)))
         observations=execution.work('source-evidence-observation',[proposal],lambda a:g.observation_request(a[0]),lambda a,r:g.bind_observation(a[0],r),1)
         if not observations:continue
         verified=g.verify(proposal,observations[0]);execution.save('source-evidence-graphs/'+sid,verified)

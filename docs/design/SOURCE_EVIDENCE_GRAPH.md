@@ -1,5 +1,9 @@
 # 원문 증거 그래프와 후보 연결 계약
 
+이 문서는 v1/v2 계약 이력이다. 현재 opt-in 구현의 v3 계약은
+[원문 대조 감사](SOURCE_FIDELITY_AUDIT.md)를 따른다. 아래 주석 완전 일치와 단일 양태 축을
+현재 v3 계약으로 사용하지 않는다. 과거 응답·실험은 당시 protocol에 묶인 채 보존한다.
+
 계약 후보: `source-evidence-graph-20261112-v2` / DEC-013 / TASK-020~022.
 상태: **B1 opt-in 첫 구현·합성 회귀, 실제 의미 채택은 미완료**. [첫 구현 범위](SOURCE_EVIDENCE_IMPLEMENTATION.md)를 함께 읽는다.
 [검토 결론](MVP_DESIGN_REVIEW.md)의 F4만 교체한다.

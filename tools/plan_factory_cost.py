@@ -76,6 +76,15 @@ def audit(directory):
             'deployment_sha256':digest(deployment),'model':deployment['model'],
             'prompt_tokens':0,'completion_tokens':0,'cached_prompt_tokens':0,'cache_write_tokens':0,
             'cache_detail_responses':0})
+        if family in cost.GRAPH_STAGES:
+            protocol=plan.get('source_evidence_protocol')
+            # Historical requests without a wire tag remain historical; a new
+            # profile must bind both its frozen plan and exact request protocol.
+            declared=request.get('data',{}).get('EVIDENCE_PROTOCOL')
+            historical=('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2')
+            if not protocol or declared!=protocol and not (declared is None and protocol in historical):
+                raise cost.CostPlanError('Source evidence cost protocol differs from frozen request/plan')
+            row['source_evidence_protocol']=protocol
         row['calls']+=1;row['cost_usd']+=charge;row['maximum_cost_usd']=max(row['maximum_cost_usd'],charge)
         if family=='membership-source-batch':
             row['maximum_batch_targets']=max(row.get('maximum_batch_targets',0),len(request['data']['CANDIDATE_TARGETS']))
