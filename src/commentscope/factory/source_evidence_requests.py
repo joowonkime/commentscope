@@ -11,6 +11,9 @@ Preserve essential conditions, modality, population, time, world and quantities.
 No prior membership verdict is supplied. Parent resolves references only.
 Return ALL source-owned reasons/concessions/conditions linked to that position,
 not a convenient subset. A reason is not a condition or a core factual premise.
+condition_for preserves a qualification; necessary_condition_for asserts a
+necessary prerequisite. Keep both in essential_condition_unit_ids without
+converting one into the other. Do not invent necessity for ordinary reasons.
 dependency_edge_ids select existing SOURCE_EDGES, without regenerating their
 spans or relations, to retain local factual/condition requirements; core_required_fact
 IDs name direct factual bases for this CORE, never the union of private motives.
@@ -45,7 +48,7 @@ def relevant_inventory(verified, positions):
     edges=verified['proposal']['output']['edges'];active=set(positions)
     for _ in range(33):
         found={e['from_unit'] for e in edges if e['to_unit'] in active and e['relation'] in
-               ('reason_for','required_premise_for','necessary_condition_for','concession_to','elaborates')}
+               ('reason_for','required_premise_for',*g.CONDITION_RELATIONS,'concession_to','elaborates')}
         if found<=active:break
         active|=found
     return active
@@ -69,10 +72,10 @@ def bind_candidates(verified, candidates, support_batches, result):
             if len(set(row[field]))!=len(row[field]):raise ValueError('Duplicate candidate evidence unit')
         if len(set(row['dependency_edge_ids']))!=len(row['dependency_edge_ids']):raise ValueError('Duplicate dependency edge selection')
         selected=[deepcopy(edge_map[eid]) for eid in row['dependency_edge_ids']]
-        for field,rel in [('reason_unit_ids','reason_for'),('concession_unit_ids','concession_to'),('essential_condition_unit_ids','necessary_condition_for')]:
-            expected={e['from_unit'] for e in edges if e['to_unit'] in active and e['relation']==rel}
+        for field,rels in [('reason_unit_ids',('reason_for',)),('concession_unit_ids',('concession_to',)),('essential_condition_unit_ids',g.CONDITION_RELATIONS)]:
+            expected={e['from_unit'] for e in edges if e['to_unit'] in active and e['relation'] in rels}
             if set(row[field])!=expected:reasons.append('candidate_inventory_incomplete')
-        expected_edges=[e for e in edges if e['to_unit'] in active and e['relation'] in ('required_premise_for','necessary_condition_for')]
+        expected_edges=[e for e in edges if e['to_unit'] in active and e['relation'] in ('required_premise_for',*g.CONDITION_RELATIONS)]
         if {e['local_id'] for e in expected_edges}!=set(row['dependency_edge_ids']):reasons.append('candidate_dependencies_changed')
         if any(units[u]['kind']!='fact' or units[u]['commitment']!='endorsed' or units[u]['assertion_mode']!='assertion'
                or units[u]['world']!='actual'

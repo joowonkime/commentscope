@@ -38,7 +38,7 @@ class CumulativeExecutionTests(TestCase):
 
     def test_cumulative_guard_does_not_reopen_old_small_caps_or_refund_prior_charges(self):
         with tempfile.TemporaryDirectory() as temp:
-            root=Path(temp);p=self.make(root);money=MagicMock();money.summary.return_value={'charged_usd':'25'}
+            root=Path(temp);p=self.make(root);money=MagicMock();money.summary.return_value={'charged_usd':'25','calls':0}
             with patch.object(live.executor,'ledger',return_value=money):
                 live.guard(p)
                 for field,value in [('maximum_cost_usd','6'),('subcap_usd','6'),('spend_scope_sha256','a'*64),('cross_run_response_reuse',True)]:
@@ -46,7 +46,7 @@ class CumulativeExecutionTests(TestCase):
                     with self.assertRaises(ValueError):live.guard(wrong)
                 money.summary.return_value={'charged_usd':'24.99'}
                 with self.assertRaises(ValueError):live.guard(p)
-                money.summary.return_value={'charged_usd':'25'}
+                money.summary.return_value={'charged_usd':'25','calls':0}
                 with self.assertRaises(TimeoutError):live.guard(p,call_seconds=3600)
 
     def test_changed_on_disk_plan_is_rejected_before_dispatch(self):
@@ -54,6 +54,47 @@ class CumulativeExecutionTests(TestCase):
             root=Path(temp);p=self.make(root);money=MagicMock();money.summary.return_value={'charged_usd':'25'}
             self.save(root/'plan.json',{**p,'maximum_physical_requests':900})
             with patch.object(live.executor,'ledger',return_value=money),self.assertRaises(ValueError):live.guard(p)
+
+    def supplement(self,root):
+        p=self.make(root);auth=deepcopy(p['authorization']['authorization'])
+        original={**auth,'version':live.OWNER_VERSIONS[0],
+            'started_at':(datetime.fromisoformat(auth['started_at'])-timedelta(minutes=10)).isoformat()}
+        owner=self.save(root/'original-owner.json',original)
+        auth.update(money_owner=dict(file=str(owner),sha256=sha(owner),authorization=original),
+            opening_scope_calls=16,opening_owner_charge_usd='0.2058115')
+        p.update(spend_scope_sha256=sha(owner),opening_scope_calls=16,opening_owner_charge_usd='0.2058115')
+        self.refreeze(root,p,auth)
+        return p,auth
+
+    def refreeze(self,root,p,auth):
+        auth_file=self.save(root/'authorization.json',auth)
+        p['authorization']=dict(file=str(auth_file),sha256=sha(auth_file),authorization=deepcopy(auth))
+        self.save(root/'plan.json',p);self.save(root/'frozen.json',{'plan_sha256':sha(root/'plan.json')})
+
+    def test_supplement_keeps_original_money_owner_deadline_and_prior_calls(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);p,auth=self.supplement(root);money=MagicMock()
+            money.summary.return_value={'charged_usd':'25','calls':16}
+            with patch.object(live.executor,'ledger',return_value=money):
+                live.guard(p)
+                self.assertEqual(p['spend_scope_sha256'],auth['money_owner']['sha256'])
+                self.assertEqual(auth['deadline'],auth['money_owner']['authorization']['deadline'])
+                extended=deepcopy(auth);extended['deadline']=(datetime.fromisoformat(auth['deadline'])+timedelta(seconds=1)).isoformat()
+                self.refreeze(root,p,extended)
+                with self.assertRaisesRegex(ValueError,'original owner'):live.guard(p)
+                self.refreeze(root,p,auth);p['opening_scope_calls']=0
+                self.save(root/'plan.json',p);self.save(root/'frozen.json',{'plan_sha256':sha(root/'plan.json')})
+                with self.assertRaisesRegex(ValueError,'scope or role'):live.guard(p)
+
+    def test_supplement_cannot_refund_owner_charge_or_reset_physical_inventory(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);p,auth=self.supplement(root);money=MagicMock()
+            money.summary.return_value={'charged_usd':'25','calls':15}
+            with patch.object(live.executor,'ledger',return_value=money),self.assertRaisesRegex(ValueError,'owner charges or calls'):live.guard(p)
+            _,_,_,proposal,_=example();request=live.g.observation_request(proposal);session=self.session(request)
+            session.plan['opening_scope_calls']=800
+            with patch.object(live.executor.RemoteSession,'call') as parent,self.assertRaises(BudgetExhausted):session.call('source-evidence-observation',request)
+            parent.assert_not_called()
 
     def session(self,request):
         s=object.__new__(live.Session);s.seen=set();s.phase='controls';s.control_requests={digest(request)}
@@ -89,7 +130,7 @@ class CumulativeExecutionTests(TestCase):
             self.assertEqual(result['account']['remaining_usd'],'148.8');self.assertEqual(result['new_model_calls'],0)
 
     def test_whole_controls_must_fit_current_balance_before_new_authorization_is_written(self):
-        fixture=read_json(Path(__file__).parent/'fixtures/source-fidelity-controls-v1.json')
+        fixture=read_json(Path(__file__).parent/'fixtures/source-fidelity-controls-v2.json')
         pack=prep.controls(fixture,remote.SOL)
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);old_policy={'account_id':'synthetic','ledger':str(root/'money.sqlite'),'maximum_usd':'50','opening_charge_usd':'1'}

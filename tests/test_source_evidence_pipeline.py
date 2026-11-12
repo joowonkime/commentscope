@@ -99,12 +99,12 @@ class CandidateEvidenceTests(TestCase):
             unit['scope'].update(subject_refs=[ref],predicate_refs=[ref]);out['units'].append(unit)
         out['coverage'][0]['span']['end']=len(source['text']);out['coverage'][0]['unit_ids']+=['U3','U4']
         last=out['units'].pop();out['coverage'][0]['unit_ids'].remove('U4')
-        first=dict(local_id='E2',from_unit='U3',to_unit='U1',relation='necessary_condition_for',cue_refs=[],interpretation='resolved')
+        first=dict(local_id='E2',from_unit='U3',to_unit='U1',relation='condition_for',cue_refs=[],interpretation='resolved')
         out['edges'].append(first)
         members=[membership([source],self.cs,[dict(source_id='s',candidate_id=self.cs[0]['id'])])]
         def lower():
             p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
-            value=candidate_output(self.cs);value['candidates'][0].update(essential_condition_unit_ids=[e['from_unit'] for e in out['edges'] if e['relation']=='necessary_condition_for'],dependency_edge_ids=[e['local_id'] for e in out['edges'] if e['relation']=='necessary_condition_for'])
+            value=candidate_output(self.cs);value['candidates'][0].update(essential_condition_unit_ids=[e['from_unit'] for e in out['edges'] if e['relation'] in g.CONDITION_RELATIONS],dependency_edge_ids=[e['local_id'] for e in out['edges'] if e['relation'] in g.CONDITION_RELATIONS])
             return adapter.lower([reqs.bind_candidates(v,self.cs,members,{'output':value})])
         simple=lower();self.assertEqual(simple['status'],'complete')
         self.assertEqual(simple['units'][2]['runtime_exposure'],'scope_annotation_only')

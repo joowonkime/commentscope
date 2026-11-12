@@ -1,4 +1,4 @@
-"""Frozen v3 validation under the already extended cumulative team credit.
+"""Frozen fidelity validation under the already extended cumulative team credit.
 
 One owner/window/request inventory; no per-experiment small cap, retries or
 automatic model/criteria changes. Historical owners and charges stay intact.
@@ -31,7 +31,8 @@ from commentscope.storage import write_json_exclusive as write
 from experiments import remote_factory_pipeline as executor
 from tools import prepare_source_fidelity_validation as preparation,source_evidence_trial as previous
 
-VERSION='source-fidelity-cumulative-validation-20261112-v1'
+VERSION='source-fidelity-cumulative-validation-20261112-v2'
+OWNER_VERSIONS=('source-fidelity-cumulative-validation-20261112-v1',VERSION)
 ALLOWED=('source-evidence-proposal','source-evidence-observation','source-evidence-candidates','core','core-fidelity','facts','runtime')
 
 
@@ -66,24 +67,40 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
     binding=plan['authorization'];auth=read_json(binding['file'])
     if sha(binding['file'])!=binding['sha256'] or auth!=binding['authorization']:raise ValueError('Cumulative authorization changed')
     start=datetime.fromisoformat(auth['started_at']);end=datetime.fromisoformat(auth['deadline'])
+    owner=binding
+    if auth.get('money_owner'):
+        owner=auth['money_owner'];original=read_json(owner['file'])
+        if (sha(owner['file'])!=owner['sha256'] or original!=owner['authorization'] or original['version'] not in OWNER_VERSIONS
+                or original['maximum_usd']!='150' or original['shared_policy_sha256']!=auth['shared_policy_sha256']
+                or original['generation_deployment']!=auth['generation_deployment']
+                or start<datetime.fromisoformat(original['started_at']) or end>datetime.fromisoformat(original['deadline'])):
+            raise ValueError('Supplement cannot change original owner, credit or deadline')
     if (auth['version']!=VERSION or not auth['user_request'].strip() or auth['maximum_usd']!='150'
-            or not timedelta(0)<end-start<=timedelta(hours=7) or plan['spend_scope_sha256']!=binding['sha256']
+            or not timedelta(0)<end-start<=timedelta(hours=7) or plan['spend_scope_sha256']!=owner['sha256']
             or plan['maximum_cost_usd']!='150' or plan['subcap_usd']!='150' or plan['opening_scope_charge_usd']!='0'
             or plan['spend_policy']!=read_json(auth['shared_policy_file']) or sha(auth['shared_policy_file'])!=auth['shared_policy_sha256']
             or plan['spend_policy']['maximum_usd']!='150' or plan['source_evidence_protocol']!=g.VERSION
             or plan['verification_deployment']!=remote.SOL or plan['deployment']!=auth['generation_deployment']
             or plan['cross_run_response_reuse'] is not False or plan['maximum_physical_requests']!=800
+            or plan.get('opening_scope_calls',0)!=auth.get('opening_scope_calls',0)
+            or type(plan.get('opening_scope_calls',0)) is not int or not 0<=plan.get('opening_scope_calls',0)<=800
+            or plan.get('opening_owner_charge_usd','0')!=auth.get('opening_owner_charge_usd','0')
             or plan['allowed_stage_families']!=list(ALLOWED) or auth.get('historical_charges_preserved') is not True):
         raise ValueError('Cumulative budget, scope or role contract changed')
     if not allow_expired and not start<=datetime.now(timezone.utc)<end-timedelta(seconds=call_seconds+3):raise TimeoutError('Fixed validation window expired')
     fact_checks.live(plan['expires_at'])
     for path,expected in plan['inputs'].items():
         if sha(Path(path))!=expected:raise ValueError('Frozen validation input/tool changed')
-    if Decimal(executor.ledger(plan['spend_policy']).summary()['charged_usd'])<Decimal(auth['opening_account_charge_usd']):
+    money=executor.ledger(plan['spend_policy'])
+    if Decimal(money.summary()['charged_usd'])<Decimal(auth['opening_account_charge_usd']):
         raise ValueError('Historical account charges regressed')
+    owner_summary=money.summary(plan_sha256=plan['spend_scope_sha256'])
+    if (Decimal(owner_summary['charged_usd'])<Decimal(auth.get('opening_owner_charge_usd','0'))
+            or owner_summary['calls']<auth.get('opening_scope_calls',0)):
+        raise ValueError('Historical owner charges or calls regressed')
 
 
-def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request):
+def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money_owner=None):
     directory=Path(directory).resolve();executor.private(directory)
     if directory.exists() or not user_request.strip():raise ValueError('New fixed execution directory/instruction required')
     old=read_json(old_plan_file);packet=read_json(packet_file);policy=read_json(policy_file)
@@ -97,21 +114,36 @@ def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request):
     if key['limit']!=150 or not review['controls_fit']:raise BudgetExhausted('Cumulative balance cannot cover whole controls')
     endpoints={'generation':executor.provider_preflight(old['deployment']),'verification':executor.provider_preflight(remote.SOL)}
     now=datetime.now(timezone.utc)
+    parent=None;deadline=now+timedelta(hours=7)
+    if money_owner is not None:
+        original=read_json(money_owner)
+        if (original['version'] not in OWNER_VERSIONS or original['maximum_usd']!='150'
+                or original['shared_policy_sha256']!=sha(policy_file) or original['generation_deployment']!=old['deployment']):
+            raise ValueError('Existing cumulative owner must match account and generation')
+        parent=dict(file=str(Path(money_owner).resolve()),sha256=sha(money_owner),authorization=original)
+        deadline=datetime.fromisoformat(original['deadline'])
+        if not now<deadline-timedelta(seconds=183):raise TimeoutError('Original owner window expired')
+    opening_owner=executor.ledger(policy).summary(plan_sha256=parent['sha256']) if parent else {'calls':0,'charged_usd':'0'}
     auth=dict(version=VERSION,user_request=user_request,started_at=now.isoformat(),deadline=(now+timedelta(hours=7)).isoformat(),
         maximum_usd='150',shared_policy_file=str(Path(policy_file).resolve()),shared_policy_sha256=sha(policy_file),
         opening_account_charge_usd=account['charged_usd'],generation_deployment=old['deployment'],
         historical_owner=old['spend_scope_sha256'],historical_charges_preserved=True,key_observation=key)
+    auth['deadline']=deadline.isoformat();auth['opening_scope_calls']=opening_owner['calls']
+    auth['opening_owner_charge_usd']=opening_owner['charged_usd']
+    if parent:auth['money_owner']=parent
     write(directory/'authorization.json',auth);binding=dict(file=str(directory/'authorization.json'),sha256=sha(directory/'authorization.json'),authorization=auth)
     inputs={**packet['inputs'],str(Path(old_plan_file).resolve()):sha(old_plan_file),str(Path(packet_file).resolve()):sha(packet_file),
         str(Path(__file__).resolve()):sha(Path(__file__)),str(ROOT/'tools/source_evidence_trial.py'):sha(ROOT/'tools/source_evidence_trial.py')}
-    plan={**deepcopy(old), 'artifact_kind':VERSION,'arm':'B-v3','run_directory':str(directory),'authorization':binding,
-        'spend_policy':policy,'spend_scope_sha256':binding['sha256'],'maximum_cost_usd':'150','subcap_usd':'150',
+    if parent:inputs[parent['file']]=parent['sha256']
+    plan={**deepcopy(old), 'artifact_kind':VERSION,'arm':'B-'+g.VERSION.rsplit('-',1)[-1],'run_directory':str(directory),'authorization':binding,
+        'spend_policy':policy,'spend_scope_sha256':parent['sha256'] if parent else binding['sha256'],'maximum_cost_usd':'150','subcap_usd':'150',
         'opening_scope_charge_usd':'0','source_evidence_protocol':g.VERSION,'inputs':inputs,'code_sha256':source_code_hashes(),
         'verification_deployment':deepcopy(remote.SOL),'role_registry':deepcopy(remote.ROLES),
         'controls_packet':str(Path(packet_file).resolve()),'maximum_physical_requests':800,
         'limits':{'analysis_seconds':None,'call_seconds':180},'cross_run_response_reuse':False,
         'allowed_stage_families':list(ALLOWED),'eligible_source_ids':[r['source']['id'] for r in packet['source_inventory']['sources']],
         'component_profiling_only':True,'formal_admission_eligible':False,'quality_gate_passed':False,'providers_at_prepare':endpoints}
+    plan.update(opening_scope_calls=opening_owner['calls'],opening_owner_charge_usd=opening_owner['charged_usd'])
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
     executor.archive_sources(directory,plan['code_sha256'])
     guard(plan)
@@ -136,7 +168,7 @@ class Session(executor.RemoteSession):
             allowed=self.pilot_ids if self.phase=='profiling' else set(self.plan['eligible_source_ids'])
             if sid not in allowed:raise ValueError('Source outside frozen validation inventory')
         elif self.phase!='factory':raise ValueError('Only graph profiling allowed before Factory')
-        if key not in self.seen and len(self.seen)>=800:raise BudgetExhausted('Frozen physical request inventory cap')
+        if key not in self.seen and self.plan.get('opening_scope_calls',0)+len(self.seen)>=800:raise BudgetExhausted('Frozen physical request inventory cap')
         self.seen.add(key)
         return super().call(family+'-'+digest(request)[:20],request)
 
@@ -179,8 +211,10 @@ def run(directory):
         factory=None
         if score['next_stage_ready']:
             session.phase='factory';factory=previous.execute_factory(directory,plan,session,dispatch,complete=False)
+        owner_total=session.money.summary(plan_sha256=plan['spend_scope_sha256'])
         report=dict(version=VERSION,controls={k:v for k,v in score.items() if k!='rows'},profiling=pilot,factory=factory,
             account=executor.ledger(plan['spend_policy']).summary(),validation_charge=session.money.summary(plan_sha256=plan['spend_scope_sha256']),
+            supplement_charge_delta_usd=str(Decimal(owner_total['charged_usd'])-Decimal(plan.get('opening_owner_charge_usd','0'))),
             cumulative_maximum_usd='150',small_subcap_usd=None,formal_admission=False,semantic_adoption=False,requires_source_review=True)
         save('validation-report',report)
         write(directory/'completed.json',dict(plan_sha256=sha(directory/'plan.json'),report=report,
@@ -192,11 +226,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--key-file',type=Path)
     sub=parser.add_subparsers(dest='action',required=True)
     p=sub.add_parser('reconcile');p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--user-request',required=True)
-    p=sub.add_parser('prepare');p.add_argument('directory',type=Path);p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--packet',type=Path,required=True);p.add_argument('--policy',type=Path,required=True);p.add_argument('--user-request',required=True)
+    p=sub.add_parser('prepare');p.add_argument('directory',type=Path);p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--packet',type=Path,required=True);p.add_argument('--policy',type=Path,required=True);p.add_argument('--user-request',required=True);p.add_argument('--money-owner',type=Path)
     p=sub.add_parser('run');p.add_argument('directory',type=Path);args=parser.parse_args()
     if args.key_file:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()
     if args.action=='reconcile':result=reconcile(args.old_plan,args.output,user_request=args.user_request)
-    elif args.action=='prepare':result=prepare(args.directory,args.old_plan,args.packet,args.policy,user_request=args.user_request)
+    elif args.action=='prepare':result=prepare(args.directory,args.old_plan,args.packet,args.policy,user_request=args.user_request,money_owner=args.money_owner)
     else:
         report=run(args.directory);factory=report.get('factory') or {}
         result=dict(controls=report['controls'],profiling_sources=len(report['profiling']),

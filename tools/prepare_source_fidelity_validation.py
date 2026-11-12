@@ -20,8 +20,8 @@ from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
 from commentscope.providers import openrouter,remote_verification as remote
 
-VERSION='source-fidelity-validation-plan-20261112-v1'
-CONTROL_VERSION='source-fidelity-controls-20261112-v1'
+VERSION='source-fidelity-validation-plan-20261112-v2'
+CONTROL_VERSION='source-fidelity-controls-20261112-v2'
 FAMILIES={'negation','possibility','desired_world','reported_ownership','missing_condition',
           'missing_reason','hidden_fact_premise','scope_qualifiers'}
 VARIANTS=('faithful','distorted')
@@ -226,7 +226,7 @@ def build(old_plan_file,review_file,fixture_file,observations_file,*,proposed_us
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
     for flag in ('old-plan','review','observations','output'):parser.add_argument('--'+flag,type=Path,required=True)
-    parser.add_argument('--controls',type=Path,default=ROOT/'tests/fixtures/source-fidelity-controls-v1.json')
+    parser.add_argument('--controls',type=Path,default=ROOT/'tests/fixtures/source-fidelity-controls-v2.json')
     parser.add_argument('--proposed-usd',help='Optional what-if cap; default uses cumulative available balance');args=parser.parse_args()
     dest=args.output.resolve()
     if dest.is_relative_to(ROOT) and dest.relative_to(ROOT).parts[0] not in ('runs','artifacts'):

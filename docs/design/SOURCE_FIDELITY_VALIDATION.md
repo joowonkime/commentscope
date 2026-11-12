@@ -86,7 +86,11 @@ pending/미확정 과금·가격/코드/자료 변경·다음 요청 예약 초�
 private manifest는 source split/coverage·주석 준비 상태·전체 요청 hash·price/wire 상한·남은 미검증을 고정한다.
 계획/host 검사·실제 model 평가·알고리즘 채택·MVP 완료를 각각 보고한다.
 
-구현: `tools/prepare_source_fidelity_validation.py`, 합성 자료: `tests/fixtures/source-fidelity-controls-v1.json`.
+구현: `tools/prepare_source_fidelity_validation.py`, 현재 합성 자료: `tests/fixtures/source-fidelity-controls-v2.json`.
+원 v1 자료/실제16응답은 이력으로 보존한다. 정상3/8·왜곡8/8보류·등록 문제7/8탐지,
+실청구0.2058115달러였다. 정상 참고 주석 오류가 확인되어 모델 정확도나 과도 보류율로 해석하지 않는다.
+[v4 계약](SOURCE_CONDITION_QUALIFICATION.md)은 일반조건/필요조건을 분리하고 참고 주석을 바로잡는다.
+v2 통제는 이전 결과를 본 뒤 만든 개발 자료이며 독립 전이/gold가 아니다. 최소5/8·왜곡오승인0 기준은 유지한다.
 현재 도구는 준비/정적 검토/진단 채점만 하며 실행 권한·유료 dispatch를 지원하지 않는다.
 구 v1 실행기의5달러/세 arm 계약은 종료된 그대로 두고 새 고정 검증을 별도로 등록한다.
 실제 실행에는 새 요청 집합·단계·공유 상한을 묶는 실행 등록이 필요하다.
@@ -94,6 +98,8 @@ private manifest는 source split/coverage·주석 준비 상태·전체 요청 h
 실행 등록은 `tools/source_fidelity_validation.py`의 reconcile/prepare/run으로 구별한다.
 reconcile은 명시적 credit revision과 현재 policy만 기록한다. prepare는 이전 owner를 수정하지 않고,
 현재 누적150달러·동일DB·과거 지출·고정16요청/19출처·최대800개 요청·최대7시간·코드/자료를 결합한다.
+후속 v4는 `prepare --money-owner <원authorization.json>`으로 동일 원owner와 최종 기한을 참조한다.
+이전16요청/0.2058115달러를 포함하며 money owner·종료 시각·요청 한도를 초기화하지 않는다.
 run은 실제 영수증이 있는 통제 채점 후 대표3출처를 측정하고,고정19출처 전체의 F4/필수 사실/Compiler/3질문을 진행한다.
 대표 출처는 같은 request/stage의 checkpoint를 재사용한다. 다른 source/단계/코드/기한은 거절하며 유료 자동 retry는 없다.
 전체19의 동작 확인도 개발48 paired/전이나 formal r5를 대체하지 않는다. 결과의 원문별 검토는 별도로 남긴다.
