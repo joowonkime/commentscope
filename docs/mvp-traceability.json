@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v66",
-  "baseline_commit": "18b0030395e9fa6759c7b586d7d44152ca90873f",
+  "spec_version": "commentscope-mvp-20261113-v67",
+  "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "PR98양OS2687/병합및별도runtime3완료:입장/이유응답·없는수치보류,신규3회0.0106315USD,과거금융행불변/미정산0. 활성API없음. Agent1/4지지유지. 다음신규104쌍69출처는계획만있고실행기/새계약미등록;원C/B재개안함."
+    "hold_reason": "사용자ㄱㄱ에따라신규104쌍69출처확대실행기구현/무료검증진행. 같은원계정누적150유지,원C/B/runtime3완료보존. 새고정실행은코드/회귀/CI/원장/가격/입력검증후등록."
   },
   "requirements": [
     {
@@ -67,7 +67,9 @@
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
         "tools/prepare_source_fidelity_validation.py",
-        "src/commentscope/factory/source_quote_anchors.py"
+        "src/commentscope/factory/source_quote_anchors.py",
+        "src/commentscope/factory/observation_reuse.py",
+        "tools/source_search_expansion.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -98,7 +100,9 @@
         "tests/test_source_audit_preflight.py",
         "tests/test_source_fidelity_audit.py",
         "tests/test_source_fidelity_validation_plan.py",
-        "tests/test_source_quote_anchors.py"
+        "tests/test_source_quote_anchors.py",
+        "tests/test_observation_reuse.py",
+        "tests/test_source_search_expansion.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -168,7 +172,9 @@
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
-        "tools/prepare_source_fidelity_validation.py"
+        "tools/prepare_source_fidelity_validation.py",
+        "src/commentscope/factory/observation_reuse.py",
+        "tools/source_search_expansion.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -197,7 +203,9 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
         "tests/test_source_fidelity_audit.py",
-        "tests/test_source_fidelity_validation_plan.py"
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_observation_reuse.py",
+        "tests/test_source_search_expansion.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -267,7 +275,9 @@
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
-        "tools/prepare_source_fidelity_validation.py"
+        "tools/prepare_source_fidelity_validation.py",
+        "src/commentscope/factory/observation_reuse.py",
+        "tools/source_search_expansion.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -296,7 +306,9 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
         "tests/test_source_fidelity_audit.py",
-        "tests/test_source_fidelity_validation_plan.py"
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_observation_reuse.py",
+        "tests/test_source_search_expansion.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -563,7 +575,9 @@
         "tools/source_evidence_trial.py",
         "tools/source_evidence_recovery.py",
         "tools/prepare_source_fidelity_validation.py",
-        "tools/source_fidelity_validation.py"
+        "tools/source_fidelity_validation.py",
+        "src/commentscope/factory/observation_reuse.py",
+        "tools/source_search_expansion.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -601,7 +615,9 @@
         "tests/test_source_fidelity_audit.py",
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_openrouter_budget_revision.py",
-        "tests/test_source_fidelity_execution.py"
+        "tests/test_source_fidelity_execution.py",
+        "tests/test_observation_reuse.py",
+        "tests/test_source_search_expansion.py"
       ],
       "acceptance": [
         "사용자 증액 지시와 소액 상한 철회에 따라 팀키/현재 누적 장부150달러를 지킨다. 이전50달러 policy와 과거 owner별 상한·보수차감은 보존하고, 동일DB/계정/opening의 명시적 한도 revision으로만 반영한다. 실험별6달러 제안은 철회한다.",
@@ -783,7 +799,9 @@
         "tools/source_evidence_trial.py",
         "tools/source_evidence_recovery.py",
         "tools/prepare_source_fidelity_validation.py",
-        "tools/source_fidelity_validation.py"
+        "tools/source_fidelity_validation.py",
+        "src/commentscope/factory/observation_reuse.py",
+        "tools/source_search_expansion.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -823,7 +841,9 @@
         "tests/test_source_fidelity_audit.py",
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_openrouter_budget_revision.py",
-        "tests/test_source_fidelity_execution.py"
+        "tests/test_source_fidelity_execution.py",
+        "tests/test_observation_reuse.py",
+        "tests/test_source_search_expansion.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1701,6 +1721,36 @@
       ],
       "design_refs": [
         "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md"
+      ]
+    },
+    {
+      "id": "DEC-026",
+      "title": "고정104신규쌍확대의실행/재사용/금융경계",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "이전실패재호출/예산초기화없이같은6후보의신규출처를어떻게끝까지검증할것인가?",
+      "options": [
+        "닫힌104쌍/69출처·기존역할·원응답재사용·새실행시간계약",
+        "기존1536쌍재실행",
+        "미해석/필수사실제거"
+      ],
+      "selection": "현재ㄱㄱ지시를최대4시간/1800신규물리요청의고정development실행으로구체화한다. 동일누적150/금융owner/이전차감유지. 원본/정확한cache/실패/신규를구분하며whole-source/min3/min2/r5불변. 무료검사/코드CI후고정run을실행한다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "17new regression cases pass:exact reuse/failed no-retry/streaming,closed pair and typed dispatch scope,finite grant,raw=None settled hold with next item continuing,unsettled stop,and same-primary full-text metadata refresh. Private preparation dry check fixed104pairs/69sources/6candidates/999registry,86old batches/582cache entries/8495477fixed bytes. Provider metadata mocked for this dry check;0paid calls. Full Factory/dual-OS CI pending.",
+          "reference": "docs/design/SOURCE_SEARCH_EXECUTION.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SOURCE_SEARCH_EXECUTION.md"
       ]
     }
   ],
@@ -3016,7 +3066,8 @@
         "DEC-022",
         "DEC-023",
         "DEC-024",
-        "DEC-025"
+        "DEC-025",
+        "DEC-026"
       ],
       "depends_on": [
         "TASK-021",
@@ -3024,7 +3075,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
-        "현재무료후속: 비명제문맥적용의무와실제주장의불확실성분리,실행별정산영수증결합,원C전체14그래프재검사와동일6후보출처검색확대계획. 원C/B/PR97이력과최소2/r5보존.",
+        "현재후속: 고정104신규쌍/69출처실행기·정확한원관측재사용·정산실패보류구현/무료검증. 기존C/B/runtime3/원예산과최소2/r5보존. 원Kela22문단재취득일치로새plan메타데이터만갱신.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
@@ -3140,6 +3191,12 @@
           "scope": "Current fixed1Agent/4sources/7entries bundle actual3standardquestions:position/reasons answered,missing abstain. Exactly3newSolcalls/0.0106315USD,0source/graph/embedding/fact inference. All returned spans and all3exact execution receipt bindings reviewed;historical finance hash unchanged,no new money owner,reserved/uncertain0. Not independent gold/multi-Agent/fresh Factory/r5. Earlier pre-checkout import failure occurred before plan/provider/reservation,not model retry.",
           "reference": "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "17new regression cases pass:exact reuse/failed no-retry/streaming,closed pair and typed dispatch scope,finite grant,raw=None settled hold with next item continuing,unsettled stop,and same-primary full-text metadata refresh. Private preparation dry check fixed104pairs/69sources/6candidates/999registry,86old batches/582cache entries/8495477fixed bytes. Provider metadata mocked for this dry check;0paid calls. Full Factory/dual-OS CI pending.",
+          "reference": "docs/design/SOURCE_SEARCH_EXECUTION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3162,7 +3219,8 @@
         "docs/design/SOURCE_ROLE_APPLICABILITY.md",
         "docs/design/EXECUTION_RECEIPT_BINDING.md",
         "docs/design/SOURCE_SEARCH_EXPANSION.md",
-        "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md"
+        "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
+        "docs/design/SOURCE_SEARCH_EXECUTION.md"
       ]
     },
     {
@@ -3604,8 +3662,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v66",
       "reason": "사용자중단후재시작지시를고정3질문실제검증으로구체화한다. PR98소스양OS2687및tree일치후새runtime시간창만고정하고같은금융집계를유지. 원C/B전체재개/새source추론/소액한도승인루프없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v67",
+      "reason": "준비된104신규쌍69출처의실행지시에따라닫힌역할/관측재사용/streaming/정산된빈length보류와현재누적150·새시간4h/물리1800경계를구체화. 기존실패개별재시도/합격기준완화/새금융owner없음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v61",
+  "design_version": "commentscope-detailed-design-20261113-v62",
   "design_document": "docs/design/README.md"
 }
