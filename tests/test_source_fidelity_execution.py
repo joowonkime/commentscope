@@ -96,6 +96,23 @@ class CumulativeExecutionTests(TestCase):
             with patch.object(live.executor.RemoteSession,'call') as parent,self.assertRaises(BudgetExhausted):session.call('source-evidence-observation',request)
             parent.assert_not_called()
 
+    def test_only_explicit_registered_C_model_can_differ_from_same_money_owner(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);p,auth=self.supplement(root);owner=deepcopy(auth['money_owner']['authorization'])
+            owner['generation_deployment']={**owner['generation_deployment'],'model':'openai/gpt-5.2'}
+            parent_file=self.save(root/'original-owner.json',owner)
+            auth['money_owner']=dict(file=str(parent_file),sha256=sha(parent_file),authorization=owner);p['spend_scope_sha256']=sha(parent_file)
+            money=MagicMock();money.summary.return_value={'charged_usd':'25','calls':16};self.refreeze(root,p,auth)
+            with patch.object(live.executor,'ledger',return_value=money):
+                with self.assertRaises(ValueError):live.guard(p)
+                old=dict(arm='C',source_evidence_protocol='source-evidence-graph-20261111-v1',deployment=live.remote.SOL,
+                    spend_policy={**p['spend_policy'],'maximum_usd':'50'})
+                ref=self.save(root/'closed-C-plan.json',old);auth['registered_generation_comparison']=dict(file=str(ref),sha256=sha(ref))
+                p['inputs'][str(ref)]=sha(ref);self.refreeze(root,p,auth);live.guard(p)
+                for wrong in ({**old,'arm':'B'},{**old,'deployment':{**live.remote.SOL,'model':'another/provider'}}):
+                    self.save(ref,wrong);auth['registered_generation_comparison']['sha256']=sha(ref);p['inputs'][str(ref)]=sha(ref);self.refreeze(root,p,auth)
+                    with self.assertRaises(ValueError):live.guard(p)
+
     def session(self,request):
         s=object.__new__(live.Session);s.seen=set();s.phase='controls';s.control_requests={digest(request)}
         s.pilot_ids={'s'};s.plan={'eligible_source_ids':['s'],'maximum_physical_requests':800};return s
@@ -114,6 +131,19 @@ class CumulativeExecutionTests(TestCase):
             with self.assertRaises(ValueError):s.call('source-evidence-proposal',wrong)
             s.phase='unregistered'
             with self.assertRaises(ValueError):s.call('source-evidence-proposal',request)
+
+    def test_new_explicit_length_policy_returns_failed_result_without_retry(self):
+        from tools import source_fidelity_continuation as continuation
+        _,env,_,_,_=example();request=live.g.proposal_request(env);s=self.session(request);s.phase='profiling'
+        s.plan['settled_length_handling']='failed_binding_no_retry-v1'
+        failure=live.executor.ModelResponseUnavailable('source-evidence-proposal',digest(request),digest(request['data']))
+        result={'errors':['incomplete_generation'],'raw':'truncated','output':None}
+        with patch.object(live.executor.RemoteSession,'call',side_effect=failure) as parent,patch.object(continuation,'saved_length',return_value=result) as proof:
+            self.assertEqual(s.call('source-evidence-proposal',request),result);parent.assert_called_once();proof.assert_called_once()
+        s.plan.pop('settled_length_handling')
+        with patch.object(live.executor.RemoteSession,'call',side_effect=failure),patch.object(continuation,'saved_length') as proof:
+            with self.assertRaises(live.executor.ModelResponseUnavailable):s.call('source-evidence-proposal',request)
+            proof.assert_not_called()
 
     def test_credit_reconciliation_preserves_same_database_opening_and_history(self):
         with tempfile.TemporaryDirectory() as temp:

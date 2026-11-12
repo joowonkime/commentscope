@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v58",
-  "baseline_commit": "bd50217aee3c43beee585b128bdece46e9bb18ea",
+  "spec_version": "commentscope-mvp-20261112-v64",
+  "baseline_commit": "998627ff6c5770295b8ddd2ef45b4cf87130eb5a",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -24,8 +24,8 @@
   "resume": {
     "next_task": "TASK-022",
     "parallel_tasks": [],
-    "paid_execution_hold": true,
-    "hold_reason": "v4 고정16통제와실제19출처검증완료: Agent0/runtime0,추가2.2192627USD,원owner총2.4250742/82회/미정산0. 완료run은readonly. 다음은SOURCE_FIDELITY_RESULT의주소결합/닫힌schema 책임을무료설계/구현하고새요청을고정. 재정승인대기나6달러질문아님. 원owner/최종14:45:28UTC/누적150과과거지출보존."
+    "paid_execution_hold": false,
+    "hold_reason": "C완료68회/1.760652USD/Agent0. 무료C전체7기록replay는6complete/Agent1/4sources/7entries,추가호출0,runtime미실행. 2Agent/r5미달. 원owner216회5.8119029/원기한14:45:28UTC/누적150보존. 현재API실행없음."
   },
   "requirements": [
     {
@@ -66,7 +66,8 @@
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
-        "tools/prepare_source_fidelity_validation.py"
+        "tools/prepare_source_fidelity_validation.py",
+        "src/commentscope/factory/source_quote_anchors.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -96,7 +97,8 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
         "tests/test_source_fidelity_audit.py",
-        "tests/test_source_fidelity_validation_plan.py"
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_source_quote_anchors.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -1543,6 +1545,72 @@
       "design_refs": [
         "docs/design/SOURCE_CONDITION_QUALIFICATION.md"
       ]
+    },
+    {
+      "id": "DEC-019",
+      "title": "원문 quote와 host 주소 결합·닫힌 유형/관계 schema",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "숫자 span 생성과 host가 이미 아는 유형/관계 제약을 모델에 맡긴 실패를 의미 기준 완화 없이 어떻게 제거할 것인가?",
+      "options": [
+        "원문 quote 선택+host exact binding, typing/관계 schema 제약",
+        "숫자 주소 유지와 prompt 보강",
+        "동일 표현에서 더 강한 생성 모델 비교"
+      ],
+      "selection": "v5 quote/host binding과 기존 host typing/edge 제약을 먼저 구현·무료 검증한다. 의미 감사/최소지지/필수사실 유지, 같은 생성모델로 표현 효과부터 등록 비교한다. 아직 품질 채택 아님.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SOURCE_QUOTE_BINDING.md",
+        "docs/design/SOURCE_FIDELITY_RESULT.md"
+      ]
+    },
+    {
+      "id": "DEC-020",
+      "title": "금융 owner 보존과 기존 C 생성 모델 설정의 실행 계약 분리",
+      "status": "proposed",
+      "requirements": [
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "같은 누적 예산/원 기한에서 기존 C의 Sol 생성 설정을 모델/구조 효과를 섞지 않고 어떻게 비교할 것인가?",
+      "options": [
+        "고정된 원 C 설정의 SHA를 새 execution auth에 결합하고 같은 owner 사용",
+        "새 owner/새7시간으로 재시작",
+        "동일 B 실행 중 모델 fallback"
+      ],
+      "selection": "첫 번째만 명시적 opt-in으로 구현/검사한다. B 종료/미정산0 후 고정 C의 동일19 전체를 새등록, 원owner/기한/기존지출 유지. 아직 실제 모델 채택 아님.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/REGISTERED_GENERATION_COMPARISON.md"
+      ]
+    },
+    {
+      "id": "DEC-021",
+      "title": "공유 한정어의 원문 조각 인용 변환",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-010"
+      ],
+      "question": "의미 검사를 통과한 절의 바깥 한정어를 생성/삭제 없이 runtime에 어떻게 보존할 것인가?",
+      "options": [
+        "출처 조각과 명시적 생략 표시로 비사실 인용 구성",
+        "한정어 생략",
+        "새 모델로 전체 재생성"
+      ],
+      "selection": "연속 own_span인 value/prediction만 그래프에 결합된 own-source 한정어를 포함한 인용으로 변환한다. 의미 실패/사실/중첩/길이 보류는 유지. 무료 회귀와 동일 C 응답의 별도 replay 후 판정.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SCOPED_SOURCE_QUOTES.md"
+      ]
     }
   ],
   "tasks": [
@@ -2850,7 +2918,10 @@
         "DEC-015",
         "DEC-016",
         "DEC-017",
-        "DEC-018"
+        "DEC-018",
+        "DEC-019",
+        "DEC-020",
+        "DEC-021"
       ],
       "depends_on": [
         "TASK-021",
@@ -2931,9 +3002,35 @@
           "scope": "Completed v4 actual19 sources/25 eligible pairs under same owner/deadline:19 unique proposal calls(no retries),16 bound/3 failures,graph audit3 complete/13 held,candidate records2 complete/1 held,Agents0/runtime0/fact calls0. New66calls confirmed2.2192627USD; owner82calls2.4250742USD; reserved/unknown0. Mechanical word-internal boundaries in8of16 graphs; not independent gold or causal attribution. v4 quality adoption failed/held, no r5/3000/UI success.",
           "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v5 B fixed19 complete:19 proposal calls/13 bound/6 failures,graph3complete/10held,candidate records3complete,Agent1 with3sources/7entries; position/reasons answered,missing abstain (3turns). Reason point manually matched attributed source prediction; meta audience prediction remains licensed. New66calls1.6261767USD; same owner148calls4.0512509USD; reserved/unknown0. Not independent gold,2Agent/r5/3000 not achieved.",
+          "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered C comparison guard and money-owner/deployment separation:24 related passed3.354s,wholeFactory851 passed272.538s. Unknown model,wrong arm,missing reference remain rejected; original same-owner/default behavior preserved. New C API calls0.",
+          "reference": "docs/design/REGISTERED_GENERATION_COMPARISON.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v5 C same19/prompt/source code, Sol generation/runtime:controls8+8 pass,14bound/5errors,7graphs complete/7held;7candidate records4complete/2adapterheld/1semanticheld;0Agents/0runtime.68newcalls1.760652USD;root216calls5.8119029USD,reserved/uncertain0. Original result immutable; not model adoption or independent gold.",
+          "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Scoped source quotations preserve audited own-source modality/world/negation/qualification in visible elided quotes; fact/discontinuous/nested/semantic vetoes and min3 preserved. Related59 pass6.236s,Factory863 pass275.419s before2additional test-only cases (included in59). Same C all7-record replay4to6complete,1Agent/4supports/7entries,0newcalls/0USD,runtime unexecuted.",
+          "reference": "docs/design/SCOPED_SOURCE_QUOTES.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
+        "docs/design/REGISTERED_GENERATION_COMPARISON.md",
+        "docs/design/SOURCE_QUOTE_BINDING.md",
         "docs/design/SOURCE_FIDELITY_RESULT.md",
         "docs/design/SOURCE_FIDELITY_CONTINUATION.md",
         "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
@@ -2946,7 +3043,8 @@
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
         "docs/design/SOURCE_EVIDENCE_TRIAL.md",
         "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
-        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md",
+        "docs/design/SCOPED_SOURCE_QUOTES.md"
       ]
     },
     {
@@ -3356,8 +3454,32 @@
     {
       "spec_version": "commentscope-mvp-20261112-v58",
       "reason": "동일계획실제19출처를재호출없이완료했으나Agent0. 검토통제8/8을실제생성성공과분리하고출력/위치/유형/관계선택문제를전수결과로보존한다. 단일댓글수리나지지기준완화대신host주소결합/닫힌schema책임을후속무료구현으로고정한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v59",
+      "reason": "실제19출처의주소/형식실패를근거로모델의숫자주소계산을host exact-quote 결합으로이동. 무효typing/edge선택은schema로제한하며,기존전수의미감사와기준/지출을보존. 무료TDD후새고정비교전까지추가추론없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v60",
+      "reason": "추가유료호출전무료format변환16개에서inline quote의총byte감소1.3%/3개증가확인. 비용절감으로과장하지않고중복정확quote를catalog에한번선언하고필드는ID로참조하는v5 draft를무료검증한다. 원오류/주소/의미를수리한성공으로보고하지않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v61",
+      "reason": "무료16개형식비교:catalog 원형은6.1%증가/APIenum초과,압축catalog의추가이점은직접압축quote대비1.2%p뿐. 목록/순환제약추가를폐기하고q/n/o 직접anchor를선택. byte감소11.3%/2개증가를실비절감/품질개선으로주장하지않음. 실제모델새호출0."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v62",
+      "reason": "v5 B의실제원문선택/해석실패가남아기존C(Sol생성)설정의동일19비교를준비. 임의모델/fallback/owner/7시간reset을금지하고,기존C plan SHA와동일DB/모델/가격을새execution auth로결합한다. B실행내용변경없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v63",
+      "reason": "v5 B실제19완료Agent1/이유응답확인,2Agent미달및quote/의미/관련성취약점보존. 기존C(Sol생성)의동일19고정비교를같은금융owner에등록하기전무료851검증을완료. 비용차를전체단가개선으로과장하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v64",
+      "reason": "v5 C는Agent0으로종료. 그래프7통과/연결4완료와모든의미검사를통과한2출처의adapter표현보류를분리. 연속비사실절에원문공유한정어를표시하는계약과같은C전체무료replay를먼저명시."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v53",
+  "design_version": "commentscope-detailed-design-20261112-v59",
   "design_document": "docs/design/README.md"
 }

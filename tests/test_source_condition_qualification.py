@@ -24,7 +24,7 @@ class SourceConditionQualificationTests(TestCase):
         out['units'].append(u);out['edges'].append(dict(local_id='E2',from_unit='U3',to_unit='U1',relation=relation,cue_refs=[],interpretation='resolved'))
         out['coverage'][0].update(span=ref(source['text']),unit_ids=['U1','U2','U3'])
         env=g.envelope(source,snapshot_id='synthetic',snapshot_sha256=digest('synthetic'),language='en')
-        p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
+        p=g.bind_annotation(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         f=fixture(source['text']);cs=[f[1]];members=[nomination(f)]
         response=candidate_output(cs);response['candidates'][0].update(essential_condition_unit_ids=['U3'],dependency_edge_ids=['E2'])
         return source,env,out,v,cs,members,response
@@ -53,13 +53,14 @@ class SourceConditionQualificationTests(TestCase):
 
     def test_unbound_antecedent_and_nested_mixed_qualifications_are_not_flattened(self):
         _,env,out,_,_,_,_=self.conditional();out['edges'].pop()
-        p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
+        p=g.bind_annotation(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         self.assertIn('unbound_conditional_antecedent',v['issues'])
         # Both conditional relations participate in cycle/closure checks.
         edges=[dict(local_id='E1',from_unit='U1',to_unit='U2',relation='condition_for',cue_refs=[],interpretation='resolved'),dict(local_id='E2',from_unit='U2',to_unit='U1',relation='necessary_condition_for',cue_refs=[],interpretation='resolved')]
         with self.assertRaises(ValueError):g.closure(edges,['U1'])
 
-    def test_actual_v3_protocol_cannot_be_relabelled_as_v4_receipt(self):
-        _,_,_,v,_,_,_=self.conditional();old=deepcopy(v['proposal'])
-        old['artifact_kind']='source-evidence-graph-20261112-v3/proposal'
-        with self.assertRaises(ValueError):g.observation_request(old)
+    def test_prior_protocol_cannot_be_relabelled_as_current_receipt(self):
+        _,_,_,v,_,_,_=self.conditional()
+        for version in ('source-evidence-graph-20261112-v3','source-evidence-graph-20261112-v4'):
+            old=deepcopy(v['proposal']);old['artifact_kind']=version+'/proposal'
+            with self.assertRaises(ValueError):g.observation_request(old)

@@ -7,9 +7,10 @@ from copy import deepcopy
 from commentscope.factory import source_evidence_graph as g, source_evidence_requests as requests
 from commentscope.factory import source_arguments as sa, argument_observations as obs
 from commentscope.factory.automatic_contract import digest
+from commentscope.factory import scoped_source_quotes
 
-VERSION=g.VERSION+'/arguments'
-AUDIT=g.VERSION+'/audit'
+VERSION=g.VERSION+'/arguments-scoped-quotes-v1'
+AUDIT=VERSION+'/audit'
 
 
 def lower(batches):
@@ -21,12 +22,14 @@ def lower(batches):
     if len(ids)!=len(set(ids)):raise ValueError('Duplicate candidate certificate')
     units={u['local_id']:u for u in verified['proposal']['output']['units']};edges=verified['proposal']['output']['edges']
     holds=list(verified['issues'])+[r for c in certificates for r in c['hold_reasons']]
-    lowered=[]
+    lowered=[];surfaces={}
+    for lid,u in units.items():
+        try:surfaces[lid]=scoped_source_quotes.quote(env,u)
+        except ValueError:holds.append('unrepresentable_hold');surfaces[lid]=None
     def text(refs):
         return '; '.join(env['source']['text'][r['start']:r['end']] for r in g.canonical_refs(refs))
     for lid,u in units.items():
-        try:literal=g.literal(env,u['own_spans'])
-        except ValueError:holds.append('unrepresentable_hold');literal=''
+        surface=surfaces[lid];literal=surface['text'] if surface else ''
         related=[c for c in certificates if lid in requests.relevant_inventory(verified,c['output']['position_unit_ids'])]
         candidate_ids=[c['candidate']['id'] for c in related]
         roles={}
@@ -40,12 +43,7 @@ def lower(batches):
         if any(any(e['to_unit']==c['local_id'] and e['relation'] in g.CONDITION_RELATIONS for e in edges) for c in conditions):
             holds.append('unrepresentable_hold')  # Existing flat runtime scope cannot express nested qualification.
         scope=dict(entity=text(u['scope']['subject_refs']) or literal,
-            time=text(u['scope']['time_refs']),conditions='; '.join(text(c['own_spans']) for c in conditions))
-        # Qualifier/world/negation spans outside the chosen contiguous claim
-        # cannot silently disappear into an unexposed internal graph.
-        for field in ('polarity_refs','modality_refs','quantifier_refs','population_refs','world_refs','comparison_refs','change_refs','qualifier_refs'):
-            if any(not any(s['start']<=r['start'] and r['end']<=s['end'] for s in u['own_spans']) for r in u['scope'][field]):
-                holds.append('unrepresentable_hold')
+            time=text(u['scope']['time_refs']),conditions='; '.join(surfaces[c['local_id']]['text'] if surfaces[c['local_id']] else '' for c in conditions))
         annotation=u['assertion_mode']=='conditional_antecedent'
         context=u['commitment']!='endorsed' or u['assertion_mode'] in ('quoted_content','question','non_assertive') or u['kind']=='not_applicable'
         if u['kind']=='fact' and not annotation and not context and u['world']!='actual':
@@ -63,7 +61,8 @@ def lower(batches):
             authorship='asserted_or_endorsed' if u['commitment']=='endorsed' else 'not_asserted',
             assertion_mode=u['assertion_mode'],epistemic=u['epistemic'],world=u['world'],
             runtime_exposure='scope_annotation_only' if annotation or context else 'claim',
-            evidence=[dict(start=r['start'],end=r['end'],text=source['text'][r['start']:r['end']]) for r in u['own_spans']],
+            surface=surface,
+            evidence=deepcopy(surface['evidence']) if surface else [dict(start=r['start'],end=r['end'],text=source['text'][r['start']:r['end']]) for r in u['own_spans']],
             requires=sorted(set(factual)),core_requires_for=sorted(c['candidate']['id'] for c in certificates if lid in c['output']['core_required_fact_unit_ids'])))
     language=verified['observation']['output']['source_language']
     if language=='unknown':holds.append('source_language_unresolved')

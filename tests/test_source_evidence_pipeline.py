@@ -47,10 +47,11 @@ class CandidateEvidenceTests(TestCase):
 
     def test_reason_omission_scope_and_core_premise_promotion_hold(self):
         for mutate in [lambda x:x['candidates'][0].update(reason_unit_ids=[]),
-                       lambda x:x['candidates'][0].update(scope_preserved='unknown'),
-                       lambda x:x['candidates'][0].update(core_required_fact_unit_ids=['U2'])]:
+                       lambda x:x['candidates'][0].update(scope_preserved='unknown')]:
             value=candidate_output(self.cs);mutate(value)
             self.assertEqual(adapter.lower([self.bind(value)])['status'],'unresolved')
+        value=candidate_output(self.cs);value['candidates'][0]['core_required_fact_unit_ids']=['U2']
+        with self.assertRaises(ValueError):self.bind(value)
 
     def test_stale_source_membership_missing_candidate_and_mixed_receipts_fail(self):
         value=candidate_output(self.cs);value['candidates']=[]
@@ -69,7 +70,7 @@ class CandidateEvidenceTests(TestCase):
         out['units'].append(fact);out['coverage'][0]['span']['end']=len(source['text']);out['coverage'][0]['unit_ids'].append('U3')
         edge=dict(local_id='E2',from_unit='U3',to_unit='U2',relation='required_premise_for',cue_refs=[],interpretation='resolved')
         out['edges'].append(edge)
-        p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
+        p=g.bind_annotation(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         members=[membership([source],self.cs,[dict(source_id='s',candidate_id=self.cs[0]['id'])])]
         output=candidate_output(self.cs);output['candidates'][0]['dependency_edge_ids']=[edge['local_id']]
         b=reqs.bind_candidates(v,self.cs,members,{'output':output});record=adapter.lower([b])
@@ -83,7 +84,7 @@ class CandidateEvidenceTests(TestCase):
         _,env,out,_,_=example()
         ref=deepcopy(out['units'][0]['own_spans'][0]);ref['end']=5
         out['units'][0]['own_spans']=[ref,dict(source_id='s',start=6,end=7)]
-        p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
+        p=g.bind_annotation(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         b=reqs.bind_candidates(v,self.cs,self.members,{'output':candidate_output(self.cs)})
         record=adapter.lower([b]);self.assertEqual(record['status'],'unresolved')
         self.assertIn('unrepresentable_hold',record['hold_reasons'])
@@ -103,7 +104,7 @@ class CandidateEvidenceTests(TestCase):
         out['edges'].append(first)
         members=[membership([source],self.cs,[dict(source_id='s',candidate_id=self.cs[0]['id'])])]
         def lower():
-            p=g.bind_proposal(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
+            p=g.bind_annotation(env,{'output':out});v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
             value=candidate_output(self.cs);value['candidates'][0].update(essential_condition_unit_ids=[e['from_unit'] for e in out['edges'] if e['relation'] in g.CONDITION_RELATIONS],dependency_edge_ids=[e['local_id'] for e in out['edges'] if e['relation'] in g.CONDITION_RELATIONS])
             return adapter.lower([reqs.bind_candidates(v,self.cs,members,{'output':value})])
         simple=lower();self.assertEqual(simple['status'],'complete')
@@ -131,7 +132,8 @@ class GraphRunner(JevRunner):
                 unit['scope'].update(subject_refs=[span(part)],predicate_refs=[span(part)])
             out['edges'][0]['cue_refs']=[span('because')]
             out['coverage'][0]['span']=span(text)
-            self.proposals[sid]=out;value=out
+            self.proposals[sid]=out
+            value=g.anchors.encode(g.envelope(source,snapshot_id='synthetic',snapshot_sha256=g.digest('synthetic')),out)
         elif system.startswith(g.OBSERVE):
             sid=data['ORIGINAL']['source_id'];value=observation_example({'output':self.proposals[sid]})
             if self.bad_graph:value['dependency_coverage']='unknown'
