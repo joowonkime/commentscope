@@ -8,6 +8,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_scoped_source_quotes",
+    "test_source_lowering_replay",
     "test_source_quote_anchors",
     "test_source_fidelity_continuation",
     "test_source_condition_qualification",

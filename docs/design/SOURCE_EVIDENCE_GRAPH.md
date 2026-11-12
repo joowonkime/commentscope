@@ -235,7 +235,7 @@ source-wide hold를 제거하는 정책은 B2이며 이 protocol에는 포함하
 assertion/quoted_content/question은 각 원문 commitment와 함께 검사하며, unresolved는 보류한다.
 
 Graph의 여러 own_spans를 이어 붙여 원문에 없는 문장을 만들지 않는다. B1에서 게시할 수 있는
-claim.text는 **하나의 연속된 원문 assertion 구간**이며, 필수 조건/귀속/지칭 문맥은 기존
+첫 adapter의 claim.text는 **하나의 연속된 원문 assertion 구간**이며, 필수 조건/귀속/지칭 문맥은 기존
 scope·required-premise·citation 계약으로 빠짐없이 동반해야 한다. host가 선택한 fragment가
 단독으로 더 강한 주장이 되는지 candidate/runtime fidelity 검토를 거친다.
 

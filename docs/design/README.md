@@ -1,7 +1,7 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261112-v58`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~025, DEC-001~020.
+설계 버전: `commentscope-detailed-design-20261112-v59`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~025, DEC-001~021.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
@@ -201,3 +201,5 @@ TASK-005 [후보별 원문 완전성](CANDIDATE_SOURCE_COVERAGE.md)은 bound typ
 Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 용량 분리](CHAT_DEPENDENCY_CAPACITY.md)를 따른다.
 
 현재 TASK-022의 [제한된 실제 F4 비교](SOURCE_EVIDENCE_TRIAL.md)는 사용자 구현/테스트 지시에 따라 별도 신규5달러/7시간으로 등록한다. 과거plan기한을 연장하지 않고 전체48/전이/999와 구별한다.
+
+후속 무료 구현: [공유 한정어의 원문 인용 변환](SCOPED_SOURCE_QUOTES.md)은 DEC-021의 후보 계약이다. C 원결과Agent0과 별도 replay를 구별한다.

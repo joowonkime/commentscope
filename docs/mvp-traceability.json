@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v63",
+  "spec_version": "commentscope-mvp-20261112-v64",
   "baseline_commit": "998627ff6c5770295b8ddd2ef45b4cf87130eb5a",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
@@ -24,8 +24,8 @@
   "resume": {
     "next_task": "TASK-022",
     "parallel_tasks": [],
-    "paid_execution_hold": true,
-    "hold_reason": "v5 B 완료:Agent1/3턴; 다음C등록준비. 원owner148회4.0512509/원14:45:28UTC/누적150보존. 관련24/Factory851통과,새C모델호출0. B재호출/fallback없음."
+    "paid_execution_hold": false,
+    "hold_reason": "C완료68회/1.760652USD/Agent0. 무료C전체7기록replay는6complete/Agent1/4sources/7entries,추가호출0,runtime미실행. 2Agent/r5미달. 원owner216회5.8119029/원기한14:45:28UTC/누적150보존. 현재API실행없음."
   },
   "requirements": [
     {
@@ -1590,6 +1590,27 @@
       "design_refs": [
         "docs/design/REGISTERED_GENERATION_COMPARISON.md"
       ]
+    },
+    {
+      "id": "DEC-021",
+      "title": "공유 한정어의 원문 조각 인용 변환",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-010"
+      ],
+      "question": "의미 검사를 통과한 절의 바깥 한정어를 생성/삭제 없이 runtime에 어떻게 보존할 것인가?",
+      "options": [
+        "출처 조각과 명시적 생략 표시로 비사실 인용 구성",
+        "한정어 생략",
+        "새 모델로 전체 재생성"
+      ],
+      "selection": "연속 own_span인 value/prediction만 그래프에 결합된 own-source 한정어를 포함한 인용으로 변환한다. 의미 실패/사실/중첩/길이 보류는 유지. 무료 회귀와 동일 C 응답의 별도 replay 후 판정.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SCOPED_SOURCE_QUOTES.md"
+      ]
     }
   ],
   "tasks": [
@@ -2899,7 +2920,8 @@
         "DEC-017",
         "DEC-018",
         "DEC-019",
-        "DEC-020"
+        "DEC-020",
+        "DEC-021"
       ],
       "depends_on": [
         "TASK-021",
@@ -2992,6 +3014,18 @@
           "scope": "Registered C comparison guard and money-owner/deployment separation:24 related passed3.354s,wholeFactory851 passed272.538s. Unknown model,wrong arm,missing reference remain rejected; original same-owner/default behavior preserved. New C API calls0.",
           "reference": "docs/design/REGISTERED_GENERATION_COMPARISON.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v5 C same19/prompt/source code, Sol generation/runtime:controls8+8 pass,14bound/5errors,7graphs complete/7held;7candidate records4complete/2adapterheld/1semanticheld;0Agents/0runtime.68newcalls1.760652USD;root216calls5.8119029USD,reserved/uncertain0. Original result immutable; not model adoption or independent gold.",
+          "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Scoped source quotations preserve audited own-source modality/world/negation/qualification in visible elided quotes; fact/discontinuous/nested/semantic vetoes and min3 preserved. Related59 pass6.236s,Factory863 pass275.419s before2additional test-only cases (included in59). Same C all7-record replay4to6complete,1Agent/4supports/7entries,0newcalls/0USD,runtime unexecuted.",
+          "reference": "docs/design/SCOPED_SOURCE_QUOTES.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3009,7 +3043,8 @@
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
         "docs/design/SOURCE_EVIDENCE_TRIAL.md",
         "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
-        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md",
+        "docs/design/SCOPED_SOURCE_QUOTES.md"
       ]
     },
     {
@@ -3439,8 +3474,12 @@
     {
       "spec_version": "commentscope-mvp-20261112-v63",
       "reason": "v5 B실제19완료Agent1/이유응답확인,2Agent미달및quote/의미/관련성취약점보존. 기존C(Sol생성)의동일19고정비교를같은금융owner에등록하기전무료851검증을완료. 비용차를전체단가개선으로과장하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v64",
+      "reason": "v5 C는Agent0으로종료. 그래프7통과/연결4완료와모든의미검사를통과한2출처의adapter표현보류를분리. 연속비사실절에원문공유한정어를표시하는계약과같은C전체무료replay를먼저명시."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v58",
+  "design_version": "commentscope-detailed-design-20261112-v59",
   "design_document": "docs/design/README.md"
 }

@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261112-v63`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261112-v64`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v58`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v59`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -286,3 +286,7 @@ TA의 초행/시연 밖 행동 평가에 따라 핵심 과업 유용성과 화�
 
 종료된 TASK-022 v1의 [제한된 실제 F4 비교](design/SOURCE_EVIDENCE_TRIAL.md)는 당시 별도5달러/7시간 범위였다.
 현재 v3는 [무료 재계획](design/SOURCE_FIDELITY_VALIDATION.md)이며 과거 plan기한·잔액을 새 실행 권한으로 사용하지 않는다.
+
+후속 무료 구현: [공유 한정어의 원문 인용 변환](design/SCOPED_SOURCE_QUOTES.md)은 DEC-021의 후보 계약이다. C 원결과Agent0과 별도 replay를 구별한다.
+
+C 고정 비교는 Agent0/68회/1.760652달러로 종료됐다. 같은 C의 전체7개 저장 기록을 별도 무료 재변환하면 Agent1개/유효 지지4개를 구성하지만 runtime은 미실행이다. 최소2 Agent·전체 r5·MVP 완료는 미달/미검증이며 원 C 결과를 덮어쓰지 않는다.

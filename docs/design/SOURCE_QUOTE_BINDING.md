@@ -50,3 +50,9 @@ canonical 참고 주석은 명시적 annotation→wire encoder를 거쳐 새 bin
 반환은 승인이나 수리가 아니며 기존 binder가 거절한다. pending/unknown·다른 오류는 여전히 중단한다.
 자료 등록 전 새 model dispatch는 없다. 단일 실패에 맞춘 유료 retry·지지 기준 완화·기한 연장은0이다.
 독립 사람 gold/48 paired·전이·r5·3000규모·사용자 유용성은 별도다.
+
+## 후속 Agent 변환
+
+위 v5 graph/wire는 유지한다. 마지막 adapter는 [DEC-021 원문 조각 인용](SCOPED_SOURCE_QUOTES.md)의
+독립 arguments-scoped-quotes-v1 계약으로 구별한다. 검증된 비사실 절의 바깥 한정어를
+원문 조각과 생략 표시로 보존하며 원 v5 B/C 결과를 새 성공으로 덮어쓰지 않는다.
