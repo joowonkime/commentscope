@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261112-v56`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261112-v57`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v51`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v52`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -24,6 +24,9 @@ TASK-022의 v3 실제16요청은0.2058115달러로 완료됐다. 원3/8 보존 �
 고정한다. 사용자 지적에 따라6달러 제안을 철회하고 [이전 지출을 포함한 누적150달러](design/TEAM_BUDGET_REVISION.md)를 반영한다.
 동일 장부150달러 revision은 완료됐다. v4는 v3와 동일 money owner·최종 기한을 참조해
 이전 지출과 요청 수를 계승한다. 새 고정 실행 등록을 검사한 뒤 진행한다(DEC-017·018).
+v4 개발 통제는 정상8/8·왜곡8/8 탐지·오승인0으로 통과했다. 최장 원문 생성의 출력한도 종료와
+[정산된 실패 응답의 재호출 없는 후속 실행](design/SOURCE_FIDELITY_CONTINUATION.md)을 구별한다.
+이 결과는 실제 Agent 생성·전체 r5 합격이 아니다.
 
 ## 1. 이 문서의 역할과 읽는 순서
 
