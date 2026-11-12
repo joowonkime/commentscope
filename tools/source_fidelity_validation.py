@@ -31,8 +31,8 @@ from commentscope.storage import write_json_exclusive as write
 from experiments import remote_factory_pipeline as executor
 from tools import prepare_source_fidelity_validation as preparation,source_evidence_trial as previous
 
-VERSION='source-fidelity-cumulative-validation-20261112-v3'
-OWNER_VERSIONS=('source-fidelity-cumulative-validation-20261112-v1','source-fidelity-cumulative-validation-20261112-v2',VERSION)
+VERSION='source-fidelity-cumulative-validation-20261112-v4'
+OWNER_VERSIONS=('source-fidelity-cumulative-validation-20261112-v1','source-fidelity-cumulative-validation-20261112-v2','source-fidelity-cumulative-validation-20261112-v3',VERSION)
 ALLOWED=('source-evidence-proposal','source-evidence-observation','source-evidence-candidates','core','core-fidelity','facts','runtime')
 
 
@@ -60,6 +60,18 @@ def reconcile(old_plan_file,output,*,user_request):
     return dict(current_policy_file=str(output),revision=revision,account=ledger.summary(),key_metadata=metadata,new_model_calls=0)
 
 
+def generation_authorized(auth,original):
+    ref=auth.get('registered_generation_comparison')
+    if ref is None:return auth['generation_deployment']==original['generation_deployment']
+    try:
+        registered=read_json(ref['file']);policy=read_json(auth['shared_policy_file'])
+        return (sha(ref['file'])==ref['sha256'] and registered['arm']=='C'
+            and registered['source_evidence_protocol']=='source-evidence-graph-20261111-v1'
+            and registered['deployment']==auth['generation_deployment']==remote.SOL
+            and {**registered['spend_policy'],'maximum_usd':'150'}==policy)
+    except (OSError,ValueError,KeyError,TypeError):return False
+
+
 def guard(plan,*,call_seconds=0,allow_expired=False):
     directory=Path(plan['run_directory'])
     if (read_json(directory/'plan.json')!=plan or read_json(directory/'frozen.json')!={'plan_sha256':sha(directory/'plan.json')}
@@ -72,7 +84,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
         owner=auth['money_owner'];original=read_json(owner['file'])
         if (sha(owner['file'])!=owner['sha256'] or original!=owner['authorization'] or original['version'] not in OWNER_VERSIONS
                 or original['maximum_usd']!='150' or original['shared_policy_sha256']!=auth['shared_policy_sha256']
-                or original['generation_deployment']!=auth['generation_deployment']
+                or original.get('money_owner') or not generation_authorized(auth,original)
                 or start<datetime.fromisoformat(original['started_at']) or end>datetime.fromisoformat(original['deadline'])):
             raise ValueError('Supplement cannot change original owner, credit or deadline')
     if (auth['version']!=VERSION or not auth['user_request'].strip() or auth['maximum_usd']!='150'
@@ -102,7 +114,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
         raise ValueError('Historical owner charges or calls regressed')
 
 
-def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money_owner=None):
+def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money_owner=None,registered_generation_comparison=False):
     directory=Path(directory).resolve();executor.private(directory)
     if directory.exists() or not user_request.strip():raise ValueError('New fixed execution directory/instruction required')
     old=read_json(old_plan_file);packet=read_json(packet_file);policy=read_json(policy_file)
@@ -114,13 +126,18 @@ def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money
     if account['reserved_calls'] or account['uncertain_calls']:raise BudgetExhausted('Prior uncertain money needs reconciliation')
     review=preparation.cost_review(packet['controls'],proposed_usd=account['remaining_usd'],account_remaining_usd=account['remaining_usd'],key_remaining_usd=key['limit_remaining'])
     if key['limit']!=150 or not review['controls_fit']:raise BudgetExhausted('Cumulative balance cannot cover whole controls')
+    if packet.get('generation_deployment')!=old['deployment'] or packet.get('verification_deployment')!=remote.SOL:
+        raise ValueError('Planning packet must bind the exact generation and reviewer')
     endpoints={'generation':executor.provider_preflight(old['deployment']),'verification':executor.provider_preflight(remote.SOL)}
     now=datetime.now(timezone.utc)
     parent=None;deadline=now+timedelta(hours=7)
+    comparison=dict(file=str(Path(old_plan_file).resolve()),sha256=sha(old_plan_file)) if registered_generation_comparison else None
+    if comparison and money_owner is None:raise ValueError('Registered C comparison must retain the original money owner')
     if money_owner is not None:
         original=read_json(money_owner)
         if (original['version'] not in OWNER_VERSIONS or original['maximum_usd']!='150'
-                or original['shared_policy_sha256']!=sha(policy_file) or original['generation_deployment']!=old['deployment']):
+                or original['shared_policy_sha256']!=sha(policy_file) or original.get('money_owner')
+                or not generation_authorized(dict(generation_deployment=old['deployment'],shared_policy_file=str(policy_file),registered_generation_comparison=comparison),original)):
             raise ValueError('Existing cumulative owner must match account and generation')
         parent=dict(file=str(Path(money_owner).resolve()),sha256=sha(money_owner),authorization=original)
         deadline=datetime.fromisoformat(original['deadline'])
@@ -133,13 +150,14 @@ def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money
     auth['deadline']=deadline.isoformat();auth['opening_scope_calls']=opening_owner['calls']
     auth['opening_owner_charge_usd']=opening_owner['charged_usd']
     auth['settled_length_handling']='failed_binding_no_retry-v1'
+    if comparison:auth['registered_generation_comparison']=comparison
     if parent:auth['money_owner']=parent
     write(directory/'authorization.json',auth);binding=dict(file=str(directory/'authorization.json'),sha256=sha(directory/'authorization.json'),authorization=auth)
     inputs={**packet['inputs'],str(Path(old_plan_file).resolve()):sha(old_plan_file),str(Path(packet_file).resolve()):sha(packet_file),
         str(Path(__file__).resolve()):sha(Path(__file__)),str(ROOT/'tools/source_evidence_trial.py'):sha(ROOT/'tools/source_evidence_trial.py')}
     if parent:inputs[parent['file']]=parent['sha256']
     inputs[str(ROOT/'tools/source_fidelity_continuation.py')]=sha(ROOT/'tools/source_fidelity_continuation.py')
-    plan={**deepcopy(old), 'artifact_kind':VERSION,'arm':'B-'+g.VERSION.rsplit('-',1)[-1],'run_directory':str(directory),'authorization':binding,
+    plan={**deepcopy(old), 'artifact_kind':VERSION,'arm':old.get('arm','B')+'-'+g.VERSION.rsplit('-',1)[-1],'run_directory':str(directory),'authorization':binding,
         'spend_policy':policy,'spend_scope_sha256':parent['sha256'] if parent else binding['sha256'],'maximum_cost_usd':'150','subcap_usd':'150',
         'opening_scope_charge_usd':'0','source_evidence_protocol':g.VERSION,'inputs':inputs,'code_sha256':source_code_hashes(),
         'verification_deployment':deepcopy(remote.SOL),'role_registry':deepcopy(remote.ROLES),
@@ -235,11 +253,11 @@ def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--key-file',type=Path)
     sub=parser.add_subparsers(dest='action',required=True)
     p=sub.add_parser('reconcile');p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--output',type=Path,required=True);p.add_argument('--user-request',required=True)
-    p=sub.add_parser('prepare');p.add_argument('directory',type=Path);p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--packet',type=Path,required=True);p.add_argument('--policy',type=Path,required=True);p.add_argument('--user-request',required=True);p.add_argument('--money-owner',type=Path)
+    p=sub.add_parser('prepare');p.add_argument('directory',type=Path);p.add_argument('--old-plan',type=Path,required=True);p.add_argument('--packet',type=Path,required=True);p.add_argument('--policy',type=Path,required=True);p.add_argument('--user-request',required=True);p.add_argument('--money-owner',type=Path);p.add_argument('--registered-generation-comparison',action='store_true')
     p=sub.add_parser('run');p.add_argument('directory',type=Path);args=parser.parse_args()
     if args.key_file:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text(encoding='utf-8').strip()
     if args.action=='reconcile':result=reconcile(args.old_plan,args.output,user_request=args.user_request)
-    elif args.action=='prepare':result=prepare(args.directory,args.old_plan,args.packet,args.policy,user_request=args.user_request,money_owner=args.money_owner)
+    elif args.action=='prepare':result=prepare(args.directory,args.old_plan,args.packet,args.policy,user_request=args.user_request,money_owner=args.money_owner,registered_generation_comparison=args.registered_generation_comparison)
     else:
         report=run(args.directory);factory=report.get('factory') or {}
         result=dict(controls=report['controls'],profiling_sources=len(report['profiling']),

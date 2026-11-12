@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v61",
+  "spec_version": "commentscope-mvp-20261112-v63",
   "baseline_commit": "998627ff6c5770295b8ddd2ef45b4cf87130eb5a",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "v4 완료 Agent0 결과 보존. v5 원문 quote/host 주소 결합·typing/edge schema를 무료 TDD로 구현 중. 새 wire/고정 plan 등록 전 dispatch 없음. 원 누적150/owner79a2/종료14:45:28UTC/과거82회2.4250742 유지."
+    "hold_reason": "v5 B 완료:Agent1/3턴; 다음C등록준비. 원owner148회4.0512509/원14:45:28UTC/누적150보존. 관련24/Factory851통과,새C모델호출0. B재호출/fallback없음."
   },
   "requirements": [
     {
@@ -1569,6 +1569,27 @@
         "docs/design/SOURCE_QUOTE_BINDING.md",
         "docs/design/SOURCE_FIDELITY_RESULT.md"
       ]
+    },
+    {
+      "id": "DEC-020",
+      "title": "금융 owner 보존과 기존 C 생성 모델 설정의 실행 계약 분리",
+      "status": "proposed",
+      "requirements": [
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "같은 누적 예산/원 기한에서 기존 C의 Sol 생성 설정을 모델/구조 효과를 섞지 않고 어떻게 비교할 것인가?",
+      "options": [
+        "고정된 원 C 설정의 SHA를 새 execution auth에 결합하고 같은 owner 사용",
+        "새 owner/새7시간으로 재시작",
+        "동일 B 실행 중 모델 fallback"
+      ],
+      "selection": "첫 번째만 명시적 opt-in으로 구현/검사한다. B 종료/미정산0 후 고정 C의 동일19 전체를 새등록, 원owner/기한/기존지출 유지. 아직 실제 모델 채택 아님.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/REGISTERED_GENERATION_COMPARISON.md"
+      ]
     }
   ],
   "tasks": [
@@ -2877,7 +2898,8 @@
         "DEC-016",
         "DEC-017",
         "DEC-018",
-        "DEC-019"
+        "DEC-019",
+        "DEC-020"
       ],
       "depends_on": [
         "TASK-021",
@@ -2958,9 +2980,22 @@
           "scope": "Completed v4 actual19 sources/25 eligible pairs under same owner/deadline:19 unique proposal calls(no retries),16 bound/3 failures,graph audit3 complete/13 held,candidate records2 complete/1 held,Agents0/runtime0/fact calls0. New66calls confirmed2.2192627USD; owner82calls2.4250742USD; reserved/unknown0. Mechanical word-internal boundaries in8of16 graphs; not independent gold or causal attribution. v4 quality adoption failed/held, no r5/3000/UI success.",
           "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v5 B fixed19 complete:19 proposal calls/13 bound/6 failures,graph3complete/10held,candidate records3complete,Agent1 with3sources/7entries; position/reasons answered,missing abstain (3turns). Reason point manually matched attributed source prediction; meta audience prediction remains licensed. New66calls1.6261767USD; same owner148calls4.0512509USD; reserved/unknown0. Not independent gold,2Agent/r5/3000 not achieved.",
+          "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered C comparison guard and money-owner/deployment separation:24 related passed3.354s,wholeFactory851 passed272.538s. Unknown model,wrong arm,missing reference remain rejected; original same-owner/default behavior preserved. New C API calls0.",
+          "reference": "docs/design/REGISTERED_GENERATION_COMPARISON.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
+        "docs/design/REGISTERED_GENERATION_COMPARISON.md",
         "docs/design/SOURCE_QUOTE_BINDING.md",
         "docs/design/SOURCE_FIDELITY_RESULT.md",
         "docs/design/SOURCE_FIDELITY_CONTINUATION.md",
@@ -3396,8 +3431,16 @@
     {
       "spec_version": "commentscope-mvp-20261112-v61",
       "reason": "무료16개형식비교:catalog 원형은6.1%증가/APIenum초과,압축catalog의추가이점은직접압축quote대비1.2%p뿐. 목록/순환제약추가를폐기하고q/n/o 직접anchor를선택. byte감소11.3%/2개증가를실비절감/품질개선으로주장하지않음. 실제모델새호출0."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v62",
+      "reason": "v5 B의실제원문선택/해석실패가남아기존C(Sol생성)설정의동일19비교를준비. 임의모델/fallback/owner/7시간reset을금지하고,기존C plan SHA와동일DB/모델/가격을새execution auth로결합한다. B실행내용변경없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v63",
+      "reason": "v5 B실제19완료Agent1/이유응답확인,2Agent미달및quote/의미/관련성취약점보존. 기존C(Sol생성)의동일19고정비교를같은금융owner에등록하기전무료851검증을완료. 비용차를전체단가개선으로과장하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v56",
+  "design_version": "commentscope-detailed-design-20261112-v58",
   "design_document": "docs/design/README.md"
 }

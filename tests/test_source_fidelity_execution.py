@@ -96,6 +96,23 @@ class CumulativeExecutionTests(TestCase):
             with patch.object(live.executor.RemoteSession,'call') as parent,self.assertRaises(BudgetExhausted):session.call('source-evidence-observation',request)
             parent.assert_not_called()
 
+    def test_only_explicit_registered_C_model_can_differ_from_same_money_owner(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root=Path(temp);p,auth=self.supplement(root);owner=deepcopy(auth['money_owner']['authorization'])
+            owner['generation_deployment']={**owner['generation_deployment'],'model':'openai/gpt-5.2'}
+            parent_file=self.save(root/'original-owner.json',owner)
+            auth['money_owner']=dict(file=str(parent_file),sha256=sha(parent_file),authorization=owner);p['spend_scope_sha256']=sha(parent_file)
+            money=MagicMock();money.summary.return_value={'charged_usd':'25','calls':16};self.refreeze(root,p,auth)
+            with patch.object(live.executor,'ledger',return_value=money):
+                with self.assertRaises(ValueError):live.guard(p)
+                old=dict(arm='C',source_evidence_protocol='source-evidence-graph-20261111-v1',deployment=live.remote.SOL,
+                    spend_policy={**p['spend_policy'],'maximum_usd':'50'})
+                ref=self.save(root/'closed-C-plan.json',old);auth['registered_generation_comparison']=dict(file=str(ref),sha256=sha(ref))
+                p['inputs'][str(ref)]=sha(ref);self.refreeze(root,p,auth);live.guard(p)
+                for wrong in ({**old,'arm':'B'},{**old,'deployment':{**live.remote.SOL,'model':'another/provider'}}):
+                    self.save(ref,wrong);auth['registered_generation_comparison']['sha256']=sha(ref);p['inputs'][str(ref)]=sha(ref);self.refreeze(root,p,auth)
+                    with self.assertRaises(ValueError):live.guard(p)
+
     def session(self,request):
         s=object.__new__(live.Session);s.seen=set();s.phase='controls';s.control_requests={digest(request)}
         s.pilot_ids={'s'};s.plan={'eligible_source_ids':['s'],'maximum_physical_requests':800};return s

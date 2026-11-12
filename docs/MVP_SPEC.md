@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261112-v61`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261112-v63`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v56`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v58`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -35,6 +35,9 @@ v4 개발 통제는 정상8/8·왜곡8/8 탐지·오승인0으로 통과했다. 
 후속 [v5 원문 quote/host 주소 결합](design/SOURCE_QUOTE_BINDING.md)은 숫자 위치 생성과
 무효 typing/edge 선택을 제거하는 opt-in 후보 구현이다(DEC-019). q/n/o wire와 canonical 주소·원 응답을
 구별하며, 기존 whole-source 감사·필수 사실·지지 기준을 유지한다. 무료 검사와 새 실제 품질은 구별한다.
+v5 B 실제19출처는 Agent1개/각 지지3개·이유 응답1개·없는 정보 보류를 확인했다.
+목표2개에는 못 미치며 [기존 C 생성 배정 비교](design/REGISTERED_GENERATION_COMPARISON.md)를
+원owner/원기한/누적150 안에서 별도 등록한다. 실제 결과와 미검증은 [결과 문서](design/SOURCE_FIDELITY_RESULT.md)에 보존한다.
 
 ## 1. 이 문서의 역할과 읽는 순서
 
