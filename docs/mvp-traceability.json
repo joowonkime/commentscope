@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v56",
-  "baseline_commit": "bd44c96c79a70d7ab66e40bc467b392102534ebe",
+  "spec_version": "commentscope-mvp-20261112-v58",
+  "baseline_commit": "bd50217aee3c43beee585b128bdece46e9bb18ea",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자 계속진행. 누적팀150/동일owner79a2…/원기한14:45UTC 유지. v3 통제는0.2058115로완료했으나참고주석오류와일반조건표현불가확인. v4계약/검사/새개발통제supplement등록전새dispatch없음;6달러승인질문철회유지."
+    "hold_reason": "v4 고정16통제와실제19출처검증완료: Agent0/runtime0,추가2.2192627USD,원owner총2.4250742/82회/미정산0. 완료run은readonly. 다음은SOURCE_FIDELITY_RESULT의주소결합/닫힌schema 책임을무료설계/구현하고새요청을고정. 재정승인대기나6달러질문아님. 원owner/최종14:45:28UTC/누적150과과거지출보존."
   },
   "requirements": [
     {
@@ -2837,7 +2837,7 @@
     },
     {
       "id": "TASK-022",
-      "title": "F4 고정 비교·전이 — v1 종료 이력과 v3 재계획",
+      "title": "F4 실제19출처 실패 완료와 주소/형식 계약 후속 구현",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -2858,7 +2858,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
-        "사용자가소액상한의필요성을지적해6달러제안/확인철회. 기승인팀누적150달러를동일DB의명시적revision으로반영하고, 고정16통제→3출처profiling→기존전체19출처F4/Compiler/runtime을새owner/유한기한에등록해진행한다. 원5달러owner/기한/지출/실패는보존한다.",
+        "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
         "[종료된 v1 단계/보존] 새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
@@ -2919,9 +2919,23 @@
           "scope": "v4 neutral/necessary condition propagation and missing-condition hold, v3 receipt/profile rejection, same-owner deadline/charge/call preservation. Focused45 passed6.303s; final reference plan10 passed1.857s; whole Factory836 passed272.034s. No v4 model calls yet.",
           "reference": "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v4 development controls16: normal8/8 retained, distorted8/8 detected/held,0 false approval, all receipts valid; confirmed0.1969075USD. First real longest-root proposal hit13312 output tokens: incomplete_generation/length, confirmed0.2008545USD; run stopped in pilot, no actual Agents yet. All money settled; no retry.",
+          "reference": "docs/design/SOURCE_FIDELITY_CONTINUATION.md",
+          "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Completed v4 actual19 sources/25 eligible pairs under same owner/deadline:19 unique proposal calls(no retries),16 bound/3 failures,graph audit3 complete/13 held,candidate records2 complete/1 held,Agents0/runtime0/fact calls0. New66calls confirmed2.2192627USD; owner82calls2.4250742USD; reserved/unknown0. Mechanical word-internal boundaries in8of16 graphs; not independent gold or causal attribution. v4 quality adoption failed/held, no r5/3000/UI success.",
+          "reference": "docs/design/SOURCE_FIDELITY_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
+        "docs/design/SOURCE_FIDELITY_RESULT.md",
+        "docs/design/SOURCE_FIDELITY_CONTINUATION.md",
         "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
         "docs/design/TEAM_BUDGET_REVISION.md",
         "docs/design/SOURCE_FIDELITY_VALIDATION.md",
@@ -3334,8 +3348,16 @@
     {
       "spec_version": "commentscope-mvp-20261112-v56",
       "reason": "실제v3통제와참고주석을대조해normal판정자료오류및conditional_antecedent의necessary강제발견.사용자계속진행에따라일반condition_for를추가하고동일누적owner/기한의새개발통제를등록한다.구결과/비용은성공으로재평가하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v57",
+      "reason": "실제 v4 최장 원문에서출력한도종료가단계전체를중단. 완료영수증/정산/동일checkpoint를확인한실패응답만원형그대로binder에전달해출처보류하고나머지등록작업계속. 미정산/불명응답은여전히중단,모델/출력할당/criteria/원owner기한변경및retry없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v58",
+      "reason": "동일계획실제19출처를재호출없이완료했으나Agent0. 검토통제8/8을실제생성성공과분리하고출력/위치/유형/관계선택문제를전수결과로보존한다. 단일댓글수리나지지기준완화대신host주소결합/닫힌schema책임을후속무료구현으로고정한다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v51",
+  "design_version": "commentscope-detailed-design-20261112-v53",
   "design_document": "docs/design/README.md"
 }

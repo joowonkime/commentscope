@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_source_fidelity_continuation",
     "test_source_condition_qualification",
     "test_source_fidelity_execution",
     "test_openrouter_budget_revision",
