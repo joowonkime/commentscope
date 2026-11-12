@@ -1,5 +1,6 @@
 """Explicit credit increase preserves historical money and old run ceilings."""
 from pathlib import Path
+from contextlib import closing
 import sqlite3
 import tempfile
 from unittest import TestCase
@@ -20,7 +21,7 @@ class BudgetRevisionTests(TestCase):
         self.ledger.resolve_conservatively(second,plan_sha256='a'*64,request_sha256='c'*64,evidence_sha256='d'*64,reason='Authored terminal loss; retain entire reservation.')
 
     def history(self):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             return {t:db.execute('SELECT * FROM '+t+' ORDER BY 1').fetchall() for t in ('plans','calls','resolutions')}
 
     def increase(self,**kwargs):
@@ -56,7 +57,7 @@ class BudgetRevisionTests(TestCase):
     def test_revision_replay_is_idempotent_and_stale_instances_cannot_report_or_reserve(self):
         stale=SpendLedger(self.path,'synthetic-team',maximum_usd='50',opening_charge_usd='1')
         first=self.increase();second=self.increase();self.assertEqual(first,second)
-        with sqlite3.connect(self.path) as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM limit_revisions').fetchone()[0],1)
+        with closing(sqlite3.connect(self.path)) as db:self.assertEqual(db.execute('SELECT COUNT(*) FROM limit_revisions').fetchone()[0],1)
         with self.assertRaises(ValueError):stale.summary()
         with self.assertRaises(ValueError):stale.reserve('f'*64,'f'*64,'0.1',run_limit_usd='5',key_remaining_usd='140')
         current=SpendLedger(self.path,'synthetic-team',maximum_usd='150',opening_charge_usd='1')

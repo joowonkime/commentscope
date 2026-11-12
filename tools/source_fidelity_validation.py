@@ -4,6 +4,7 @@ One owner/window/request inventory; no per-experiment small cap, retries or
 automatic model/criteria changes. Historical owners and charges stay intact.
 """
 import argparse
+from contextlib import closing
 from copy import deepcopy
 from datetime import datetime,timedelta,timezone
 from decimal import Decimal
@@ -40,7 +41,7 @@ def reconcile(old_plan_file,output,*,user_request):
     if not user_request.strip():raise ValueError('Existing user credit/continuation instruction required')
     old=read_json(old_plan_file);policy=old['spend_policy'];metadata=executor.key_metadata()
     if metadata['limit']!=150:raise ValueError('Observed team credit differs from accepted150')
-    with sqlite3.connect(Path(policy['ledger']).resolve().as_uri()+'?mode=ro',uri=True) as db:
+    with closing(sqlite3.connect(Path(policy['ledger']).resolve().as_uri()+'?mode=ro',uri=True)) as db:
         current=db.execute('SELECT maximum FROM policy WHERE id=1').fetchone()[0]
     ledger=SpendLedger(policy['ledger'],policy['account_id'],maximum_usd=dollars(current),opening_charge_usd=policy['opening_charge_usd'])
     auth_file=output.with_name('credit-revision-authorization.json')
