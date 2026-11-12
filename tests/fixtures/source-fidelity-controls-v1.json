@@ -1,0 +1,1725 @@
+{
+  "version": "source-fidelity-controls-20261112-v1",
+  "source_kind": "authored_synthetic",
+  "annotation_kind": "authored_reference_not_independent_human_gold",
+  "families": [
+    {
+      "source": {
+        "id": "s01",
+        "text": "Do not adopt P.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s01",
+                "start": 0,
+                "end": 15
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s01",
+                "start": 0,
+                "end": 15
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s01",
+                  "start": 0,
+                  "end": 15
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s01",
+                  "start": 0,
+                  "end": 15
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "negative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s01",
+              "start": 0,
+              "end": 15
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "negation",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s01",
+                "start": 0,
+                "end": 15
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s01",
+                "start": 0,
+                "end": 15
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s01",
+                  "start": 0,
+                  "end": 15
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s01",
+                  "start": 0,
+                  "end": 15
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s01",
+              "start": 0,
+              "end": 15
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "scope_fidelity"
+          ]
+        },
+        "source_failures": [],
+        "coverage_failure": false,
+        "missing_units": false,
+        "missing_edges": false
+      }
+    },
+    {
+      "source": {
+        "id": "s02",
+        "text": "P may reduce costs.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s02",
+                "start": 0,
+                "end": 19
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s02",
+                "start": 0,
+                "end": 19
+              }
+            ],
+            "speech_act": "assertion",
+            "kind": "prediction",
+            "commitment": "endorsed",
+            "epistemic": "possible",
+            "world": "actual",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s02",
+                  "start": 0,
+                  "end": 19
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s02",
+                  "start": 0,
+                  "end": 19
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s02",
+              "start": 0,
+              "end": 19
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "possibility",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s02",
+                "start": 0,
+                "end": 19
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s02",
+                "start": 0,
+                "end": 19
+              }
+            ],
+            "speech_act": "assertion",
+            "kind": "prediction",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "actual",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s02",
+                  "start": 0,
+                  "end": 19
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s02",
+                  "start": 0,
+                  "end": 19
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s02",
+              "start": 0,
+              "end": 19
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "modality_world_fidelity"
+          ]
+        },
+        "source_failures": [],
+        "coverage_failure": false,
+        "missing_units": false,
+        "missing_edges": false
+      }
+    },
+    {
+      "source": {
+        "id": "s03",
+        "text": "P should be fair.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s03",
+                "start": 0,
+                "end": 17
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s03",
+                "start": 0,
+                "end": 17
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s03",
+                  "start": 0,
+                  "end": 17
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s03",
+                  "start": 0,
+                  "end": 17
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s03",
+              "start": 0,
+              "end": 17
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "desired_world",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s03",
+                "start": 0,
+                "end": 17
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s03",
+                "start": 0,
+                "end": 17
+              }
+            ],
+            "speech_act": "assertion",
+            "kind": "fact",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "actual",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s03",
+                  "start": 0,
+                  "end": 17
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s03",
+                  "start": 0,
+                  "end": 17
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s03",
+              "start": 0,
+              "end": 17
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "typing_fidelity",
+            "modality_world_fidelity"
+          ]
+        },
+        "source_failures": [],
+        "coverage_failure": false,
+        "missing_units": false,
+        "missing_edges": false
+      }
+    },
+    {
+      "source": {
+        "id": "s04",
+        "text": "They say P is fair, but I reject P.",
+        "parent": {
+          "id": "parent04",
+          "text": "P is fair."
+        }
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 18
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 35
+              }
+            ],
+            "speech_act": "report",
+            "kind": "value",
+            "commitment": "reported_only",
+            "epistemic": "categorical",
+            "world": "unspecified",
+            "assertion_mode": "quoted_content",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 0,
+                  "end": 18
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 0,
+                  "end": 18
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s04",
+                "start": 24,
+                "end": 35
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 35
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 24,
+                  "end": 35
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 24,
+                  "end": 35
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "negative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [
+          {
+            "local_id": "E1",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "opposes",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          }
+        ],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s04",
+              "start": 0,
+              "end": 35
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "reported_ownership",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 18
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 35
+              }
+            ],
+            "speech_act": "report",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "unspecified",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 0,
+                  "end": 18
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 0,
+                  "end": 18
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s04",
+                "start": 24,
+                "end": 35
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s04",
+                "start": 0,
+                "end": 35
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 24,
+                  "end": 35
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s04",
+                  "start": 24,
+                  "end": 35
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "negative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [
+          {
+            "local_id": "E1",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "opposes",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          }
+        ],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s04",
+              "start": 0,
+              "end": 35
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "ownership_fidelity"
+          ]
+        },
+        "source_failures": [],
+        "coverage_failure": false,
+        "missing_units": false,
+        "missing_edges": false
+      }
+    },
+    {
+      "source": {
+        "id": "s05",
+        "text": "If funding is secured, adopt P.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s05",
+                "start": 23,
+                "end": 31
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s05",
+                "start": 0,
+                "end": 31
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 23,
+                  "end": 31
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 23,
+                  "end": 31
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s05",
+                "start": 0,
+                "end": 21
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s05",
+                "start": 0,
+                "end": 31
+              }
+            ],
+            "speech_act": "assertion",
+            "kind": "fact",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "hypothetical",
+            "assertion_mode": "conditional_antecedent",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 0,
+                  "end": 21
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 0,
+                  "end": 21
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [
+          {
+            "local_id": "E1",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "necessary_condition_for",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          }
+        ],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s05",
+              "start": 0,
+              "end": 31
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "missing_condition",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s05",
+                "start": 23,
+                "end": 31
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s05",
+                "start": 0,
+                "end": 31
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 23,
+                  "end": 31
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s05",
+                  "start": 23,
+                  "end": 31
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s05",
+              "start": 0,
+              "end": 31
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "conditions_complete"
+          ]
+        },
+        "source_failures": [
+          "dependency_coverage"
+        ],
+        "coverage_failure": true,
+        "missing_units": true,
+        "missing_edges": true
+      }
+    },
+    {
+      "source": {
+        "id": "s06",
+        "text": "Adopt P because fairness matters.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 7
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 33
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 0,
+                  "end": 7
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 0,
+                  "end": 7
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s06",
+                "start": 16,
+                "end": 33
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 33
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "unspecified",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 16,
+                  "end": 33
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 16,
+                  "end": 33
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [
+          {
+            "local_id": "E1",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "reason_for",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          }
+        ],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s06",
+              "start": 0,
+              "end": 33
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "missing_reason",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 7
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 33
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 0,
+                  "end": 7
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 0,
+                  "end": 7
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s06",
+                "start": 16,
+                "end": 33
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s06",
+                "start": 0,
+                "end": 33
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "unspecified",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 16,
+                  "end": 33
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s06",
+                  "start": 16,
+                  "end": 33
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s06",
+              "start": 0,
+              "end": 33
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "reasons_complete"
+          ]
+        },
+        "source_failures": [
+          "dependency_coverage"
+        ],
+        "coverage_failure": false,
+        "missing_units": true,
+        "missing_edges": true
+      }
+    },
+    {
+      "source": {
+        "id": "s07",
+        "text": "We should reconsider P because costs doubled.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s07",
+                "start": 0,
+                "end": 22
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s07",
+                "start": 0,
+                "end": 45
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 0,
+                  "end": 22
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 0,
+                  "end": 22
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "U2",
+            "own_spans": [
+              {
+                "source_id": "s07",
+                "start": 31,
+                "end": 45
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s07",
+                "start": 0,
+                "end": 45
+              }
+            ],
+            "speech_act": "assertion",
+            "kind": "fact",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "actual",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 31,
+                  "end": 45
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 31,
+                  "end": 45
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "change"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [
+          {
+            "local_id": "E1",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "reason_for",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          },
+          {
+            "local_id": "E2",
+            "from_unit": "U2",
+            "to_unit": "U1",
+            "relation": "required_premise_for",
+            "cue_refs": [],
+            "interpretation": "resolved"
+          }
+        ],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s07",
+              "start": 0,
+              "end": 45
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1",
+              "U2"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "hidden_fact_premise",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s07",
+                "start": 0,
+                "end": 22
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s07",
+                "start": 0,
+                "end": 45
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 0,
+                  "end": 22
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s07",
+                  "start": 0,
+                  "end": 22
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "neither"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s07",
+              "start": 0,
+              "end": 45
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "premises_complete"
+          ]
+        },
+        "source_failures": [
+          "dependency_coverage"
+        ],
+        "coverage_failure": true,
+        "missing_units": true,
+        "missing_edges": true
+      }
+    },
+    {
+      "source": {
+        "id": "s08",
+        "text": "Only rural schools should receive an increase of 10 units next year.",
+        "parent": null
+      },
+      "faithful": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s08",
+                "start": 0,
+                "end": 68
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s08",
+                "start": 0,
+                "end": 68
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 0,
+                  "end": 68
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 0,
+                  "end": 68
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 0,
+                  "end": 4
+                },
+                {
+                  "source_id": "s08",
+                  "start": 49,
+                  "end": 51
+                }
+              ],
+              "population_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 5,
+                  "end": 18
+                }
+              ],
+              "time_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 58,
+                  "end": 67
+                }
+              ],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 37,
+                  "end": 45
+                }
+              ],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "change"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s08",
+              "start": 0,
+              "end": 68
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "family": "scope_qualifiers",
+      "distorted": {
+        "units": [
+          {
+            "local_id": "U1",
+            "own_spans": [
+              {
+                "source_id": "s08",
+                "start": 11,
+                "end": 45
+              }
+            ],
+            "envelope_spans": [
+              {
+                "source_id": "s08",
+                "start": 0,
+                "end": 68
+              }
+            ],
+            "speech_act": "preference",
+            "kind": "value",
+            "commitment": "endorsed",
+            "epistemic": "categorical",
+            "world": "desired",
+            "assertion_mode": "assertion",
+            "scope": {
+              "subject_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 11,
+                  "end": 45
+                }
+              ],
+              "referent_refs": [],
+              "predicate_refs": [
+                {
+                  "source_id": "s08",
+                  "start": 11,
+                  "end": 45
+                }
+              ],
+              "polarity_refs": [],
+              "modality_refs": [],
+              "quantifier_refs": [],
+              "population_refs": [],
+              "time_refs": [],
+              "world_refs": [],
+              "comparison_refs": [],
+              "change_refs": [],
+              "qualifier_refs": [],
+              "polarity": "affirmative",
+              "change_or_state": "change"
+            },
+            "interpretation": "resolved"
+          }
+        ],
+        "edges": [],
+        "coverage": [
+          {
+            "span": {
+              "source_id": "s08",
+              "start": 0,
+              "end": 68
+            },
+            "disposition": "represented",
+            "unit_ids": [
+              "U1"
+            ],
+            "reason_code": "represented"
+          }
+        ],
+        "issues": []
+      },
+      "expected_detection": {
+        "unit_failures": {
+          "U1": [
+            "boundary_fidelity",
+            "scope_fidelity",
+            "qualifiers_complete"
+          ]
+        },
+        "source_failures": [
+          "scope_coverage"
+        ],
+        "coverage_failure": true,
+        "missing_units": false,
+        "missing_edges": false
+      }
+    }
+  ]
+}

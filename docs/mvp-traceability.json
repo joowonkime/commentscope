@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v53",
-  "baseline_commit": "922e60e4d0b120e421b9b5f4f59680ddd5ed8987",
+  "spec_version": "commentscope-mvp-20261112-v55",
+  "baseline_commit": "e1f9918fd399366026cdd4146c378bd645e6c9a6",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "TASK025의 v3 무료 구현/Factory/양OS CI 완료. 다음TASK022는 무료 재계획만 한다. 기존 공유5달러 실험은4.7406401에서닫힘; 기존 plan/잔액 재개 금지. 실제v3품질·전이·r5·3천개 원가/속도 미검증, 신규유료권한 없음."
+    "hold_reason": "이전5달러 owner/기한은 종료된 채 보존. 사용자 지적으로6달러 제안/확인 철회. 누적팀150달러 정합화와 새 고정 실행 등록을 검사 중이며, 등록 전 provider dispatch 없음."
   },
   "requirements": [
     {
@@ -65,7 +65,8 @@
         "src/commentscope/factory/source_evidence_graph.py",
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
-        "tools/prepare_source_evidence_review.py"
+        "tools/prepare_source_evidence_review.py",
+        "tools/prepare_source_fidelity_validation.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -94,7 +95,8 @@
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
-        "tests/test_source_fidelity_audit.py"
+        "tests/test_source_fidelity_audit.py",
+        "tests/test_source_fidelity_validation_plan.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -163,7 +165,8 @@
         "src/commentscope/factory/source_evidence_graph.py",
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
-        "tools/prepare_source_evidence_review.py"
+        "tools/prepare_source_evidence_review.py",
+        "tools/prepare_source_fidelity_validation.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -191,7 +194,8 @@
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
-        "tests/test_source_fidelity_audit.py"
+        "tests/test_source_fidelity_audit.py",
+        "tests/test_source_fidelity_validation_plan.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -260,7 +264,8 @@
         "src/commentscope/factory/source_evidence_graph.py",
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
-        "tools/prepare_source_evidence_review.py"
+        "tools/prepare_source_evidence_review.py",
+        "tools/prepare_source_fidelity_validation.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -288,7 +293,8 @@
         "tests/test_source_evidence_graph.py",
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
-        "tests/test_source_fidelity_audit.py"
+        "tests/test_source_fidelity_audit.py",
+        "tests/test_source_fidelity_validation_plan.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -553,7 +559,9 @@
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
         "tools/source_evidence_trial.py",
-        "tools/source_evidence_recovery.py"
+        "tools/source_evidence_recovery.py",
+        "tools/prepare_source_fidelity_validation.py",
+        "tools/source_fidelity_validation.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -588,10 +596,13 @@
         "tests/test_source_evidence_trial.py",
         "tests/test_source_evidence_recovery.py",
         "tests/test_source_audit_preflight.py",
-        "tests/test_source_fidelity_audit.py"
+        "tests/test_source_fidelity_audit.py",
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_openrouter_budget_revision.py",
+        "tests/test_source_fidelity_execution.py"
       ],
       "acceptance": [
-        "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
+        "사용자 증액 지시와 소액 상한 철회에 따라 팀키/현재 누적 장부150달러를 지킨다. 이전50달러 policy와 과거 owner별 상한·보수차감은 보존하고, 동일DB/계정/opening의 명시적 한도 revision으로만 반영한다. 실험별6달러 제안은 철회한다.",
         "최초 분석·증분·재열람·1:1·그룹·성찰 비용을 분리 측정하며 서비스 단가 목표는 결정 기록으로 확정한다."
       ],
       "evidence": [
@@ -768,7 +779,9 @@
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
         "tools/source_evidence_trial.py",
-        "tools/source_evidence_recovery.py"
+        "tools/source_evidence_recovery.py",
+        "tools/prepare_source_fidelity_validation.py",
+        "tools/source_fidelity_validation.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -805,7 +818,10 @@
         "tests/test_source_evidence_trial.py",
         "tests/test_source_evidence_recovery.py",
         "tests/test_source_audit_preflight.py",
-        "tests/test_source_fidelity_audit.py"
+        "tests/test_source_fidelity_audit.py",
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_openrouter_budget_revision.py",
+        "tests/test_source_fidelity_execution.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1468,6 +1484,42 @@
       ],
       "design_refs": [
         "docs/design/SOURCE_FIDELITY_AUDIT.md"
+      ]
+    },
+    {
+      "id": "DEC-017",
+      "title": "소액 실험 상한 철회와 팀 누적150달러 장부 정합화",
+      "status": "accepted",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "동조/과도 보류와 구조 효과를 분리하면서 종료된 예산을 재개하지 않고 어떤 비교를 준비할 것인가?",
+      "options": [
+        "짝 통제→동일 생성모델 실제 profiling→동결 paired/전이·Agent",
+        "생성모델과 구조를 동시에 바꾼 즉시 전체 실행"
+      ],
+      "selection": "사용자 신규 지적에 따라6달러 제안/확인을 철회. 이미 증액된 팀150달러를 현재 누적 장부에 명시적 revision으로 반영하고 이전 청구/owner/상한을 유지한다. 고정 자료·요청·기한·가격/receipt·미확정/중복 호출 통제 아래 실제 검증을 이어간다.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Fixed canonical16-request wire reserve5.405045 plus0.341860 headroom=5.746905; initial5USD proposal refused and6USD proposed. Real6candidates/19sources/25pairs and original48/48 thread-disjoint splits pinned. Related46 and full Factory819 passed. No dispatch/authorization; current observed team150 remaining131.07261646 differs from internal50 remaining24.58151411.",
+          "reference": "docs/design/SOURCE_FIDELITY_VALIDATION.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "User prior team150 credit/experiment instruction and latest objection to per-experiment small caps: withdraw6USD confirmation. Explicit same-DB revision/finite-scope executor implemented; related68 synthetic checks pass, actual revision and model results pending. Not semantic adoption.",
+          "reference": "docs/design/TEAM_BUDGET_REVISION.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/TEAM_BUDGET_REVISION.md",
+        "docs/design/SOURCE_FIDELITY_VALIDATION.md"
       ]
     }
   ],
@@ -2774,15 +2826,16 @@
       "decisions": [
         "DEC-013",
         "DEC-015",
-        "DEC-016"
+        "DEC-016",
+        "DEC-017"
       ],
       "depends_on": [
         "TASK-021",
         "TASK-025"
       ],
-      "status": "next",
+      "status": "in_progress",
       "deliverables": [
-        "다음 행동은 v3 고정 통제/비교/전이의 무료 재계획이다. 옛5달러 plan은 종료됐으며 잔액/원기한을 새 호출 권한으로 쓰지 않는다. 신규 실행은 새 protocol·자료·가격·상한·중단 조건/권한을 별도로 동결한다.",
+        "사용자가소액상한의필요성을지적해6달러제안/확인철회. 기승인팀누적150달러를동일DB의명시적revision으로반영하고, 고정16통제→3출처profiling→기존전체19출처F4/Compiler/runtime을새owner/유한기한에등록해진행한다. 원5달러owner/기한/지출/실패는보존한다.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
         "[종료된 v1 단계/보존] 새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
@@ -2819,9 +2872,23 @@
           "scope": "Safe source-audit preflight:5regressions passed9.761s; final Factory798 passed414.089s. Exact same synthetic posted bundle/Agents with fewer calls for already blocked sources; healthy two-Agent case preserves every request; SCOPABLE valid peer retained; altered provenance rejected. On archived actual A records,18 retained/13statically blocked/5potential:dependency116to5,owner22to8,audit tasks116to13. No new model calls or general cost/quality claim.",
           "reference": "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "New v3 free planning: eight authored faithful/distorted pairs compile to16 canonical requests; exact-wire control reservation5.405045 plus headroom0.341860=5.746905 rejects5USD proposal, fits proposed6USD. Frozen real6cores/19sources/25pairs, development48 reference presence not complete gold, transfer48 no shared thread. New10 planning tests plus graph/fidelity/spec related46 pass2.428s; full Factory819 passed285.206s. No new model calls, owner or financial authorization; comparison cost remains null.",
+          "reference": "docs/design/SOURCE_FIDELITY_VALIDATION.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Cumulative revision/executor guards:4 ledger revision tests preserve all financial rows/opening/old run ceilings;6 execution tests cover settled history, plan tampering, closed request/source stages, stable pilot/full checkpoint IDs, no unaffordable authorization, readonly completion. Related68 passed3.881s. New credit mutation/provider calls not yet executed; full Factory829 passed293.346s.",
+          "reference": "docs/design/TEAM_BUDGET_REVISION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
+        "docs/design/TEAM_BUDGET_REVISION.md",
+        "docs/design/SOURCE_FIDELITY_VALIDATION.md",
         "docs/design/SOURCE_FIDELITY_AUDIT.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
@@ -3219,8 +3286,16 @@
     {
       "spec_version": "commentscope-mvp-20261112-v53",
       "reason": "사용자가F4내부재설계설명에동의. 계층/기준을유지한원문대조감사·희소관계완전성·world/확신강도분리 계약을TASK025로구체화. TASK022의기존실패/예산중단은완료처리하지않고deferred, v3무료구현후별도새계획/검증으로연결. 새기본값/유료권한/품질채택아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v54",
+      "reason": "사용자 진행 지시에 따라 새 v3 통제/실제비교/비용 preflight를 무료로 준비한다. 이전실험과 신규6달러제안·미발급권한을 분리하고 구조/모델효과·주석/전이의한계를 보존한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v55",
+      "reason": "사용자가잔여가충분한데개별상한이필요한지지적.6달러제안철회하고기승인팀150달러를동일금융장부에감사기록으로반영한다.과거지출/owner상한/unknown보존,임의resume/초기화불가.새고정검증진행에반복소액승인요구하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v48",
+  "design_version": "commentscope-detailed-design-20261112-v50",
   "design_document": "docs/design/README.md"
 }

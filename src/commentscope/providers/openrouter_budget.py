@@ -1,7 +1,8 @@
 """Durable API money reservations, separate from the local time ledger.
 
 Unknown charges retain their entire reservation and stop new paid requests.
-Neither reopening a ledger nor resuming a plan can increase its spending limit.
+Reopening/resuming cannot increase limits. An explicit audited credit revision
+may raise the account ceiling without changing historical money or run caps.
 """
 from contextlib import contextmanager
 from decimal import Decimal, InvalidOperation, ROUND_CEILING, ROUND_FLOOR
@@ -45,7 +46,7 @@ class SpendLedger:
         if not isinstance(account_id, str) or not account_id.strip() or maximum <= 0 or opening > maximum:
             raise ValueError('Explicit account and valid finite opening balance required')
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.maximum, self.opening = maximum, opening
+        self.maximum, self.opening, self.account_id = maximum, opening, account_id
         with self.transaction() as db:
             db.execute('CREATE TABLE IF NOT EXISTS policy (id INTEGER PRIMARY KEY CHECK(id=1), version TEXT, account TEXT, maximum INTEGER, opening INTEGER)')
             db.execute('CREATE TABLE IF NOT EXISTS plans (sha TEXT PRIMARY KEY, maximum INTEGER)')
@@ -68,6 +69,43 @@ class SpendLedger:
             raise
         finally: db.close()
 
+    def check_policy(self,db):
+        actual=db.execute('SELECT version,account,maximum,opening FROM policy WHERE id=1').fetchone()
+        if actual!=(VERSION,self.account_id,self.maximum,self.opening):
+            raise ValueError('Stale API account policy; reopen with current audited limit')
+
+    def increase_limit(self,*,maximum_usd,observed_key_limit_usd,authorization_sha256,user_request):
+        """Explicit control-plane revision; never a resume or a money refund."""
+        identity(authorization_sha256)
+        maximum=units(maximum_usd,rounding=ROUND_FLOOR);observed=units(observed_key_limit_usd,rounding=ROUND_FLOOR)
+        if not isinstance(user_request,str) or not user_request.strip() or maximum>observed:
+            raise ValueError('User instruction and sufficient observed team credit required')
+        with self.transaction() as db:
+            self.check_policy(db)
+            db.execute('CREATE TABLE IF NOT EXISTS limit_revisions (authorization_sha TEXT PRIMARY KEY, record TEXT NOT NULL)')
+            previous=db.execute('SELECT record FROM limit_revisions WHERE authorization_sha=?',(authorization_sha256,)).fetchone()
+            if previous is not None:
+                record=json.loads(previous[0])
+                if (record['new_maximum_usd']!=dollars(maximum) or self.maximum!=maximum
+                        or record['observed_key_limit_usd']!=dollars(observed) or record['user_request']!=user_request):
+                    raise ValueError('Credit revision authorization changed')
+                return record
+            if maximum<=self.maximum:raise ValueError('Explicit credit increase required')
+            if db.execute("SELECT 1 FROM calls WHERE state NOT IN ('complete','conservative') LIMIT 1").fetchone():
+                raise BudgetExhausted('Active or uncertain money must settle before credit revision')
+            history={name:db.execute('SELECT * FROM '+name+' ORDER BY 1').fetchall() for name in ('plans','calls','resolutions')}
+            charged=self.opening+db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
+            record=dict(version='openrouter-account-credit-revision-20261112-v1',account_id=self.account_id,
+                authorization_sha256=authorization_sha256,user_request=user_request,
+                old_maximum_usd=dollars(self.maximum),new_maximum_usd=dollars(maximum),
+                observed_key_limit_usd=dollars(observed),opening_charge_usd=dollars(self.opening),
+                charged_usd_at_change=dollars(charged),history_sha256=digest(history),
+                changed_at=datetime.now(timezone.utc).isoformat())
+            db.execute('UPDATE policy SET maximum=? WHERE id=1',(maximum,))
+            db.execute('INSERT INTO limit_revisions VALUES (?,?)',(authorization_sha256,json.dumps(record,sort_keys=True)))
+        self.maximum=maximum
+        return record
+
     def reserve(self, plan_sha, request_sha, maximum_cost_usd, *, run_limit_usd, key_remaining_usd):
         identity(plan_sha); identity(request_sha)
         reserve = units(maximum_cost_usd)
@@ -75,6 +113,7 @@ class SpendLedger:
         remaining = units(key_remaining_usd, rounding=ROUND_FLOOR)
         if limit <= 0: raise ValueError('Positive run spending limit required')
         with self.transaction() as db:
+            self.check_policy(db)
             row = db.execute('SELECT maximum FROM plans WHERE sha=?', (plan_sha,)).fetchone()
             if row is not None and row[0] != limit: raise ValueError('Frozen run spending limit changed')
             if row is None: db.execute('INSERT INTO plans VALUES (?,?)', (plan_sha, limit))
@@ -91,6 +130,7 @@ class SpendLedger:
         actual = None if actual_cost_usd is None else units(actual_cost_usd)
         exceeded = False
         with self.transaction() as db:
+            self.check_policy(db)
             row = db.execute('SELECT reserved,state FROM calls WHERE id=?', (call_id,)).fetchone()
             if row is None or row[1] != 'reserved': raise ValueError('Missing or already settled API reservation')
             exceeded = actual is not None and actual > row[0]
@@ -104,6 +144,7 @@ class SpendLedger:
         for value in (plan_sha256, request_sha256, evidence_sha256): identity(value)
         if not isinstance(reason, str) or not reason.strip(): raise ValueError('Explained audit evidence required')
         with self.transaction() as db:
+            self.check_policy(db)
             row = db.execute('SELECT plan_sha,request_sha,reserved,charged,state FROM calls WHERE id=?', (call_id,)).fetchone()
             if row is None or row[:2] != (plan_sha256, request_sha256) or row[4] != 'unknown':
                 raise ValueError('Only the exact terminal unknown charge may be resolved')
@@ -114,6 +155,7 @@ class SpendLedger:
     def summary(self, *, plan_sha256=None):
         if plan_sha256 is not None: identity(plan_sha256)
         with self.transaction() as db:
+            self.check_policy(db)
             clause, args = ('', ()) if plan_sha256 is None else (' WHERE plan_sha=?', (plan_sha256,))
             opening = self.opening if plan_sha256 is None else 0
             row = None if plan_sha256 is None else db.execute('SELECT maximum FROM plans WHERE sha=?', (plan_sha256,)).fetchone()
