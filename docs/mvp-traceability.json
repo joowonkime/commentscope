@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v58",
-  "baseline_commit": "bd50217aee3c43beee585b128bdece46e9bb18ea",
+  "spec_version": "commentscope-mvp-20261112-v61",
+  "baseline_commit": "998627ff6c5770295b8ddd2ef45b4cf87130eb5a",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "v4 고정16통제와실제19출처검증완료: Agent0/runtime0,추가2.2192627USD,원owner총2.4250742/82회/미정산0. 완료run은readonly. 다음은SOURCE_FIDELITY_RESULT의주소결합/닫힌schema 책임을무료설계/구현하고새요청을고정. 재정승인대기나6달러질문아님. 원owner/최종14:45:28UTC/누적150과과거지출보존."
+    "hold_reason": "v4 완료 Agent0 결과 보존. v5 원문 quote/host 주소 결합·typing/edge schema를 무료 TDD로 구현 중. 새 wire/고정 plan 등록 전 dispatch 없음. 원 누적150/owner79a2/종료14:45:28UTC/과거82회2.4250742 유지."
   },
   "requirements": [
     {
@@ -66,7 +66,8 @@
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
         "tools/prepare_source_evidence_review.py",
-        "tools/prepare_source_fidelity_validation.py"
+        "tools/prepare_source_fidelity_validation.py",
+        "src/commentscope/factory/source_quote_anchors.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -96,7 +97,8 @@
         "tests/test_source_evidence_pipeline.py",
         "tests/test_source_audit_preflight.py",
         "tests/test_source_fidelity_audit.py",
-        "tests/test_source_fidelity_validation_plan.py"
+        "tests/test_source_fidelity_validation_plan.py",
+        "tests/test_source_quote_anchors.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -1543,6 +1545,30 @@
       "design_refs": [
         "docs/design/SOURCE_CONDITION_QUALIFICATION.md"
       ]
+    },
+    {
+      "id": "DEC-019",
+      "title": "원문 quote와 host 주소 결합·닫힌 유형/관계 schema",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "숫자 span 생성과 host가 이미 아는 유형/관계 제약을 모델에 맡긴 실패를 의미 기준 완화 없이 어떻게 제거할 것인가?",
+      "options": [
+        "원문 quote 선택+host exact binding, typing/관계 schema 제약",
+        "숫자 주소 유지와 prompt 보강",
+        "동일 표현에서 더 강한 생성 모델 비교"
+      ],
+      "selection": "v5 quote/host binding과 기존 host typing/edge 제약을 먼저 구현·무료 검증한다. 의미 감사/최소지지/필수사실 유지, 같은 생성모델로 표현 효과부터 등록 비교한다. 아직 품질 채택 아님.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SOURCE_QUOTE_BINDING.md",
+        "docs/design/SOURCE_FIDELITY_RESULT.md"
+      ]
     }
   ],
   "tasks": [
@@ -2850,7 +2876,8 @@
         "DEC-015",
         "DEC-016",
         "DEC-017",
-        "DEC-018"
+        "DEC-018",
+        "DEC-019"
       ],
       "depends_on": [
         "TASK-021",
@@ -2934,6 +2961,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/SOURCE_QUOTE_BINDING.md",
         "docs/design/SOURCE_FIDELITY_RESULT.md",
         "docs/design/SOURCE_FIDELITY_CONTINUATION.md",
         "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
@@ -3356,8 +3384,20 @@
     {
       "spec_version": "commentscope-mvp-20261112-v58",
       "reason": "동일계획실제19출처를재호출없이완료했으나Agent0. 검토통제8/8을실제생성성공과분리하고출력/위치/유형/관계선택문제를전수결과로보존한다. 단일댓글수리나지지기준완화대신host주소결합/닫힌schema책임을후속무료구현으로고정한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v59",
+      "reason": "실제19출처의주소/형식실패를근거로모델의숫자주소계산을host exact-quote 결합으로이동. 무효typing/edge선택은schema로제한하며,기존전수의미감사와기준/지출을보존. 무료TDD후새고정비교전까지추가추론없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v60",
+      "reason": "추가유료호출전무료format변환16개에서inline quote의총byte감소1.3%/3개증가확인. 비용절감으로과장하지않고중복정확quote를catalog에한번선언하고필드는ID로참조하는v5 draft를무료검증한다. 원오류/주소/의미를수리한성공으로보고하지않는다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v61",
+      "reason": "무료16개형식비교:catalog 원형은6.1%증가/APIenum초과,압축catalog의추가이점은직접압축quote대비1.2%p뿐. 목록/순환제약추가를폐기하고q/n/o 직접anchor를선택. byte감소11.3%/2개증가를실비절감/품질개선으로주장하지않음. 실제모델새호출0."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v53",
+  "design_version": "commentscope-detailed-design-20261112-v56",
   "design_document": "docs/design/README.md"
 }

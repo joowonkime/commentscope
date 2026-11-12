@@ -31,8 +31,8 @@ from commentscope.storage import write_json_exclusive as write
 from experiments import remote_factory_pipeline as executor
 from tools import prepare_source_fidelity_validation as preparation,source_evidence_trial as previous
 
-VERSION='source-fidelity-cumulative-validation-20261112-v2'
-OWNER_VERSIONS=('source-fidelity-cumulative-validation-20261112-v1',VERSION)
+VERSION='source-fidelity-cumulative-validation-20261112-v3'
+OWNER_VERSIONS=('source-fidelity-cumulative-validation-20261112-v1','source-fidelity-cumulative-validation-20261112-v2',VERSION)
 ALLOWED=('source-evidence-proposal','source-evidence-observation','source-evidence-candidates','core','core-fidelity','facts','runtime')
 
 
@@ -85,6 +85,8 @@ def guard(plan,*,call_seconds=0,allow_expired=False):
             or plan.get('opening_scope_calls',0)!=auth.get('opening_scope_calls',0)
             or type(plan.get('opening_scope_calls',0)) is not int or not 0<=plan.get('opening_scope_calls',0)<=800
             or plan.get('opening_owner_charge_usd','0')!=auth.get('opening_owner_charge_usd','0')
+            or plan.get('settled_length_handling')!=auth.get('settled_length_handling')
+            or plan.get('settled_length_handling') not in (None,'failed_binding_no_retry-v1')
             or plan['allowed_stage_families']!=list(ALLOWED) or auth.get('historical_charges_preserved') is not True):
         raise ValueError('Cumulative budget, scope or role contract changed')
     if not allow_expired and not start<=datetime.now(timezone.utc)<end-timedelta(seconds=call_seconds+3):raise TimeoutError('Fixed validation window expired')
@@ -130,11 +132,13 @@ def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money
         historical_owner=old['spend_scope_sha256'],historical_charges_preserved=True,key_observation=key)
     auth['deadline']=deadline.isoformat();auth['opening_scope_calls']=opening_owner['calls']
     auth['opening_owner_charge_usd']=opening_owner['charged_usd']
+    auth['settled_length_handling']='failed_binding_no_retry-v1'
     if parent:auth['money_owner']=parent
     write(directory/'authorization.json',auth);binding=dict(file=str(directory/'authorization.json'),sha256=sha(directory/'authorization.json'),authorization=auth)
     inputs={**packet['inputs'],str(Path(old_plan_file).resolve()):sha(old_plan_file),str(Path(packet_file).resolve()):sha(packet_file),
         str(Path(__file__).resolve()):sha(Path(__file__)),str(ROOT/'tools/source_evidence_trial.py'):sha(ROOT/'tools/source_evidence_trial.py')}
     if parent:inputs[parent['file']]=parent['sha256']
+    inputs[str(ROOT/'tools/source_fidelity_continuation.py')]=sha(ROOT/'tools/source_fidelity_continuation.py')
     plan={**deepcopy(old), 'artifact_kind':VERSION,'arm':'B-'+g.VERSION.rsplit('-',1)[-1],'run_directory':str(directory),'authorization':binding,
         'spend_policy':policy,'spend_scope_sha256':parent['sha256'] if parent else binding['sha256'],'maximum_cost_usd':'150','subcap_usd':'150',
         'opening_scope_charge_usd':'0','source_evidence_protocol':g.VERSION,'inputs':inputs,'code_sha256':source_code_hashes(),
@@ -144,6 +148,7 @@ def prepare(directory,old_plan_file,packet_file,policy_file,*,user_request,money
         'allowed_stage_families':list(ALLOWED),'eligible_source_ids':[r['source']['id'] for r in packet['source_inventory']['sources']],
         'component_profiling_only':True,'formal_admission_eligible':False,'quality_gate_passed':False,'providers_at_prepare':endpoints}
     plan.update(opening_scope_calls=opening_owner['calls'],opening_owner_charge_usd=opening_owner['charged_usd'])
+    plan['settled_length_handling']=auth['settled_length_handling']
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
     executor.archive_sources(directory,plan['code_sha256'])
     guard(plan)
@@ -170,7 +175,11 @@ class Session(executor.RemoteSession):
         elif self.phase!='factory':raise ValueError('Only graph profiling allowed before Factory')
         if key not in self.seen and self.plan.get('opening_scope_calls',0)+len(self.seen)>=800:raise BudgetExhausted('Frozen physical request inventory cap')
         self.seen.add(key)
-        return super().call(family+'-'+digest(request)[:20],request)
+        try:return super().call(family+'-'+digest(request)[:20],request)
+        except executor.ModelResponseUnavailable:
+            if self.plan.get('settled_length_handling')!='failed_binding_no_retry-v1' or family not in ALLOWED[:3]:raise
+            from tools.source_fidelity_continuation import saved_length
+            return saved_length(self,stage,request)
 
 
 def run(directory):

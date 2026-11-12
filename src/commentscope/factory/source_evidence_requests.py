@@ -30,12 +30,13 @@ def candidate_request(verified, candidates):
     cs={c['id']:mc.validate_candidate(c) for c in candidates}
     if len(cs)!=len(candidates) or not 1<=len(cs)<=8:raise ValueError('Unique bounded candidate batch required')
     units=verified['proposal']['output']['units'];ids=[u['local_id'] for u in units]
-    edges=verified['proposal']['output']['edges'];edge_ids=[e['local_id'] for e in edges]
+    edges=verified['proposal']['output']['edges'];edge_ids=[e['local_id'] for e in edges if e['relation'] in ('required_premise_for',*g.CONDITION_RELATIONS)]
+    fact_ids=[u['local_id'] for u in units if u['kind']=='fact' and u['commitment']=='endorsed' and u['assertion_mode']=='assertion' and u['world']=='actual']
     id_list=lambda:array(g.choice(ids),maximum=len(ids))
     row=obj(dict(candidate_id=g.choice(sorted(cs)),position_unit_ids=id_list(),
         alignment=g.choice(('supports_core','equivalent','conditional','opposed','unrelated','uncertain')),
         reason_unit_ids=id_list(),concession_unit_ids=id_list(),essential_condition_unit_ids=id_list(),
-        dependency_edge_ids=array(g.choice(edge_ids),maximum=len(edge_ids)),core_required_fact_unit_ids=id_list(),
+        dependency_edge_ids=array(g.choice(edge_ids),maximum=len(edge_ids)),core_required_fact_unit_ids=array(g.choice(fact_ids),maximum=len(fact_ids)),
         full_original_coverage=g.choice(g.VERDICTS),ownership=g.choice(g.VERDICTS),scope_preserved=g.choice(g.VERDICTS),
         issue_codes=array(g.choice(g.CODES),maximum=16)))
     return mc.request(SYSTEM,{'EVIDENCE_PROTOCOL':g.VERSION,'ORIGINAL':mc.packet(verified['proposal']['source']),

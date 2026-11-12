@@ -115,6 +115,19 @@ class CumulativeExecutionTests(TestCase):
             s.phase='unregistered'
             with self.assertRaises(ValueError):s.call('source-evidence-proposal',request)
 
+    def test_new_explicit_length_policy_returns_failed_result_without_retry(self):
+        from tools import source_fidelity_continuation as continuation
+        _,env,_,_,_=example();request=live.g.proposal_request(env);s=self.session(request);s.phase='profiling'
+        s.plan['settled_length_handling']='failed_binding_no_retry-v1'
+        failure=live.executor.ModelResponseUnavailable('source-evidence-proposal',digest(request),digest(request['data']))
+        result={'errors':['incomplete_generation'],'raw':'truncated','output':None}
+        with patch.object(live.executor.RemoteSession,'call',side_effect=failure) as parent,patch.object(continuation,'saved_length',return_value=result) as proof:
+            self.assertEqual(s.call('source-evidence-proposal',request),result);parent.assert_called_once();proof.assert_called_once()
+        s.plan.pop('settled_length_handling')
+        with patch.object(live.executor.RemoteSession,'call',side_effect=failure),patch.object(continuation,'saved_length') as proof:
+            with self.assertRaises(live.executor.ModelResponseUnavailable):s.call('source-evidence-proposal',request)
+            proof.assert_not_called()
+
     def test_credit_reconciliation_preserves_same_database_opening_and_history(self):
         with tempfile.TemporaryDirectory() as temp:
             root=Path(temp);path=root/'money.sqlite';old={'account_id':'synthetic','ledger':str(path),'maximum_usd':'50','opening_charge_usd':'1'}

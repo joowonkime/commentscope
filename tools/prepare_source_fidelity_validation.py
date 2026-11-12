@@ -1,4 +1,4 @@
-"""Freeze v3 validation inputs and conservative costs without dispatch or authority.
+"""Freeze fidelity inputs and conservative costs without dispatch or authority.
 
 No HTTP, key loading, paid reservation, model runner or authorization writer.
 Read-only endpoint/account observations must be supplied as a separate input.
@@ -41,7 +41,7 @@ def controls(fixture,deployment):
             or fixture.get('annotation_kind')!='authored_reference_not_independent_human_gold'
             or len(fixture['families'])!=8 or {r['family'] for r in fixture['families']}!=FAMILIES):
         raise ValueError('All eight fixed authored control pairs required')
-    if deployment!=remote.SOL:raise ValueError('Frozen v3 reviewer deployment required')
+    if deployment!=remote.SOL:raise ValueError('Frozen fidelity reviewer deployment required')
     rows=[];source_ids=[]
     for family in fixture['families']:
         if set(family)!={'family','source','expected_detection',*VARIANTS} or family['faithful']==family['distorted']:
@@ -55,7 +55,7 @@ def controls(fixture,deployment):
         env=g.envelope(family['source'],snapshot_id=CONTROL_VERSION,snapshot_sha256=digest(fixture))
         source_ids.append(family['source']['id'])
         for variant in VARIANTS:
-            proposal=g.bind_proposal(env,{'output':family[variant]});request=g.observation_request(proposal)
+            proposal=g.bind_annotation(env,{'output':family[variant]});request=g.observation_request(proposal)
             rows.append(dict(case_id='C'+digest([family['family'],variant,proposal])[:20],family=family['family'],
                 variant=variant,proposal=proposal,request=request,request_sha256=digest(request),
                 expected_detection=deepcopy(expected),
@@ -82,7 +82,7 @@ def cost_review(pack,*,proposed_usd,account_remaining_usd,key_remaining_usd):
         controls_required_with_headroom_usd=str(total+headroom),
         controls_fit=total+headroom<=min(cap,account,key),
         full_comparison_estimated_usd=None,full_comparison_admitted=False,
-        unmeasured_stages=['v3 actual source proposal','v3 actual source audit','candidate certificates','required facts','runtime'],
+        unmeasured_stages=[g.VERSION+' source proposal',g.VERSION+' source audit','candidate certificates','required facts','runtime'],
         cost_kind='conservative exact-wire reservation, not measured or predicted actual charge',
         financial_authorization=False,dispatch_enabled=False,new_model_calls=0)
 

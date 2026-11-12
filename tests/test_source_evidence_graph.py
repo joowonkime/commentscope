@@ -33,7 +33,7 @@ def example(text='Adopt P because fairness matters.'):
     output = dict(units=units, edges=[dict(local_id='E1', from_unit='U2', to_unit='U1',
         relation='reason_for', cue_refs=[span('because')], interpretation='resolved')],
         coverage=[dict(span=span(text), disposition='represented', unit_ids=['U1', 'U2'], reason_code='represented')], issues=[])
-    proposal = graph.bind_proposal(envelope, {'output': output})
+    proposal = graph.bind_annotation(envelope, {'output': output})
     observation = observation_example(proposal)
     return source, envelope, output, proposal, observation
 
@@ -105,14 +105,14 @@ class SourceEvidenceGraphTests(TestCase):
             lambda x: x['units'][0]['own_spans'][0].update(start=True),
         ]:
             value = deepcopy(output); mutate(value)
-            with self.assertRaises(ValueError): graph.bind_proposal(env, {'output': value})
+            with self.assertRaises(ValueError): graph.bind_annotation(env, {'output': value})
         _, _, _, proposal, _ = example('🙂 Adopt P because fairness matters.')
         self.assertEqual(graph.literal(proposal['envelope'], proposal['output']['units'][0]['own_spans']), 'Adopt P')
 
     def test_capacity_and_observation_coverage_are_closed(self):
         _, env, output, proposal, observed = example()
         invalid = deepcopy(output); invalid['units'] = [dict(output['units'][0], local_id=f'U{i}') for i in range(1,34)]
-        with self.assertRaises(ValueError): graph.bind_proposal(env, {'output':invalid})
+        with self.assertRaises(ValueError): graph.bind_annotation(env, {'output':invalid})
         for key in ['unit_observations','edge_observations','coverage_observations']:
             value=deepcopy(observed);value[key].pop()
             with self.assertRaises(ValueError): graph.bind_observation(proposal, {'output':value})
@@ -121,12 +121,12 @@ class SourceEvidenceGraphTests(TestCase):
         _, env, output, _, _ = example()
         output['edges'] = [dict(local_id='E1',from_unit='U1',to_unit='U2',relation='required_premise_for',cue_refs=[],interpretation='resolved'),
                            dict(local_id='E2',from_unit='U2',to_unit='U1',relation='necessary_condition_for',cue_refs=[],interpretation='resolved')]
-        p=graph.bind_proposal(env,{'output':output});o=graph.bind_observation(p,{'output':observation_example(p)})
+        p=graph.bind_annotation(env,{'output':output});o=graph.bind_observation(p,{'output':observation_example(p)})
         self.assertEqual(graph.verify(p,o)['status'],'unresolved')
 
     def test_schema_rejects_unknown_keys_empty_receipts_and_non_applicable_assertion(self):
         _, env, output, proposal, _ = example()
         for mutate in [lambda x:x.update(approved=True),lambda x:x['units'][0].update(kind='not_applicable')]:
             x=deepcopy(output);mutate(x)
-            with self.assertRaises(ValueError):graph.bind_proposal(env,{'output':x})
+            with self.assertRaises(ValueError):graph.bind_annotation(env,{'output':x})
         with self.assertRaises(ValueError):graph.bind_observation(proposal,{'output':{}})

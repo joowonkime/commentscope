@@ -1,7 +1,7 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261112-v53`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~025, DEC-001~018.
+설계 버전: `commentscope-detailed-design-20261112-v56`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~025, DEC-001~019.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
@@ -23,6 +23,8 @@ v4 supplement는 동일 money owner·기한·과거 지출을 계승해 등록�
 [정산된 실패 응답의 후속 실행](SOURCE_FIDELITY_CONTINUATION.md)으로 재호출 없이 보류한다.
 **[실제19출처 최종 결과](SOURCE_FIDELITY_RESULT.md): Agent0/runtime0, v4 생성 품질 미채택.**
 host 주소 결합·유형 일관성·닫힌 관계 목록을 다음 무료 구현으로 검토한다. 검토 통제 통과를 생성 성공으로 보고하지 않는다.
+현재 후속 계약은 [v5 exact-quote 결합](SOURCE_QUOTE_BINDING.md)이다. wire는 정확한 원문 q/n/o를 받고,
+host가 canonical source_id/start/end와 원문 전체 envelope를 결합한다. 의미·원가 채택은 미검증이다.
 새 protocol만 명시적으로 고르며 기본 legacy는 유지한다. 실제 품질·원가 채택은 미검증이다.
 [이전 Factory 구조안](FACTORY_STRUCTURE.md)은 당시 현재/제안을 구별한 이력이다. 최신999 사용모델·결과를 그 당시 도식으로 대체하지 않는다.
 

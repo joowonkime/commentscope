@@ -29,7 +29,7 @@ class SourceFidelityAuditTests(TestCase):
 
     def test_no_facts_or_proposed_edges_does_not_waive_missing_premise_checks(self):
         _,env,out,_,_=example();out['edges']=[]
-        p=g.bind_proposal(env,{'output':out});o=observation_example(p)
+        p=g.bind_annotation(env,{'output':out});o=observation_example(p)
         self.assertEqual(self.verify(p,o)['status'],'complete')
         for mutate in (
             lambda x:x['unit_observations'][0].update(premises_complete='unknown'),
@@ -43,7 +43,7 @@ class SourceFidelityAuditTests(TestCase):
 
     def test_audit_inventory_rejects_duplicates_foreign_addresses_and_old_receipts(self):
         _,env,out,p,o=example()
-        for version in ('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3'):
+        for version in ('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3','source-evidence-graph-20261112-v4'):
             old=deepcopy(p);old['artifact_kind']=version+'/proposal'
             with self.assertRaises(ValueError):g.observation_request(old)
         for mutate in (
@@ -55,7 +55,7 @@ class SourceFidelityAuditTests(TestCase):
             value=deepcopy(o);mutate(value)
             with self.assertRaises(ValueError):self.verify(p,value)
         out['edges'][0]['local_id']='invented'
-        with self.assertRaises(ValueError):g.bind_proposal(env,{'output':out})
+        with self.assertRaises(ValueError):g.bind_annotation(env,{'output':out})
         schema=g.observation_request(p)['schema']['properties']['issues']['items']['properties']['target_ids']['items']
         self.assertEqual(set(schema['enum']),{'s','U1','U2','E1'})
 
@@ -64,15 +64,15 @@ class SourceFidelityAuditTests(TestCase):
         out['units'][0].update(world='desired',epistemic='categorical')
         # An alternate faithful span annotation is audited, not re-extracted.
         out['units'][0]['scope']['predicate_refs']=[]
-        p=g.bind_proposal(env,{'output':out});o=observation_example(p)
+        p=g.bind_annotation(env,{'output':out});o=observation_example(p)
         self.assertNotIn('typing',o['unit_observations'][0])
         self.assertEqual(self.verify(p,o)['status'],'complete')
         for world in ('unspecified','unknown'):
             value=deepcopy(out);value['units'][1].update(kind='fact',world=world)
-            p=g.bind_proposal(env,{'output':value})
+            p=g.bind_annotation(env,{'output':value})
             self.assertEqual(self.verify(p,observation_example(p))['status'],'unresolved')
         value=deepcopy(out);value['units'][1]['epistemic']='desired'
-        with self.assertRaises(ValueError):g.bind_proposal(env,{'output':value})
+        with self.assertRaises(ValueError):g.bind_annotation(env,{'output':value})
 
     def test_sparse_workload_covers_every_unit_edge_and_partition_without_pairs(self):
         _,env,out,_,_=example()
@@ -81,7 +81,7 @@ class SourceFidelityAuditTests(TestCase):
             value=deepcopy(out)
             value['units']+=[dict(deepcopy(out['units'][1]),local_id=f'U{i}') for i in range(3,size+1)]
             value['coverage'][0]['unit_ids']=[u['local_id'] for u in value['units']]
-            p=g.bind_proposal(env,{'output':value});work=g.audit_workload(p,candidate_count=9)
+            p=g.bind_annotation(env,{'output':value});work=g.audit_workload(p,candidate_count=9)
             self.assertEqual(work['audit_verdicts'],10*size+1+1+3)
             self.assertEqual(work['candidate_calls'],2)
             self.assertEqual(work['source_calls'],2)
@@ -92,7 +92,7 @@ class SourceFidelityAuditTests(TestCase):
 
 class FidelityCandidateAndCostTests(TestCase):
     def bind(self, source, env, out, candidate=None):
-        p=g.bind_proposal(env,{'output':out})
+        p=g.bind_annotation(env,{'output':out})
         v=g.verify(p,g.bind_observation(p,{'output':observation_example(p)}))
         cs=mc.candidates(extraction([source],{'s':['Adopt P.']}))
         members=[membership([source],cs,[dict(source_id='s',candidate_id=cs[0]['id'])])]
@@ -142,7 +142,7 @@ class FidelityCandidateAndCostTests(TestCase):
         import test_factory_cost_plan as cf
         h=cf.CostPlanningTests();h.setUp();h.plan['source_evidence_protocol']=g.VERSION
         counts={**h.work['counts'],**dict.fromkeys(cost.GRAPH_STAGES,6)}
-        for protocol in (None,'source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3',g.VERSION):
+        for protocol in (None,'source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3','source-evidence-graph-20261112-v4',g.VERSION):
             profile=deepcopy(h.profile)
             for stage in cost.GRAPH_STAGES:
                 profile['stages'][stage]=dict(calls=2,cost_usd='0.002',maximum_cost_usd='0.001',
