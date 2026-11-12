@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v55",
-  "baseline_commit": "e1f9918fd399366026cdd4146c378bd645e6c9a6",
+  "spec_version": "commentscope-mvp-20261112-v56",
+  "baseline_commit": "bd44c96c79a70d7ab66e40bc467b392102534ebe",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "이전5달러 owner/기한은 종료된 채 보존. 사용자 지적으로6달러 제안/확인 철회. 누적팀150달러 정합화와 새 고정 실행 등록을 검사 중이며, 등록 전 provider dispatch 없음."
+    "hold_reason": "사용자 계속진행. 누적팀150/동일owner79a2…/원기한14:45UTC 유지. v3 통제는0.2058115로완료했으나참고주석오류와일반조건표현불가확인. v4계약/검사/새개발통제supplement등록전새dispatch없음;6달러승인질문철회유지."
   },
   "requirements": [
     {
@@ -1521,6 +1521,28 @@
         "docs/design/TEAM_BUDGET_REVISION.md",
         "docs/design/SOURCE_FIDELITY_VALIDATION.md"
       ]
+    },
+    {
+      "id": "DEC-018",
+      "title": "일반 조건·필요조건·이유·필수 사실 전제의 구분",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "원문이 말하지 않은 필요성을 추가하지 않고 조건을 보존하며 잘못된 참고 주석과 모델 오류를 어떻게 분리할 것인가?",
+      "options": [
+        "중립 condition_for를 추가하고 필요성/이유 관계를 구분",
+        "모든 조건을 necessary로 유지하고 모델을 바꿈"
+      ],
+      "selection": "v4 opt-in condition_for+necessary_condition_for를 분리하고 실제 투영/누락/사실/전체 source 기준을 유지. 새 개발 통제를 같은 누적 owner/기한의 supplement로 검증한다.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SOURCE_CONDITION_QUALIFICATION.md"
+      ]
     }
   ],
   "tasks": [
@@ -2827,7 +2849,8 @@
         "DEC-013",
         "DEC-015",
         "DEC-016",
-        "DEC-017"
+        "DEC-017",
+        "DEC-018"
       ],
       "depends_on": [
         "TASK-021",
@@ -2884,9 +2907,22 @@
           "scope": "Cumulative revision/executor guards:4 ledger revision tests preserve all financial rows/opening/old run ceilings;6 execution tests cover settled history, plan tampering, closed request/source stages, stable pilot/full checkpoint IDs, no unaffordable authorization, readonly completion. Related68 passed3.881s. New credit mutation/provider calls not yet executed; full Factory829 passed293.346s.",
           "reference": "docs/design/TEAM_BUDGET_REVISION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "v3 actual16 controls completed0.2058115USD:0missing/invalid/unreceipted, normal3of8 complete, distorted8blocked/7reference-matched detection/0false approvals. Profiling/full19 not run. Offline reference QA identified erroneous/ambiguous normal annotations and a schema forcing every conditional antecedent to necessary_condition_for. No model accuracy/adoption claim; original responses and charges unchanged.",
+          "reference": "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "v4 neutral/necessary condition propagation and missing-condition hold, v3 receipt/profile rejection, same-owner deadline/charge/call preservation. Focused45 passed6.303s; final reference plan10 passed1.857s; whole Factory836 passed272.034s. No v4 model calls yet.",
+          "reference": "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
+        "docs/design/SOURCE_CONDITION_QUALIFICATION.md",
         "docs/design/TEAM_BUDGET_REVISION.md",
         "docs/design/SOURCE_FIDELITY_VALIDATION.md",
         "docs/design/SOURCE_FIDELITY_AUDIT.md",
@@ -3294,8 +3330,12 @@
     {
       "spec_version": "commentscope-mvp-20261112-v55",
       "reason": "사용자가잔여가충분한데개별상한이필요한지지적.6달러제안철회하고기승인팀150달러를동일금융장부에감사기록으로반영한다.과거지출/owner상한/unknown보존,임의resume/초기화불가.새고정검증진행에반복소액승인요구하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v56",
+      "reason": "실제v3통제와참고주석을대조해normal판정자료오류및conditional_antecedent의necessary강제발견.사용자계속진행에따라일반condition_for를추가하고동일누적owner/기한의새개발통제를등록한다.구결과/비용은성공으로재평가하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v50",
+  "design_version": "commentscope-detailed-design-20261112-v51",
   "design_document": "docs/design/README.md"
 }

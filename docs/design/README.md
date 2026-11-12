@@ -1,7 +1,7 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261112-v50`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~025, DEC-001~017.
+설계 버전: `commentscope-detailed-design-20261112-v51`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~025, DEC-001~018.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
@@ -14,15 +14,17 @@
 v1 원 실행/유실 비용/미완료 A/C는 보존하며 실제 v2 품질이나 전체 MVP 완료로 승격하지 않는다.
 TASK-025의 무료 구현·회귀 완료 근거는 [F4 v3 원문 대조 감사](SOURCE_FIDELITY_AUDIT.md)다.
 TASK-022의 고정 검증은 종료된5달러 비교와 구별하며, 사용자 지적으로 제안된6달러 확인은 철회한다.
-현재 [v3 고정 대조·비용 계획](SOURCE_FIDELITY_VALIDATION.md)은8가족16요청·기존6후보/19출처/25관계와
+현재 [고정 대조·비용 계획](SOURCE_FIDELITY_VALIDATION.md)은8가족16요청·기존6후보/19출처/25관계와
 개발48/전이48을 구별한다. [누적150달러 예산 revision](TEAM_BUDGET_REVISION.md)은 과거 지출·owner 한도를 보존한다.
-새 고정 owner·시간·요청 등록 전에는 provider dispatch를 하지 않는다.
-새 protocol만 명시적으로 고르며 기본 legacy는 유지한다. 실제 v3 모델 품질·원가 채택은 미검증이다.
+v3 실제16요청/0.2058115달러와 원3/8 결과는 보존한다. 참고 주석 오류와 일반조건 표현 문제는
+[v4 조건·필요성 구분](SOURCE_CONDITION_QUALIFICATION.md)에서 다룬다.
+v4 supplement는 동일 money owner·기한·과거 지출을 계승해 등록한다.
+새 protocol만 명시적으로 고르며 기본 legacy는 유지한다. 실제 품질·원가 채택은 미검증이다.
 [이전 Factory 구조안](FACTORY_STRUCTURE.md)은 당시 현재/제안을 구별한 이력이다. 최신999 사용모델·결과를 그 당시 도식으로 대체하지 않는다.
 
 **완료된 실험 설계:** 사용자 입력 풀 확대 지시에 따른 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md).
 실행은1 Agent/이유 부족으로 완료됐다. 이후 v1 F4 비교도 별도 owner·원 지출 계승 아래 예산 중단됐다.
-현재 v3 재계획에는 새로운 money owner·기한이 없다.
+현재 누적150달러 실행은 등록됐으며 v4도 기존 owner와 최종 기한을 연장하지 않는다.
 이전 MINING_EXPERIMENT의 합성12/실제24 범위는 종료된 소규모 계획이다. snapshot3000 상한을
 실제 입력3000개로 오해하지 않는다. 새 실행기는999개 전체 입력과 형식적 gate 불승격을 검사한다.
 

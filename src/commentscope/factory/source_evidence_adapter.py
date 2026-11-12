@@ -36,8 +36,8 @@ def lower(batches):
                 'reason' if lid in row['reason_unit_ids'] else
                 'concession' if lid in row['concession_unit_ids'] else
                 'essential_condition' if lid in row['essential_condition_unit_ids'] else 'factual_premise')
-        conditions=[units[e['from_unit']] for e in edges if e['to_unit']==lid and e['relation']=='necessary_condition_for']
-        if any(any(e['to_unit']==c['local_id'] and e['relation']=='necessary_condition_for' for e in edges) for c in conditions):
+        conditions=[units[e['from_unit']] for e in edges if e['to_unit']==lid and e['relation'] in g.CONDITION_RELATIONS]
+        if any(any(e['to_unit']==c['local_id'] and e['relation'] in g.CONDITION_RELATIONS for e in edges) for c in conditions):
             holds.append('unrepresentable_hold')  # Existing flat runtime scope cannot express nested qualification.
         scope=dict(entity=text(u['scope']['subject_refs']) or literal,
             time=text(u['scope']['time_refs']),conditions='; '.join(text(c['own_spans']) for c in conditions))

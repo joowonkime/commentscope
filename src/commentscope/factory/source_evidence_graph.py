@@ -9,7 +9,7 @@ from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc
 from commentscope.factory.automatic_contract import digest
 
-VERSION = 'source-evidence-graph-20261112-v3'
+VERSION = 'source-evidence-graph-20261112-v4'
 UNIT_IDS = tuple(f'U{i}' for i in range(1,33))
 EDGE_IDS = tuple(f'E{i}' for i in range(1,65))
 SCOPE_REFS = ('subject_refs','referent_refs','predicate_refs','polarity_refs','modality_refs',
@@ -19,7 +19,8 @@ UNIT_CHECKS = ('boundary_fidelity','typing_fidelity','ownership_fidelity','modal
                'scope_fidelity','qualifiers_complete','reasons_complete','conditions_complete',
                'premises_complete','concessions_complete')
 VERDICTS = ('pass','fail','unknown','unassessed')
-RELATIONS = ('reason_for','required_premise_for','necessary_condition_for','concession_to','opposes','elaborates','reported_by','unresolved')
+CONDITION_RELATIONS = ('condition_for','necessary_condition_for')
+RELATIONS = ('reason_for','required_premise_for',*CONDITION_RELATIONS,'concession_to','opposes','elaborates','reported_by','unresolved')
 STATUS_CODES = ('represented','context_only','nonpropositional')
 CODES = STATUS_CODES+('interpretation_unresolved','attribution_unclear',
          'scope_unresolved','coverage_missing','dependency_missing','boundary_changed','mixed_content',
@@ -162,7 +163,11 @@ epistemic describes strength only; world separately describes actual/hypothetica
 desired content. A categorical normative wish can have world=desired. Use
 not_applicable strength/non_assertive only for nonpropositional context.
 Edges point from reason/premise/condition to its conclusion. Factual dependency
-is separate from discourse ownership. Cover ALL original characters including
+is separate from discourse ownership. condition_for preserves the situation in
+which a claim applies; it does NOT assert that situation is necessary. Use
+necessary_condition_for only for a requirement the author actually makes.
+A stated factual reason is not automatically a required_premise_for: preserve
+reason_for without inventing logical necessity. Cover ALL original characters including
 whitespace; context_only/nonpropositional cannot hide important propositions.
 Unresolved/missing/capacity content stays explicit. Never add reasons or facts.
 No candidate is supplied and no support or factual-truth approval occurs here.'''
@@ -178,6 +183,9 @@ Strength and world are orthogonal: a categorical normative wish may be desired;
 an empirical wish must never become an actual fact. Preserve negation, quantity,
 population, time, comparisons and change versus state. No parent reason borrowing.
 For EACH proposed edge check endpoints, direction, relation and cue fidelity.
+Distinguish a claim's conditional qualification from a necessary prerequisite.
+Do not demand or approve necessity the source never asserts. A factual reason
+alone does not license a required_premise_for edge.
 Even with zero proposed FACT units or edges, inspect each unit AND the full source
 for omitted empirical premises, reasons and conditions. Report missing_units and
 missing_edges using existing unit addresses; never silently repair the graph.
@@ -272,7 +280,7 @@ def edge_keys(edges):return sorted(digest([e['from_unit'],e['to_unit'],e['relati
 def closure(edges, targets):
     incoming={t:[] for e in edges for t in (e['from_unit'],e['to_unit'])}
     for e in edges:
-        if e['relation'] in ('required_premise_for','necessary_condition_for'):incoming[e['to_unit']].append(e['from_unit'])
+        if e['relation'] in ('required_premise_for',*CONDITION_RELATIONS):incoming[e['to_unit']].append(e['from_unit'])
     visited=set();active=set()
     def walk(lid):
         if lid in active:raise ValueError('Cyclic necessary evidence')
@@ -296,7 +304,7 @@ def verify(proposal, observation):
                 or u['epistemic']=='unknown' or u['world']=='unknown'
                 or u['kind'] in ('fact','prediction') and u['world']=='unspecified'
                 or u['scope']['change_or_state']=='unresolved' or u['assertion_mode']=='unresolved'):issues.append('unit_interpretation_unresolved')
-        if u['assertion_mode']=='conditional_antecedent' and not any(e['from_unit']==u['local_id'] and e['relation']=='necessary_condition_for' for e in out['edges']):
+        if u['assertion_mode']=='conditional_antecedent' and not any(e['from_unit']==u['local_id'] and e['relation'] in CONDITION_RELATIONS for e in out['edges']):
             issues.append('unbound_conditional_antecedent')
     if any(r['fidelity']!='pass' or blocking_codes(r['issue_codes']) for r in obs['edge_observations']):issues.append('edge_fidelity_unresolved')
     if obs['missing_edges']:issues.append('missing_source_dependency')

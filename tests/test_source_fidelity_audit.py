@@ -43,7 +43,7 @@ class SourceFidelityAuditTests(TestCase):
 
     def test_audit_inventory_rejects_duplicates_foreign_addresses_and_old_receipts(self):
         _,env,out,p,o=example()
-        for version in ('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2'):
+        for version in ('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3'):
             old=deepcopy(p);old['artifact_kind']=version+'/proposal'
             with self.assertRaises(ValueError):g.observation_request(old)
         for mutate in (
@@ -142,7 +142,7 @@ class FidelityCandidateAndCostTests(TestCase):
         import test_factory_cost_plan as cf
         h=cf.CostPlanningTests();h.setUp();h.plan['source_evidence_protocol']=g.VERSION
         counts={**h.work['counts'],**dict.fromkeys(cost.GRAPH_STAGES,6)}
-        for protocol in (None,'source-evidence-graph-20261112-v2',g.VERSION):
+        for protocol in (None,'source-evidence-graph-20261112-v2','source-evidence-graph-20261112-v3',g.VERSION):
             profile=deepcopy(h.profile)
             for stage in cost.GRAPH_STAGES:
                 profile['stages'][stage]=dict(calls=2,cost_usd='0.002',maximum_cost_usd='0.001',

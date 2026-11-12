@@ -13,7 +13,7 @@ from commentscope.factory.automatic_contract import digest
 from test_source_evidence_graph import observation_example
 
 
-FIXTURE=Path(__file__).parent/'fixtures/source-fidelity-controls-v1.json'
+FIXTURE=Path(__file__).parent/'fixtures/source-fidelity-controls-v2.json'
 
 
 class FidelityValidationPlanTests(TestCase):
@@ -39,13 +39,13 @@ class FidelityValidationPlanTests(TestCase):
 
     def test_whole_control_batch_rejects_five_dollars_without_trimming_or_zeroing_unknown_work(self):
         pack=plan.controls(json.loads(FIXTURE.read_text()),remote.SOL)
-        for cap,ready in [('5',False),('6',True)]:
+        for cap,ready in [('5',False),('125',True)]:
             result=plan.cost_review(pack,proposed_usd=cap,account_remaining_usd='24',key_remaining_usd='130')
             self.assertEqual(result['controls_fit'],ready)
             self.assertFalse(result['dispatch_enabled']);self.assertFalse(result['full_comparison_admitted'])
             self.assertIsNone(result['full_comparison_estimated_usd'])
             self.assertFalse(result['financial_authorization']);self.assertEqual(result['new_model_calls'],0)
-        self.assertFalse(plan.cost_review(pack,proposed_usd='6',account_remaining_usd='5.7',key_remaining_usd='130')['controls_fit'])
+        self.assertFalse(plan.cost_review(pack,proposed_usd='125',account_remaining_usd='5.7',key_remaining_usd='130')['controls_fit'])
 
     def test_changed_deployment_or_request_cannot_keep_stale_reservation(self):
         pack=plan.controls(json.loads(FIXTURE.read_text()),remote.SOL)
@@ -54,7 +54,7 @@ class FidelityValidationPlanTests(TestCase):
                        lambda x:x.update(planner_sha256='0'*64),
                        lambda x:x['cases'][0].update(maximum_reservation_usd='0')):
             wrong=deepcopy(pack);mutate(wrong)
-            with self.assertRaises(ValueError):plan.cost_review(wrong,proposed_usd='6',account_remaining_usd='24',key_remaining_usd='130')
+            with self.assertRaises(ValueError):plan.cost_review(wrong,proposed_usd='125',account_remaining_usd='24',key_remaining_usd='130')
 
     def test_reference_gaps_and_thread_leakage_remain_explicit(self):
         sources={str(i):{'source':{'id':str(i),'text':'Synthetic '+str(i),'parent':None}} for i in range(100)}
