@@ -9,18 +9,24 @@ from commentscope.contracts.perspective_draft import obj, array
 from commentscope.factory import minimal_claims as mc
 from commentscope.factory.automatic_contract import digest
 
-VERSION = 'source-evidence-graph-20261111-v1'
+VERSION = 'source-evidence-graph-20261112-v2'
 SCOPE_REFS = ('subject_refs','referent_refs','predicate_refs','polarity_refs','modality_refs',
               'quantifier_refs','population_refs','time_refs','world_refs','comparison_refs','change_refs','qualifier_refs')
 SEMANTIC_FIELDS = ('speech_act','kind','commitment','epistemic','assertion_mode','scope','interpretation')
 VERDICTS = ('pass','fail','unknown','unassessed')
 RELATIONS = ('reason_for','required_premise_for','necessary_condition_for','concession_to','opposes','elaborates','reported_by','unresolved')
-CODES = ('represented','context_only','nonpropositional','interpretation_unresolved','attribution_unclear',
+STATUS_CODES = ('represented','context_only','nonpropositional')
+CODES = STATUS_CODES+('interpretation_unresolved','attribution_unclear',
          'scope_unresolved','coverage_missing','dependency_missing','boundary_changed','mixed_content',
          'capacity_exceeded','missing_unit','unresolved_reference','comparison_changed','world_changed')
 OBLIGATIONS = ('binding','interpretation','ownership','scope','coverage','dependency','capacity')
 BINDING_CHECKS = ('source_hash','span_bounds','coverage_partition','unit_inventory','edge_inventory','protocol','request_binding','receipt_binding')
 OBLIGATION_CHECKS = ('boundary_fidelity','typing','ownership','scope_preservation','substantive_coverage','dependency_coverage')
+
+
+def blocking_codes(codes):
+    """Informational statuses never approve or override a failed obligation."""
+    return [code for code in codes if code not in STATUS_CODES]
 
 
 def choice(values):
@@ -159,6 +165,9 @@ For every coverage partition no_substantive_omission=pass means NOTHING importan
 is missing. All pass fields mean obligation fulfilled; unknown is not approval.
 Keep parent attribution, modality, change/state and full scope. No truth claims.
 Conditional antecedents annotate scope; they do not assert their satisfaction.'''
+OBSERVE+=''' issue_codes contains actual blocking problems; use [] when none.
+represented/context_only/nonpropositional are informational statuses, not errors.
+No status code overrides fail, unknown, unassessed or a missing obligation.'''
 
 
 def proposal_request(env):
@@ -168,7 +177,7 @@ def proposal_request(env):
     schema=obj(dict(units=array(unit,maximum=32),edges=array(edge_schema(ids),maximum=64),
         coverage=array(obj(dict(span=span_schema(),disposition=choice(('represented','context_only','nonpropositional','unresolved')),
               unit_ids=array(choice(ids),maximum=32),reason_code=choice(CODES))),minimum=1,maximum=64),issues=array(issue_schema(ids),maximum=64)))
-    return mc.request(PROPOSE,{'ORIGINAL':mc.packet(env['source']),'LANGUAGE_HINT':env['language']},schema,12288)
+    return mc.request(PROPOSE,{'EVIDENCE_PROTOCOL':VERSION,'ORIGINAL':mc.packet(env['source']),'LANGUAGE_HINT':env['language']},schema,12288)
 
 
 def bind_proposal(env, result):
@@ -211,7 +220,7 @@ def observation_request(proposal):
         scope_coverage=choice(VERDICTS),ownership_coverage=choice(VERDICTS),dependency_coverage=choice(VERDICTS),issues=array(issue_schema(ids),maximum=64)))
     schema['properties']['source_language']=choice(('en','ko','other','unknown'))
     schema['required'].append('source_language')
-    return mc.request(OBSERVE,{'ORIGINAL':mc.packet(proposal['source']),'UNITS':units,
+    return mc.request(OBSERVE,{'EVIDENCE_PROTOCOL':VERSION,'ORIGINAL':mc.packet(proposal['source']),'UNITS':units,
                              'COVERAGE_SPANS':[r['span'] for r in out['coverage']]},schema,12288)
 
 
@@ -255,7 +264,7 @@ def verify(proposal, observation):
     for u in out['units']:
         row=seen[u['local_id']]
         if semantic(u)!=semantic(row['typing']):issues.append('unit_semantics_disagree')
-        if row['boundary_fidelity']!='pass' or row['qualifiers_complete']!='pass' or row['issue_codes']:issues.append('unit_fidelity_unresolved')
+        if row['boundary_fidelity']!='pass' or row['qualifiers_complete']!='pass' or blocking_codes(row['issue_codes']):issues.append('unit_fidelity_unresolved')
         if (u['interpretation']!='resolved' or u['kind'] in ('mixed','unresolved')
                 or u['commitment']=='unclear' or u['scope']['polarity']=='unresolved'
                 or u['epistemic']=='unknown'
@@ -266,7 +275,7 @@ def verify(proposal, observation):
     if any(e['interpretation']!='resolved' or e['relation']=='unresolved' for e in out['edges']):issues.append('edge_unresolved')
     try:closure(out['edges'],[u['local_id'] for u in out['units']])
     except ValueError:issues.append('cyclic_dependency')
-    if any(r['no_substantive_omission']!='pass' or r['missing_refs'] or r['issue_codes'] for r in obs['coverage_observations']):issues.append('substantive_coverage_unresolved')
+    if any(r['no_substantive_omission']!='pass' or r['missing_refs'] or blocking_codes(r['issue_codes']) for r in obs['coverage_observations']):issues.append('substantive_coverage_unresolved')
     if any(r['disposition']=='unresolved' for r in out['coverage']) or obs['missing_units']:issues.append('missing_source_content')
     if any(obs[k]!='pass' for k in ('scope_coverage','ownership_coverage','dependency_coverage')):issues.append('source_obligations_unresolved')
     if any(i['status']=='unresolved' for i in out['issues']+obs['issues']):issues.append('unresolved_issue')

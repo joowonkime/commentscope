@@ -16,7 +16,9 @@ IDs name direct factual bases for this CORE, never the union of private motives.
 Independently inspect ORIGINAL for omitted conditions, reasons or prerequisites,
 including when the graph declares zero facts. unknown/unassessed is not pass.
 Value/prediction is not verified empirical truth; no external evidence here.
-An assertion can have no reasons. Do not invent any to complete the candidate.'''
+An assertion can have no reasons. Do not invent any to complete the candidate.
+issue_codes contains blocking problems; use [] when none. Informational status
+codes never override a failed, unknown, unassessed or missing obligation.'''
 
 
 def candidate_request(verified, candidates):
@@ -31,7 +33,7 @@ def candidate_request(verified, candidates):
         dependency_edges=array(g.edge_schema(ids),maximum=64),core_required_fact_unit_ids=id_list(),
         full_original_coverage=g.choice(g.VERDICTS),ownership=g.choice(g.VERDICTS),scope_preserved=g.choice(g.VERDICTS),
         issue_codes=array(g.choice(g.CODES),maximum=16)))
-    return mc.request(SYSTEM,{'ORIGINAL':mc.packet(verified['proposal']['source']),
+    return mc.request(SYSTEM,{'EVIDENCE_PROTOCOL':g.VERSION,'ORIGINAL':mc.packet(verified['proposal']['source']),
         'UNITS':deepcopy(units),'SOURCE_EDGES':deepcopy(verified['proposal']['output']['edges']),
         'CANDIDATES':[{'id':cid,**mc.candidate_packet(cs[cid])} for cid in sorted(cs)]},
         obj({'candidates':array(row,minimum=len(cs),maximum=len(cs))}),8192)
@@ -76,7 +78,7 @@ def bind_candidates(verified, candidates, support_batches, result):
                for u in row['reason_unit_ids']+row['concession_unit_ids']):reasons.append('reason_ownership_unverified')
         if (not positions or any(units[u]['commitment']!='endorsed' or units[u]['assertion_mode']!='assertion' for u in positions)
                 or row['alignment'] not in ('supports_core','equivalent')):reasons.append('owned_position_unverified')
-        if any(row[k]!='pass' for k in ('full_original_coverage','ownership','scope_preserved')) or row['issue_codes']:reasons.append('candidate_obligations_unresolved')
+        if any(row[k]!='pass' for k in ('full_original_coverage','ownership','scope_preserved')) or g.blocking_codes(row['issue_codes']):reasons.append('candidate_obligations_unresolved')
         if verified['status']!='complete':reasons.append('source_graph_unresolved')
         bound.append(dict(artifact_kind=g.VERSION+'/candidate-certificate',candidate=deepcopy(cs[cid]),source_id=sid,
             verified_sha256=digest(verified),request_sha256=digest(req),output=deepcopy(row),

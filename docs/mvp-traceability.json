@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261111-v48",
-  "baseline_commit": "8777756db85c84e2f8886806bba498e51a6a64f6",
-  "observed_date": "2026-11-11",
+  "spec_version": "commentscope-mvp-20261112-v52",
+  "baseline_commit": "b361afce2e09e65421bcf1ef1465d2f666711986",
+  "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "TASK020 평가자료와TASK021 B1 opt-in/무료회귀 완료. 실제999는기존1Agent/이유부족결과유지. 다음022는후보별정답·검토provenance·신규wire/profile·현재가격·합계비용/기한동결부터. 원15달러실행기한만료,5달러비교는제안/새paid권한아님. 신규OpenRouter0/실행중모델없음;새유료호출·기존plan재개없음."
+    "hold_reason": "실제비교합계4.7406401에서예산보호중단. B완료0Agent/A322응답미완료/C미실행. 추가유료실행없음. 현재격리worktree에서기존승인상불가능한출처의후속호출생략/무료회귀/PR정리중."
   },
   "requirements": [
     {
@@ -92,7 +92,8 @@
         "tests/test_wide_mining_trial.py",
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
-        "tests/test_source_evidence_pipeline.py"
+        "tests/test_source_evidence_pipeline.py",
+        "tests/test_source_audit_preflight.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -187,7 +188,8 @@
         "tests/test_perspective_mining.py",
         "tests/test_wide_mining_trial.py",
         "tests/test_source_evidence_graph.py",
-        "tests/test_source_evidence_pipeline.py"
+        "tests/test_source_evidence_pipeline.py",
+        "tests/test_source_audit_preflight.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -282,7 +284,8 @@
         "tests/test_wide_mining_trial.py",
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
-        "tests/test_source_evidence_pipeline.py"
+        "tests/test_source_evidence_pipeline.py",
+        "tests/test_source_audit_preflight.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -545,7 +548,9 @@
         "src/commentscope/factory/source_evidence_graph.py",
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
-        "tools/prepare_source_evidence_review.py"
+        "tools/prepare_source_evidence_review.py",
+        "tools/source_evidence_trial.py",
+        "tools/source_evidence_recovery.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -576,7 +581,10 @@
         "tests/test_wide_cached_recovery.py",
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
-        "tests/test_source_evidence_pipeline.py"
+        "tests/test_source_evidence_pipeline.py",
+        "tests/test_source_evidence_trial.py",
+        "tests/test_source_evidence_recovery.py",
+        "tests/test_source_audit_preflight.py"
       ],
       "acceptance": [
         "현재 금전권한(DEC-011/012: 팀키$150·운영장부$50, 이전owner$8·소규모추가$3 보존, 현재 확대단계추가상한$15)을 지키며 과거지출·실행별상한·가격·예약·미확정비용·중복재개를 통제한다.",
@@ -754,7 +762,9 @@
         "src/commentscope/factory/source_evidence_graph.py",
         "src/commentscope/factory/source_evidence_requests.py",
         "src/commentscope/factory/source_evidence_adapter.py",
-        "tools/prepare_source_evidence_review.py"
+        "tools/prepare_source_evidence_review.py",
+        "tools/source_evidence_trial.py",
+        "tools/source_evidence_recovery.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -787,7 +797,10 @@
         "tests/test_wide_cached_recovery.py",
         "tests/test_chat_dependency_capacity.py",
         "tests/test_source_evidence_graph.py",
-        "tests/test_source_evidence_pipeline.py"
+        "tests/test_source_evidence_pipeline.py",
+        "tests/test_source_evidence_trial.py",
+        "tests/test_source_evidence_recovery.py",
+        "tests/test_source_audit_preflight.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1335,7 +1348,7 @@
         "C 같은B1 계약에 생성 모델만 Sol 비교",
         "B2 source admission 세분화는 별도 후속 제안이며 최초 구현 제외"
       ],
-      "selection": "추천 B1 opt-in 계약을 구현용 기준안으로 정리한다. 실제 선택은 A/B1/C 동일표본 비교·전이 이후이며 새 기본값/품질/유료권한을 승인하지 않는다.",
+      "selection": "B1 v1은한정development에서14graph전부보류/0Agent로기본값승격하지않음. 정상코드v2/통과불가출처조기종료는후속무료수정이며구조·모델의품질채택은아님. annotation의미호환성계약/유효출처의희소의존성검증/모델C·전체전이근거미검증. 기존분모·최소지지·필수fact경계유지.",
       "evidence": [
         {
           "kind": "offline",
@@ -1354,7 +1367,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
       ]
     },
     {
@@ -1390,6 +1404,36 @@
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/INTERACTIONS.md",
         "docs/MVP_USER_CHECK.md"
+      ]
+    },
+    {
+      "id": "DEC-015",
+      "title": "새 원문 증거 구조의 제한된 실제 F4 비교 실행",
+      "status": "accepted",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "사용자의 구현/테스트 지시에서 기존 지출·만료plan을 보존하며 무엇을 실제로 확인할 것인가?",
+      "options": [
+        "기존999 map을고정한19출처/25관계 F4 비교",
+        "A/B/C단일moneyowner합계5달러/7시간,후속전이/전체실행별도"
+      ],
+      "selection": "현재 사용자 진행/구현및테스트 지시에따라 신규한정profiling만실행. 기존50장부잔여/실제150키잔여 안에서 동일5달러최대예약으로제어하며모든과거차감·기한보존. 성능·모델기본값·r5완료 채택아님.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Current user explicitly requests implementing/testing the Agent creation pipeline; bounded new scope documented before provider dispatch. Not performance evidence.",
+          "reference": "docs/design/SOURCE_EVIDENCE_TRIAL.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SOURCE_EVIDENCE_TRIAL.md",
+        "docs/design/MVP_REDESIGN_PLAN.md"
       ]
     }
   ],
@@ -2694,15 +2738,18 @@
         "REQ-010"
       ],
       "decisions": [
-        "DEC-013"
+        "DEC-013",
+        "DEC-015"
       ],
       "depends_on": [
         "TASK-021"
       ],
-      "status": "next",
+      "status": "in_progress",
       "deliverables": [
         "같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
-        "고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구"
+        "고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
+        "새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
+        "승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
       ],
       "done_when": [
         "새 실행권한·가격·wire 상한/기한을 먼저 고정하고 모든 arm 결과·실패를 기록한다.",
@@ -2711,12 +2758,40 @@
       "required_evidence": [
         "limited_live"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Synthetic boot-time/request/checkpoint/ledger matching and conservative no-refund settlement; exact unavailable request skips provider, other requests retain original guarded route; recovery+trial9 checks pass. No semantic approval.",
+          "reference": "docs/design/SOURCE_EVIDENCE_TRIAL.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Isolated v2 informational-status fix, no override of real failed/unknown typing/scope/coverage/dependency checks; old protocol rejected; resource attempt logs preserved. Related50 passed7.067s and Factory793 passed431.500s. Live frozen v1 unchanged, no v2 provider calls or semantic adoption.",
+          "reference": "docs/design/SOURCE_EVIDENCE_TRIAL.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Shared5USD profiling stopped at4.7406401: Bcomplete0Agents/45known responses+1lost conservativelycharged; Apartial322responses before compiler/runtime, Cnotstarted.367known responses4.4883321+0.252308conservative;0reserved/uncertain. Not a completed comparison or formal gate; v2 not live tested.",
+          "reference": "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Safe source-audit preflight:5regressions passed9.761s; final Factory798 passed414.089s. Exact same synthetic posted bundle/Agents with fewer calls for already blocked sources; healthy two-Agent case preserves every request; SCOPABLE valid peer retained; altered provenance rejected. On archived actual A records,18 retained/13statically blocked/5potential:dependency116to5,owner22to8,audit tasks116to13. No new model calls or general cost/quality claim.",
+          "reference": "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/SOURCE_EVIDENCE_TRIAL.md",
+        "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
       ]
     },
     {
@@ -3031,8 +3106,24 @@
     {
       "spec_version": "commentscope-mvp-20261111-v48",
       "reason": "사용자 진행 지시로TASK020의 원인/평가자료를 실제 원실험에서 동결하고16개 합성통제와B1 closed graph/observer/candidate/Compiler opt-in을 구현. legacy·B2보류·기존원문/조건/전체eligible-source/fact/최소지지기준유지. 새stage등록과unknown-profile거절,무료합성통합2Agent/각3지지. candidate gold/실제 품질·비용은미검증,모델호출0·신규paid권한없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v49",
+      "reason": "사용자가 외부논증확장보다Agent생성파이프라인을우선하고구현및테스트를요청. PR91양OS CI통과/main병합확인. 기존999 map고정19출처25관계의새F4/Compiler/runtime A/B/C profiling실행기와새합계5달러/7시간범위를등록. 전체표본/전이/whole999/정식gate승격아님;과거금전/기한/실패보존."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v50",
+      "reason": "사용자 이어진행 지시 후 호스트재부팅/45완료응답/유실pending1건 확인. 원 frozen source/tool/plan/요청/5달러/기한 유지한 별도 복구 manifest로 부팅시각 이전 요청만 전액0.252308 보수정산하고 재호출0/응답없는 항목 보류. 정상상태 코드 결함은2개 무료회귀로 재현했으며 실제 비교코드는 아직수정하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v51",
+      "reason": "진행중인frozen v1비교와격리된worktree에서정상진단상태코드/차단문제코드를구별하는v2수정. 양태/scope/타입/edge정확비교와전체source/필수fact/최소지지기준불변. 구형receipt거절/요청protocol명시,시도별resource로그분리. 관련50무료회귀통과,실제품질승격아님. 원비교종료전live원본에미반영."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261112-v52",
+      "reason": "한정비교는공유5달러한도의다음요청예약전에4.7406401에서중단(B0Agent완료/A322응답미완료/C미실행). 정상코드v2와별도로기존Compiler규칙상모든후보가불가능한owned record의후속owner/dependency/audit만생략. 원records/map/보류/필수fact/최소3지지/다른후보가가능한SCOPABLE출처를보존. 기존A의18출처1731질문116요청을확인했으며일반가격·품질개선으로외삽하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261111-v43",
+  "design_version": "commentscope-detailed-design-20261112-v47",
   "design_document": "docs/design/README.md"
 }

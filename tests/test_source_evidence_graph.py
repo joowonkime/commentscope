@@ -38,6 +38,36 @@ def example(text='Adopt P because fairness matters.'):
 
 
 class SourceEvidenceGraphTests(TestCase):
+    def test_prior_protocol_receipts_cannot_be_approved_by_the_status_code_fix(self):
+        _, _, _, proposal, output = example()
+        old=deepcopy(proposal);old['artifact_kind']='source-evidence-graph-20261111-v1/proposal'
+        for row in output['unit_observations']+output['coverage_observations']:
+            row['issue_codes']=['represented']
+        with self.assertRaises(ValueError):graph.bind_observation(old,{'output':output})
+
+    def test_represented_status_is_not_a_blocking_issue(self):
+        _, _, _, proposal, output = example()
+        for row in output['unit_observations']+output['coverage_observations']:
+            row['issue_codes']=['represented']
+        observed=graph.bind_observation(proposal,{'output':output})
+        self.assertEqual(graph.verify(proposal,observed)['status'],'complete')
+
+    def test_positive_status_never_clears_semantic_or_coverage_failures(self):
+        _, _, _, proposal, output = example()
+        for row in output['unit_observations']+output['coverage_observations']:
+            row['issue_codes']=['represented']
+        for mutate in (
+            lambda x:x['unit_observations'][0].update(boundary_fidelity='fail'),
+            lambda x:x['unit_observations'][0].update(qualifiers_complete='unknown'),
+            lambda x:x['unit_observations'][0]['typing'].update(kind='prediction'),
+            lambda x:x['coverage_observations'][0].update(no_substantive_omission='unknown'),
+            lambda x:x['coverage_observations'][0]['issue_codes'].append('coverage_missing'),
+            lambda x:x.update(dependency_coverage='unknown'),
+        ):
+            value=deepcopy(output);mutate(value)
+            result=graph.verify(proposal,graph.bind_observation(proposal,{'output':value}))
+            self.assertEqual(result['status'],'unresolved')
+
     def test_exact_source_and_independent_observation_are_required(self):
         _, env, _, proposal, output = example()
         request = graph.observation_request(proposal)

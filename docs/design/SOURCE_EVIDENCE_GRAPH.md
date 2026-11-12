@@ -1,10 +1,18 @@
 # 원문 증거 그래프와 후보 연결 계약
 
-계약 후보: `source-evidence-graph-20261111-v1` / DEC-013 / TASK-020~022.
+계약 후보: `source-evidence-graph-20261112-v2` / DEC-013 / TASK-020~022.
 상태: **B1 opt-in 첫 구현·합성 회귀, 실제 의미 채택은 미완료**. [첫 구현 범위](SOURCE_EVIDENCE_IMPLEMENTATION.md)를 함께 읽는다.
 [검토 결론](MVP_DESIGN_REVIEW.md)의 F4만 교체한다.
 현재 `explicit_discourse`의 parser graph와 새로운 graph는 서로 다른 artifact다.
 이 문서의 필드를 과거 응답에 추가해 새 검증을 받은 것처럼 사용하지 않는다.
+
+v2는 실제 v1 비교에서 재현한 정상 상태 코드 처리 결함만 수정한다.
+`represented/context_only/nonpropositional`은 진단 상태이며 `issue_codes`에 있어도 차단 오류가 아니다.
+명시적 fail/unknown/unassessed,실제 issue code,누락·미해결 Issue,타입/scope/edge 불일치는 계속 보류한다.
+동일 규칙을 source observation과 candidate certificate에 적용한다. source 전체 완전성,
+필수 사실·최소 지지·Compiler 조건은 유지한다. v1 artifact/plan은 v2 증거로 읽지 않는다.
+v1의 실제 결과는 별도 보존하며 이 코드 수정만으로 실제 Agent 증가를 입증하지 않는다.
+scope/양태의 정확 비교 계약 자체는 아직 수정·채택하지 않았다.
 
 ## 1. B1의 변경 범위
 
