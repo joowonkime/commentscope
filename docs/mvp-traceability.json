@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "spec_version": "commentscope-mvp-20261112-v53",
-  "baseline_commit": "91994d217c38f1c440c980c595f5c036f6b31a81",
+  "baseline_commit": "922e60e4d0b120e421b9b5f4f59680ddd5ed8987",
   "observed_date": "2026-11-12",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
@@ -22,10 +22,10 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-025",
+    "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자 동의로 F4 v3 계약/무료 구현 진행. 이전 공유5달러실험은4.7406401에서닫힘. 이번 신규유료호출0, 실제모델품질/Task022전체비교/전이/r5는미완료."
+    "hold_reason": "TASK025의 v3 무료 구현/Factory/양OS CI 완료. 다음TASK022는 무료 재계획만 한다. 기존 공유5달러 실험은4.7406401에서닫힘; 기존 plan/잔액 재개 금지. 실제v3품질·전이·r5·3천개 원가/속도 미검증, 신규유료권한 없음."
   },
   "requirements": [
     {
@@ -1458,7 +1458,14 @@
         "blind 추출 후 별도 호환성 adjudication(추가 호출/비용 필요)"
       ],
       "selection": "첫 opt-in은 기존 observer를 직접 fidelity audit로 교체. world와확신강도분리, edgeID선택, unit별 이유/조건/전제/양보 누락 검사. 원문/필수fact/최소지지와B1전체완전성은 유지. 구현/무료검증만 진행하며 실제 품질 채택은 proposed.",
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Implementation source922e60e passed exact-head CI43159174627: Ubuntu2612 tests330.209s (0 skips), Windows2612 tests489.657s (12 existing POSIX skips). All33 source-fidelity/graph/pipeline/new cost-wire cases executed with ok on both OS. Local Factory809/related80 passed. CI/host delivery only, not actual semantic adoption; no paid calls.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/43159174627",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/SOURCE_FIDELITY_AUDIT.md"
       ]
@@ -2756,7 +2763,7 @@
     },
     {
       "id": "TASK-022",
-      "title": "고정 A/B1/C 비교와 전이·채택 판단",
+      "title": "F4 고정 비교·전이 — v1 종료 이력과 v3 재계획",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -2766,17 +2773,20 @@
       ],
       "decisions": [
         "DEC-013",
-        "DEC-015"
+        "DEC-015",
+        "DEC-016"
       ],
       "depends_on": [
-        "TASK-021"
+        "TASK-021",
+        "TASK-025"
       ],
-      "status": "deferred",
+      "status": "next",
       "deliverables": [
-        "같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
-        "고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
-        "새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
-        "승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
+        "다음 행동은 v3 고정 통제/비교/전이의 무료 재계획이다. 옛5달러 plan은 종료됐으며 잔액/원기한을 새 호출 권한으로 쓰지 않는다. 신규 실행은 새 protocol·자료·가격·상한·중단 조건/권한을 별도로 동결한다.",
+        "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
+        "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
+        "[종료된 v1 단계/보존] 새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
+        "[종료된 v1 단계/보존] 승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
       ],
       "done_when": [
         "새 실행권한·가격·wire 상한/기한을 먼저 고정하고 모든 arm 결과·실패를 기록한다.",
@@ -2812,6 +2822,7 @@
         }
       ],
       "design_refs": [
+        "docs/design/SOURCE_FIDELITY_AUDIT.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
@@ -2911,7 +2922,7 @@
       "depends_on": [
         "TASK-021"
       ],
-      "status": "in_progress",
+      "status": "done",
       "deliverables": [
         "주석 exact equality를 대체하는 source fidelity audit와 orthogonal world/strength 계약",
         "단위/관계/coverage 누락 검사를 갖는 선형 inventory와 기존 Compiler 연결",
@@ -2927,14 +2938,20 @@
       "evidence": [
         {
           "kind": "offline",
-          "scope": "Initial TDD8 failed on old contract (7 schema errors/1 stale graph cost profile reuse); first Factory808 passed279.286s. Added reported nonactual context positive counterexample failed before narrowing guard to exposed claims; final related80 passed5.156s. Scripted host controls only; full Factory rerun/CI pending, no paid calls/semantic approval.",
+          "scope": "Initial TDD8 failed on old contract (7 schema errors/1 stale graph cost profile reuse); first Factory808 passed279.286s. Added reported nonactual context positive counterexample failed before narrowing guard to exposed claims; final related80 passed5.156s. Scripted host controls only; full Factory/CI followed, no paid calls/semantic approval.",
           "reference": "docs/design/SOURCE_FIDELITY_AUDIT.md",
           "result": "pass"
         },
         {
           "kind": "offline",
-          "scope": "Final related80 passed5.156s (including spec18); full Factory809 passed278.773s. Synthetic two Agents/3 supports/owned reasons, no legacy dependency all-pairs calls, complete audit inventory, nonactual asserted facts held while reported context remains scope-only, stale wire/profile/receipt rejected. No paid calls; exact-head OS CI pending.",
+          "scope": "Final related80 passed5.156s (including spec18); full Factory809 passed278.773s. Synthetic two Agents/3 supports/owned reasons, no legacy dependency all-pairs calls, complete audit inventory, nonactual asserted facts held while reported context remains scope-only, stale wire/profile/receipt rejected. No paid calls; exact-head OS CI subsequently verified.",
           "reference": "docs/design/SOURCE_FIDELITY_AUDIT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Implementation source922e60e passed exact-head CI43159174627: Ubuntu2612 tests330.209s (0 skips), Windows2612 tests489.657s (12 existing POSIX skips). All33 source-fidelity/graph/pipeline/new cost-wire cases executed with ok on both OS. Local Factory809/related80 passed. CI/host delivery only, not actual semantic adoption; no paid calls.",
+          "reference": "https://github.com/joowonkime/commentscope/actions/runs/43159174627",
           "result": "pass"
         }
       ],

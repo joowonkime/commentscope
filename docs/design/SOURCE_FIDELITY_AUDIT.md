@@ -109,8 +109,12 @@ world 값만을 이유로 전체 source를 불필요하게 보류하지 않는�
 첫 전체 Factory808개 통과 후 문맥 전용 가정을 과도하게 보류하는 정상 반례를 실패 재현하고 수정했다.
 이후 명세 검사까지 포함한 관련80개가5.156초에 통과했다.
 이는 scripted 응답을 주는 host 회귀다. 실제 auditor가 의미 왜곡을 탐지했다는 결과가 아니다.
-최종 전체 Factory809개가278.773초에 통과했다. 양OS CI는 PR의 정확한 head에서 확인하며,
-그 전까지 TASK-025는 진행 중으로 남긴다. 작업 추적표와 PR에 결과를 연결한다.
+최종 전체 Factory809개가278.773초에 통과했다. 구현 head `922e60e`의
+[양OS CI](https://github.com/joowonkime/commentscope/actions/runs/43159174627)에서
+Ubuntu2,612개(330.209초), Windows2,612개(489.657초,기존 POSIX 전용12개 skip)를 확인했다.
+이번 fidelity/graph/pipeline/새 비용 wire 검사33개는 두 OS 모두 skip 없이 실행됐다.
+TASK-025는 이 구현·무료 회귀 범위에서 완료다. 이후 완료 기록만 수정한 PR head에도
+동일한 두 OS 필수 CI를 요구한다. 실제 모델 채택이나 MVP 완료로 승격하지 않는다.
 
 ## 다음 실제 검증의 선행 조건
 

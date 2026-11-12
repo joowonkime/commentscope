@@ -12,7 +12,8 @@
 
 후속 무료 수정은 정상 status code 처리와 [기존 규칙상 통과 불가 출처의 후속 호출 생략](SOURCE_AUDIT_PREFLIGHT.md)이다.
 v1 원 실행/유실 비용/미완료 A/C는 보존하며 실제 v2 품질이나 전체 MVP 완료로 승격하지 않는다.
-현재 TASK-025의 계약·구현 진입점은 [F4 v3 원문 대조 감사](SOURCE_FIDELITY_AUDIT.md)다.
+TASK-025의 무료 구현·회귀 완료 근거는 [F4 v3 원문 대조 감사](SOURCE_FIDELITY_AUDIT.md)다.
+다음 TASK-022는 무료 재계획이며, 종료된5달러 비교의 재개나 새 유료 실행을 승인하지 않는다.
 새 protocol만 명시적으로 고르며 기본 legacy는 유지한다. 실제 v3 모델 품질·원가 채택은 미검증이다.
 [이전 Factory 구조안](FACTORY_STRUCTURE.md)은 당시 현재/제안을 구별한 이력이다. 최신999 사용모델·결과를 그 당시 도식으로 대체하지 않는다.
 
