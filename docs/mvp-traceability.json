@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v68",
+  "spec_version": "commentscope-mvp-20261113-v69",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "고정104신규쌍/69출처실행과결과대조완료. 신규276회/0.917447514USD,장부잔여117.841532196,예약/unknown0,활성유료작업없음. compiler2profiles지만같은찬성/3출처중복/이유1보류이므로실질2관점/전체r5/MVP미완료. 다음은저장된F4손실과관점·이유/조건전달의일반계약검토;원실패재호출이나미등록추가유료사이클없음."
+    "hold_reason": "기존104확대완료/유료작업없음/누적150·원999/r5유지. 사용자영어·한국어건설적토의/TA초행QA요청에따라27공식API읽기로영상후보/10QA계획준비(OpenRouter0). 영어CNBC주4일제938은기능후보,한국어SBS임금/주4일제3534는조건·언어·규모후보이며Agent생성/QA실행미검증. 현F4손실해결이나영상교체/정식gate완료로승격하지않음. 새유료실행미등록."
   },
   "requirements": [
     {
@@ -120,6 +120,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -136,7 +142,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -235,6 +242,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -250,7 +263,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -344,6 +358,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -359,7 +379,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -448,6 +469,12 @@
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -455,7 +482,8 @@
         "docs/design/EXECUTION.md",
         "docs/design/DECISION_LAYERS.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -763,6 +791,12 @@
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -771,7 +805,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -915,6 +950,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -933,7 +974,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     }
   ],
@@ -2657,13 +2699,21 @@
       "deliverables": [
         "접근 가능한 실행 URL·재현 명령·실제세과업E2E",
         "최초/재열람/질문/그룹/성찰 원가·실패·지연 측정",
-        "같은 자료의 일반 댓글 읽기/요약 대비 사용자 이해 검증"
+        "같은 자료의 일반 댓글 읽기/요약 대비 사용자 이해 검증",
+        "영상성격별후보/내용예비검토와10개정상·조건·문맥·사실·부족·시나리오이탈QA계획. 자료선정준비만완료,Agent자격/실제QA/사용자평가는미검증."
       ],
       "done_when": [
         "기존 Factory·제품 기능·서비스 원가·사용자 효과의 완료/미검증 범위를 각각 보고한다.",
         "경쟁력·재방문·지불 의향을 Figma나 CI만으로 입증했다고 주장하지 않는다."
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
+        }
+      ],
       "required_evidence": [
         "product_e2e"
       ],
@@ -2677,7 +2727,8 @@
         "docs/M4_PROTOTYPE_REVIEW.md",
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
-        "docs/design/MVP_REDESIGN_PLAN.md"
+        "docs/design/MVP_REDESIGN_PLAN.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ],
       "design_status": "written_unimplemented"
     },
@@ -3123,7 +3174,8 @@
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
         "[종료된 v1 단계/보존] 새추가5달러/7시간안의19출처25관계 F4/Compiler/runtime profiling과분리된A/B/C결과. 전체48/전이·정식gate를대체하지않음.",
-        "[종료된 v1 단계/보존] 승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀"
+        "[종료된 v1 단계/보존] 승인기준/원records/map을유지한통과불가출처의후속호출생략과동일게시결과무료회귀",
+        "영상성격별후보/내용예비검토와10개정상·조건·문맥·사실·부족·시나리오이탈QA계획. 자료선정준비만완료,Agent자격/실제QA/사용자평가는미검증."
       ],
       "done_when": [
         "새 실행권한·가격·wire 상한/기한을 먼저 고정하고 모든 arm 결과·실패를 기록한다.",
@@ -3246,6 +3298,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
+          "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -3270,7 +3328,8 @@
         "docs/design/SOURCE_SEARCH_EXPANSION.md",
         "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
         "docs/design/SOURCE_SEARCH_EXECUTION.md",
-        "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md"
+        "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+        "docs/design/VIDEO_SELECTION_QA.md"
       ]
     },
     {
@@ -3720,8 +3779,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v68",
       "reason": "PR100소스6f544c0/Factory901/양OS2704통과및동일tree3f5c341병합후고정104신규쌍확대완료. 실제276회/0.917447514USD·compiler2profiles와동일찬성쏠림/이유보류를분리기록. 원19밖F4대상10중1complete로후반손실확인. 기존C/B/runtime3/누적150/원금융owner/보수차감/최소3/r5보존. 종료handle과독립품질미검증구별."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v69",
+      "reason": "사용자가건설적토의와초행TA/시나리오이탈을고려한영상성격사전파악요청. 제목/인기만으로선정하지않고실제공식API메타데이터/댓글·답글사례를비교하여기능·조건·편향·규모QA를분리. 선정후보와Agent준비·실제QA성공을구별하며기존999/r5/역할·출처·비용/기준은유지. 추가OpenRouter호출0."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v63",
+  "design_version": "commentscope-detailed-design-20261113-v64",
   "design_document": "docs/design/README.md"
 }
