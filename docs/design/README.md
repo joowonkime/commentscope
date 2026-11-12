@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261113-v62`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261113-v63`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~025, DEC-001~026.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
@@ -205,3 +205,5 @@ Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 �
 [고정1Agent의 실제3질문 검증](FIXED_PROFILE_RUNTIME_CHECK.md)은 저장응답replay와구별한별도runtime실행이다. 원C기한을바꾸지않고현재계속지시의한정된시간권한/같은누적금융장부를결합한다.
 
 현재 신규 구현: [고정104쌍 출처 검색 확대 실행](SOURCE_SEARCH_EXECUTION.md). 정확한원관측재사용과새평가를분리하고같은누적150을유지한다. 기존단일Agent/실제3질문과전체2Agent/r5목표를구별한다.
+
+[104신규관계 확대 결과](SOURCE_SEARCH_EXPANSION_RESULT.md): 실제276회/0.917447514USD, compiler2개(5/4지지), 둘 다 찬성·3출처 중복·이유1보류. 실질2관점/전체r5/MVP 완료와 구별한다.

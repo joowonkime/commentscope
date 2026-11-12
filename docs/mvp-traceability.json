@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v67",
+  "spec_version": "commentscope-mvp-20261113-v68",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자ㄱㄱ에따라신규104쌍69출처확대실행기구현/무료검증진행. 같은원계정누적150유지,원C/B/runtime3완료보존. 새고정실행은코드/회귀/CI/원장/가격/입력검증후등록."
+    "hold_reason": "고정104신규쌍/69출처실행과결과대조완료. 신규276회/0.917447514USD,장부잔여117.841532196,예약/unknown0,활성유료작업없음. compiler2profiles지만같은찬성/3출처중복/이유1보류이므로실질2관점/전체r5/MVP미완료. 다음은저장된F4손실과관점·이유/조건전달의일반계약검토;원실패재호출이나미등록추가유료사이클없음."
   },
   "requirements": [
     {
@@ -114,6 +114,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -223,6 +229,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -326,6 +338,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -671,6 +689,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -885,6 +909,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -1747,10 +1777,23 @@
           "scope": "17new regression cases pass:exact reuse/failed no-retry/streaming,closed pair and typed dispatch scope,finite grant,raw=None settled hold with next item continuing,unsettled stop,and same-primary full-text metadata refresh. Private preparation dry check fixed104pairs/69sources/6candidates/999registry,86old batches/582cache entries/8495477fixed bytes. Provider metadata mocked for this dry check;0paid calls. Full Factory/dual-OS CI pending.",
           "reference": "docs/design/SOURCE_SEARCH_EXECUTION.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Required Factory901pass/261.834s; native source6f544c0 Ubuntu2704/458.273s and Windows2704/618.421s with12existing POSIX-only skips pass. Strict main protection required both contexts; PR100 native-auto-squash merged3f5c341 with identical tree d2d4b209. Same code frozen for the registered live expansion; this is not semantic admission.",
+          "reference": "docs/design/SOURCE_SEARCH_EXECUTION.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
-        "docs/design/SOURCE_SEARCH_EXECUTION.md"
+        "docs/design/SOURCE_SEARCH_EXECUTION.md",
+        "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md"
       ]
     }
   ],
@@ -3075,7 +3118,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
-        "현재후속: 고정104신규쌍/69출처실행기·정확한원관측재사용·정산실패보류구현/무료검증. 기존C/B/runtime3/원예산과최소2/r5보존. 원Kela22문단재취득일치로새plan메타데이터만갱신.",
+        "현재104신규쌍/69출처확대실행·전수정산/게시출처/6runtime대조완료. compiler2profiles(5/4지지)·둘다찬성/3출처중복·이유1보류. 후반원문해석손실/관점구별/전체r5미해결. 기존C/B/runtime3/예산/최소3지지보존.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
@@ -3197,6 +3240,12 @@
           "scope": "17new regression cases pass:exact reuse/failed no-retry/streaming,closed pair and typed dispatch scope,finite grant,raw=None settled hold with next item continuing,unsettled stop,and same-primary full-text metadata refresh. Private preparation dry check fixed104pairs/69sources/6candidates/999registry,86old batches/582cache entries/8495477fixed bytes. Provider metadata mocked for this dry check;0paid calls. Full Factory/dual-OS CI pending.",
           "reference": "docs/design/SOURCE_SEARCH_EXECUTION.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -3220,7 +3269,8 @@
         "docs/design/EXECUTION_RECEIPT_BINDING.md",
         "docs/design/SOURCE_SEARCH_EXPANSION.md",
         "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
-        "docs/design/SOURCE_SEARCH_EXECUTION.md"
+        "docs/design/SOURCE_SEARCH_EXECUTION.md",
+        "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md"
       ]
     },
     {
@@ -3666,8 +3716,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v67",
       "reason": "준비된104신규쌍69출처의실행지시에따라닫힌역할/관측재사용/streaming/정산된빈length보류와현재누적150·새시간4h/물리1800경계를구체화. 기존실패개별재시도/합격기준완화/새금융owner없음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v68",
+      "reason": "PR100소스6f544c0/Factory901/양OS2704통과및동일tree3f5c341병합후고정104신규쌍확대완료. 실제276회/0.917447514USD·compiler2profiles와동일찬성쏠림/이유보류를분리기록. 원19밖F4대상10중1complete로후반손실확인. 기존C/B/runtime3/누적150/원금융owner/보수차감/최소3/r5보존. 종료handle과독립품질미검증구별."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v62",
+  "design_version": "commentscope-detailed-design-20261113-v63",
   "design_document": "docs/design/README.md"
 }
