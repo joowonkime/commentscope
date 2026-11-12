@@ -280,9 +280,23 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     save('arguments', arguments); save('cores', cores)
     tasks = sa.audit_tasks(arguments, cores)
     typed=getattr(execution,'argument_audit_protocol',None) in argument_observations.TYPED_PROTOCOLS
+    review_records=arguments
+    if split and typed:
+        from commentscope.factory import candidate_source_coverage
+        review_records=[];preflight=[]
+        for record in arguments:
+            possible=candidate_source_coverage.potential_candidates(record)
+            preflight.append({'source_id':record['source']['id'],'potential_candidate_ids':possible,
+                              'status':'needs_review' if possible else 'held_before_review'})
+            if possible:review_records.append(record)
+            else:holds.append({'stage':'argument-review-preflight','source_id':record['source']['id'],
+                'candidate_ids':record['candidate_ids'],'reason':'no_candidate_can_pass_existing_source_rules'})
+        if len(review_records)!=len(arguments):save('argument-review-preflight',preflight)
+    review_ids={record['source']['id'] for record in review_records}
+    review_tasks=[task for task in tasks if task['source_id'] in review_ids]
     owner_protocol=(owner_observations.DIRECTIONAL_SOURCE_BOUND if getattr(execution,'shared_typed',False)
                     else owner_observations.SOURCE_BOUND if typed else owner_observations.VERSION)
-    owner_checks = work('argument-owner', owner_observations.tasks(arguments, cores, tasks,protocol=owner_protocol),
+    owner_checks = work('argument-owner', owner_observations.tasks(review_records, cores, review_tasks,protocol=owner_protocol),
                         lambda group: owner_observations.request(group[0]),
                         lambda group, result: owner_observations.bind(group[0], result), 1) if split else []
     if split: save('argument-owner-checks', owner_checks)
@@ -294,7 +308,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
         if not split:raise ValueError('Typed dependencies require split source audits')
         protocol=execution.argument_audit_protocol
         chat=protocol in (argument_observations.CHAT_SPLIT,*argument_observations.TYPED_PROTOCOLS)
-        for record in arguments:
+        for record in review_records:
             for task in deps.tasks(record,cores,typed=typed):
                 try:requests=deps.chat_requests(task) if chat else deps.requests(task)
                 except ValueError:
@@ -317,7 +331,7 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
         # size. Model input already contains only this original: keep its exact
         # request while binding just the current source and its relevant cores.
         audit_groups = []
-        for record in arguments:
+        for record in review_records:
             sid = record['source']['id']; cids = set(record['candidate_ids'])
             audit_groups.append(([record], [c for c in cores if c['candidate']['id'] in cids],
                 [t for t in tasks if t['source_id'] == sid],

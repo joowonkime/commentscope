@@ -1,18 +1,21 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261111-v43`. 검토 코드: `3b4069a`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~024, DEC-001~014.
+설계 버전: `commentscope-detailed-design-20261112-v47`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~024, DEC-001~015.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
 
 **현재 진입점:** [실제999 이후 설계 검토](MVP_DESIGN_REVIEW.md) → [원문 증거 계약](SOURCE_EVIDENCE_GRAPH.md)
-→ [구현·검증·비용 작업표](MVP_REDESIGN_PLAN.md). DEC-013/014는 제안. [B1 첫 구현](SOURCE_EVIDENCE_IMPLEMENTATION.md)의 무료회귀가 완료됐다. 다음은 TASK-022의 비교 준비다.
-기존 F1~F5/P/X를 유지하며 B1 표현 계약만 opt-in 비교한다. 새 모델 호출·의미품질 채택은 없다. 구현/합성 검사/실제 품질을 구별한다.
+→ [구현·검증·비용 작업표](MVP_REDESIGN_PLAN.md). DEC-013/014는 제안. [B1 첫 구현](SOURCE_EVIDENCE_IMPLEMENTATION.md)의 무료회귀 후 TASK-022의 [실제 원문 비교](SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](SOURCE_EVIDENCE_TRIAL_RESULT.md)).
+기존 F1~F5/P/X를 유지하며 B1 표현 계약만 opt-in 비교한다. DEC-015는 세 arm 합산5달러/7시간의 제한 profiling이며 구조·모델의 의미품질 채택은 아니다. 구현/합성 검사/실제 품질을 구별한다.
+
+후속 무료 수정은 정상 status code 처리와 [기존 규칙상 통과 불가 출처의 후속 호출 생략](SOURCE_AUDIT_PREFLIGHT.md)이다.
+v1 원 실행/유실 비용/미완료 A/C는 보존하며 실제 v2 품질이나 전체 MVP 완료로 승격하지 않는다.
 [이전 Factory 구조안](FACTORY_STRUCTURE.md)은 당시 현재/제안을 구별한 이력이다. 최신999 사용모델·결과를 그 당시 도식으로 대체하지 않는다.
 
 **완료된 실험 설계:** 사용자 입력 풀 확대 지시에 따른 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md).
-실행은1 Agent/이유 부족으로 완료됐다. 원 기한은 만료됐고 새 paid 실행은 보류다.
+실행은1 Agent/이유 부족으로 완료됐다. 원 기한은 만료됐으며 현재 F4 비교는 별도 money owner·원 지출 계승·새 기한을 사용한다.
 이전 MINING_EXPERIMENT의 합성12/실제24 범위는 종료된 소규모 계획이다. snapshot3000 상한을
 실제 입력3000개로 오해하지 않는다. 새 실행기는999개 전체 입력과 형식적 gate 불승격을 검사한다.
 
@@ -156,7 +159,7 @@ TASK-005의 첫 Jev-only2관측/4선언 통제는 기대와 일치했다. 다음
 TASK-001/002/003은 기준선·상세 설계·첫 source adapter의 완료 이력이다.
 TASK-004/013/014의 새 의미 역할 진단/채택은 보류한다. 초기 adapter를 원가 개선으로 채택하지 않았다.
 TASK-015/008/009/010은 기존 자동 생성 결과로 제품 API/개발 화면을 연결한 범위다.
-현재 TASK-020/021의 무료 평가자료·B1 opt-in 구현/회귀 완료 후 TASK-022의 비교 준비가 다음이다. TASK-017/018의 실제 이력과 미완료 품질은
+현재 TASK-020/021의 무료 평가자료·B1 opt-in 구현/회귀 후 TASK-022의 제한 profiling은 예산 중단됐다. 후속 무료 수정과 남은 전체 비교·전이를 구별한다. TASK-017/018의 실제 이력과 미완료 품질은
 deferred로 보존한다. TASK-021~024와 기존 TASK-005~007/012 연결은 새 작업표와 추적표를 따른다.
 자세한 입력·정상/부정·동일cycle 실행 계약은 [Factory 실제 실행](FACTORY_DELIVERY.md)을 따른다.
 TASK-011은 기존 제품 개발 화면/API 연결 범위에서 완료됐으며 조원 프론트 전체 완성이나 실제 사용자 검증을 뜻하지 않는다.
@@ -178,3 +181,5 @@ TASK-005 [후보별 원문 완전성](CANDIDATE_SOURCE_COVERAGE.md)은 bound typ
 원문별 전송 최적화 계약과 채택 조건은 [membership batch](SOURCE_MEMBERSHIP_BATCH.md)를 따른다. 구조v1의 책임은 유지한다.
 
 Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 용량 분리](CHAT_DEPENDENCY_CAPACITY.md)를 따른다.
+
+현재 TASK-022의 [제한된 실제 F4 비교](SOURCE_EVIDENCE_TRIAL.md)는 사용자 구현/테스트 지시에 따라 별도 신규5달러/7시간으로 등록한다. 과거plan기한을 연장하지 않고 전체48/전이/999와 구별한다.

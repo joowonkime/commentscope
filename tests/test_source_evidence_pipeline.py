@@ -26,6 +26,15 @@ class CandidateEvidenceTests(TestCase):
 
     def bind(self,value):return reqs.bind_candidates(self.verified,self.cs,self.members,{'output':value})
 
+    def test_represented_status_cannot_become_a_candidate_error_or_override_failure(self):
+        value=candidate_output(self.cs);value['candidates'][0]['issue_codes']=['represented']
+        self.assertEqual(adapter.lower([self.bind(value)])['status'],'complete')
+        value['candidates'][0]['scope_preserved']='unknown'
+        self.assertEqual(adapter.lower([self.bind(value)])['status'],'unresolved')
+        value['candidates'][0]['scope_preserved']='pass'
+        value['candidates'][0]['issue_codes'].append('scope_unresolved')
+        self.assertEqual(adapter.lower([self.bind(value)])['status'],'unresolved')
+
     def test_literal_reason_and_provenance_reach_new_record(self):
         batch=self.bind(candidate_output(self.cs));record=adapter.lower([batch])
         self.assertEqual(record['status'],'complete');self.assertEqual(record['artifact_kind'],adapter.VERSION)

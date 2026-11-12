@@ -13,6 +13,32 @@ POLICY = 'candidate_verified_subset'
 SCOPABLE = {'supported_candidate_without_owned_position', 'position_alignment_uncertain'}
 
 
+def potential_candidates(record):
+    """Optimistic preflight, never approval or repair of a source declaration.
+
+    A later audit only vetoes these frozen declarations. Skip paid work solely
+    when even the most permissive existing projection cannot publish a source.
+    Unknown legacy formats keep their candidates; malformed provenance raises.
+    """
+    from commentscope.factory import source_arguments
+    source_arguments.validate(record)
+    extraction=record.get('extraction_record',{})
+    if extraction.get('artifact_kind')!=owned.VERSION:
+        return list(record['candidate_ids'])
+    if record['dependency_status']!='complete':return []
+    if record['status']=='complete':return list(record['candidate_ids'])
+    holds=set(extraction.get('hold_reasons',()))
+    if not holds or holds-SCOPABLE:return []
+    candidates={c['id']:c for c in extraction['batch_candidates']};possible=[]
+    for cid in record['candidate_ids']:
+        if not any(cid in u['candidate_ids'] and u['role']=='core_restatement'
+                   and u['authorship']=='asserted_or_endorsed' for u in record['units']):continue
+        if any(a['candidate_sha256']==digest(candidates[cid]) and a['relation']=='uncertain'
+               for a in extraction['alignments']):continue
+        possible.append(cid)
+    return possible
+
+
 def project(record, candidate_id, cores, audits):
     extraction = record.get('extraction_record', {})
     holds = set(extraction.get('hold_reasons', ()))
