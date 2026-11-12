@@ -154,43 +154,48 @@ def run_arm(directory):
     p=validate(directory);executor.check_quota(wait_for_fresh=False)
     with experiment_lock(directory),executor.quota_watch():
         dispatch=host_resources.RemoteCallGuard();session=Session(directory,p,dispatch)
-        def save(name,value):
-            dest=directory/'artifacts'/(name+'.json')
-            if dest.exists():
-                if read_json(dest)!=value:raise ValueError('Same-plan artifact changed')
-            else:session.storage.before_write(value);write(dest,value)
-        baseline=Path(p['baseline_artifacts']);snapshot=load_snapshot(Path(p['snapshot'])).snapshot
-        registry={sid:r['source'] for sid,r in read_json(baseline/'source-discourse.json').items()}
-        candidates=read_json(baseline/'candidates.json');memberships=read_json(baseline/'memberships.json');discourse=read_json(baseline/'source-discourse.json')
-        e=PipelineWork(session,session.inspect,save,registry=registry,membership_mode='raw',verification_contract=raw.FULL_SCOPE,schedule=executor.minimal_pipeline.SCHEDULE)
-        e.shared_typed=True;e.argument_audit_protocol=obs.SHARED_TYPED_CHAT;e.source_evidence_protocol=p['source_evidence_protocol']
-        with host_resources.watch(resource_attempt(directory),p['resource_policy'],host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_api'):
-            result=pipeline_stages.arguments(snapshot,candidates,memberships,discourse,e,discovery_mode='shared')
-            inputs,checks=pipeline_stages.compile_agents(snapshot,candidates,memberships,result.arguments,result.cores,result.audits,
-                lambda req:session.call('facts',req),model=p['classifier'],documents=p['documents'],selections=p['selections'],source_policy='candidate_verified_subset')
-            save('agent-inputs',inputs);save('fact-checks',checks)
-            runtime=runtime_probe(inputs['bundle'],session,save_turn=lambda row:save('runtime/'+row['candidate_id']+'/'+row['question_id'],row))
-            runtime_check(runtime,inputs['compiled']);save('runtime',runtime)
-            save('errors',e.errors);save('holds',e.holds)
-        published={r['candidate_id'] for r in inputs['compiled']['profiles']}
-        bindings={(r['claim_id'][:-2],r['source_id']) for r in inputs['bundle']['relations'] if r['claim_id'].endswith(':C')}
-        assessment=[dict(row,selected_for_bundle=(row['candidate_id'],row['source_id']) in bindings,
-            published=(row['candidate_id'],row['source_id']) in bindings and row['candidate_id'] in published)
-            for row in read_json(p['annotations'])['cases']]
-        save('eligible-pair-assessment',assessment)
-        report=dict(arm=p['arm'],plan_sha256=sha(directory/'plan.json'),fresh_f4=True,archived_membership_inputs_reused=True,
-            profiles=len(inputs['compiled']['profiles']),source_arguments=len(result.arguments),complete_source_arguments=sum(r['status']=='complete' for r in result.arguments),
-            profile_summaries=[dict(candidate_id=x['candidate_id'],support_count=x['model_core_support_count'],entries=len(x['prompt_entries'])) for x in inputs['compiled']['profiles']],
-            errors=len(e.errors),holds=len(e.holds),runtime_turns=len(runtime['turns']),
-            eligible_pair_assessments=assessment,
-            runtime_statuses=[dict(candidate_id=r['candidate_id'],question_id=r['question_id'],status=r['turn']['status']) for r in runtime['turns']],
-            account=executor.ledger(p['spend_policy']).summary(),shared_comparison_charge=session.money.summary(plan_sha256=p['spend_scope_sha256']),
-            formal_admission=False,quality_gate_passed=False,requires_semantic_review=True)
-        save('report',report)
+        return execute_factory(directory,p,session,dispatch)
+
+
+def execute_factory(directory,p,session,dispatch,*,complete=True):
+    """Existing F4/Compiler/runtime path with an already authorized session."""
+    def save(name,value):
+        dest=directory/'artifacts'/(name+'.json')
+        if dest.exists():
+            if read_json(dest)!=value:raise ValueError('Same-plan artifact changed')
+        else:session.storage.before_write(value);write(dest,value)
+    baseline=Path(p['baseline_artifacts']);snapshot=load_snapshot(Path(p['snapshot'])).snapshot
+    registry={sid:r['source'] for sid,r in read_json(baseline/'source-discourse.json').items()}
+    candidates=read_json(baseline/'candidates.json');memberships=read_json(baseline/'memberships.json');discourse=read_json(baseline/'source-discourse.json')
+    e=PipelineWork(session,session.inspect,save,registry=registry,membership_mode='raw',verification_contract=raw.FULL_SCOPE,schedule=executor.minimal_pipeline.SCHEDULE)
+    e.shared_typed=True;e.argument_audit_protocol=obs.SHARED_TYPED_CHAT;e.source_evidence_protocol=p['source_evidence_protocol']
+    with host_resources.watch(resource_attempt(directory),p['resource_policy'],host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_api'):
+        result=pipeline_stages.arguments(snapshot,candidates,memberships,discourse,e,discovery_mode='shared')
+        inputs,checks=pipeline_stages.compile_agents(snapshot,candidates,memberships,result.arguments,result.cores,result.audits,
+            lambda req:session.call('facts',req),model=p['classifier'],documents=p['documents'],selections=p['selections'],source_policy='candidate_verified_subset')
+        save('agent-inputs',inputs);save('fact-checks',checks)
+        runtime=runtime_probe(inputs['bundle'],session,save_turn=lambda row:save('runtime/'+row['candidate_id']+'/'+row['question_id'],row))
+        runtime_check(runtime,inputs['compiled']);save('runtime',runtime)
+        save('errors',e.errors);save('holds',e.holds)
+    published={r['candidate_id'] for r in inputs['compiled']['profiles']}
+    bindings={(r['claim_id'][:-2],r['source_id']) for r in inputs['bundle']['relations'] if r['claim_id'].endswith(':C')}
+    assessment=[dict(row,selected_for_bundle=(row['candidate_id'],row['source_id']) in bindings,
+        published=(row['candidate_id'],row['source_id']) in bindings and row['candidate_id'] in published)
+        for row in read_json(p['annotations'])['cases']]
+    save('eligible-pair-assessment',assessment)
+    report=dict(arm=p['arm'],plan_sha256=sha(directory/'plan.json'),fresh_f4=True,archived_membership_inputs_reused=True,
+        profiles=len(inputs['compiled']['profiles']),source_arguments=len(result.arguments),complete_source_arguments=sum(r['status']=='complete' for r in result.arguments),
+        profile_summaries=[dict(candidate_id=x['candidate_id'],support_count=x['model_core_support_count'],entries=len(x['prompt_entries'])) for x in inputs['compiled']['profiles']],
+        errors=len(e.errors),holds=len(e.holds),runtime_turns=len(runtime['turns']),
+        eligible_pair_assessments=assessment,
+        runtime_statuses=[dict(candidate_id=r['candidate_id'],question_id=r['question_id'],status=r['turn']['status']) for r in runtime['turns']],
+        account=executor.ledger(p['spend_policy']).summary(),shared_comparison_charge=session.money.summary(plan_sha256=p['spend_scope_sha256']),
+        formal_admission=False,quality_gate_passed=False,requires_semantic_review=True)
+    save('report',report)
+    if complete:
         write(directory/'completed.json',{'plan_sha256':sha(directory/'plan.json'),'report':report,
             'artifacts':{str(path.relative_to(directory)):sha(path) for path in sorted((directory/'artifacts').rglob('*.json'))}})
-        return report
-
+    return report
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--key-file',type=Path)
