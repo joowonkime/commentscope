@@ -8,6 +8,8 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_observation_reuse",
+    "test_source_search_expansion",
     "test_source_role_applicability",
     "test_source_role_replay",
     "test_execution_receipt_binding",

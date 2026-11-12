@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v66`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v67`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v61`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v62`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -287,3 +287,5 @@ C 고정 비교는 Agent0/68회/1.760652달러로 종료됐다. 같은 C의 전�
 [검색 확대 준비](design/SOURCE_SEARCH_EXPANSION.md)는 같은6후보·999풀에서 신규104쌍/69출처를 계산했다. 기존 검색을 정확히 재현한 무료 계획이며 실제 호출·지지·Agent 증가를 뜻하지 않는다.
 
 [고정1Agent의 실제3질문 검증](design/FIXED_PROFILE_RUNTIME_CHECK.md)은 저장응답replay와구별한별도runtime실행이다. 원C기한을바꾸지않고현재계속지시의한정된시간권한/같은누적금융장부를결합한다.
+
+현재 신규 구현: [고정104쌍 출처 검색 확대 실행](design/SOURCE_SEARCH_EXECUTION.md). 정확한원관측재사용과새평가를분리하고같은누적150을유지한다. 기존단일Agent/실제3질문과전체2Agent/r5목표를구별한다.
