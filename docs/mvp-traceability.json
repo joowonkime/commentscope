@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261112-v64",
-  "baseline_commit": "998627ff6c5770295b8ddd2ef45b4cf87130eb5a",
-  "observed_date": "2026-11-12",
+  "spec_version": "commentscope-mvp-20261113-v65",
+  "baseline_commit": "e6f031949fe1e6d886ea2ad1f72389b418d28b9c",
+  "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -24,8 +24,8 @@
   "resume": {
     "next_task": "TASK-022",
     "parallel_tasks": [],
-    "paid_execution_hold": false,
-    "hold_reason": "C완료68회/1.760652USD/Agent0. 무료C전체7기록replay는6complete/Agent1/4sources/7entries,추가호출0,runtime미실행. 2Agent/r5미달. 원owner216회5.8119029/원기한14:45:28UTC/누적150보존. 현재API실행없음."
+    "paid_execution_hold": true,
+    "hold_reason": "발화역할/영수증결합무료구현/관련100·Factory884통과,C전체14graph재검사7→8/후보1대기/Agent1유지. 검색확대신규104쌍69출처계획만준비/호출0. 기존유료기한만료보존,새실행미등록."
   },
   "requirements": [
     {
@@ -1611,6 +1611,69 @@
       "design_refs": [
         "docs/design/SCOPED_SOURCE_QUOTES.md"
       ]
+    },
+    {
+      "id": "DEC-022",
+      "title": "비명제 문맥의 적용 의무와 주장 검증 분리",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-003",
+        "REQ-010"
+      ],
+      "question": "실제 주장/반문/조건절의 불확실성을 유지하면서 명제가 아닌 질문의 필드 미적용을 어떻게 표현할 것인가?",
+      "options": [
+        "닫힌 역할 조건과 별도 검증 policy/적용 증거",
+        "모든 unclear를 무시",
+        "매 실패를 유료 재생성"
+      ],
+      "selection": "비명제 문맥만 commitment/polarity 미적용을 별도 기록한다. 전체 원문 감사와 의미 실패/조건절/mixed 보류를 유지하고 원 C 전체 그래프의 무료 replay를 구별한다.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SOURCE_ROLE_APPLICABILITY.md"
+      ]
+    },
+    {
+      "id": "DEC-023",
+      "title": "원 금융 owner와 실행별 정산 영수증 결합",
+      "status": "proposed",
+      "requirements": [
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "같은 요청 본문/owner의 다른 모델 실행을 금융 행에 어떻게 모호함 없이 결합할 것인가?",
+      "options": [
+        "새 호출의 실제 실행/모델/원 응답 SHA를 정산과 함께 저장",
+        "금액만으로 행 선택",
+        "과거 행을 추정 수정"
+      ],
+      "selection": "보조 receipt binding을 실제 금융 call ID에 원자적으로 저장한다. 과거 유일 증명만 유지하고 모호한 과거 다중 행은 계속 중단한다. 새 지출/환급/기한 연장은 없다.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/EXECUTION_RECEIPT_BINDING.md"
+      ]
+    },
+    {
+      "id": "DEC-024",
+      "title": "동일6후보의미평가출처검색확대",
+      "status": "proposed",
+      "requirements": [
+        "REQ-002",
+        "REQ-003",
+        "REQ-008",
+        "REQ-010"
+      ],
+      "question": "같은19개실패재호출없이전체999풀에서이전검색상한의영향을어떻게분리할것인가?",
+      "options": [
+        "원임베딩재현후같은6후보32출처검색및원선택쌍전체제외",
+        "동일19개재호출",
+        "지지기준완화"
+      ],
+      "selection": "기존검색artifact를원42임베딩응답으로정확히재현했다. 확대안은신규104쌍/69출처(미선택46),추가호출0. 새실행계약/상한/가격/현재누적장부확인전dispatch없음. 새지지/Agent증가/r5합격과구별.",
+      "evidence": [],
+      "design_refs": [
+        "docs/design/SOURCE_SEARCH_EXPANSION.md"
+      ]
     }
   ],
   "tasks": [
@@ -2905,7 +2968,7 @@
     },
     {
       "id": "TASK-022",
-      "title": "F4 실제19출처 실패 완료와 주소/형식 계약 후속 구현",
+      "title": "Agent 생성 후속 검증: 발화 역할·출처 검색·실행 증거",
       "requirements": [
         "REQ-001",
         "REQ-002",
@@ -2921,7 +2984,10 @@
         "DEC-018",
         "DEC-019",
         "DEC-020",
-        "DEC-021"
+        "DEC-021",
+        "DEC-022",
+        "DEC-023",
+        "DEC-024"
       ],
       "depends_on": [
         "TASK-021",
@@ -2929,6 +2995,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
+        "현재무료후속: 비명제문맥적용의무와실제주장의불확실성분리,실행별정산영수증결합,원C전체14그래프재검사와동일6후보출처검색확대계획. 원C/B/PR97이력과최소2/r5보존.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
@@ -3026,6 +3093,18 @@
           "scope": "Scoped source quotations preserve audited own-source modality/world/negation/qualification in visible elided quotes; fact/discontinuous/nested/semantic vetoes and min3 preserved. Related59 pass6.236s,Factory863 pass275.419s before2additional test-only cases (included in59). Same C all7-record replay4to6complete,1Agent/4supports/7entries,0newcalls/0USD,runtime unexecuted.",
           "reference": "docs/design/SCOPED_SOURCE_QUOTES.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Role/receipt/replay related100 pass7.825s; fullFactory884 pass273.810s. C all14 original graphs replay7to8complete,1pending candidate without fabricated certificate. Existing7records retain6complete/1Agent4sources7entries,0newcalls/USD,runtime not exercised. Same owner/body different model/plan receipt matching,atomic rollback,legacy ambiguity and no-refund guards pass.",
+          "reference": "docs/design/SOURCE_ROLE_APPLICABILITY.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Original42embeddingrequest/response pairs restored with exact request/plan/model/usage checks; entire original999/303 retrieval artifact reproduced exactly. Same6cores32source search yields104newpairs69sources incl46previously unselected; original1536 attempted pairs excluded,0newembedding/model calls. Execution cost/latency unknown and no new financial/runtime authorization.",
+          "reference": "docs/design/SOURCE_SEARCH_EXPANSION.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3044,7 +3123,10 @@
         "docs/design/SOURCE_EVIDENCE_TRIAL.md",
         "docs/design/SOURCE_AUDIT_PREFLIGHT.md",
         "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md",
-        "docs/design/SCOPED_SOURCE_QUOTES.md"
+        "docs/design/SCOPED_SOURCE_QUOTES.md",
+        "docs/design/SOURCE_ROLE_APPLICABILITY.md",
+        "docs/design/EXECUTION_RECEIPT_BINDING.md",
+        "docs/design/SOURCE_SEARCH_EXPANSION.md"
       ]
     },
     {
@@ -3478,8 +3560,12 @@
     {
       "spec_version": "commentscope-mvp-20261112-v64",
       "reason": "v5 C는Agent0으로종료. 그래프7통과/연결4완료와모든의미검사를통과한2출처의adapter표현보류를분리. 연속비사실절에원문공유한정어를표시하는계약과같은C전체무료replay를먼저명시."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v65",
+      "reason": "PR97후속계속진행: 질문문과실제주장의필드적용분리및동일owner다른실행/모델의정산결합을먼저명세. 이전결과/만료plan/금융이력보존,무료합성/전체저장C재검사와실제품질증가구별. 현재형으로남은v3/v4/C대기문구를이력링크로정리하고현재무료작업과원실패/미검증을첫화면에서구별한다."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261112-v59",
+  "design_version": "commentscope-detailed-design-20261113-v60",
   "design_document": "docs/design/README.md"
 }
