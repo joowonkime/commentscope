@@ -1,7 +1,7 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261112-v59`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~025, DEC-001~021.
+설계 버전: `commentscope-detailed-design-20261113-v60`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~025, DEC-001~024.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
@@ -10,30 +10,24 @@
 → [구현·검증·비용 작업표](MVP_REDESIGN_PLAN.md). DEC-013/014는 제안. [B1 첫 구현](SOURCE_EVIDENCE_IMPLEMENTATION.md)의 무료회귀 후 TASK-022의 [실제 원문 비교](SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](SOURCE_EVIDENCE_TRIAL_RESULT.md)).
 기존 F1~F5/P/X를 유지하며 B1 표현 계약만 opt-in 비교한다. DEC-015는 세 arm 합산5달러/7시간의 제한 profiling이며 구조·모델의 의미품질 채택은 아니다. 구현/합성 검사/실제 품질을 구별한다.
 
-후속 무료 수정은 정상 status code 처리와 [기존 규칙상 통과 불가 출처의 후속 호출 생략](SOURCE_AUDIT_PREFLIGHT.md)이다.
-v1 원 실행/유실 비용/미완료 A/C는 보존하며 실제 v2 품질이나 전체 MVP 완료로 승격하지 않는다.
-TASK-025의 무료 구현·회귀 완료 근거는 [F4 v3 원문 대조 감사](SOURCE_FIDELITY_AUDIT.md)다.
-TASK-022의 고정 검증은 종료된5달러 비교와 구별하며, 사용자 지적으로 제안된6달러 확인은 철회한다.
-현재 [고정 대조·비용 계획](SOURCE_FIDELITY_VALIDATION.md)은8가족16요청·기존6후보/19출처/25관계와
-개발48/전이48을 구별한다. [누적150달러 예산 revision](TEAM_BUDGET_REVISION.md)은 과거 지출·owner 한도를 보존한다.
-v3 실제16요청/0.2058115달러와 원3/8 결과는 보존한다. 참고 주석 오류와 일반조건 표현 문제는
-[v4 조건·필요성 구분](SOURCE_CONDITION_QUALIFICATION.md)에서 다룬다.
-v4 supplement는 동일 money owner·기한·과거 지출을 계승해 등록한다.
-실제 v4 통제는 정상8/8·왜곡탐지8/8·오승인0이었다. 최장 원문의 출력한도 종료는
-[정산된 실패 응답의 후속 실행](SOURCE_FIDELITY_CONTINUATION.md)으로 재호출 없이 보류한다.
-**[실제19출처 최종 결과](SOURCE_FIDELITY_RESULT.md): Agent0/runtime0, v4 생성 품질 미채택.**
-host 주소 결합·유형 일관성·닫힌 관계 목록을 다음 무료 구현으로 검토한다. 검토 통제 통과를 생성 성공으로 보고하지 않는다.
-현재 후속 계약은 [v5 exact-quote 결합](SOURCE_QUOTE_BINDING.md)이다. wire는 정확한 원문 q/n/o를 받고,
-host가 canonical source_id/start/end와 원문 전체 envelope를 결합한다. 의미·원가 채택은 미검증이다.
-후속 v5 B 결과는1 Agent/이유 응답으로 부분 개선됐으며2 Agent 미달이다.
-[기존 C 생성 배정의 등록 계약](REGISTERED_GENERATION_COMPARISON.md)은 모델 설정과 금융owner를 구별하고
-같은19개·원기한·원지출을 유지한다. B 실패 댓글의 개별 fallback은 허용하지 않는다.
+현재 TASK-022의 무료 후속은 [발화 역할별 필드 적용](SOURCE_ROLE_APPLICABILITY.md)과
+[실행별 정산 영수증 결합](EXECUTION_RECEIPT_BINDING.md)이다.
+원 C14개 저장 그래프의 별도 재검증은 완료7→8, 새1개는 후보 관측 대기이며
+Agent는 PR97의 무료 재변환과 같은1개/유효 지지4개다. 새 질문 검증·최소2Agent·r5는 미완료다.
+[검색 확대 준비](SOURCE_SEARCH_EXPANSION.md)는 같은6후보/999풀에서 신규104쌍/69출처를
+원 임베딩으로 계산했다. 실제 호출·새 지지 판정은 없다.
+
+과거 v1 비교 중단·v3/v4 실패·v5 B/C 생성 비교와 비용은
+[원 결과/무료 재검사](SOURCE_FIDELITY_RESULT.md)와 추적표에서 보존한다.
+주석 exact equality→대조 감사, 일반/필요 조건 분리, quote 주소 결합의 설계 근거도 해당 결과에 연결한다.
+현재 팀 누적150달러와 과거 차감은 유지하며 종료된 실행 plan·기한을 다시 사용하지 않는다.
+
 새 protocol만 명시적으로 고르며 기본 legacy는 유지한다. 실제 품질·원가 채택은 미검증이다.
 [이전 Factory 구조안](FACTORY_STRUCTURE.md)은 당시 현재/제안을 구별한 이력이다. 최신999 사용모델·결과를 그 당시 도식으로 대체하지 않는다.
 
 **완료된 실험 설계:** 사용자 입력 풀 확대 지시에 따른 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md).
 실행은1 Agent/이유 부족으로 완료됐다. 이후 v1 F4 비교도 별도 owner·원 지출 계승 아래 예산 중단됐다.
-현재 누적150달러 실행은 등록됐으며 v4도 기존 owner와 최종 기한을 연장하지 않는다.
+이전 누적150달러 실행은 완료됐으며, 현재 새 유료 실행은 등록하지 않았다. 이전 owner·원 기한은 보존한다.
 이전 MINING_EXPERIMENT의 합성12/실제24 범위는 종료된 소규모 계획이다. snapshot3000 상한을
 실제 입력3000개로 오해하지 않는다. 새 실행기는999개 전체 입력과 형식적 gate 불승격을 검사한다.
 
@@ -203,3 +197,7 @@ Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 �
 현재 TASK-022의 [제한된 실제 F4 비교](SOURCE_EVIDENCE_TRIAL.md)는 사용자 구현/테스트 지시에 따라 별도 신규5달러/7시간으로 등록한다. 과거plan기한을 연장하지 않고 전체48/전이/999와 구별한다.
 
 후속 무료 구현: [공유 한정어의 원문 인용 변환](SCOPED_SOURCE_QUOTES.md)은 DEC-021의 후보 계약이다. C 원결과Agent0과 별도 replay를 구별한다.
+
+후속 무료 계약: [발화 역할별 적용 의무](SOURCE_ROLE_APPLICABILITY.md), [실행별 정산 영수증 결합](EXECUTION_RECEIPT_BINDING.md). 원 C/B 결과와 종료된 유료 기한을 유지하며 전체 저장 응답의 재검사는 fresh 품질 합격이 아니다.
+
+동일6후보의 [출처 검색 확대 준비](SOURCE_SEARCH_EXPANSION.md)는 원 임베딩을 재현한 무료 계획이며 새 모델 지지 판정이나 유료 실행은 아니다. 신규104쌍/69출처와 원1536시도쌍 제외를 별도 실행 계약에 연결한다.

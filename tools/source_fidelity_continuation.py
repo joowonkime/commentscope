@@ -20,7 +20,7 @@ from commentscope.providers.generation_limits import allocate
 from commentscope.providers.openrouter_budget import units
 from commentscope.storage import write_json_exclusive as write
 
-VERSION='source-fidelity-settled-length-continuation-20261112-v1'
+VERSION='source-fidelity-settled-length-continuation-20261113-v2'
 TOOL=Path(__file__).resolve()
 GRAPH=('source-evidence-proposal','source-evidence-observation','source-evidence-candidates')
 
@@ -55,9 +55,15 @@ def saved_length(session,stage,request):
     policy=session.plan['spend_policy'];money=live.executor.ledger(policy);account=money.summary()
     if account['reserved_calls'] or account['uncertain_calls']:raise live.BudgetExhausted('Unsettled charges still stop continuation')
     with closing(sqlite3.connect(Path(policy['ledger']).resolve().as_uri()+'?mode=ro',uri=True)) as db:
-        rows=db.execute('SELECT state,charged FROM calls WHERE plan_sha=? AND request_sha=?',
+        rows=db.execute('SELECT c.state,c.charged,b.binding FROM calls c LEFT JOIN receipt_bindings b ON b.call_id=c.id WHERE c.plan_sha=? AND c.request_sha=?',
             (session.plan['spend_scope_sha256'],digest(actual))).fetchall()
-    if rows!=[('complete',units(receipt['usage']['cost']))]:raise ValueError('Unique complete charge must match original receipt')
+    exact=dict(execution_plan_sha256=identity['plan_sha256'],request_sha256=digest(actual),
+        deployment_sha256=digest(deployment),provider_response_sha256=digest(receipt))
+    bound_rows=[(state,charge) for state,charge,binding in rows if binding is not None and json.loads(binding)==exact]
+    if any(binding is not None for _,_,binding in rows):
+        matches=bound_rows  # Never fall back from a mismatched/new receipt to legacy price matching.
+    else:matches=[(state,charge) for state,charge,_ in rows]
+    if matches!=[('complete',units(receipt['usage']['cost']))]:raise ValueError('Unique complete charge must match exact execution receipt')
     return result
 
 

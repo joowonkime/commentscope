@@ -1,43 +1,34 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261112-v64`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v65`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261112-v59`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v60`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
 [구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). TASK-020의 무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. TASK-022의 [고정 비교](design/SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](design/SOURCE_EVIDENCE_TRIAL_RESULT.md)).
 [첫 구현/검증 범위](design/SOURCE_EVIDENCE_IMPLEMENTATION.md)와 현재 추적표를 확인한다. DEC-015는 사용자 구현·테스트 지시에 따른 세 arm 합산 추가5달러/7시간의 제한 profiling만 승인한다. DEC-013/014의 구조·모델 채택은 제안이며 r5·제품 의도는 유지한다.
 
-후속 수정은 정상 상태 코드/자원 로그와 [통과 불가 출처의 후속 호출 생략](design/SOURCE_AUDIT_PREFLIGHT.md)이다.
-실제 v2 품질·전체 비교·MVP 완료는 미검증이다. 종료된 v1/v2 실행은 재개하지 않는다.
-TASK-025의 [v3 원문 대조 감사](design/SOURCE_FIDELITY_AUDIT.md)는 opt-in 구현·무료 검증을 완료했다.
-주석 완전 일치를 원문 충실성 감사로 교체하고, 세계/확신 강도와 희소 관계·누락 의무를 분리한다.
-DEC-016의 구현은 실제 의미 품질 채택이 아니며 기본 legacy 경로와 기존 합격 기준을 유지한다.
-TASK-022의 v3 실제16요청은0.2058115달러로 완료됐다. 원3/8 보존 결과에는 참고 주석 오류가 있어
-모델 정확도로 해석하지 않는다. 일반 조건을 필요조건으로 강제한 계약은
-[v4 조건 구분과 후속 검증](design/SOURCE_CONDITION_QUALIFICATION.md)으로 수정한다.
-새 개발 통제는 독립 gold가 아니며 통과 기준은 유지한다. 종료된5달러 plan은 재개하지 않는다.
-[새 고정 비교·비용 계획](design/SOURCE_FIDELITY_VALIDATION.md)은8가족16요청과 기존 실제6후보/19출처/25관계를
-고정한다. 사용자 지적에 따라6달러 제안을 철회하고 [이전 지출을 포함한 누적150달러](design/TEAM_BUDGET_REVISION.md)를 반영한다.
-동일 장부150달러 revision은 완료됐다. v4는 v3와 동일 money owner·최종 기한을 참조해
-이전 지출과 요청 수를 계승한다. 새 고정 실행 등록을 검사한 뒤 진행한다(DEC-017·018).
-v4 개발 통제는 정상8/8·왜곡8/8 탐지·오승인0으로 통과했다. 최장 원문 생성의 출력한도 종료와
-[정산된 실패 응답의 재호출 없는 후속 실행](design/SOURCE_FIDELITY_CONTINUATION.md)을 구별한다.
-이 결과는 실제 Agent 생성·전체 r5 합격이 아니다.
-후속 실제19출처 검증은 [v4 결과](design/SOURCE_FIDELITY_RESULT.md)에 기록했다.
-그래프 감사3개·근거 연결2개 완료에 그쳐 최종 Agent0/runtime0이었다.
-새66회/2.2192627달러를 포함한 원 owner 누적은2.4250742달러이며 재호출/미정산0이다.
-다음은 host의 정확한 주소 결합과 schema/관계 선택 계약을 개선하는 무료 설계·구현이다.
-실제 생성 품질 채택·전체999 재실행·48개 paired/전이·r5·MVP 완료는 보류한다.
-후속 [v5 원문 quote/host 주소 결합](design/SOURCE_QUOTE_BINDING.md)은 숫자 위치 생성과
-무효 typing/edge 선택을 제거하는 opt-in 후보 구현이다(DEC-019). q/n/o wire와 canonical 주소·원 응답을
-구별하며, 기존 whole-source 감사·필수 사실·지지 기준을 유지한다. 무료 검사와 새 실제 품질은 구별한다.
-v5 B 실제19출처는 Agent1개/각 지지3개·이유 응답1개·없는 정보 보류를 확인했다.
-목표2개에는 못 미치며 [기존 C 생성 배정 비교](design/REGISTERED_GENERATION_COMPARISON.md)를
-원owner/원기한/누적150 안에서 별도 등록한다. 실제 결과와 미검증은 [결과 문서](design/SOURCE_FIDELITY_RESULT.md)에 보존한다.
+현재 TASK-022는 Agent 생성 파이프라인의 후속 검증이다. 확인된 결과는
+[원 실행·실패·무료 재검사](design/SOURCE_FIDELITY_RESULT.md)에서 구별한다.
+
+- 실제 v5 B: 고정19출처에서 Agent1개/유효 지지3개, 입장·이유 응답과 없는 정보 보류3턴.
+- 실제 v5 C: 동일19출처의 Sol 생성 비교에서 Agent0개/질문0턴. 원 결과는 변경하지 않는다.
+- PR97의 별도 무료 재변환: C 전체7개 기록에서 Agent1개/유효 지지4개/허용 항목7개.
+  새 프로필의 실제 질문 검증은 미실행이다. 최소2 Agent·전체 r5·MVP 완료는 미달/미검증이다.
+- 현재 무료 후속: [발화 역할별 적용](design/SOURCE_ROLE_APPLICABILITY.md)과
+  [실행별 정산 결합](design/EXECUTION_RECEIPT_BINDING.md). 비명제 문맥의 필드 미적용과
+  실제 주장/조건절의 불확실성을 구별하며 원문 전체 감사·필수 사실·최소 지지는 유지한다.
+- 발견 입력999개와 관계 검증120개 출처/1536선택쌍, F4 비교19개 출처를 구별한다.
+  같은6후보의 검색 범위 확대는 저장된 임베딩으로 먼저 준비한다. 미평가는 반대나 노이즈가 아니다.
+
+팀 누적150달러와 과거 지출/보수 차감은 유지한다. 이전 실행의5달러 owner·종료 기한을
+재개하지 않으며,6달러 제안은 철회된 상태다. 현재 작업은 무료이고 활성 유료 실행은 없다.
+새 모델 검증은 원 계획을 덮어쓰지 않는 별도 고정 실행 계약에 결합한다.
+주석 완전 일치→원문 대조 감사·조건 구분·quote 주소 결합·B/C 생성 배정 비교의
+이력과 근거는 [결과 문서](design/SOURCE_FIDELITY_RESULT.md) 및 추적표 DEC-013~024에 보존한다.
 
 ## 1. 이 문서의 역할과 읽는 순서
 
@@ -290,3 +281,7 @@ TA의 초행/시연 밖 행동 평가에 따라 핵심 과업 유용성과 화�
 후속 무료 구현: [공유 한정어의 원문 인용 변환](design/SCOPED_SOURCE_QUOTES.md)은 DEC-021의 후보 계약이다. C 원결과Agent0과 별도 replay를 구별한다.
 
 C 고정 비교는 Agent0/68회/1.760652달러로 종료됐다. 같은 C의 전체7개 저장 기록을 별도 무료 재변환하면 Agent1개/유효 지지4개를 구성하지만 runtime은 미실행이다. 최소2 Agent·전체 r5·MVP 완료는 미달/미검증이며 원 C 결과를 덮어쓰지 않는다.
+
+후속 무료 계약: [발화 역할별 적용 의무](design/SOURCE_ROLE_APPLICABILITY.md), [실행별 정산 영수증 결합](design/EXECUTION_RECEIPT_BINDING.md). 원 C/B 결과와 종료된 유료 기한을 유지하며 전체 저장 응답의 재검사는 fresh 품질 합격이 아니다.
+
+[검색 확대 준비](design/SOURCE_SEARCH_EXPANSION.md)는 같은6후보·999풀에서 신규104쌍/69출처를 계산했다. 기존 검색을 정확히 재현한 무료 계획이며 실제 호출·지지·Agent 증가를 뜻하지 않는다.

@@ -25,3 +25,7 @@ TASK-022 / REQ-001·003·008·010 / DEC-018. 원 v4 계획·모델·출력 할�
 
 정산된 길이 오류만 원형 반환, pending/unknown과 영수증/본문 변경 거절, 원 checkpoint 재사용/추가 호출0,
 manifest·원 계획/기한의 결합을 합성 회귀로 확인한다. 실제 품질은 원 v4 결과와 함께 따로 보고한다.
+
+## 후속 실행별 정산 증거
+
+현재 helper v2는 [정산 영수증 결합](EXECUTION_RECEIPT_BINDING.md)으로 같은 owner/body의 다른 실행을 구별한다. 구 frozen helper/manifest/실행은 수정하지 않는다. 과거 다중 행에 추정 결합을 추가하거나 기한을 재개하지 않는다.

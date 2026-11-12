@@ -11,6 +11,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory import source_quote_anchors as anchors
 
 VERSION = 'source-evidence-graph-20261112-v5'
+VERIFICATION_POLICY = 'source-role-applicability-20261113-v1'
 UNIT_IDS = tuple(f'U{i}' for i in range(1,33))
 EDGE_IDS = tuple(f'E{i}' for i in range(1,65))
 SCOPE_REFS = ('subject_refs','referent_refs','predicate_refs','polarity_refs','modality_refs',
@@ -327,15 +328,36 @@ def closure(edges, targets):
     return visited-set(targets)
 
 
+def unit_applicability(unit, edges):
+    """Nonpropositional context has no asserted commitment or truth polarity.
+
+    An unresolved assertion, rhetorical proposition or antecedent is never
+    converted to context. Argumentative edges also retain their existing veto.
+    The independent full-source fidelity obligations remain mandatory.
+    """
+    context=(unit['kind']=='not_applicable' and unit['speech_act'] in ('question','other')
+        and unit['assertion_mode'] in ('question','non_assertive')
+        and unit['epistemic']=='not_applicable' and unit['commitment']!='endorsed'
+        and unit['interpretation']=='resolved'
+        and all(e['relation'] in ('elaborates','reported_by') for e in edges
+                if unit['local_id'] in (e['from_unit'],e['to_unit'])))
+    return dict(role='nonpropositional_context' if context else 'propositional_or_unresolved',
+        not_applicable_fields=['commitment','polarity'] if context else [])
+
+
 def verify(proposal, observation):
     validate_proposal(proposal)
     if bind_observation(proposal,{'output':observation['output']})!=observation:raise ValueError('Observation provenance changed')
     out=proposal['output'];seen={r['unit_id']:r for r in observation['output']['unit_observations']};obs=observation['output'];issues=[]
+    applicability={u['local_id']:unit_applicability(u,out['edges']) for u in out['units']}
     for u in out['units']:
         row=seen[u['local_id']]
         if any(row[k]!='pass' for k in UNIT_CHECKS) or blocking_codes(row['issue_codes']):issues.append('unit_fidelity_unresolved')
-        if (u['interpretation']!='resolved' or u['kind'] in ('mixed','unresolved')
-                or u['commitment']=='unclear' or u['scope']['polarity']=='unresolved'
+        inactive=applicability[u['local_id']]['not_applicable_fields']
+        if (u['interpretation']!='resolved' or u['kind'] in ('mixed','unresolved') or u['speech_act']=='unresolved'
+                or u['kind']=='not_applicable' and not inactive
+                or 'commitment' not in inactive and u['commitment']=='unclear'
+                or 'polarity' not in inactive and u['scope']['polarity']=='unresolved'
                 or u['epistemic']=='unknown' or u['world']=='unknown'
                 or u['kind'] in ('fact','prediction') and u['world']=='unspecified'
                 or u['scope']['change_or_state']=='unresolved' or u['assertion_mode']=='unresolved'):issues.append('unit_interpretation_unresolved')
@@ -351,7 +373,8 @@ def verify(proposal, observation):
     if any(obs[k]!='pass' for k in ('scope_coverage','ownership_coverage','dependency_coverage')):issues.append('source_obligations_unresolved')
     if any(i['status']=='unresolved' for i in out['issues']+obs['issues']):issues.append('unresolved_issue')
     obligations={k:('unknown' if issues else 'pass') for k in OBLIGATION_CHECKS}
-    return dict(artifact_kind=VERSION+'/verified',proposal=deepcopy(proposal),observation=deepcopy(observation),
+    return dict(artifact_kind=VERSION+'/verified',verification_policy=VERIFICATION_POLICY,unit_applicability=applicability,
+        proposal=deepcopy(proposal),observation=deepcopy(observation),
         binding_checks={k:'pass' for k in BINDING_CHECKS},obligation_results=obligations,
         status='unresolved' if issues else 'complete',issues=sorted(set(issues)),semantic_approval=False)
 

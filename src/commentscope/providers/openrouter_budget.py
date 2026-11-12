@@ -52,6 +52,7 @@ class SpendLedger:
             db.execute('CREATE TABLE IF NOT EXISTS plans (sha TEXT PRIMARY KEY, maximum INTEGER)')
             db.execute('CREATE TABLE IF NOT EXISTS calls (id INTEGER PRIMARY KEY, plan_sha TEXT, request_sha TEXT, reserved INTEGER, charged INTEGER, state TEXT)')
             db.execute('CREATE TABLE IF NOT EXISTS resolutions (call_id INTEGER PRIMARY KEY, evidence_sha TEXT, reason TEXT, resolved_at TEXT)')
+            db.execute('CREATE TABLE IF NOT EXISTS receipt_bindings (call_id INTEGER PRIMARY KEY, binding TEXT NOT NULL)')
             expected = (VERSION, account_id, maximum, opening)
             row = db.execute('SELECT version,account,maximum,opening FROM policy WHERE id=1').fetchone()
             if row is None: db.execute('INSERT INTO policy VALUES (1,?,?,?,?)', expected)
@@ -93,7 +94,7 @@ class SpendLedger:
             if maximum<=self.maximum:raise ValueError('Explicit credit increase required')
             if db.execute("SELECT 1 FROM calls WHERE state NOT IN ('complete','conservative') LIMIT 1").fetchone():
                 raise BudgetExhausted('Active or uncertain money must settle before credit revision')
-            history={name:db.execute('SELECT * FROM '+name+' ORDER BY 1').fetchall() for name in ('plans','calls','resolutions')}
+            history={name:db.execute('SELECT * FROM '+name+' ORDER BY 1').fetchall() for name in ('plans','calls','resolutions','receipt_bindings')}
             charged=self.opening+db.execute('SELECT COALESCE(SUM(charged),0) FROM calls').fetchone()[0]
             record=dict(version='openrouter-account-credit-revision-20261112-v1',account_id=self.account_id,
                 authorization_sha256=authorization_sha256,user_request=user_request,
@@ -126,17 +127,27 @@ class SpendLedger:
             return db.execute("INSERT INTO calls(plan_sha,request_sha,reserved,charged,state) VALUES (?,?,?,?,'reserved')",
                               (plan_sha, request_sha, reserve, reserve)).lastrowid
 
-    def finish(self, call_id, actual_cost_usd):
+    def finish(self, call_id, actual_cost_usd, *, receipt_binding=None):
         actual = None if actual_cost_usd is None else units(actual_cost_usd)
+        if receipt_binding is not None:
+            if (actual is None or not isinstance(receipt_binding,dict) or set(receipt_binding)!=
+                    {'execution_plan_sha256','request_sha256','deployment_sha256','provider_response_sha256'}):
+                raise ValueError('Complete known-cost receipt binding required')
+            for value in receipt_binding.values():identity(value)
         exceeded = False
         with self.transaction() as db:
             self.check_policy(db)
-            row = db.execute('SELECT reserved,state FROM calls WHERE id=?', (call_id,)).fetchone()
+            row = db.execute('SELECT reserved,state,request_sha FROM calls WHERE id=?', (call_id,)).fetchone()
             if row is None or row[1] != 'reserved': raise ValueError('Missing or already settled API reservation')
+            if receipt_binding is not None and receipt_binding['request_sha256']!=row[2]:
+                raise ValueError('Receipt binding differs from actual reserved request')
             exceeded = actual is not None and actual > row[0]
             state = 'unknown' if actual is None else 'over_ceiling' if exceeded else 'complete'
             db.execute('UPDATE calls SET charged=?,state=? WHERE id=?',
                        (row[0] if actual is None else actual, state, call_id))
+            if receipt_binding is not None:
+                db.execute('INSERT INTO receipt_bindings VALUES (?,?)',
+                    (call_id,json.dumps(receipt_binding,sort_keys=True)))
         if exceeded: raise BudgetExhausted('Actual API charge exceeded its ceiling; evidence retained')
 
     def resolve_conservatively(self, call_id, *, plan_sha256, request_sha256, evidence_sha256, reason):
@@ -219,5 +230,6 @@ class PaidBudget:
         except (KeyError, TypeError, ValueError):
             self.ledger.finish(call_id, None)
             raise BudgetExhausted('Missing or invalid API charge; reconcile before further inference') from None
-        self.ledger.finish(call_id, cost)
+        self.ledger.finish(call_id, cost,receipt_binding=dict(execution_plan_sha256=plan_sha,
+            request_sha256=digest(request),deployment_sha256=digest(self.deployment),provider_response_sha256=digest(response)))
         return response

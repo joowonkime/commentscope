@@ -305,3 +305,7 @@ negative를 보류하는 능력과 대응 valid positive를 보존하는 능력�
 `source_evidence_graph`/`source_evidence_requests`의 request/bind/validate 함수가 함께 고정한다.
 snapshot/root/parent/video 식별은 immutable envelope의 원래 source와 snapshot hash에 보존하며
 graph가 기존 registry의 별도 사본을 새 사실로 생성하지 않는다.
+
+## 현행 host 검증 policy
+
+v5 proposal/observation wire는 유지하고 [발화 역할별 적용](SOURCE_ROLE_APPLICABILITY.md)의 별도 verification_policy를 기록한다. 구 verified 기록을 자동 승인하지 않으며, 원 모델 요청이 같은 경우에만 명시적 오프라인 replay로 재결합한다. 위의 과거 모든 unresolved 보류 서술 중 비명제 문맥의 commitment/polarity 미적용만 이 닫힌 후속 계약을 따른다. 실제 주장/반문/조건절/mixed 및 전체 원문 감사의 보류는 유지한다.
