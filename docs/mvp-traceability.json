@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v69",
+  "spec_version": "commentscope-mvp-20261113-v70",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "기존104확대완료/유료작업없음/누적150·원999/r5유지. 사용자영어·한국어건설적토의/TA초행QA요청에따라27공식API읽기로영상후보/10QA계획준비(OpenRouter0). 영어CNBC주4일제938은기능후보,한국어SBS임금/주4일제3534는조건·언어·규모후보이며Agent생성/QA실행미검증. 현F4손실해결이나영상교체/정식gate완료로승격하지않음. 새유료실행미등록."
+    "hold_reason": "사용자가CNBC첫기능용실행및댓글비용제어지시. root64/reply32고정96/확인24·192쌍/48source·새3h/1200요청/동일누적150으로실행기구현검사중. 코드/전체회귀/양OSCI/현재가격·장부·입력통과후별도plan등록실행. 기존실패/999/r5/과거금융보존."
   },
   "requirements": [
     {
@@ -69,7 +69,8 @@
         "tools/prepare_source_fidelity_validation.py",
         "src/commentscope/factory/source_quote_anchors.py",
         "src/commentscope/factory/observation_reuse.py",
-        "tools/source_search_expansion.py"
+        "tools/source_search_expansion.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -102,7 +103,8 @@
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_source_quote_anchors.py",
         "tests/test_observation_reuse.py",
-        "tests/test_source_search_expansion.py"
+        "tests/test_source_search_expansion.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -143,7 +145,8 @@
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -187,7 +190,8 @@
         "tools/prepare_source_evidence_review.py",
         "tools/prepare_source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
-        "tools/source_search_expansion.py"
+        "tools/source_search_expansion.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -218,7 +222,8 @@
         "tests/test_source_fidelity_audit.py",
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_observation_reuse.py",
-        "tests/test_source_search_expansion.py"
+        "tests/test_source_search_expansion.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -264,7 +269,8 @@
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -303,7 +309,8 @@
         "tools/prepare_source_evidence_review.py",
         "tools/prepare_source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
-        "tools/source_search_expansion.py"
+        "tools/source_search_expansion.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -334,7 +341,8 @@
         "tests/test_source_fidelity_audit.py",
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_observation_reuse.py",
-        "tests/test_source_search_expansion.py"
+        "tests/test_source_search_expansion.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -380,7 +388,8 @@
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -443,7 +452,8 @@
         "src/commentscope/agents/grounded_web.py",
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
-        "src/commentscope/product/web.py"
+        "src/commentscope/product/web.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_grounded_web.py",
@@ -451,7 +461,8 @@
         "tests/test_source_context_display.py",
         "tests/test_product_app.py",
         "tests/test_product_web.py",
-        "tests/test_serve_mvp.py"
+        "tests/test_serve_mvp.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "자기 관점 근거의 후속 질문·적절한 보류·원문/부모 확인·대화 저장을 연결한다.",
@@ -483,7 +494,8 @@
         "docs/design/DECISION_LAYERS.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -623,7 +635,8 @@
         "tools/prepare_source_fidelity_validation.py",
         "tools/source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
-        "tools/source_search_expansion.py"
+        "tools/source_search_expansion.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -663,7 +676,8 @@
         "tests/test_openrouter_budget_revision.py",
         "tests/test_source_fidelity_execution.py",
         "tests/test_observation_reuse.py",
-        "tests/test_source_search_expansion.py"
+        "tests/test_source_search_expansion.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "사용자 증액 지시와 소액 상한 철회에 따라 팀키/현재 누적 장부150달러를 지킨다. 이전50달러 policy와 과거 owner별 상한·보수차감은 보존하고, 동일DB/계정/opening의 명시적 한도 revision으로만 반영한다. 실험별6달러 제안은 철회한다.",
@@ -740,7 +754,8 @@
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md"
+        "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -761,7 +776,8 @@
         "tools/complete_factory.py",
         "tools/cohort_refresh.py",
         "tools/serve_mvp.py",
-        "tools/product_trial_budget.py"
+        "tools/product_trial_budget.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/grounded_ui_smoke.cjs",
@@ -771,7 +787,8 @@
         "tests/test_serve_mvp.py",
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
-        "tests/test_cohort_refresh.py"
+        "tests/test_cohort_refresh.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "기존 Figma·팀 프론트를 보존하고 실제 자동 bundle로 Explore→Converse→Reflect를 끝까지 수행한다.",
@@ -806,7 +823,8 @@
         "docs/design/PREPARED_VIDEO_MINING.md",
         "docs/design/MVP_DESIGN_REVIEW.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -860,7 +878,8 @@
         "tools/prepare_source_fidelity_validation.py",
         "tools/source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
-        "tools/source_search_expansion.py"
+        "tools/source_search_expansion.py",
+        "tools/first_functional_video.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -902,7 +921,8 @@
         "tests/test_openrouter_budget_revision.py",
         "tests/test_source_fidelity_execution.py",
         "tests/test_observation_reuse.py",
-        "tests/test_source_search_expansion.py"
+        "tests/test_source_search_expansion.py",
+        "tests/test_first_functional_video.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -975,7 +995,8 @@
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     }
   ],
@@ -1836,6 +1857,38 @@
       "design_refs": [
         "docs/design/SOURCE_SEARCH_EXECUTION.md",
         "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md"
+      ]
+    },
+    {
+      "id": "DEC-027",
+      "title": "첫기능영상96개고정실행과단계별비용·QA검증",
+      "status": "proposed",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-005",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "question": "사용자가선택한첫기능영상을댓글비용을제어하며어떤완료산출물까지검증할것인가?",
+      "options": [
+        "root64/reply32고정96·확인용24·동일역할과150원금융owner·기존3질문+기능4질문",
+        "전체938을즉시전수판정",
+        "관점/Agent를미리수작업작성"
+      ],
+      "selection": "현재사용자지시에따라공식bounded240snapshot중내용정답과무관한고정hash표본96/24를등록. 후보당12출처·전체192쌍/48출처·새3시간/1200물리요청으로제한하고누적150와이전차감을유지. 자동발굴/기존최소3·2관점/조건·필수사실유지,새UKRI원문근거공급. 표준3/기능4질문은기존6질문한도안의별도세션으로전수실행. 전체938/원999/r5/TA완료와구별.",
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "9new regressions plus18spec checks pass. New-video scope96/holdout24 deterministic and disjoint,typed/embedding/graph foreign/held-out dispatch rejected,generated inventory pinned,seven question probe uses independent3/4 sessions preserving existing6question limit,completed reentry read-only. Private preparation dry run validates real240input96/24/192pairs/48sources/11UKRIspans,consistent plan mutations of money/source/docs/model/questions rejected with0providercalls. Full Factory/native CI pending.",
+          "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     }
   ],
@@ -3161,7 +3214,8 @@
         "DEC-023",
         "DEC-024",
         "DEC-025",
-        "DEC-026"
+        "DEC-026",
+        "DEC-027"
       ],
       "depends_on": [
         "TASK-021",
@@ -3169,7 +3223,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
-        "현재104신규쌍/69출처확대실행·전수정산/게시출처/6runtime대조완료. compiler2profiles(5/4지지)·둘다찬성/3출처중복·이유1보류. 후반원문해석손실/관점구별/전체r5미해결. 기존C/B/runtime3/예산/최소3지지보존.",
+        "현재CNBC첫기능영상:240수집원문에서96처리/24확인고정,독립UKRI근거준비·실행기/무료검사구현중. 동일150owner·기존원999/r5유지. 실제새Agent/QA품질은검증전.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
@@ -3304,6 +3358,12 @@
           "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
           "reference": "docs/design/VIDEO_SELECTION_QA.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "9new regressions plus18spec checks pass. New-video scope96/holdout24 deterministic and disjoint,typed/embedding/graph foreign/held-out dispatch rejected,generated inventory pinned,seven question probe uses independent3/4 sessions preserving existing6question limit,completed reentry read-only. Private preparation dry run validates real240input96/24/192pairs/48sources/11UKRIspans,consistent plan mutations of money/source/docs/model/questions rejected with0providercalls. Full Factory/native CI pending.",
+          "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3329,7 +3389,8 @@
         "docs/design/FIXED_PROFILE_RUNTIME_CHECK.md",
         "docs/design/SOURCE_SEARCH_EXECUTION.md",
         "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
-        "docs/design/VIDEO_SELECTION_QA.md"
+        "docs/design/VIDEO_SELECTION_QA.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
       ]
     },
     {
@@ -3783,8 +3844,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v69",
       "reason": "사용자가건설적토의와초행TA/시나리오이탈을고려한영상성격사전파악요청. 제목/인기만으로선정하지않고실제공식API메타데이터/댓글·답글사례를비교하여기능·조건·편향·규모QA를분리. 선정후보와Agent준비·실제QA성공을구별하며기존999/r5/역할·출처·비용/기준은유지. 추가OpenRouter호출0."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v70",
+      "reason": "사용자첫기능영상실행/댓글수비용우려에따른고정96개새개발검증. 기존영상실험을재개하거나문턱완화하지않고동일역할/원금융owner/누적150·새시간3h/요청1200·독립UKRI근거·전수기존3+기능4질문을결합. scope/holdout/비용/재진입보호를무료검사후실행하며완료와품질승인을구별."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v64",
+  "design_version": "commentscope-detailed-design-20261113-v65",
   "design_document": "docs/design/README.md"
 }

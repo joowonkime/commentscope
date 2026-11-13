@@ -8,6 +8,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 MODULES = (
+    "test_first_functional_video",
     "test_observation_reuse",
     "test_source_search_expansion",
     "test_source_role_applicability",
