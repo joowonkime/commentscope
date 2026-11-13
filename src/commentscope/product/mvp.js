@@ -135,6 +135,7 @@ function renderMessages(){
     if(m.body)bubble.append(node('p',m.body));
     if(m.author_kind==='agent'&&!m.points?.length)bubble.append(node('p',m.evidence_scope==='expired'?'근거 자료의 기한이 지났습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
     for(const point of m.points||[]){if(point.origin)bubble.append(node('small',({original_comment:'댓글 근거',ai_reasoning:'AI 추론 · 원작성자의 발언이 아닙니다',external_evidence:'외부 자료 기반 주장'})[point.origin]));bubble.append(node('p',point.text));sourceButtons(bubble,point);}
+    if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
     box.append(bubble);$('messages').append(box);

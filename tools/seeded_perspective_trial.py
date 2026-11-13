@@ -39,6 +39,28 @@ GROUP_QUESTION='Discuss the strongest objection to your position and respond to 
 ASSETS=tuple(ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','mvp.css'))
 
 
+def continuation_scope(directory,candidate_ids,bundle_revision):
+    """Continue only unattempted work inside the *original* request/time grant."""
+    directory=Path(directory).resolve();plan=read_json(directory/'plan.json')
+    failed=read_json(directory/'failed.json');auth=read_json(plan['authorization']['file'])
+    if ((directory/'completed.json').exists() or plan['artifact_kind']!=VERSION or
+            failed['plan_sha256']!=sha(directory/'plan.json') or
+            failed['authorization_sha256']!=sha(plan['authorization']['file']) or
+            sha(plan['authorization']['file'])!=plan['authorization']['sha256'] or
+            plan['candidate_ids']!=candidate_ids or plan['bundle_revision']!=bundle_revision or
+            auth['maximum_new_physical_calls']!=MAX_CALLS):
+        raise ValueError('Bound failed execution and identical automatic profile inventory required')
+    attempted=set(candidate_ids)-set(plan.get('direct_ids',candidate_ids))
+    for room in failed['rooms']:
+        if room['mode']=='one_to_one':attempted.update(room['participant_ids'])
+    if not attempted or not attempted.issubset(candidate_ids):raise ValueError('Failed work inventory required')
+    groups=[] if any(r['mode']=='group' for r in failed['rooms']) else plan['group_ids']
+    scope={'directory':str(directory),'plan_sha256':sha(directory/'plan.json'),
+           'failed_sha256':sha(directory/'failed.json'),'authorization_sha256':sha(plan['authorization']['file']),
+           'direct_ids':[cid for cid in candidate_ids if cid not in attempted],'group_ids':groups}
+    return scope,auth
+
+
 def rebuild(directory,original,reference):
     directory=Path(directory).resolve();original=Path(original).resolve();reference=Path(reference).resolve()
     if directory.exists():raise ValueError('Fresh offline rebuild directory required')
@@ -71,7 +93,7 @@ def rebuild(directory,original,reference):
     return {'profiles':analysis.public()['perspectives'],'new_model_calls':0}
 
 
-def prepare(directory,rebuild_run,*,user_request):
+def prepare(directory,rebuild_run,*,user_request,continuation=None):
     directory=Path(directory).resolve();rebuild_run=Path(rebuild_run).resolve()
     if directory.exists() or not user_request.strip():raise ValueError('Fresh explicit execution required')
     saved=read_json(rebuild_run/'plan.json');done=read_json(rebuild_run/'completed.json')
@@ -100,16 +122,32 @@ def prepare(directory,rebuild_run,*,user_request):
           'opening_account':account,'opening_owner':own,'history_cutoff':cutoff,'history_sha256':history,
           'maximum_new_physical_calls':MAX_CALLS,'new_money_owner':False,'retries':0,'fallback':None,
           'key_observation':key,'providers':providers}
+    ids=[p['candidate_id'] for p in analysis.compiled['profiles']]
+    direct_ids=ids;group_ids=ids[:3] if count>1 else [];continued=None
+    if continuation is not None:
+        continued,parent=continuation_scope(continuation,ids,analysis.revision)
+        if parent['financial_owner']!=owner:raise ValueError('Cannot change continuation financial owner')
+        for field in ('started_at','deadline','opening_account','opening_owner','history_cutoff','history_sha256'):
+            auth[field]=deepcopy(parent[field])
+        direct_ids=continued['direct_ids'];group_ids=continued['group_ids']
+    required=2*(len(direct_ids)*len(QUESTIONS)+2*len(group_ids))
+    already=own['calls']-auth['opening_owner']['calls']
+    if not required or already<0 or already+required>MAX_CALLS:
+        raise e.BudgetExhausted('Unattempted product work cannot fit the original request grant')
+    auth['phase_opening_owner']=own
     write(directory/'authorization.json',auth)
     files=[rebuild_run/'plan.json',rebuild_run/'completed.json',rebuild_run/'artifacts/agent-inputs.json',
            rebuild_run/'artifacts/output.json',Path(owner['file']),Path(old['policy_file']),ROOT/'tools/seeded_perspective_trial.py',*ASSETS]
+    if continued:
+        parent_dir=Path(continued['directory']);parent_plan=read_json(parent_dir/'plan.json')
+        files.extend([parent_dir/'plan.json',parent_dir/'failed.json',Path(parent_plan['authorization']['file'])])
     plan={'artifact_kind':VERSION,'run_directory':str(directory),'rebuild_run':str(rebuild_run),
           'authorization':{'file':str(directory/'authorization.json'),'sha256':sha(directory/'authorization.json')},
           'inputs':{**saved['inputs'],**{str(p):sha(p) for p in files}},'code_sha256':source_code_hashes(),
           'admission_policy':deepcopy(seed_policy.POLICY),'bundle_revision':analysis.revision,
-          'candidate_ids':[p['candidate_id'] for p in analysis.compiled['profiles']],
+          'candidate_ids':ids,'direct_ids':direct_ids,
           'questions':QUESTIONS,'group_question':GROUP_QUESTION,
-          'group_ids':[p['candidate_id'] for p in analysis.compiled['profiles'][:3]] if count>1 else [],
+          'group_ids':group_ids,'continuation':continued,
           'spend_policy':policy,'spend_scope_sha256':owner['sha256'],'maximum_cost_usd':'150',
           'subcap_usd':'150','opening_scope_charge_usd':'0','deployment':deepcopy(e.remote.SOL),
           'verification_deployment':deepcopy(e.remote.SOL),'embedding_deployment':deepcopy(e.remote.EMBEDDING),
@@ -118,7 +156,8 @@ def prepare(directory,rebuild_run,*,user_request):
           'resource_policy':host_resources.HTTP_API_POLICY,'formal_factory_eligible':False,'quality_gate_passed':False}
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
     guard(plan)
-    return {'profiles':count,'maximum_physical_calls':MAX_CALLS,'deadline':auth['deadline'],
+    return {'profiles':count,'direct_profiles':len(direct_ids),'maximum_physical_calls':MAX_CALLS,
+            'already_used_physical_calls':already,'planned_physical_calls':required,'deadline':auth['deadline'],
             'opening_account':account,'new_model_calls':0}
 
 
@@ -145,13 +184,20 @@ def guard(plan,*,call_seconds=0):
     original_auth=read_json(old['authorization']['file'])
     owner=auth['financial_owner'];analysis=from_factory(plan['rebuild_run'])
     ids=[p['candidate_id'] for p in analysis.compiled['profiles']]
+    direct_ids=ids;group_ids=ids[:3] if len(ids)>1 else []
+    if plan.get('continuation'):
+        expected,parent=continuation_scope(plan['continuation']['directory'],ids,analysis.revision)
+        if expected!=plan['continuation'] or any(auth[k]!=parent[k] for k in (
+                'started_at','deadline','opening_account','opening_owner','history_cutoff','history_sha256','financial_owner')):
+            raise ValueError('Continuation cannot reset grant, history, money or request denominator')
+        direct_ids=expected['direct_ids'];group_ids=expected['group_ids']
     if (sha(old['authorization']['file'])!=old['authorization']['sha256'] or
             owner!=original_auth['financial_owner'] or plan['spend_policy']!=old['spend_policy'] or
             plan['spend_policy']!=read_json(old['policy_file']) or
             sha(owner['file'])!=owner['sha256'] or read_json(owner['file'])!=owner['authorization'] or
             plan['spend_scope_sha256']!=owner['sha256'] or plan['spend_policy']['maximum_usd']!='150' or
             analysis.revision!=plan['bundle_revision'] or plan['candidate_ids']!=ids or
-            plan['group_ids']!=(ids[:3] if len(ids)>1 else [])):
+            plan['direct_ids']!=direct_ids or plan['group_ids']!=group_ids):
         raise ValueError('Source analysis or original financial owner changed')
     analysis.live();account=e.ledger(plan['spend_policy']).summary();own=e.ledger(plan['spend_policy']).summary(plan_sha256=owner['sha256'])
     if account['reserved_calls'] or account['uncertain_calls']:raise e.BudgetExhausted('Unsettled shared account')
@@ -193,7 +239,7 @@ class Session(e.RemoteSession):
         return {**raw,'new_cost_usd':str(self.amount()-before)}
 
 
-def probe(app,analysis,save):
+def probe(app,analysis,save,*,direct_ids=None,group_ids=None):
     token=secrets.token_urlsafe(32)
     def call(method,path,body=None):return app.handle(method,path,token,body)[1]
     session=call('POST','/api/v1/sessions',{'analysis_id':analysis.id,'bundle_revision':analysis.revision,
@@ -207,7 +253,8 @@ def probe(app,analysis,save):
                 return
             time.sleep(.25)
     rooms=[]
-    for i,cid in enumerate(p['candidate_id'] for p in analysis.compiled['profiles']):
+    direct_ids=([p['candidate_id'] for p in analysis.compiled['profiles']] if direct_ids is None else direct_ids)
+    for i,cid in enumerate(direct_ids):
         room=call('POST',base+'/rooms',{'mode':'one_to_one','participant_ids':[cid],
             'initial_revision':1,'request_id':'direct'+str(i)});path='/api/v1/rooms/'+room['room_id']
         for j,question in enumerate(QUESTIONS):
@@ -217,7 +264,7 @@ def probe(app,analysis,save):
             settle(call('POST',path+('/messages' if j else '/start'),args))
             room=call('GET',path);save(f'rooms/direct{i}/question{j}',room)
         rooms.append(room)
-    ids=[p['candidate_id'] for p in analysis.compiled['profiles'][:3]]
+    ids=[p['candidate_id'] for p in analysis.compiled['profiles'][:3]] if group_ids is None else group_ids
     if len(ids)>1:
         room=call('POST',base+'/rooms',{'mode':'group','participant_ids':ids,'initial_revision':1,'request_id':'group'})
         path='/api/v1/rooms/'+room['room_id']
@@ -244,15 +291,17 @@ def run(directory):
             decision_reservation=lambda:str(decisions.reservation(decisions.DEPLOYMENT)),revalidate=lambda:guard(plan))
         try:
             with host_resources.watch(previous.previous.resource_attempt(directory),plan['resource_policy'],host_resources.observe_wsl_host,interrupt=dispatch.request_stop,workload='http_api'):
-                rooms=probe(app,analysis,save)
+                rooms=probe(app,analysis,save,direct_ids=plan['direct_ids'],group_ids=plan['group_ids'])
         finally:app.close()
         guard(plan)
         if previous.previous.history(plan['spend_policy'],auth['history_cutoff'])!=(auth['history_cutoff'],auth['history_sha256']):raise ValueError('Historical financial rows changed')
         own=session.money.summary(plan_sha256=plan['spend_scope_sha256']);messages=[m for r in rooms for m in r['messages'] if m['author_kind']=='agent']
         report={'version':VERSION,'profiles':analysis.public()['perspectives'],'rooms':len(rooms),
-            'runtime_turns':len(messages),'answered':sum(bool(m['points']) for m in messages),
+            'runtime_turns':len(messages),'answered':sum(m['status']=='answered' for m in messages),
+            'explanatory_abstentions':sum(m['status']=='abstain' and bool(m['points']) for m in messages),
             'origins':{k:sum(p.get('origin')==k for m in messages for p in m['points']) for k in ('original_comment','ai_reasoning','external_evidence')},
             'new_calls':own['calls']-auth['opening_owner']['calls'],
+            'phase_new_calls':own['calls']-auth['phase_opening_owner']['calls'],
             'new_charge_usd':str(Decimal(own['charged_usd'])-Decimal(auth['opening_owner']['charged_usd'])),
             'account':e.ledger(plan['spend_policy']).summary(),'quality_gate_passed':False,'requires_source_and_utility_review':True}
         save('report',report)
@@ -265,8 +314,8 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--key-file',type=Path)
     sub=parser.add_subparsers(dest='action',required=True)
     q=sub.add_parser('rebuild');q.add_argument('directory',type=Path);q.add_argument('--original',type=Path,required=True);q.add_argument('--reference',type=Path,required=True)
-    q=sub.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--rebuild',type=Path,required=True);q.add_argument('--user-request',required=True)
+    q=sub.add_parser('prepare');q.add_argument('directory',type=Path);q.add_argument('--rebuild',type=Path,required=True);q.add_argument('--user-request',required=True);q.add_argument('--continuation',type=Path)
     q=sub.add_parser('run');q.add_argument('directory',type=Path);args=parser.parse_args()
     if args.key_file:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
-    result=rebuild(args.directory,args.original,args.reference) if args.action=='rebuild' else prepare(args.directory,args.rebuild,user_request=args.user_request) if args.action=='prepare' else run(args.directory)
+    result=rebuild(args.directory,args.original,args.reference) if args.action=='rebuild' else prepare(args.directory,args.rebuild,user_request=args.user_request,continuation=args.continuation) if args.action=='prepare' else run(args.directory)
     print(json.dumps(result,ensure_ascii=False),flush=True)

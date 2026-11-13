@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v73",
+  "spec_version": "commentscope-mvp-20261113-v74",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-026",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자1출처Agent/논거확장구현승인. DEC028/TASK026명세후구현/무료회귀진행;기존TASK022엄격실험후속은보존유보. 새닫힌policy·출처분리Runtime·양OSCI/실행계약동결후같은누적150owner에서제한대화48요청까지. 현재새호출0."
+    "hold_reason": "TASK026 첫7호출/0.056386856USD 실패를 보존. 보류 설명과 Host/schema 충돌·typed 문단 주소 수정 무료 회귀 중. 새 코드 Factory/양OS CI 뒤 미실행 profile/group만 같은48물리요청 분모·기존 deadline에서 후속; 새48/3시간/금융owner 없음."
   },
   "requirements": [
     {
@@ -3700,6 +3700,18 @@
           "scope": "29 new offline compiler/runtime/product/frozen-plan/probe regressions plus9 Node smoke cases pass. Actual saved CNBC evidence rebuilt at zero paid calls into4 profiles with1/2/1/1 sources, all pro-four-day overlapping; not4 distinct viewpoints. Full Factory/native CI and actual dialogue pending.",
           "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "PR106 source b8bfc26, Factory939 and both OS2742 passed. First bounded seeded dialogue stopped after7 calls/0.056386856USD: first3turns published original/AI/document material, fourth generation correctly declined universal numeric guarantee but included an explanatory paragraph; Host rejected abstain-with-content despite generation schema allowing it. Both why paragraphs held by Jev kind classification; numeric target ambiguity is a hypothesis, not proven cause. All charges settled, no unknown/reserved calls, no retry. Contract correction and remaining unattempted profiles stay inside original48physical calls/deadline.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Three failing regressions reproduced contradictory explanatory abstention, permissive state schema and numeric paragraph target; complete state/limitation/content matrix plus origin/reference constraints now schema/Host-consistent. 73 related tests and10 Node checks pass;4 saved actual generation output shapes accepted with0calls, no semantic rejudgment. Continuation preserves original deadline/opening48-request denominator and skips attempted profiles; reset attempts rejected. Final Factory/native CI pending.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -4047,6 +4059,6 @@
       "reason": "사용자가3지지대신1출처에서도관점생성후debate논거확장을제안/구현승인. 내부3출처를제품필수조건으로고정하지않고새versioned제품정책으로분리. legacyr5/과거실패유지,귀속/조건/필수사실보존,AI추론·등록외부문헌을원댓글과구별하는새Runtime/제품연결."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v68",
+  "design_version": "commentscope-detailed-design-20261113-v69",
   "design_document": "docs/design/README.md"
 }

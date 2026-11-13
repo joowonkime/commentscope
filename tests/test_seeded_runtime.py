@@ -21,13 +21,55 @@ def verifier(payload, overrides=None):
         if overrides and key in overrides:return overrides[key]
         if key=='answer':return 'appropriate'
         if key.endswith('_kind'):
-            row=payload['state']['PROPOSED_RESPONSE']['paragraphs'][int(key[1])]
+            row=payload['state']['PARAGRAPHS']['P'+key[1].zfill(3)]
             return 'reasoning' if row['origin']=='ai_reasoning' else 'empirical'
         return {'attribution':'clean','scope':'preserved','basis':'supported'}[key.split('_',1)[1]]
     return receipt(payload,choose)
 
 
 class SeededRuntimeTests(unittest.TestCase):
+    def test_explanatory_abstention_remains_abstention_after_same_evidence_checks(self):
+        value=response('external_evidence','The prepared fictional trial describes only its sample, not a guarantee for every device.')
+        value.update(answerability='abstain',limitation='missing_evidence')
+        turn=self.session(value).ask('What percentage is guaranteed for every device?')
+        self.assertEqual(turn['status'],'abstain');self.assertEqual(turn['answerability'],'abstain')
+        self.assertEqual(turn['points'][-1]['origin'],'external_evidence')
+        self.assertEqual(turn['points'][-1]['member_source_count'],0)
+        self.assertEqual(len(self.verifications),1)
+        held=self.session(value,{'answer':'inappropriate'}).ask('What is guaranteed?')
+        self.assertFalse(held['points']);self.assertEqual(held['status'],'abstain')
+
+    def test_schema_and_host_agree_on_answerability_and_content_combinations(self):
+        from commentscope.contracts.structured_output import check_output
+        from commentscope.providers.openai_schema import compile_schema
+        from commentscope.agents.seeded_runtime import validate_output
+        session=self.session();inv,ids,refs=session.invocation('What is available?')
+        compile_schema(inv['schema'])  # The deployed transport must support every branch.
+        for kind in ('answered','partial','abstain'):
+            for limit in ('none','missing_evidence','out_of_scope'):
+                for content in (False,True):
+                    value={'answerability':kind,'limitation':limit,'comment_ids':['E1'] if content else [],'paragraphs':[]}
+                    expected=(kind=='answered')==(limit=='none') and (kind=='abstain' or content)
+                    checked=check_output(inv['schema'],value)
+                    self.assertEqual(not checked['errors'],expected,(kind,limit,content))
+                    if expected:validate_output(value,ids,refs)
+                    else:
+                        with self.assertRaises(ValueError):validate_output(value,ids,refs)
+        for origin in ('ai_reasoning','external_evidence'):
+            for reference_ids in ([],['D1']):
+                value=response(origin);value['paragraphs'][0]['reference_ids']=reference_ids
+                expected=(origin=='external_evidence')==bool(reference_ids)
+                self.assertEqual(not check_output(inv['schema'],value)['errors'],expected)
+
+    def test_typed_questions_address_explicit_paragraph_keys(self):
+        value=response();value['paragraphs'].append(response('external_evidence')['paragraphs'][0])
+        self.session(value).ask('Develop the position.')
+        payload=self.verifications[0]
+        self.assertEqual(set(payload['state']['PARAGRAPHS']),{'P000','P001'})
+        for i in range(2):
+            for suffix in ('kind','attribution','scope','basis'):
+                self.assertIn('PARAGRAPHS.P00'+str(i),payload['questions'][f'p{i}_{suffix}']['instructions'])
+
     def session(self,value=None,overrides=None,peer=None):
         self.generations=[];self.verifications=[]
         def gen(req):

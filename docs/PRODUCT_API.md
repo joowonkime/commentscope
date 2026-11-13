@@ -120,3 +120,7 @@ CI는 이를 실행하지 않는다. 승인된 cycle/잔여/종료시각을 확�
 허용되지 않은 문단은 숨기고 남은 답변은 partial/verification_hold로 기록한다.
 작성과 문단 판정의 비용은 같은 room·계정에 합산하며 첫 호출 전 둘의 예약 여유를 확인한다.
 외부 청구가 불명확하면 기존 needs_reconciliation 절차를 따르고 자동 재시도하지 않는다.
+
+새 runtime v2의 보류는 검증된 한계 설명을 포함할 수 있다. 이 경우에도
+`status=abstain`, `answerability=abstain`을 유지하며 answered 집계에 넣지 않는다.
+설명 문단은 동일한 출처/문헌/typed 검사를 통과해야 하며 화면에도 보류 설명을 표시한다.

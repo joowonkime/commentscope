@@ -12,10 +12,10 @@ class Element {
 }
 const flatten=n=>[n,...n.children.flatMap(flatten)];
 const text=n=>n.textContent+n.children.map(text).join('');
-function render(points){
+function render(points,extra={}){
   const js=fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
   const container=new Element('div');
-  const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points}]}},
+  const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points,...extra}]}},
     $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{}});
   vm.runInContext(js.slice(js.indexOf('function sourceButtons('),js.indexOf('// API span offsets')),context);
   vm.runInContext(js.slice(js.indexOf('function renderMessages('),js.indexOf('async function refreshRoom(')),context);
@@ -39,4 +39,10 @@ test('unsafe schemes and credential URLs never become external links',()=>{
   const result=render([{origin:'external_evidence',text:'Visible text',citations:{external_evidence:[
     {url:'javascript:alert(1)'},{url:'https://user:secret@example.invalid/'},{url:'not a URL'}]}}]);
   assert.equal(flatten(result).filter(n=>n.tagName==='a').length,0);
+});
+
+test('explanatory abstention is visible even when checked paragraphs are present',()=>{
+  const result=render([{origin:'external_evidence',text:'A limited study is not a universal guarantee.'}],{status:'abstain',answerability:'abstain'});
+  assert.match(text(result),/요청한 답을 확인할 수 없어/);
+  assert.match(text(result),/A limited study/);
 });

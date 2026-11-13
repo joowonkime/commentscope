@@ -84,3 +84,30 @@ Factory 필수검사·관련 product/Node검사·양OS CI 뒤 동결checkout에�
 그대로 남아 있다. 재조립의 새 추론/청구는0이다. 전체 Factory939개는289.307초에 통과했다.
 이후 대화 이력/peer의 중복 citation inventory를 입력에서 제외한 최종 변경은 관련 무료 회귀와
 전체 Factory·양OS CI로 다시 확인한다. 실제 대화는 후속 검증이다.
+
+## 첫 실제 실행과 일반 계약 수정
+
+PR106/b8bfc26: Factory939(305.054s), Ubuntu2742(465.038s), Windows2742(654.244s,기존POSIX12skip), Node9 통과 후 실행했다.
+실제7호출/0.056386856달러에서 첫 profile의 입장·추론·문헌3턴을 저장했고, 네 번째 생성이
+없는 보편 생산성 수치를 제공하지 않고 문헌의 한계를 설명했다. 생성 schema는 이를 허용했으나
+Host는 `abstain`에 content가 있으면 오류로 처리했다. 원 실행은 실패로 보존한다.
+
+보류는 요청한 답을 제공하지 못했다는 뜻이며, 검증된 **한계 설명**을 제공할 수 있다.
+새 runtime v2는 `abstain`+`missing_evidence/out_of_scope`에서 인용/설명 문단을 허용하되
+동일한 ID·문헌·유형·귀속·범위·Jev 검사를 거친다. 설명에 요청한 미확인 사실을 섞으면 보류한다.
+설명이 있어도 status/answerability는 `abstain`으로 남고 answered 수에 포함하지 않는다.
+answered/partial은 내용이 필요하며 schema와 Host의 모든 상태 조합을 일치시킨다.
+
+첫 why 응답의 두 새 문단은 Jev가 mixed/reasoning으로 판정해 게시되지 않았다.
+숫자 'paragraph0/1' 참조 혼동은 경쟁 설명 중 하나다. `PARAGRAPHS.P000`처럼 닫힌 주소로
+각 질문의 대상을 명시한다. 판정 종류·veto·confidence 규칙을 완화하거나 실제 개선을 추정하지 않는다.
+
+실패 profile 질문을 다시 결제하지 않는다. 후속은 기존 grant의 시작/종료·48물리요청 분모·
+계정·owner·opening 차감을 그대로 이어받고, 아직 실행하지 않은 나머지 profile 질문과
+미실행 그룹만 등록한다. 변경 코드의 Factory·양OS CI 뒤 실행한다. 기존7요청은 상한에서
+계속 차감되며 새48요청/새3시간 권한을 만들지 않는다.
+
+수정 전 무료3검사에서 상태 계약/설명형 보류/문단 주소 실패를 재현했다. 수정 후
+상태18조합·origin/reference 조합·ProductApp 설명형 보류·continuation 분모 초기화 거부를
+포함한 관련73검사와 Node10이 통과했다. 기존 실제 생성4개는 새 schema/Host 형태 검사만
+0호출로 확인했으며 새 Jev 의미 판정이나 유용성 개선으로 계산하지 않았다.

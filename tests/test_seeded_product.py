@@ -73,6 +73,16 @@ class SeededProductTests(unittest.TestCase):
         self.assertEqual(self.analysis.public()['perspectives'][0]['support_scope'],
                          'verified_comment_sources_not_population_share')
 
+    def test_explanatory_abstention_is_a_successful_job_with_an_abstaining_message(self):
+        value=response('external_evidence','The prepared fictional trial describes a sample, not a universal guarantee.')
+        value.update(answerability='abstain',limitation='missing_evidence')
+        self.app.model=lambda stage,req:{'output':deepcopy(value),'errors':[],'new_cost_usd':'0.0001'}
+        path,args,job=self.start('direct');self.assertEqual(job['state'],'succeeded')
+        room=self.call('GET',path)[1];message=room['messages'][-1]
+        self.assertEqual(room['state'],'awaiting_user')
+        self.assertEqual(message['status'],'abstain');self.assertEqual(message['answerability'],'abstain')
+        self.assertTrue(message['points']);self.assertEqual(self.cost(path),Decimal('0.000101'))
+
     def test_typed_failure_keeps_generation_and_verification_charges_and_previous_turn(self):
         original=self.app.decision;count=0
         def fail(stage,payload):

@@ -39,7 +39,7 @@ class SeededTrialTests(TestCase):
     def mocks(self):
         state={'calls':3,'charged_usd':'1','reserved_calls':0,'uncertain_calls':0}
         money=type('Money',(),{'summary':lambda self,**kw:deepcopy(state)})()
-        self.stack=[]
+        self.stack=[];self.money_state=state
         for target,value in ((trial.e,'ledger'),(trial.e,'provider_preflight'),(trial.e,'key_metadata'),
                               (trial.decisions,'preflight'),(trial.previous.previous,'history')):
             result=money if value=='ledger' else {'limit':150} if value=='key_metadata' else (3,'f'*64) if value=='history' else {}
@@ -85,6 +85,39 @@ class SeededTrialTests(TestCase):
             'artifacts':{'artifacts/result.json':sha(directory/'artifacts/result.json')},'report':{'ok':True}})
         with patch.object(trial,'guard',side_effect=AssertionError('no new work')):
             self.assertEqual(trial.run(directory),{'ok':True})
+
+    def test_continuation_keeps_original_deadline_denominator_and_skips_attempted_profiles(self):
+        from datetime import datetime,timedelta,timezone
+        trial.rebuild(self.rebuilt,self.original,self.reference);self.mocks()
+        parent=self.root/'parent';trial.prepare(parent,self.rebuilt,user_request='synthetic first request')
+        original=read_json(parent/'plan.json');auth=read_json(parent/'authorization.json')
+        write(parent/'failed.json',{'plan_sha256':sha(parent/'plan.json'),
+            'authorization_sha256':sha(parent/'authorization.json'),
+            'rooms':[{'mode':'one_to_one','participant_ids':original['candidate_ids'][:1]}]})
+        self.money_state.update(calls=10,charged_usd='1.056')
+        child=self.root/'child';result=trial.prepare(child,self.rebuilt,user_request='contract correction',continuation=parent)
+        plan=read_json(child/'plan.json');new=read_json(child/'authorization.json')
+        self.assertEqual(new['deadline'],auth['deadline']);self.assertEqual(new['started_at'],auth['started_at'])
+        self.assertEqual(new['opening_owner'],auth['opening_owner'])
+        self.assertEqual(new['phase_opening_owner']['calls'],10)
+        self.assertEqual(result['already_used_physical_calls'],7)
+        self.assertEqual(plan['direct_ids'],original['candidate_ids'][1:])
+        self.assertEqual(plan['group_ids'],original['group_ids'])
+        trial.guard(plan)
+        # Even a consistently rehashed child cannot acquire a fresh denominator.
+        changed=deepcopy(new);changed['opening_owner']=deepcopy(new['phase_opening_owner'])
+        (child/'authorization.json').write_text(json.dumps(changed))
+        plan['authorization']['sha256']=sha(child/'authorization.json')
+        (child/'plan.json').write_text(json.dumps(plan))
+        (child/'frozen.json').write_text(json.dumps({'plan_sha256':sha(child/'plan.json')}))
+        with self.assertRaises(ValueError):trial.guard(plan)
+
+    def test_continuation_rejects_changed_or_completed_failed_parent(self):
+        trial.rebuild(self.rebuilt,self.original,self.reference);self.mocks()
+        parent=self.root/'parent';trial.prepare(parent,self.rebuilt,user_request='synthetic first request')
+        plan=read_json(parent/'plan.json')
+        write(parent/'failed.json',{'plan_sha256':'f'*64,'authorization_sha256':sha(parent/'authorization.json'),'rooms':[]})
+        with self.assertRaises(ValueError):trial.continuation_scope(parent,plan['candidate_ids'],plan['bundle_revision'])
 
 
 class SeededProbeTests(TestCase):
