@@ -27,7 +27,8 @@ class PreparedVideoTests(unittest.TestCase):
         self.owner_file=self.root/'owner.json'
         self.owner={'maximum_usd':'150','shared_policy_file':str(self.policy_file),
             'shared_policy_sha256':t.sha(self.policy_file),'historical_charges_preserved':True,
-            'generation_deployment':deepcopy(t.e.remote.SOL),'deadline':'2020-01-01T00:00:00Z'}
+            'generation_deployment':{**deepcopy(t.e.remote.SOL),'model':'openai/gpt-5.2'},
+            'deadline':'2020-01-01T00:00:00Z'}
         t.write(self.owner_file,self.owner)
         self.money=t.e.ledger(self.policy)
         call=self.money.reserve(t.sha(self.owner_file),'a'*64,'1',run_limit_usd='150',key_remaining_usd='150')
@@ -63,6 +64,20 @@ class PreparedVideoTests(unittest.TestCase):
         self.assertEqual(first['spend_scope_sha256'],second['spend_scope_sha256'])
         self.assertEqual(self.money.summary(plan_sha256=second['spend_scope_sha256'])['charged_usd'],'0.3')
         self.assertEqual(self.money.summary()['charged_usd'],'0.4')
+
+    def test_historical_financial_model_does_not_override_new_pinned_execution_roles(self):
+        before=self.owner_file.read_bytes();owner_sha=t.sha(self.owner_file)
+        root,plan=self.prepare()
+        self.assertNotEqual(self.owner['generation_deployment'],plan['deployment'])
+        self.assertEqual(plan['deployment'],t.e.remote.SOL)
+        self.assertEqual(plan['verification_deployment'],t.e.remote.SOL)
+        self.assertEqual(plan['membership_deployment'],t.decisions.DEPLOYMENT)
+        self.assertEqual(plan['spend_scope_sha256'],owner_sha)
+        self.assertEqual(self.owner_file.read_bytes(),before)
+        self.assertEqual(self.money.summary(plan_sha256=owner_sha)['charged_usd'],'0.3')
+        changed=deepcopy(plan);changed['deployment']=deepcopy(self.owner['generation_deployment'])
+        self.rewrite_plan(root,changed)
+        with self.assertRaises(ValueError):t.guard(changed)
 
     def test_constructed_execution_session_keeps_existing_owner_and_costs_nothing(self):
         root,plan=self.prepare();before=self.money.summary()
