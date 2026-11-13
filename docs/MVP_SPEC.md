@@ -1,19 +1,19 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v74`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v75`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v69`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v70`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
-**현재 구현:** 사용자 승인 [1출처 관점과 토론 논거 확장](design/SEEDED_PERSPECTIVE_DEBATE.md),DEC-028/TASK-026. 새 제품 opt-in은 검증출처1개 이상에서 생성하고 댓글/AI추론/외부근거를 구별한다. 기존3출처r5는 과거·legacy 기준으로 보존하며 새모드의 통과를 뜻하지 않는다. 구현/검증은 진행 중이다.
+**현재 구현:** 사용자 승인 [1출처 관점과 토론 논거 확장](design/SEEDED_PERSPECTIVE_DEBATE.md),DEC-028/TASK-026. 새 제품 opt-in은 검증출처1개 이상에서 생성하고 댓글/AI추론/외부근거를 구별한다. 기존3출처r5는 과거·legacy 기준으로 보존하며 새모드의 통과를 뜻하지 않는다. [실제 대화 검증 결과](design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md): Compiler4개/지지1·2·1·1,총43호출/0.302761314달러/21게시턴을 확인했다. TASK-026 기능 구현·제한 검증은 완료했으나 모두 찬성 계열이고 전체MVP는 미완료다. TASK-027에서 구별되는 관점·게시답변 유용성을 다룬다.
 
-**현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
+**기존 B1 설계/검증 이력:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
 [구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). TASK-020의 무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. TASK-022의 [고정 비교](design/SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](design/SOURCE_EVIDENCE_TRIAL_RESULT.md)).
 [첫 구현/검증 범위](design/SOURCE_EVIDENCE_IMPLEMENTATION.md)와 현재 추적표를 확인한다. DEC-015는 사용자 구현·테스트 지시에 따른 세 arm 합산 추가5달러/7시간의 제한 profiling만 승인한다. DEC-013/014의 구조·모델 채택은 제안이며 r5·제품 의도는 유지한다.
 
-현재 TASK-022는 Agent 생성 파이프라인의 후속 검증이다. 확인된 결과는
+유보된 TASK-022는 기존 엄격 기준의 후속 검증 이력이다. 현재 작업은 상단 TASK-027을 따른다. 확인된 결과는
 [원 실행·실패·무료 재검사](design/SOURCE_FIDELITY_RESULT.md)에서 구별한다.
 
 - 실제 v5 B: 고정19출처에서 Agent1개/유효 지지3개, 입장·이유 응답과 없는 정보 보류3턴.
@@ -28,7 +28,7 @@
 
 현재 [104신규관계 확대 결과](design/SOURCE_SEARCH_EXPANSION_RESULT.md): 실제276요청/0.917447514달러, compiler2개/지지5·4개. 모두 찬성 계열이고 출처3개가 겹치며 이유 질문은1개 보류했다. 실질적으로 구별되는 유용한2관점·전체r5/MVP 완료는 미달/미검증이다.
 
-현재 [CNBC 첫 기능 실행 결과](design/FIRST_FUNCTIONAL_VIDEO_RESULT.md): 고정96개/192쌍에서501요청·2.151337702달러를 사용했으나 Agent0개/질문0턴으로 첫 기능 검증에 실패했다. 원문19→graph complete8→후보 기록 complete4로 줄었고 모든 후보가3유효지지에 미달했다. 검색15후보 미평가와 후보별 veto의 source 전체 전파도 확인했다. 다음은 저장 응답의 무료 계약·회귀이며 현재 활성 유료 작업은 없다.
+기존3출처 설정의 [CNBC 첫 기능 실행 결과](design/FIRST_FUNCTIONAL_VIDEO_RESULT.md): 고정96개/192쌍에서501요청·2.151337702달러를 사용했으나 Agent0개/질문0턴으로 첫 기능 검증에 실패했다. 원문19→graph complete8→후보 기록 complete4로 줄었고 모든 후보가3유효지지에 미달했다. 검색15후보 미평가와 후보별 veto의 source 전체 전파도 확인했다. 다음은 저장 응답의 무료 계약·회귀이며 현재 활성 유료 작업은 없다.
 
 현재 [이력·현재 구조·Jev 감사](design/PIPELINE_HISTORY_AND_JEV_AUDIT.md)는 과거 후보격리/검색누락과 B1/B2·작업 유보를 대조했다. Jev M1 지지55→host39→SolM2 35와 F4 이후0Agent를 구별한다. 비용은 F4생성44.65%·F4판정31.26%·Jev2.08%이며 domain 정확도/승격 정책은 미검증이다. 새 구현·호출 없이 공통 오류범위 계약/무료회귀를 먼저 준비한다.
 

@@ -1,27 +1,27 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261113-v69`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~026, DEC-001~028.
+설계 버전: `commentscope-detailed-design-20261113-v70`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~027, DEC-001~028.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
 
-**현재 구현 계약:** [1출처 관점과 토론 논거 확장](SEEDED_PERSPECTIVE_DEBATE.md). 사용자 승인 DEC-028/TASK-026이며 legacy3출처와 새제품1출처·AI추론/외부문헌 경계를 구별한다.
+**현재 구현 계약:** [1출처 관점과 토론 논거 확장](SEEDED_PERSPECTIVE_DEBATE.md). 사용자 승인 DEC-028/TASK-026이며 legacy3출처와 새제품1출처·AI추론/외부문헌 경계를 구별한다. [기능·실제 대화 결과](SEEDED_PERSPECTIVE_RUNTIME_RESULT.md)를 확인하고, 다음 TASK-027은 구별되는 관점과 게시답변 유용성을 다룬다.
 
-**최신 이력/실제 배정 감사:** [과거 시행착오와 Jev 비용/품질](PIPELINE_HISTORY_AND_JEV_AUDIT.md), [현재 실행 Mermaid](diagrams/factory-history-audit-current-20261113.mmd). 기존 PR76 범위와 B1 전역 complete/B2 유보·TASK023 검색 유보를 구별했다. 신규호출0·구조변경미구현이며 정확도/원가 채택은 아니다.
+**이번 구현 전의 이력/배정 감사:** [과거 시행착오와 Jev 비용/품질](PIPELINE_HISTORY_AND_JEV_AUDIT.md), [당시 실행 Mermaid](diagrams/factory-history-audit-current-20261113.mmd). 기존 PR76 범위와 B1 전역 complete/B2 유보·TASK023 검색 유보를 구별했다. 신규호출0·구조변경미구현이며 정확도/원가 채택은 아니다.
 
-**현재 진입점:** [실제999 이후 설계 검토](MVP_DESIGN_REVIEW.md) → [원문 증거 계약](SOURCE_EVIDENCE_GRAPH.md)
+**기존 B1/TASK-022의 설계 이력:** [실제999 이후 설계 검토](MVP_DESIGN_REVIEW.md) → [원문 증거 계약](SOURCE_EVIDENCE_GRAPH.md)
 → [구현·검증·비용 작업표](MVP_REDESIGN_PLAN.md). DEC-013/014는 제안. [B1 첫 구현](SOURCE_EVIDENCE_IMPLEMENTATION.md)의 무료회귀 후 TASK-022의 [실제 원문 비교](SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](SOURCE_EVIDENCE_TRIAL_RESULT.md)).
 기존 F1~F5/P/X를 유지하며 B1 표현 계약만 opt-in 비교한다. DEC-015는 세 arm 합산5달러/7시간의 제한 profiling이며 구조·모델의 의미품질 채택은 아니다. 구현/합성 검사/실제 품질을 구별한다.
 
-현재 [CNBC 첫 기능 실행 결과](FIRST_FUNCTIONAL_VIDEO_RESULT.md)는 고정96개/501요청·2.151337702달러에서 Agent0개/질문0턴으로 실패했다.32후보 중15미평가,19source→8graph complete→4candidate record complete의 손실과 후보별 veto의 source 전파를 구별했다. source8f07ab0의 Factory910·양OS2713은 코드 검사이며 의미 품질 합격이 아니다. 새 유료 작업 없이 저장 응답으로 배분·오류 격리 계약을 먼저 검토한다.
+기존3출처 모드의 [CNBC 첫 기능 실행 결과](FIRST_FUNCTIONAL_VIDEO_RESULT.md)는 고정96개/501요청·2.151337702달러에서 Agent0개/질문0턴으로 실패했다.32후보 중15미평가,19source→8graph complete→4candidate record complete의 손실과 후보별 veto의 source 전파를 구별했다. source8f07ab0의 Factory910·양OS2713은 코드 검사이며 의미 품질 합격이 아니다. 그 뒤 사용자 승인1출처 구현/실제 대화는 상단의 TASK-026 결과와 구별한다.
 
-현재 TASK-022의 무료 후속은 [발화 역할별 필드 적용](SOURCE_ROLE_APPLICABILITY.md)과
+유보된 TASK-022의 과거 무료 후속은 [발화 역할별 필드 적용](SOURCE_ROLE_APPLICABILITY.md)과
 [실행별 정산 영수증 결합](EXECUTION_RECEIPT_BINDING.md)이다.
 원 C14개 저장 그래프의 별도 재검증은 완료7→8, 새1개는 후보 관측 대기이며
 Agent는 PR97의 무료 재변환과 같은1개/유효 지지4개다. 이후 [고정3질문](FIXED_PROFILE_RUNTIME_CHECK.md)의 실제 입장/이유 응답·없는 수치 보류를 확인했으며 최소2Agent/r5는 미완료다.
 [검색 확대 준비](SOURCE_SEARCH_EXPANSION.md)는 같은6후보/999풀에서 신규104쌍/69출처를
-원 임베딩으로 계산했다. 실제 호출·새 지지 판정은 없다.
+원 임베딩으로 계산했다. 이후 [실제 확대 결과](SOURCE_SEARCH_EXPANSION_RESULT.md)의2개 profile/지지5·4와 새1출처 무료 재조립3개는 상단 결과에서 구별한다.
 
 과거 v1 비교 중단·v3/v4 실패·v5 B/C 생성 비교와 비용은
 [원 결과/무료 재검사](SOURCE_FIDELITY_RESULT.md)와 추적표에서 보존한다.
@@ -33,7 +33,7 @@ Agent는 PR97의 무료 재변환과 같은1개/유효 지지4개다. 이후 [�
 
 **완료된 실험 설계:** 사용자 입력 풀 확대 지시에 따른 [등록999 전체 검증](WIDE_MINING_EXPERIMENT.md).
 실행은1 Agent/이유 부족으로 완료됐다. 이후 v1 F4 비교도 별도 owner·원 지출 계승 아래 예산 중단됐다.
-이전 누적150달러 실행은 완료됐으며, 고정3질문의 새 runtime 실행은 완료됐고 현재 활성 유료 작업은 없다. 이전 owner·원 기한은 보존한다.
+이전 누적150달러 한도 내 확대 실행은 완료됐으며, 고정3질문의 새 runtime 실행은 완료됐고 현재 활성 유료 작업은 없다. 이전 owner·원 기한은 보존한다.
 이전 MINING_EXPERIMENT의 합성12/실제24 범위는 종료된 소규모 계획이다. snapshot3000 상한을
 실제 입력3000개로 오해하지 않는다. 새 실행기는999개 전체 입력과 형식적 gate 불승격을 검사한다.
 
@@ -217,3 +217,5 @@ Sol chat/Jev의 논거 전송 용량 책임과 무료 회귀 결과는 [전송 �
 [영상 성격별 후보와 QA 계획](VIDEO_SELECTION_QA.md)은 공식API/실제댓글 예비검토로 기능·조건·문맥·사실·편향·규모/초행사용 사례를 나눈다. Agent 준비/QA 실행/기존999/r5 완료를 뜻하지 않는다.
 
 [CNBC 첫 기능 영상 실행](FIRST_FUNCTIONAL_VIDEO_TRIAL.md)은96처리/24확인·192검색쌍/48출처·동일누적150/새3h·UKRI근거·기존3+기능4질문을고정한다. 원999/r5/MVP완료와구별한다.
+
+TASK-026의 [실제 대화·비용·실패/수정 결과](SEEDED_PERSPECTIVE_RUNTIME_RESULT.md)와 [Mermaid 역할 구조](diagrams/seeded-perspective-runtime-v2.mmd)를 확인한다. 다음 TASK-027은 관점 구별·보류 후 답변 유용성이며 새 유료 실행은 보류 상태다.

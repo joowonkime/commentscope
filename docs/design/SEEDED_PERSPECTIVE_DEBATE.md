@@ -111,3 +111,5 @@ answered/partial은 내용이 필요하며 schema와 Host의 모든 상태 조�
 상태18조합·origin/reference 조합·ProductApp 설명형 보류·continuation 분모 초기화 거부를
 포함한 관련73검사와 Node10이 통과했다. 기존 실제 생성4개는 새 schema/Host 형태 검사만
 0호출로 확인했으며 새 Jev 의미 판정이나 유용성 개선으로 계산하지 않았다.
+
+최종 기능/제한 검증과 남은 품질 항목은 [실제 결과](SEEDED_PERSPECTIVE_RUNTIME_RESULT.md)에 있다. 초기 실패·후속43호출 합산·21게시턴을 구별하며 전체MVP/구별되는관점2개 승인은 하지 않았다.
