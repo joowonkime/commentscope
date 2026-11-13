@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v69`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v70`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v64`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v65`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -293,3 +293,5 @@ C 고정 비교는 Agent0/68회/1.760652달러로 종료됐다. 같은 C의 전�
 현재 신규 구현: [고정104쌍 출처 검색 확대 실행](design/SOURCE_SEARCH_EXECUTION.md). 정확한원관측재사용과새평가를분리하고같은누적150을유지한다. 기존단일Agent/실제3질문과전체2Agent/r5목표를구별한다.
 
 현재 [영상 성격별 후보와 QA 계획](design/VIDEO_SELECTION_QA.md)은 영어/한국어 실제 댓글 표본을 확인한 준비다. 첫 기능 검증과 조건·언어·규모·편향 사례를 나누며, 새 영상의 Agent 자격/실제 QA는 미검증이다. 기존 UBI999/r5를 교체하지 않는다.
+
+현재 사용자 실행 지시에 따른 [CNBC 첫 기능 영상96개 검증](design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md)을 구현한다. 별도 고정 입력/새 시간/같은 누적150과 기존 역할·품질 기준을 유지하고 실제 Agent/질문 결과는 실행 후 기록한다.
