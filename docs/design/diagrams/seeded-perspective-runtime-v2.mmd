@@ -1,0 +1,30 @@
+flowchart TD
+  Y[YouTube root comments and replies] --> S[Immutable source registry and parent context]
+  S --> D[Sol discovery and candidate consolidation]
+  D --> E[Embeddings retrieve candidate-source pairs]
+  E --> M[Jev membership observations]
+  M --> V[Sol independent membership verification]
+  V --> N[Host seeded membership eligibility: minimum one source]
+  N --> C[Sol core type and source-fidelity checks]
+  C --> F[Sol source graph and candidate certificates]
+  F --> T[Sol document-based fact checks when supplied]
+  P[Prepared topic documents and exact passages] --> T
+  T --> H[Host source eligibility and essential dependency checks]
+  H --> A[Explicit seeded policy: at least one verified source]
+  P --> A
+  A --> B[Immutable perspective bundle and actual source count]
+  B --> R[Conversation controller and isolated history]
+  U[User question or peer discussion context] --> R
+  R --> Q[Host reserves generation plus verification budget]
+  Q --> G[Sol writes bounded proposed paragraphs]
+  P --> G
+  G --> J[Jev observes named paragraph targets in one request]
+  J --> K[Host publishes eligible paragraphs and exact citations]
+  K --> O[Original comment-backed claims]
+  K --> I[AI reasoning: zero new comment support]
+  K --> X[External evidence: bound document passages]
+  O --> UI[Stored one-to-one or group messages and provenance UI]
+  I --> UI
+  X --> UI
+  K --> L[Explanatory abstention stays abstention]
+  L --> UI

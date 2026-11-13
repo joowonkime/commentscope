@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v74",
+  "spec_version": "commentscope-mvp-20261113-v75",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -22,10 +22,10 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-026",
+    "next_task": "TASK-027",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "TASK026 첫7호출/0.056386856USD 실패를 보존. 보류 설명과 Host/schema 충돌·typed 문단 주소 수정 무료 회귀 중. 새 코드 Factory/양OS CI 뒤 미실행 profile/group만 같은48물리요청 분모·기존 deadline에서 후속; 새48/3시간/금융owner 없음."
+    "hold_reason": "TASK026 기능 구현/제한 대화 검증 완료. 초기 실패7+후속36=43호출/0.302761314USD,완료 재진입0호출/미정산0. 현재추가유료작업없음. TASK027은 미평가/검색누락/원문전역보류·중복·게시후질문충족성 무료 점검과 제한 계약부터; 기존grant48/기한/원장/누적150owner를 새 권한으로 재개하지 않음."
   },
   "requirements": [
     {
@@ -2002,10 +2002,17 @@
           "scope": "User explicitly proposed single-source creation plus later argument expansion and instructed implementation (ㄱㄱㄱ). This records authorized direction only; implementation and semantic quality are unverified.",
           "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Opt-in seeded compilation and separately labeled argument development function in bounded real ProductApp1:1/group. Original grant43calls/0.302761314USD and all ledger/source bindings verified. Known overlap, conservative paragraph holds/core-only partials and initial failure preserved; neither independent model accuracy nor full MVP approved.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
-        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md"
+        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+        "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md"
       ]
     }
   ],
@@ -3673,7 +3680,7 @@
         "TASK-021",
         "TASK-025"
       ],
-      "status": "in_progress",
+      "status": "done",
       "deliverables": [
         "새닫힌1출처policy/Compiler·Pipeline연결과legacy3출처보존",
         "세출처발언/등록문헌·Jev문단판정Runtime및1:1·그룹·UI출처표시",
@@ -3712,10 +3719,72 @@
           "scope": "Three failing regressions reproduced contradictory explanatory abstention, permissive state schema and numeric paragraph target; complete state/limitation/content matrix plus origin/reference constraints now schema/Host-consistent. 73 related tests and10 Node checks pass;4 saved actual generation output shapes accepted with0calls, no semantic rejudgment. Continuation preserves original deadline/opening48-request denominator and skips attempted profiles; reset attempts rejected. Final Factory/native CI pending.",
           "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "Sourceb5f9793 final Factory945/303.354s, related73, Node10 pass. Native Ubuntu2748/467.108s and Windows2748/458.959s(existingPOSIX12skips) pass on CI43375729686; PR107 mergedcc582c9. Mermaid parsed/rendered and private read-only review HTML rendered in Chromium. Browser report smoke only, not product usability.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Within original48physical/08:40:38UTC grant and same150owner: first7calls/0.056386856 failure preserved; follow-up36unattempted requests/0.246374458,18product turns(12direct/6group),0joberrors,3abstentions. Total43calls/0.302761314,21published turns,20AI+14document paragraphs. All43ledger charges,22exactSol receipt bindings21uniqueJev wires,quotes/counts/dependencies/passages/history/room costs bound;no reserved/unknown;completed reentry0calls. All4stance inputs and3/4newreason queries produce useful material by assistant inspection;1reference query core-onlypartial,1refusal core-only,all4profiles pro/overlapping. No matched-causalJev accuracy claim,independenthumanGold,distinct2viewpoints,r5,3k,fresh generation unit-cost,or fullMVP approval. Runtime-only response median9.99s;6turngroup75.82s.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
-        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md"
+        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+        "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md"
+      ]
+    },
+    {
+      "id": "TASK-027",
+      "title": "구별되는 관점 발굴과 게시 답변 유용성 검증",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "decisions": [
+        "DEC-027",
+        "DEC-028"
+      ],
+      "depends_on": [
+        "TASK-026"
+      ],
+      "status": "next",
+      "deliverables": [
+        "저장된 미평가/검색누락/원문전역보류와 profile중복의 영향 구별 및 무료 실패 재현",
+        "필수조건/사실·귀속을 유지하는 후보/출처 오류범위와 게시답변 적합성의 제한 계약·구현",
+        "원래금융owner/지출을 보존한 고정 실제 대조관점·자유질문·그룹 유용성 및 비용 검증"
+      ],
+      "done_when": [
+        "다른 입장/조건/이유를 가진 실제 후보를 임의 수작업 persona로 바꾸지 않고 최소2개의 유용한 관점 산출물로 구별한다.",
+        "보류 후 core만 남은 답변을 질문 충족으로 세지 않고 precision/recall·모델 관측·독립 QA를 구별한다.",
+        "무료 회귀/필수검사/양OS CI 뒤 별도 고정 실행 계약으로만 실제 효과·비용을 평가하며 이전48회/종료기한/차감을 초기화하지 않는다. 전체MVP 완료는 세 과업 QA와 별도다."
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Zero-call inventory over saved CNBC memberships:9candidates have >=1 support,5already core-assessed,4additional candidates with supports1/1/2/1 await core/F4/source validation. Topics involve occupational coverage/flexibility/qualified application/hourly-vs-salaried scope, not approved contrasting Agents. Existing source-wide candidate-certificate veto propagation is a known hazard to reproduce/contract before widening paid F4. No implementation or quality gain claimed.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
+        "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
+        "docs/design/SOURCE_EVIDENCE_GRAPH.md"
       ]
     }
   ],
@@ -4059,6 +4128,6 @@
       "reason": "사용자가3지지대신1출처에서도관점생성후debate논거확장을제안/구현승인. 내부3출처를제품필수조건으로고정하지않고새versioned제품정책으로분리. legacyr5/과거실패유지,귀속/조건/필수사실보존,AI추론·등록외부문헌을원댓글과구별하는새Runtime/제품연결."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v69",
+  "design_version": "commentscope-detailed-design-20261113-v70",
   "design_document": "docs/design/README.md"
 }
