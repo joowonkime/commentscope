@@ -1,5 +1,7 @@
 # Decision 계층과 모델 호출 상세 설계
 
+현재 실제 선택 배정과 과거 수정의 적용 범위는 [2026-11-13 이력/Jev 감사](PIPELINE_HISTORY_AND_JEV_AUDIT.md)를 먼저 확인한다. 아래 날짜별 기본값/제안/실험은 당시 이력으로 보존한다.
+
 현재 책임·입출력 계층의 정본은 [구조v1](ARCHITECTURE_BASELINE.md), 실행전 비용검토는 [전체비용계획](FACTORY_COST_PLAN.md)이다. 아래 오래된 모델/단일deployment/로컬NLI 설명은 당시 기준선이며 최근 원격plan의 배정과 구별한다.
 
 설계 `commentscope-detailed-design-20261110-v19`, DEC-007, TASK-016/005.

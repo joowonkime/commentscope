@@ -1,0 +1,48 @@
+flowchart TB
+    subgraph discoveryLayer["F1 F2 원문과 관점 발견"]
+        registry["Host 원문96과 부모"]
+        sourceEmbedding["외부 원문 embedding"]
+        discovery["Sol 공통후보32"]
+        candidateEmbedding["외부 후보 embedding"]
+        retrieval["Host 검색192쌍48출처"]
+        registry --> sourceEmbedding --> discovery --> candidateEmbedding --> retrieval
+    end
+    subgraph membershipLayer["F3 지지 검증"]
+        interpretation["Sol 문맥과 world"]
+        jev["Jev M1 관계와 구간"]
+        membershipGuard["Host 지지55에서39"]
+        ownEvidence["Sol route와 M2"]
+        checkedMap["Host 지지35와5후보"]
+        interpretation --> jev --> membershipGuard --> ownEvidence --> checkedMap
+    end
+    subgraph evidenceLayer["F4 출처별 논거"]
+        core["Sol core 유형과 충실도"]
+        proposal["Sol 원문 그래프19"]
+        quoteBinding["Host exact quote18"]
+        audit["Sol 원문 감사8통과"]
+        certificate["Sol 후보 연결8기록"]
+        lowering["Host 기록4개 complete"]
+        core --> proposal --> quoteBinding --> audit --> certificate --> lowering
+    end
+    compiler["F5 Host 최소3지지와 자격"]
+    failed["이번결과 Agent0 질문0"]
+    facts["Sol 필수사실 검사"]
+    bundle["Host 불변 Agent bundle"]
+    runtime["P Sol 근거기반 대화"]
+    execution["X 예산과 영수증과 checkpoint"]
+    retrieval --> interpretation
+    checkedMap --> core
+    lowering --> compiler
+    compiler -->|"이번 실행"| failed
+    compiler -.->|"자격 충족 시"| facts
+    facts -.-> bundle -.-> runtime
+    execution -.-> discovery
+    execution -.-> jev
+    execution -.-> proposal
+    execution -.-> runtime
+    style jev fill:#CDF4D3,stroke:#66D575
+    style proposal fill:#FFE0C2,stroke:#FF9E42
+    style audit fill:#FFE0C2,stroke:#FF9E42
+    style certificate fill:#FFE0C2,stroke:#FF9E42
+    style lowering fill:#FFCDC2,stroke:#FF7556
+    style failed fill:#FFCDC2,stroke:#FF7556

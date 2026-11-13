@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v71",
+  "spec_version": "commentscope-mvp-20261113-v72",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "CNBC96첫기능고정실행완료/품질실패:501요청2.151337702USD/Agent0/runtime0. 모든정산완료·현재유료job없음. 다음은저장응답무료대조와검색nominee배분/원문전역vs후보오류격리계약·회귀. 새호출은수정범위·고정비교준비후별도등록;종료된plan/실패/999/r5/누적150·과거차감유지."
+    "hold_reason": "이력·현재구조·Jev비용/품질감사완료/새호출0. CNBC실패501회2.151337702/Agent0·누적150과모든과거차감보존. 다음원문전역/후보오류격리공통계약·저장응답무료회귀;기존TASK023검색배분유보와무료coverage대조구별. 이후F4단일판정Jev대체/조건부Sol비교는reference·배정·비용·기한동결후별도등록. 전체r5/MVP미완료."
   },
   "requirements": [
     {
@@ -1330,6 +1330,12 @@
           "scope": "Frozen M1 component completed:6 synthetic controls +5 stratified actual pairs,126 questions/11 physical responses/$0.001672902. Predeclared relation8/11; host support decisions10/11, valid support2/3 retained, invalid approval0/8, raw false supported1 held by scope guards, binding0. Actual5 Jev relation3/5 vs historical Sol4/5; paired raw costs$0.000794136 vs$0.0110568 (different time/cache). Authored development annotations, not independent human gold or population estimate. Completed replay0calls; original1.50/owner8/global50 preserved, reserved/uncertain0. Default remains Sol; no fresh Factory/production adoption.",
           "reference": "docs/design/JEV_MEMBERSHIP_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "User-requested free history/current-role/cost audit: PR76 candidate isolation is legacy-only; B1 explicitly retained whole-source-complete and deferred B2. Nominee search loss already recorded in mining24 and deferred TASK023; not a new Jev defect. Latest192pairs:rawJev55supported/92uncertain→host39/108→SolM2 final35/112→5frontcores→0Agents. Candidate-local-veto count-only opportunity1/3/1/0/2 is not implementation/compilation or2-Agent proof. Current Jev bill2.08% does not measure introduced total savings; F4generation44.65% and verification31.26% differ. No domain precision/recall/Pareto curve or calibrated escalation threshold exists; recommend common failure-scope contracts then one F4 verifier substitution/cascade comparison, not adding another gate. Historical cache/U2 reduction/optional omission already implemented. Current source8f07ab0/current main3ac2251; no app code/meaning-policy change or paid calls.",
+          "reference": "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -1339,7 +1345,8 @@
         "docs/design/FACTORY_COST_PLAN.md",
         "docs/design/JEV_MEMBERSHIP.md",
         "docs/design/JEV_MEMBERSHIP_RESULT.md",
-        "docs/design/PREPARED_VIDEO_MINING.md"
+        "docs/design/PREPARED_VIDEO_MINING.md",
+        "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md"
       ]
     },
     {
@@ -1497,6 +1504,12 @@
           "scope": "B1 opt-in exact spans/observer/candidate certificates/new-version source arguments and strict existing Compiler integration. Factory778 passed393.717s before final wire compatibility fix; after discovering unsupported numeric-minimum schema annotations, host bounds retained and actual strict-wire regression+related81 passed10.754s.20 new tests; synthetic two distinct Agents/three supports/own reasons and failure vetoes.48 real-source proposal payload constructions fit both frozen deployments; no provider calls. Actual source quality/model cost/MVP remain unverified.",
           "reference": "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "User-requested free history/current-role/cost audit: PR76 candidate isolation is legacy-only; B1 explicitly retained whole-source-complete and deferred B2. Nominee search loss already recorded in mining24 and deferred TASK023; not a new Jev defect. Latest192pairs:rawJev55supported/92uncertain→host39/108→SolM2 final35/112→5frontcores→0Agents. Candidate-local-veto count-only opportunity1/3/1/0/2 is not implementation/compilation or2-Agent proof. Current Jev bill2.08% does not measure introduced total savings; F4generation44.65% and verification31.26% differ. No domain precision/recall/Pareto curve or calibrated escalation threshold exists; recommend common failure-scope contracts then one F4 verifier substitution/cascade comparison, not adding another gate. Historical cache/U2 reduction/optional omission already implemented. Current source8f07ab0/current main3ac2251; no app code/meaning-policy change or paid calls.",
+          "reference": "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -1504,7 +1517,8 @@
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/MVP_REDESIGN_PLAN.md",
         "docs/design/SOURCE_EVIDENCE_IMPLEMENTATION.md",
-        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
+        "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md",
+        "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md"
       ]
     },
     {
@@ -1891,11 +1905,18 @@
           "scope": "Actual CNBC first-functional fixed96/heldout24:32candidates/192pairs48sources,35supported112uncertain21opposed2conditional22unrelated;17candidates assessed15unassessed. F4 nineteen sources:1ordered-coverage binding error,18graphs8complete10unresolved;8candidate records4complete4unresolved. Front-qualified5cores final sources1/2/1/0/1,0Agents/0runtime/facts calls. Exactly501new requests/2.151337702USD;224Sol exact receipt bindings273Jev unique wire-owner-charge4embedding request/model/usage-cost matches,all settled/history preserved/read-only reentry0newcalls. Source8f07ab0/PR103 merged461cb71 after Factory910 and dual-OS2713. Search nominee43pairs42sources fit existing192/48 but19nominee pairs unassessed;new-source adapter cross-candidate veto coupling confirmed. No fixes/counterfactual gains or independent gold/TA/fullr5/MVP success claimed.",
           "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "User-requested free history/current-role/cost audit: PR76 candidate isolation is legacy-only; B1 explicitly retained whole-source-complete and deferred B2. Nominee search loss already recorded in mining24 and deferred TASK023; not a new Jev defect. Latest192pairs:rawJev55supported/92uncertain→host39/108→SolM2 final35/112→5frontcores→0Agents. Candidate-local-veto count-only opportunity1/3/1/0/2 is not implementation/compilation or2-Agent proof. Current Jev bill2.08% does not measure introduced total savings; F4generation44.65% and verification31.26% differ. No domain precision/recall/Pareto curve or calibrated escalation threshold exists; recommend common failure-scope contracts then one F4 verifier substitution/cascade comparison, not adding another gate. Historical cache/U2 reduction/optional omission already implemented. Current source8f07ab0/current main3ac2251; no app code/meaning-policy change or paid calls.",
+          "reference": "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
         "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
-        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md"
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
+        "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md"
       ]
     }
   ],
@@ -3230,6 +3251,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
+        "현재이력/Jev감사완료:PR76legacy격리와B1/B2유보·기존nominee누락이력대조. 현재M1 55→39→35관계/F4후0Agents;비용생성44.65/후반판정31.26/Jev2.08분리. 후보격리단독count-only1/3/1/0/2,코드/Agent증가미검증. 신규호출0;다음공통오류범위계약/무료회귀뒤F4단일역할비교.",
         "현재CNBC첫기능고정96/확인24실행완료:501요청/2.151337702USD,32후보/192쌍중17후보평가15미평가,F4 19→8graph complete→4candidate record complete→Agent0/runtime0. 검색배분/후보간veto결합/원문감사손실확인;다음무료일반계약·회귀. 동일150owner·원999/r5·실패/금융보존.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
@@ -3377,6 +3399,12 @@
           "scope": "Actual CNBC first-functional fixed96/heldout24:32candidates/192pairs48sources,35supported112uncertain21opposed2conditional22unrelated;17candidates assessed15unassessed. F4 nineteen sources:1ordered-coverage binding error,18graphs8complete10unresolved;8candidate records4complete4unresolved. Front-qualified5cores final sources1/2/1/0/1,0Agents/0runtime/facts calls. Exactly501new requests/2.151337702USD;224Sol exact receipt bindings273Jev unique wire-owner-charge4embedding request/model/usage-cost matches,all settled/history preserved/read-only reentry0newcalls. Source8f07ab0/PR103 merged461cb71 after Factory910 and dual-OS2713. Search nominee43pairs42sources fit existing192/48 but19nominee pairs unassessed;new-source adapter cross-candidate veto coupling confirmed. No fixes/counterfactual gains or independent gold/TA/fullr5/MVP success claimed.",
           "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "User-requested free history/current-role/cost audit: PR76 candidate isolation is legacy-only; B1 explicitly retained whole-source-complete and deferred B2. Nominee search loss already recorded in mining24 and deferred TASK023; not a new Jev defect. Latest192pairs:rawJev55supported/92uncertain→host39/108→SolM2 final35/112→5frontcores→0Agents. Candidate-local-veto count-only opportunity1/3/1/0/2 is not implementation/compilation or2-Agent proof. Current Jev bill2.08% does not measure introduced total savings; F4generation44.65% and verification31.26% differ. No domain precision/recall/Pareto curve or calibrated escalation threshold exists; recommend common failure-scope contracts then one F4 verifier substitution/cascade comparison, not adding another gate. Historical cache/U2 reduction/optional omission already implemented. Current source8f07ab0/current main3ac2251; no app code/meaning-policy change or paid calls.",
+          "reference": "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3404,7 +3432,8 @@
         "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
         "docs/design/VIDEO_SELECTION_QA.md",
         "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
-        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md"
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
+        "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md"
       ]
     },
     {
@@ -3866,8 +3895,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v71",
       "reason": "사용자첫기능용영상실행을96개로제한해끝까지수행하고실패/실청구/손실을기록. Source8f07ab0양OS검사후501요청2.151337702USD,0Agents/0runtime,19source→8graph→4record. 영상교체성공/댓글주장부재로오인하지않도록15후보미평가와같은상한안nominee배분손실·후보veto의source전체전파를구별. 기준완화·유료재시도·구조수정효과를주장하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v72",
+      "reason": "사용자지적에따라새재설계/유료실험전에과거PR/설계/실제결과와현코드를감사. 후보격리·nominee누락이이미알려졌고B1전역정책/B2·TASK023유보가남아있음을구별. Jev M1원답/host/M2손실과생성/검증비중·한정반사실을무료산출. 기존DEC009/013/027에연결해중복DEC/새구현/정확도·절감약속을만들지않고현재실제구조Mermaid문서화."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v66",
+  "design_version": "commentscope-detailed-design-20261113-v67",
   "design_document": "docs/design/README.md"
 }
