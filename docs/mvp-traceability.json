@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v76",
+  "spec_version": "commentscope-mvp-20261113-v77",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,11 +23,9 @@
   },
   "resume": {
     "next_task": "TASK-027",
-    "parallel_tasks": [
-      "TASK-028"
-    ],
+    "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자 승인 선정영상180댓글/실제 프론트 연결 진행. 먼저 TASK028 새모드 웹 실행기 연결·무료 회귀/양OS CI, TASK027 후보별 오류범위·게시답변 유용성 점검. 새 유료 실행은 고정 계획을 준비한 뒤 기존 누적150owner/과거 차감에 결합하며 완료된48호출/기한을 재개하지 않음."
+    "hold_reason": "선정영상180/고정제품QA를898요청·3.383771486달러로완료. TASK028연결구현/양OS CI·실제브라우저확인완료, TASK027은2관심사/원문이유0·비교빈결과/문단보류후유용성미달을보존하며무료계약진단이next. 기존로컬서버의직접상호작용만원래2026-11-13T20:34:19Z기한/2400누적요청분모/150계정한도안에서가능하며자동추가실험없음. 과거48grant/금융owner/차감은초기화하지않음."
   },
   "requirements": [
     {
@@ -523,6 +521,12 @@
           "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
           "reference": "docs/design/VIDEO_SELECTION_QA.md",
           "result": "partial"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Actual registered-video factory plus existing web integration exercised all three workflows; source/billing/reload audits passed. Meaningful why1/2,study explanation0/2,group engagement weak; no public deployment or first-use human QA. Total new$3.383771486 with same cumulative150 owner,original charges retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -581,6 +585,12 @@
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Actual registered-video factory plus existing web integration exercised all three workflows; source/billing/reload audits passed. Meaningful why1/2,study explanation0/2,group engagement weak; no public deployment or first-use human QA. Total new$3.383771486 with same cumulative150 owner,original charges retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -626,6 +636,12 @@
           "scope": "Actual OpenRouter9 requests on the historical automatically generated two-Agent bundle from synthetic comments: two comparisons, group4, one-to-one2, reflection1, manual save/read revision2; $0.048202. All profiles preserved. Not 755/999-comment quality or independent semantic evaluation.",
           "reference": "docs/PRODUCT_DELIVERY_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Actual registered-video factory plus existing web integration exercised all three workflows; source/billing/reload audits passed. Meaningful why1/2,study explanation0/2,group engagement weak; no public deployment or first-use human QA. Total new$3.383771486 with same cumulative150 owner,original charges retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -795,6 +811,12 @@
           "scope": "Fixed104newpairs/69sources expansion completed on frozen source6f544c0 after both native2704/Factory901passed;103assessed/1Jev contradictory hold,17new supports,29F4sources/20bound/9complete graphs,9candidate records/7complete. Two compiler profiles(5/4sources),3shared of6unique sources,both pro-UBI. Actual6runtime turns:position2answered,reasons1answered/1abstain,missing2abstain. Exact276new requests/0.917447514USD,108original observations reused,137Sol exact receipt bindings+139Jev unique wire/owner/charge matches;all settled/history preserved. Distinct-viewpoint/TA/fullr5/MVP not achieved;not independent human gold or fresh gate.",
           "reference": "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual registered-video factory plus existing web integration exercised all three workflows; source/billing/reload audits passed. Meaningful why1/2,study explanation0/2,group engagement weak; no public deployment or first-use human QA. Total new$3.383771486 with same cumulative150 owner,original charges retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -881,6 +903,12 @@
           "kind": "limited_live",
           "scope": "Read-only video scouting:official YouTube API27GETs,16video metadata,8video relevance/time first pages and2complete bounded reply threads. Selected qualitative examples show32vs40hour correction,industry/customer constraints,wage/rest/enforcement priorities;typed/viewpoint accuracy,Agent readiness and usability untested. English CNBC four-day938comments recommended for first functional check;Korean SBS wage/four-day3534comments for conditional/language/scale case. Ten QA cases planned only. OpenRouter/embedding/Agent calls0; original999/r5 and money unchanged.",
           "reference": "docs/design/VIDEO_SELECTION_QA.md",
+          "result": "partial"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Actual registered-video factory plus existing web integration exercised all three workflows; source/billing/reload audits passed. Meaningful why1/2,study explanation0/2,group engagement weak; no public deployment or first-use human QA. Total new$3.383771486 with same cumulative150 owner,original charges retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
           "result": "partial"
         }
       ],
@@ -3781,7 +3809,7 @@
       "depends_on": [
         "TASK-026"
       ],
-      "status": "in_progress",
+      "status": "next",
       "deliverables": [
         "저장된 미평가/검색누락/원문전역보류와 profile중복의 영향 구별 및 무료 실패 재현",
         "필수조건/사실·귀속을 유지하는 후보/출처 오류범위와 게시답변 적합성의 제한 계약·구현",
@@ -3802,12 +3830,20 @@
           "scope": "Zero-call inventory over saved CNBC memberships:9candidates have >=1 support,5already core-assessed,4additional candidates with supports1/1/2/1 await core/F4/source validation. Topics involve occupational coverage/flexibility/qualified application/hourly-vs-salaried scope, not approved contrasting Agents. Existing source-wide candidate-certificate veto propagation is a known hazard to reproduce/contract before widening paid F4. No implementation or quality gain claimed.",
           "reference": "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Frozen Jubilee180 discovery60/search33/384pairs ->383saved relations/37supports ->34F4sources/29graphs(11complete)/11candidate records(5complete) ->2profiles each1source/no admitted own reasons. Different responsibility/detector concerns, not opposed learning policies. Baseline comparisons0/2; direct developed reason1/2,studies0/2,substantive unavailable-IQ limitation2/2. Proposal relevance before filtering and core-inherited new-paragraph scope remain. Source/candidate loss and17of28new-paragraph holds uncalibrated; no human gold or fullMVP.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
         "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md",
         "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
-        "docs/design/SOURCE_EVIDENCE_GRAPH.md"
+        "docs/design/SOURCE_EVIDENCE_GRAPH.md",
+        "docs/design/SEEDED_WEB_INTEGRATION.md",
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
       ]
     },
     {
@@ -3826,7 +3862,7 @@
       "depends_on": [
         "TASK-026"
       ],
-      "status": "in_progress",
+      "status": "done",
       "deliverables": [
         "명시적1출처 bundle의 Sol/Jev 동결 설정과 공유 비용/기한을 일반 웹 서버에 연결",
         "기존 legacy 화면/API·원본/DB를 유지하는 정상·실패·재열람 회귀",
@@ -3847,12 +3883,25 @@
           "scope": "General seeded server and registered-snapshot executor wire generation/typed verification into existing ProductApp and shared cumulative financial owner; existing UI/API kept.64 related tests,945 existing Factory tests(277.955s),14 new executor tests,25 synthetic Chromium checks and10 Node tests pass. First Factory attempt exit143 preserved as interrupted, not pass. New paid calls0. Exact-source both-OS CI and real selected-video frontend remain pending.",
           "reference": "docs/design/SEEDED_WEB_INTEGRATION.md",
           "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "PR109/110 preserve old UI/API/data/owner and wire seeded generation/typed verification; 65related/960Factory/25syntheticChromium/10Node pass. Exact b773827 source both protected OS CI43433419454 passed2769 tests each(Windows12existingPOSIXskips). Earlier143interruption and zero-call prepare coupling error retained.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "pass"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Actual automatic180comment bundle served on existing frontend:8direct questions/4group turns/reflection analysis and revision2 save/reload; live source lookup during reservation200; actual Chromium14read-only and7real-entry checks pass,Windowsloopback200. Baseline2empty comparisons preserved; separately frozen applicable opinion gives1grounded difference and free postreload reuse.898new requests/$3.383771486 inclFactory870/$3.20174896 andproduct28/$0.182022526; originalfinance unchanged,no unresolved charges. This is connection validation, not all-MVP/TA usability or semantic quality pass.",
+          "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
         "docs/design/SEEDED_WEB_INTEGRATION.md",
         "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
-        "docs/PRODUCT_API.md"
+        "docs/PRODUCT_API.md",
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
       ]
     }
   ],
@@ -4198,8 +4247,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v76",
       "reason": "사용자승인선정영상/프론트연결을기존화면/API/DB/실험보존하에진행. 최신ProductApp/표시코드와일반웹실행기검증callback누락을구별하고TASK028로추적. 기존TASK027품질·누적150owner·종료된grant/과거실패를유지하며무료연결회귀부터진행."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v77",
+      "reason": "PR109/110및고정Jubilee180→기존웹실제검증완료를반영.898요청/3.383771486달러,2profile각1출처/원문이유0·기본비교0/2·별도관련의견차이1·12게시턴·성찰수정/재열람·실제브라우저와양OS CI를구별해보존. TASK028완료와TASK027유용성/범위계약미완료를구별하고무료진단을next로설정. 원150owner/과거차감/종료grant/legacy기준불변;전체MVP완료아님."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v71",
+  "design_version": "commentscope-detailed-design-20261113-v72",
   "design_document": "docs/design/README.md"
 }
