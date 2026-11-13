@@ -10,9 +10,11 @@ import re
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory import fact_checks as facts
 from commentscope.factory import nli_fact_records
+from commentscope.agents import seed_policy
 
 VERSION = 'fact-screened-agent-inputs-0.4'
 SCOPED_VERSION = 'fact-screened-agent-inputs-0.5'
+SEEDED_VERSION = seed_policy.VERSION + '/compiled'
 
 
 def indexed(rows, name):
@@ -26,8 +28,11 @@ def indexed(rows, name):
 
 def compile_inputs(bundle):
     required = {'expires_at','sources','claims','relations','documents','checks','candidates','model'}
-    if not required<=set(bundle) or set(bundle)-required-{'runtime_scopes','source_contexts'}:
+    if not required<=set(bundle) or set(bundle)-required-{'runtime_scopes','source_contexts','admission_policy','reference_selections'}:
         raise ValueError('Unexpected grounding bundle fields')
+    minimum_sources = seed_policy.minimum(bundle.get('admission_policy'))
+    seeded = seed_policy.seeded(bundle)
+    seed_policy.references(bundle)
     expiry = facts.live(bundle['expires_at']); facts.model_identity(bundle['model'])
     sources = indexed(bundle['sources'],'source')
     claims = indexed(bundle['claims'],'claim')
@@ -149,10 +154,20 @@ def compile_inputs(bundle):
         if factual and runtime_scope and runtime_scope['interpretation_scope']['world']!='actual':
             raise ValueError('Nonactual factual arguments require a scope-aware fact verifier')
         major = candidate['major_fact_ids']
-        if not isinstance(major,list) or any(cid not in factual for cid in major) or len(set(major)) != len(major) or (factual and not major):
+        essential=set()
+        def gather_essential(cid):
+            if cid not in essential:
+                essential.add(cid)
+                for dep in claims[cid]['requires']:gather_essential(dep)
+        gather_essential(core_id)
+        essential_facts={cid for cid in essential if claims[cid]['kind']=='fact'}
+        if (not isinstance(major,list) or any(cid not in factual for cid in major)
+                or len(set(major)) != len(major) or (factual and not major and not seeded)
+                or seeded and not essential_facts.issubset(major)):
             raise ValueError('Factual perspectives must declare major fact IDs')
         core_sources = {r['source_id'] for r in bindings[core_id]}
-        reason = ('fewer_than_three_core_sources' if len(core_sources) < 3 else eligibility[core_id][1])
+        reason = (('fewer_than_required_seed_sources' if seeded else 'fewer_than_three_core_sources')
+                  if len(core_sources) < minimum_sources else eligibility[core_id][1])
         if reason:
             deferred.append({'candidate_id':candidate['id'],'core_claim_id':core_id,'reason':reason,
                              'model_core_support_count':len(core_sources)})
@@ -197,7 +212,7 @@ def compile_inputs(bundle):
                          'model_core_support_count':len(core_sources),
                          'prompt_entries':entries,'citations':citations,'omitted':omitted})
         if runtime_scope:profiles[-1]['interpretation_scope']=deepcopy(runtime_scope['interpretation_scope'])
-    return {'artifact_kind':SCOPED_VERSION if runtime_scopes else VERSION,'input_sha256':digest(bundle),'expires_at':expiry.isoformat(),
+    result = {'artifact_kind':SEEDED_VERSION if seeded else SCOPED_VERSION if runtime_scopes else VERSION,'input_sha256':digest(bundle),'expires_at':expiry.isoformat(),
             'profiles':profiles,'deferred':deferred,'claim_decisions':{
                 cid:{'eligible':v[0],'reason':v[1],'fact_state':fact_status.get(cid,'not_applicable' if claims[cid]['kind']!='fact' else 'unassessed')}
                 for cid,v in eligibility.items()},
@@ -206,6 +221,10 @@ def compile_inputs(bundle):
             'limitations':['Input policy enforcement, not fact-check accuracy or automatic clustering proof.',
                            'Claim typing/dependencies/source judgments remain fallible upstream decisions.',
                            'Omitted evidence may change perspective representativeness; runtime approval is pending.']}
+    if seeded:
+        result['admission_policy'] = deepcopy(bundle['admission_policy'])
+        result['formal_factory_eligible'] = False
+    return result
 
 
 def prompt_input(compiled, candidate_id, *, bundle):

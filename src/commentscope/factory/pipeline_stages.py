@@ -201,7 +201,10 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     work, qualify, save = execution.work, execution.qualify, execution.save
     holds, errors = execution.holds, execution.errors
     mapped = mm.assemble_map(snapshot, candidates, memberships); save('map', mapped)
-    eligible_ids = {p['id'] for p in mapped['opinion_map']['perspectives'] if p['minimum_support_met']}
+    from commentscope.agents import seed_policy
+    minimum=seed_policy.minimum(getattr(execution,'admission_policy',None))
+    eligible_ids = {p['id'] for p in mapped['opinion_map']['perspectives']
+                    if len(p['supported_canonical_ids'])>=minimum}
     eligible = [c for c in candidates if c['id'] in eligible_ids]
     members = {p['id']: p['supported_canonical_ids'] for p in mapped['opinion_map']['perspectives']}
     runtime_scopes = {c['id']: contextual_runtime.bind(c,engine.scope(c)) for c in eligible
@@ -357,9 +360,11 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
 
 
 def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
-                   fact_check, *, model, documents, selections, source_policy='all_members'):
+                   fact_check, *, model, documents, selections, source_policy='all_members',admission_policy=None):
     """Owned arguments -> fact-screened bundle/profiles plus bound NLI checks."""
-    agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits, model=model, documents=documents,source_policy=source_policy)
+    policy_args={'admission_policy':admission_policy,
+                 'reference_selections':selections if admission_policy else ()}
+    agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits, model=model, documents=documents,source_policy=source_policy,**policy_args)
     packets = [fact_checks.packet(c, list(documents), list(selections), snapshot.usage.expires_at)
                for c in agent_inputs['bundle']['claims'] if c['kind'] == 'fact']
     checks = []
@@ -372,7 +377,7 @@ def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
             checks.append({'claim_id':bound['claim']['id'],'selections':deepcopy(list(selections)),'record':record})
         if checks:
             agent_inputs=ma.prepare(snapshot,candidates,memberships,arguments,cores,audits,
-                model=model,documents=documents,checks=checks,source_policy=source_policy)
+                model=model,documents=documents,checks=checks,source_policy=source_policy,**policy_args)
         return agent_inputs,checks
     for offset in range(0, len(packets), 16):
         batch = packets[offset:offset+16]; req = nli_fact_records.invocation(batch)
@@ -382,5 +387,5 @@ def compile_agents(snapshot, candidates, memberships, arguments, cores, audits,
             checks.append({'claim_id': packet['claim']['id'], 'selections': deepcopy(list(selections)), 'record': record})
     if checks:
         agent_inputs = ma.prepare(snapshot, candidates, memberships, arguments, cores, audits,
-                                  model=model, documents=documents, checks=checks,source_policy=source_policy)
+                                  model=model, documents=documents, checks=checks,source_policy=source_policy,**policy_args)
     return agent_inputs, checks

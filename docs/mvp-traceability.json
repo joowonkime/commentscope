@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v72",
+  "spec_version": "commentscope-mvp-20261113-v73",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -22,10 +22,10 @@
     ]
   },
   "resume": {
-    "next_task": "TASK-022",
+    "next_task": "TASK-026",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "이력·현재구조·Jev비용/품질감사완료/새호출0. CNBC실패501회2.151337702/Agent0·누적150과모든과거차감보존. 다음원문전역/후보오류격리공통계약·저장응답무료회귀;기존TASK023검색배분유보와무료coverage대조구별. 이후F4단일판정Jev대체/조건부Sol비교는reference·배정·비용·기한동결후별도등록. 전체r5/MVP미완료."
+    "hold_reason": "사용자1출처Agent/논거확장구현승인. DEC028/TASK026명세후구현/무료회귀진행;기존TASK022엄격실험후속은보존유보. 새닫힌policy·출처분리Runtime·양OSCI/실행계약동결후같은누적150owner에서제한대화48요청까지. 현재새호출0."
   },
   "requirements": [
     {
@@ -70,7 +70,10 @@
         "src/commentscope/factory/source_quote_anchors.py",
         "src/commentscope/factory/observation_reuse.py",
         "tools/source_search_expansion.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_raw_membership_source_context.py",
@@ -104,7 +107,11 @@
         "tests/test_source_quote_anchors.py",
         "tests/test_observation_reuse.py",
         "tests/test_source_search_expansion.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "원문·ID·부모 문맥을 보존하고 부모나 다른 작성자의 주장을 해당 원문의 지지·이유로 승격하지 않는다.",
@@ -191,7 +198,10 @@
         "tools/prepare_source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
         "tools/source_search_expansion.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_minimal_pipeline.py",
@@ -223,7 +233,11 @@
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_observation_reuse.py",
         "tests/test_source_search_expansion.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "동일 고정 설정의 G1~G4와 기존 r5 분모·보존·활용 기준을 통과한다.",
@@ -310,7 +324,10 @@
         "tools/prepare_source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
         "tools/source_search_expansion.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_minimal_agents.py",
@@ -342,7 +359,11 @@
         "tests/test_source_fidelity_validation_plan.py",
         "tests/test_observation_reuse.py",
         "tests/test_source_search_expansion.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "고정 최종 gate에서 서로 다른 Agent 최소2개·각 유효 지지3개와 모든 자동 생성 Agent의 내용·주요 사실·실제3질문을 확인한다.",
@@ -453,7 +474,10 @@
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
         "src/commentscope/product/web.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_grounded_web.py",
@@ -462,7 +486,11 @@
         "tests/test_product_app.py",
         "tests/test_product_web.py",
         "tests/test_serve_mvp.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "자기 관점 근거의 후속 질문·적절한 보류·원문/부모 확인·대화 저장을 연결한다.",
@@ -509,12 +537,19 @@
       "code": [
         "src/commentscope/product/app.py",
         "src/commentscope/product/contracts.py",
-        "src/commentscope/product/web.py"
+        "src/commentscope/product/web.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_product_app.py",
         "tests/test_product_web.py",
-        "tests/test_serve_mvp.py"
+        "tests/test_serve_mvp.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "대화 Controller와 자기 근거를 유지하는 Agent의 상호 응답·사용자 개입·턴/비용 제한·오류 복구를 명시하고 구현한다.",
@@ -636,7 +671,10 @@
         "tools/source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
         "tools/source_search_expansion.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_openrouter_budget.py",
@@ -677,7 +715,11 @@
         "tests/test_source_fidelity_execution.py",
         "tests/test_observation_reuse.py",
         "tests/test_source_search_expansion.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "사용자 증액 지시와 소액 상한 철회에 따라 팀키/현재 누적 장부150달러를 지킨다. 이전50달러 policy와 과거 owner별 상한·보수차감은 보존하고, 동일DB/계정/opening의 명시적 한도 revision으로만 반영한다. 실험별6달러 제안은 철회한다.",
@@ -777,7 +819,10 @@
         "tools/cohort_refresh.py",
         "tools/serve_mvp.py",
         "tools/product_trial_budget.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/grounded_ui_smoke.cjs",
@@ -788,7 +833,11 @@
         "tests/test_actual24_development.py",
         "tests/test_factory_completion.py",
         "tests/test_cohort_refresh.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "기존 Figma·팀 프론트를 보존하고 실제 자동 bundle로 Explore→Converse→Reflect를 끝까지 수행한다.",
@@ -879,7 +928,10 @@
         "tools/source_fidelity_validation.py",
         "src/commentscope/factory/observation_reuse.py",
         "tools/source_search_expansion.py",
-        "tools/first_functional_video.py"
+        "tools/first_functional_video.py",
+        "src/commentscope/agents/seed_policy.py",
+        "src/commentscope/agents/seeded_runtime.py",
+        "tools/seeded_perspective_trial.py"
       ],
       "checks": [
         "tests/test_mvp_spec.py",
@@ -922,7 +974,11 @@
         "tests/test_source_fidelity_execution.py",
         "tests/test_observation_reuse.py",
         "tests/test_source_search_expansion.py",
-        "tests/test_first_functional_video.py"
+        "tests/test_first_functional_video.py",
+        "tests/test_seeded_perspectives.py",
+        "tests/test_seeded_runtime.py",
+        "tests/test_seeded_product.py",
+        "tests/test_seeded_trial.py"
       ],
       "acceptance": [
         "모든 작업이 요구사항·선행 작업·산출물·완료 조건·증거와 연결되고 재개 시 현재 명세를 다시 읽는다.",
@@ -1917,6 +1973,39 @@
         "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
         "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
         "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md"
+      ]
+    },
+    {
+      "id": "DEC-028",
+      "title": "1출처관점Agent와출처가분리된토론논거확장",
+      "status": "accepted",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "question": "사용자가승인한1출처관점생성과AI추론/외부자료확장을귀속·필수조건·사실·비용경계를유지하며어떻게구현할것인가?",
+      "options": [
+        "새제품opt-in정책1출처+세출처발언/typed검증",
+        "기존3출처추출대화만유지",
+        "모든모델발언을댓글근거로집계"
+      ],
+      "selection": "사용자제안후ㄱㄱㄱ구현지시에따른새제품정책. 기존3출처r5/과거결과는보존하고새모드를명시한다. source1이상검증입장,AI추론/문헌근거분리,지지수불변,Sol생성/Jev문단판정/Host출처·비용관리. 구현/실제유용성검증전.",
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "User explicitly proposed single-source creation plus later argument expansion and instructed implementation (ㄱㄱㄱ). This records authorized direction only; implementation and semantic quality are unverified.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md"
       ]
     }
   ],
@@ -3249,7 +3338,7 @@
         "TASK-021",
         "TASK-025"
       ],
-      "status": "in_progress",
+      "status": "deferred",
       "deliverables": [
         "현재이력/Jev감사완료:PR76legacy격리와B1/B2유보·기존nominee누락이력대조. 현재M1 55→39→35관계/F4후0Agents;비용생성44.65/후반판정31.26/Jev2.08분리. 후보격리단독count-only1/3/1/0/2,코드/Agent증가미검증. 신규호출0;다음공통오류범위계약/무료회귀뒤F4단일역할비교.",
         "현재CNBC첫기능고정96/확인24실행완료:501요청/2.151337702USD,32후보/192쌍중17후보평가15미평가,F4 19→8graph complete→4candidate record complete→Agent0/runtime0. 검색배분/후보간veto결합/원문감사손실확인;다음무료일반계약·회귀. 동일150owner·원999/r5·실패/금융보존.",
@@ -3562,6 +3651,59 @@
       "design_refs": [
         "docs/design/SOURCE_FIDELITY_AUDIT.md",
         "docs/design/SOURCE_EVIDENCE_TRIAL_RESULT.md"
+      ]
+    },
+    {
+      "id": "TASK-026",
+      "title": "1출처관점생성과논거확장Runtime·제품연결",
+      "requirements": [
+        "REQ-001",
+        "REQ-002",
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "decisions": [
+        "DEC-028"
+      ],
+      "depends_on": [
+        "TASK-021",
+        "TASK-025"
+      ],
+      "status": "in_progress",
+      "deliverables": [
+        "새닫힌1출처policy/Compiler·Pipeline연결과legacy3출처보존",
+        "세출처발언/등록문헌·Jev문단판정Runtime및1:1·그룹·UI출처표시",
+        "합성정상/부정·전체Factory/product·양OSCI와별도제한실제대화·비용/유용성보고"
+      ],
+      "done_when": [
+        "정책없는old bundle/필수사실/귀속·조건·예산회귀를유지하고새1출처정책이일관되게전달된다.",
+        "AI추론/외부근거/원댓글을생성·검증·기록·화면에서구별하며지지수와원본bundle이불변이다.",
+        "실행성공·실제대화유용성·전체MVP완료를구별하고원결과/금융을보존한다."
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live"
+      ],
+      "evidence": [
+        {
+          "kind": "code",
+          "scope": "Explicit seeded admission across compiler/pipeline; core-required facts remain mandatory and optional unverified factual reasons are omitted; generated reasoning/document paragraphs separately typed and host-bound; ProductApp1:1/group/storage/UI and shared charging connected. New bounded rebuild/product QA tool. Not semantic quality approval.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+          "result": "pass"
+        },
+        {
+          "kind": "offline",
+          "scope": "29 new offline compiler/runtime/product/frozen-plan/probe regressions plus9 Node smoke cases pass. Actual saved CNBC evidence rebuilt at zero paid calls into4 profiles with1/2/1/1 sources, all pro-four-day overlapping; not4 distinct viewpoints. Full Factory/native CI and actual dialogue pending.",
+          "reference": "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/SEEDED_PERSPECTIVE_DEBATE.md"
       ]
     }
   ],
@@ -3899,8 +4041,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v72",
       "reason": "사용자지적에따라새재설계/유료실험전에과거PR/설계/실제결과와현코드를감사. 후보격리·nominee누락이이미알려졌고B1전역정책/B2·TASK023유보가남아있음을구별. Jev M1원답/host/M2손실과생성/검증비중·한정반사실을무료산출. 기존DEC009/013/027에연결해중복DEC/새구현/정확도·절감약속을만들지않고현재실제구조Mermaid문서화."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v73",
+      "reason": "사용자가3지지대신1출처에서도관점생성후debate논거확장을제안/구현승인. 내부3출처를제품필수조건으로고정하지않고새versioned제품정책으로분리. legacyr5/과거실패유지,귀속/조건/필수사실보존,AI추론·등록외부문헌을원댓글과구별하는새Runtime/제품연결."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v67",
+  "design_version": "commentscope-detailed-design-20261113-v68",
   "design_document": "docs/design/README.md"
 }

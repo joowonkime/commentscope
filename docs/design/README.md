@@ -1,10 +1,12 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261113-v67`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~025, DEC-001~027.
+설계 버전: `commentscope-detailed-design-20261113-v68`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-010, TASK-001~026, DEC-001~028.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
+
+**현재 구현 계약:** [1출처 관점과 토론 논거 확장](SEEDED_PERSPECTIVE_DEBATE.md). 사용자 승인 DEC-028/TASK-026이며 legacy3출처와 새제품1출처·AI추론/외부문헌 경계를 구별한다.
 
 **최신 이력/실제 배정 감사:** [과거 시행착오와 Jev 비용/품질](PIPELINE_HISTORY_AND_JEV_AUDIT.md), [현재 실행 Mermaid](diagrams/factory-history-audit-current-20261113.mmd). 기존 PR76 범위와 B1 전역 complete/B2 유보·TASK023 검색 유보를 구별했다. 신규호출0·구조변경미구현이며 정확도/원가 채택은 아니다.
 
