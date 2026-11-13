@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261113-v71`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261113-v72`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~028, DEC-001~028.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
@@ -8,7 +8,7 @@
 
 **현재 구현 계약:** [1출처 관점과 토론 논거 확장](SEEDED_PERSPECTIVE_DEBATE.md). 사용자 승인 DEC-028/TASK-026이며 legacy3출처와 새제품1출처·AI추론/외부문헌 경계를 구별한다. [기능·실제 대화 결과](SEEDED_PERSPECTIVE_RUNTIME_RESULT.md)를 확인하고, 다음 TASK-027은 구별되는 관점과 게시답변 유용성을 다룬다.
 
-**진행 중:** [기존 화면을 유지하는 최신 모드 웹 실행기 연결](SEEDED_WEB_INTEGRATION.md), TASK-028. 일반 서버의 검증 callback 누락과 실험 실행기의 제한 성공을 구별한다.
+**연결 구현·제한 검증 완료:** [기존 화면을 유지하는 최신 모드 웹 실행기](SEEDED_WEB_INTEGRATION.md), TASK-028. [실제 선정영상 웹 결과](PREPARED_VIDEO_WEB_RESULT.md)는180입력→2관심사/각1출처·12게시턴·성찰 저장/reload·실제 브라우저를 확인했다. 기본 비교0/2·새 논거1/2·연구 설명0/2·그룹 대응 부족과 별도 관련 의견의 비교1건을 함께 보존한다. TASK-027의 원문 손실/문단 범위·최종 답변 계약과 전체MVP 품질은 남아 있다.
 
 **이번 구현 전의 이력/배정 감사:** [과거 시행착오와 Jev 비용/품질](PIPELINE_HISTORY_AND_JEV_AUDIT.md), [당시 실행 Mermaid](diagrams/factory-history-audit-current-20261113.mmd). 기존 PR76 범위와 B1 전역 complete/B2 유보·TASK023 검색 유보를 구별했다. 신규호출0·구조변경미구현이며 정확도/원가 채택은 아니다.
 
