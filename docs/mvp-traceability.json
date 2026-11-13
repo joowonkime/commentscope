@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v70",
+  "spec_version": "commentscope-mvp-20261113-v71",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-13",
   "intent_document": "docs/MVP_SPEC.md",
@@ -25,7 +25,7 @@
     "next_task": "TASK-022",
     "parallel_tasks": [],
     "paid_execution_hold": true,
-    "hold_reason": "사용자가CNBC첫기능용실행및댓글비용제어지시. root64/reply32고정96/확인24·192쌍/48source·새3h/1200요청/동일누적150으로실행기구현검사중. 코드/전체회귀/양OSCI/현재가격·장부·입력통과후별도plan등록실행. 기존실패/999/r5/과거금융보존."
+    "hold_reason": "CNBC96첫기능고정실행완료/품질실패:501요청2.151337702USD/Agent0/runtime0. 모든정산완료·현재유료job없음. 다음은저장응답무료대조와검색nominee배분/원문전역vs후보오류격리계약·회귀. 새호출은수정범위·고정비교준비후별도등록;종료된plan/실패/999/r5/누적150·과거차감유지."
   },
   "requirements": [
     {
@@ -1878,17 +1878,24 @@
         "전체938을즉시전수판정",
         "관점/Agent를미리수작업작성"
       ],
-      "selection": "현재사용자지시에따라공식bounded240snapshot중내용정답과무관한고정hash표본96/24를등록. 후보당12출처·전체192쌍/48출처·새3시간/1200물리요청으로제한하고누적150와이전차감을유지. 자동발굴/기존최소3·2관점/조건·필수사실유지,새UKRI원문근거공급. 표준3/기능4질문은기존6질문한도안의별도세션으로전수실행. 전체938/원999/r5/TA완료와구별.",
+      "selection": "현재사용자지시에따라공식bounded240snapshot중내용정답과무관한고정hash표본96/24를등록. 후보당12출처·전체192쌍/48출처·새3시간/1200물리요청으로제한하고누적150와이전차감을유지. 자동발굴/기존최소3·2관점/조건·필수사실유지,새UKRI원문근거공급. 표준3/기능4질문은기존6질문한도안의별도세션으로전수실행. 전체938/원999/r5/TA완료와구별. 실제고정실행은501요청/2.151337702USD로완료했으나Agent0으로첫기능실패. 실제7질문실행0턴,문서공급효과/유용성미검증. 검색15후보미평가및원문전역/후보별veto결합을다음무료계약검토로분리.",
       "evidence": [
         {
           "kind": "offline",
           "scope": "9new regressions plus18spec checks pass. New-video scope96/holdout24 deterministic and disjoint,typed/embedding/graph foreign/held-out dispatch rejected,generated inventory pinned,seven question probe uses independent3/4 sessions preserving existing6question limit,completed reentry read-only. Private preparation dry run validates real240input96/24/192pairs/48sources/11UKRIspans,consistent plan mutations of money/source/docs/model/questions rejected with0providercalls. Full Factory/native CI pending.",
           "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual CNBC first-functional fixed96/heldout24:32candidates/192pairs48sources,35supported112uncertain21opposed2conditional22unrelated;17candidates assessed15unassessed. F4 nineteen sources:1ordered-coverage binding error,18graphs8complete10unresolved;8candidate records4complete4unresolved. Front-qualified5cores final sources1/2/1/0/1,0Agents/0runtime/facts calls. Exactly501new requests/2.151337702USD;224Sol exact receipt bindings273Jev unique wire-owner-charge4embedding request/model/usage-cost matches,all settled/history preserved/read-only reentry0newcalls. Source8f07ab0/PR103 merged461cb71 after Factory910 and dual-OS2713. Search nominee43pairs42sources fit existing192/48 but19nominee pairs unassessed;new-source adapter cross-candidate veto coupling confirmed. No fixes/counterfactual gains or independent gold/TA/fullr5/MVP success claimed.",
+          "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
+          "result": "fail"
         }
       ],
       "design_refs": [
-        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md"
       ]
     }
   ],
@@ -3223,7 +3230,7 @@
       ],
       "status": "in_progress",
       "deliverables": [
-        "현재CNBC첫기능영상:240수집원문에서96처리/24확인고정,독립UKRI근거준비·실행기/무료검사구현중. 동일150owner·기존원999/r5유지. 실제새Agent/QA품질은검증전.",
+        "현재CNBC첫기능고정96/확인24실행완료:501요청/2.151337702USD,32후보/192쌍중17후보평가15미평가,F4 19→8graph complete→4candidate record complete→Agent0/runtime0. 검색배분/후보간veto결합/원문감사손실확인;다음무료일반계약·회귀. 동일150owner·원999/r5·실패/금융보존.",
         "v3 raw16/0.2058115 보존. v4 통제16 정상8/왜곡8통과, 실제19출처는제안16바인딩/3오류·감사3통과·근거연결2완료·Agent0/runtime0으로완료. 새66회/2.2192627USD,동일owner누적2.4250742/82회. 다음은주소결합/유형일관성/닫힌관계목록의일반계약개선이며기존결과/기준/예산을유지.",
         "[종료된 v1 단계/보존] 같은5달러 제안한도 안의 유한 component profiling 및 동결 전체arm preflight",
         "[종료된 v1 단계/보존] 고정 비교/holdout 결과와 accept/reject/inconclusive 결정·실청구",
@@ -3364,6 +3371,12 @@
           "scope": "9new regressions plus18spec checks pass. New-video scope96/holdout24 deterministic and disjoint,typed/embedding/graph foreign/held-out dispatch rejected,generated inventory pinned,seven question probe uses independent3/4 sessions preserving existing6question limit,completed reentry read-only. Private preparation dry run validates real240input96/24/192pairs/48sources/11UKRIspans,consistent plan mutations of money/source/docs/model/questions rejected with0providercalls. Full Factory/native CI pending.",
           "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Actual CNBC first-functional fixed96/heldout24:32candidates/192pairs48sources,35supported112uncertain21opposed2conditional22unrelated;17candidates assessed15unassessed. F4 nineteen sources:1ordered-coverage binding error,18graphs8complete10unresolved;8candidate records4complete4unresolved. Front-qualified5cores final sources1/2/1/0/1,0Agents/0runtime/facts calls. Exactly501new requests/2.151337702USD;224Sol exact receipt bindings273Jev unique wire-owner-charge4embedding request/model/usage-cost matches,all settled/history preserved/read-only reentry0newcalls. Source8f07ab0/PR103 merged461cb71 after Factory910 and dual-OS2713. Search nominee43pairs42sources fit existing192/48 but19nominee pairs unassessed;new-source adapter cross-candidate veto coupling confirmed. No fixes/counterfactual gains or independent gold/TA/fullr5/MVP success claimed.",
+          "reference": "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md",
+          "result": "fail"
         }
       ],
       "design_refs": [
@@ -3390,7 +3403,8 @@
         "docs/design/SOURCE_SEARCH_EXECUTION.md",
         "docs/design/SOURCE_SEARCH_EXPANSION_RESULT.md",
         "docs/design/VIDEO_SELECTION_QA.md",
-        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md"
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
+        "docs/design/FIRST_FUNCTIONAL_VIDEO_RESULT.md"
       ]
     },
     {
@@ -3848,8 +3862,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v70",
       "reason": "사용자첫기능영상실행/댓글수비용우려에따른고정96개새개발검증. 기존영상실험을재개하거나문턱완화하지않고동일역할/원금융owner/누적150·새시간3h/요청1200·독립UKRI근거·전수기존3+기능4질문을결합. scope/holdout/비용/재진입보호를무료검사후실행하며완료와품질승인을구별."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261113-v71",
+      "reason": "사용자첫기능용영상실행을96개로제한해끝까지수행하고실패/실청구/손실을기록. Source8f07ab0양OS검사후501요청2.151337702USD,0Agents/0runtime,19source→8graph→4record. 영상교체성공/댓글주장부재로오인하지않도록15후보미평가와같은상한안nominee배분손실·후보veto의source전체전파를구별. 기준완화·유료재시도·구조수정효과를주장하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v65",
+  "design_version": "commentscope-detailed-design-20261113-v66",
   "design_document": "docs/design/README.md"
 }

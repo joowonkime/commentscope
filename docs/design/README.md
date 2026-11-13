@@ -1,6 +1,6 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261113-v65`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+설계 버전: `commentscope-detailed-design-20261113-v66`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
 연결: REQ-001~REQ-010, TASK-001~025, DEC-001~027.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
@@ -9,6 +9,8 @@
 **현재 진입점:** [실제999 이후 설계 검토](MVP_DESIGN_REVIEW.md) → [원문 증거 계약](SOURCE_EVIDENCE_GRAPH.md)
 → [구현·검증·비용 작업표](MVP_REDESIGN_PLAN.md). DEC-013/014는 제안. [B1 첫 구현](SOURCE_EVIDENCE_IMPLEMENTATION.md)의 무료회귀 후 TASK-022의 [실제 원문 비교](SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](SOURCE_EVIDENCE_TRIAL_RESULT.md)).
 기존 F1~F5/P/X를 유지하며 B1 표현 계약만 opt-in 비교한다. DEC-015는 세 arm 합산5달러/7시간의 제한 profiling이며 구조·모델의 의미품질 채택은 아니다. 구현/합성 검사/실제 품질을 구별한다.
+
+현재 [CNBC 첫 기능 실행 결과](FIRST_FUNCTIONAL_VIDEO_RESULT.md)는 고정96개/501요청·2.151337702달러에서 Agent0개/질문0턴으로 실패했다.32후보 중15미평가,19source→8graph complete→4candidate record complete의 손실과 후보별 veto의 source 전파를 구별했다. source8f07ab0의 Factory910·양OS2713은 코드 검사이며 의미 품질 합격이 아니다. 새 유료 작업 없이 저장 응답으로 배분·오류 격리 계약을 먼저 검토한다.
 
 현재 TASK-022의 무료 후속은 [발화 역할별 필드 적용](SOURCE_ROLE_APPLICABILITY.md)과
 [실행별 정산 영수증 결합](EXECUTION_RECEIPT_BINDING.md)이다.
