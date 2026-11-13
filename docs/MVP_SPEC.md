@@ -1,13 +1,15 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v75`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v76`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v70`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v71`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 구현:** 사용자 승인 [1출처 관점과 토론 논거 확장](design/SEEDED_PERSPECTIVE_DEBATE.md),DEC-028/TASK-026. 새 제품 opt-in은 검증출처1개 이상에서 생성하고 댓글/AI추론/외부근거를 구별한다. 기존3출처r5는 과거·legacy 기준으로 보존하며 새모드의 통과를 뜻하지 않는다. [실제 대화 검증 결과](design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md): Compiler4개/지지1·2·1·1,총43호출/0.302761314달러/21게시턴을 확인했다. TASK-026 기능 구현·제한 검증은 완료했으나 모두 찬성 계열이고 전체MVP는 미완료다. TASK-027에서 구별되는 관점·게시답변 유용성을 다룬다.
+
+사용자 승인 후 TASK-027과 병행하는 [최신 모드 웹 서버 연결](design/SEEDED_WEB_INTEGRATION.md), TASK-028을 진행한다. 기존 `/mvp` 화면·API·저장본을 유지하고 일반 실행기의 Sol/Jev 연결 공백을 고친다. 새 영상180댓글의 실제 Agent/세 과업 검증은 아직 완료 증거가 아니다.
 
 **기존 B1 설계/검증 이력:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
 [구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). TASK-020의 무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. TASK-022의 [고정 비교](design/SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](design/SOURCE_EVIDENCE_TRIAL_RESULT.md)).

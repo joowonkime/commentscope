@@ -250,3 +250,131 @@ class ProductServerPlanTests(unittest.TestCase):
                  Decimal(actual['max_tokens'])*Decimal(str(server.openrouter.billing_prices(plan['deployment'])['completion'])))/1_000_000
             self.assertLess(expected,old)
         finally:product.close()
+
+    def seeded(self):
+        from test_seeded_perspectives import seeded_bundle
+        from test_seeded_runtime import response, verifier
+        self.analysis=Analysis(seeded_bundle(),{'synthetic':True})
+        server.from_factory.return_value=self.analysis
+        self.preflight=patch.object(server.decisions,'preflight',return_value={'synthetic':True}).start()
+        def reply(request,*args,**kwargs):
+            if kwargs.get('typed_request'):return verifier(request)
+            return {'choices':[{'finish_reason':'stop','message':{'content':json.dumps(response())}}],
+                    'usage':{'cost':0.00001,'prompt_tokens':1,'completion_tokens':1}}
+        self.base.call.side_effect=reply
+
+    def ask_seeded(self,app):
+        token=secrets.token_urlsafe(32)
+        _,session=app.handle('POST','/api/v1/sessions',token,{'analysis_id':self.analysis.id,
+            'bundle_revision':self.analysis.revision,'initial_opinion':'','request_id':'create'})
+        base='/api/v1/sessions/'+session['session_id']
+        _,room=app.handle('POST',base+'/rooms',token,{'mode':'one_to_one',
+            'participant_ids':['P1'],'initial_revision':1,'request_id':'room'})
+        path='/api/v1/rooms/'+room['room_id']
+        args={'opening_question':'Why?','expected_revision':room['revision'],'request_id':'start'}
+        _,job=app.handle('POST',path+'/start',token,args)
+        end=time.monotonic()+3
+        while time.monotonic()<end:
+            value=app.handle('GET','/api/v1/jobs/'+job['job_id'],token)[1]
+            if value['state'] not in ('queued','running'):
+                return value,app.handle('GET',path,token)[1],token,path,args
+            time.sleep(.01)
+        self.fail('Seeded web job did not settle')
+
+    def room_charge(self,app,room):
+        from commentscope.product.store import decode
+        with app.store.transaction() as db:
+            stored=decode(db.execute('SELECT data FROM rooms WHERE id=?',(room['room_id'],)).fetchone())
+            return Decimal(stored['cost_usd'])
+
+    def test_seeded_server_freezes_verifier_and_routes_both_charges_without_duplicate_dispatch(self):
+        self.seeded();directory,plan=self.prepare()
+        self.assertEqual(plan['seeded_verifier_deployment'],server.decisions.DEPLOYMENT)
+        self.base.call.assert_not_called()
+        product,legacy,broker=server.build(directory)
+        try:
+            job,room,token,path,args=self.ask_seeded(product)
+            self.assertEqual(job['state'],'succeeded')
+            self.assertEqual(room['turn_count'],1)
+            self.assertEqual(self.room_charge(product,room),Decimal('0.000011'))
+            self.assertEqual([p['origin'] for p in room['messages'][-1]['points']],['original_comment','ai_reasoning'])
+            self.assertEqual(broker.ledger.summary(plan_sha256=plan['spend_scope_sha256'])['charged_usd'],'0.000011')
+            product.handle('POST',path+'/start',token,args)
+            self.assertEqual(self.base.call.call_count,2)
+            self.assertEqual(self.base.call.call_args.kwargs['typed_request'],True)
+        finally:product.close()
+
+    def test_seeded_server_verifier_binding_is_required_at_validate_and_changed_price_refuses(self):
+        self.seeded();directory,plan=self.prepare()
+        for value in (None,{**server.decisions.DEPLOYMENT,'prices':{'prompt':'0','completion':'0','request':'0'}}):
+            changed=deepcopy(plan)
+            if value is None:changed.pop('seeded_verifier_deployment')
+            else:changed['seeded_verifier_deployment']=value
+            (directory/'plan.json').write_text(json.dumps(changed))
+            (directory/'frozen.json').write_text(json.dumps({'plan_sha256':sha(directory/'plan.json')}))
+            with self.subTest(value=value),self.assertRaises(ValueError):server.validate(directory)
+        self.base.call.assert_not_called()
+
+    def test_seeded_combined_room_reservation_blocks_before_paid_generation(self):
+        self.seeded();directory,_=self.prepare();product,_,broker=server.build(directory)
+        try:
+            product.room_limit=Decimal('0.000001')
+            job,room,*_=self.ask_seeded(product)
+            self.assertEqual(job['state'],'failed');self.assertEqual(room['turn_count'],0)
+            self.base.call.assert_not_called()
+        finally:product.close()
+
+    def test_seeded_real_http_server_uses_broker_and_keeps_legacy_routes(self):
+        from http.client import HTTPConnection
+        import threading
+        self.seeded();directory,_=self.prepare();product,legacy,broker=server.build(directory)
+        http=server.ProductServer(product,legacy,0)
+        threading.Thread(target=http.serve_forever,daemon=True).start()
+        port=http.server_address[1];origin='http://127.0.0.1:'+str(port)
+        class OverHTTP:
+            def handle(self,method,path,token,body=None):
+                connection=HTTPConnection('127.0.0.1',port,timeout=3)
+                connection.request(method,path,None if body is None else json.dumps(body),
+                    {'Origin':origin,'X-Session-Token':token,'Content-Type':'application/json'})
+                result=connection.getresponse();status=result.status;value=result.read();connection.close()
+                return status,json.loads(value)
+        try:
+            wire=OverHTTP();job,room,*_=self.ask_seeded(wire)
+            self.assertEqual(job['state'],'succeeded')
+            self.assertEqual(room['messages'][-1]['evidence_scope'],'seeded_provenance')
+            self.assertEqual(self.base.call.call_count,2)
+            status,_=wire.handle('POST','/api/session',secrets.token_urlsafe(32),{'ids':['P1']})
+            self.assertEqual(status,201)
+            self.assertEqual(self.base.call.call_count,2)
+        finally:http.shutdown();http.server_close();product.close()
+
+    def test_seeded_expired_cycle_blocks_typed_call_before_dispatch(self):
+        self.seeded();directory,_=self.prepare();product,_,broker=server.build(directory)
+        try:
+            from test_seeded_runtime import SeededRuntimeTests
+            session=SeededRuntimeTests().session();payloads=[]
+            session.verifier=lambda payload:payloads.append(payload) or __import__('test_seeded_runtime').verifier(payload)
+            session.ask('Why?')
+            def expired(cycle,*,allow_expired=False,**kwargs):
+                if not allow_expired:raise TimeoutError('deadline')
+            with patch.object(server,'cycle_guard',side_effect=expired):
+                with self.assertRaisesRegex(Exception,'cycle_deadline'):broker.verify('room-verification',payloads[0])
+            self.base.call.assert_not_called()
+        finally:product.close()
+
+    def test_seeded_known_typed_failure_charge_is_retained_in_room_and_ledger(self):
+        self.seeded();directory,_=self.prepare();product,_,broker=server.build(directory)
+        original=self.base.call.side_effect
+        def fail(request,*args,**kwargs):
+            if kwargs.get('typed_request'):raise TimeoutError('synthetic settled reservation')
+            return original(request,*args,**kwargs)
+        self.base.call.side_effect=fail
+        try:
+            job,room,*_=self.ask_seeded(product)
+            self.assertNotEqual(job['state'],'succeeded')
+            expected=Decimal('0.00001')+server.decisions.reservation(server.decisions.DEPLOYMENT)
+            self.assertEqual(self.room_charge(product,room),expected)
+            own=broker.ledger.summary(plan_sha256=broker.plan['spend_scope_sha256'])
+            self.assertEqual(Decimal(own['charged_usd']),expected)
+            self.assertEqual(self.base.call.call_count,2)
+        finally:product.close()

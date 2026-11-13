@@ -124,3 +124,13 @@ CI는 이를 실행하지 않는다. 승인된 cycle/잔여/종료시각을 확�
 새 runtime v2의 보류는 검증된 한계 설명을 포함할 수 있다. 이 경우에도
 `status=abstain`, `answerability=abstain`을 유지하며 answered 집계에 넣지 않는다.
 설명 문단은 동일한 출처/문헌/typed 검사를 통과해야 하며 화면에도 보류 설명을 표시한다.
+
+TASK-028의 [웹 연결 계약](design/SEEDED_WEB_INTEGRATION.md)에 따라 일반 `serve_mvp.py`는
+새모드 bundle의 Jev deployment를 prepare에 동결하고 build에서 생성/판정 callback을 함께 연결한다.
+legacy bundle에는 이 설정이나 Jev 호출을 추가하지 않는다. 생성/판정 비용과 알려진 실패 차감은
+같은 기존 금융owner·room에 합산한다. 기존 동결 실행 파일은 변경하지 않으며 새 설정에는 새 plan이 필요하다.
+
+등록 영상 전체의1회 생성과 같은 owner의 제품 대화는 `tools/prepared_video_trial.py`의
+`prepare/run/serve`로 연결한다. `serve DIRECTORY --port 8767`은 loopback `/mvp`를 제공한다.
+이 실행기는 공개 호스팅·품질 승인·종합 Agent를 자동 생성하지 않는다.
+무료 새모드 브라우저 확인은 기존 검사 명령 마지막에 `--seeded`를 붙인다.

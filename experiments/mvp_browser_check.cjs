@@ -3,17 +3,18 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {spawn}=require('node:child_process');
 const WebSocket=require('ws');
-const [python,chrome,destination]=process.argv.slice(2);
+const [python,chrome,destination,mode]=process.argv.slice(2);
 if(!python||!chrome||!destination)throw Error('Usage: node mvp_browser_check.cjs PYTHON CHROME NEW_PRIVATE_OUTPUT');
+if(mode&&mode!=='--seeded')throw Error('Only explicit --seeded browser fixture mode is supported');
 const output=path.resolve(destination);fs.mkdirSync(output,{recursive:false});
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'commentscope-mvp-browser-'));
-const report={synthetic_only:true,paid_calls:0,semantic_quality_measured:false,checks:{},page_errors:[],external_requests:[]};
+const report={synthetic_only:true,seeded_mode:mode==='--seeded',paid_calls:0,semantic_quality_measured:false,checks:{},page_errors:[],external_requests:[]};
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(fn,timeout=12000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(value)return value;await sleep(80);}throw Error('Browser assertion deadline');}
 let server,browser,socket;
 (async()=>{
   let stdout='';
-  server=spawn(python,['-m','experiments.mvp_browser_fixture',path.join(output,'fixture')],{
+  server=spawn(python,['-m','experiments.mvp_browser_fixture',path.join(output,'fixture'),...(mode?[mode]:[])],{
     stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONPATH:[path.resolve('src'),process.cwd()].join(path.delimiter)}});
   server.stdout.on('data',chunk=>stdout+=chunk.toString());server.stderr.on('data',chunk=>fs.appendFileSync(path.join(output,'fixture.log'),chunk));
   const origin=await until(()=>{if(server.exitCode!==null)throw Error('Fixture exited');return stdout.includes('\n')?JSON.parse(stdout.split('\n')[0]).origin:null;});
@@ -81,6 +82,11 @@ let server,browser,socket;
   await evaluate("document.querySelector('#resume').click()");
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
   report.checks.group_opening_and_reply=true;
+  if(report.seeded_mode){
+    report.checks.seeded_provenance_labels=await evaluate("['댓글 근거','AI 추론 · 원작성자의 발언이 아닙니다','외부 자료 기반 주장'].every(label=>document.querySelector('#messages').textContent.includes(label))");
+    report.checks.seeded_external_reference_link=await evaluate("Array.from(document.querySelectorAll('.message.agent a.source-button')).some(a=>a.protocol==='https:'&&a.rel.includes('noopener'))");
+    report.checks.seeded_typed_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_typed_calls===4;
+  }
   report.checks.peer_reply_links=await evaluate("document.querySelector('#messages').textContent.split('앞선 발언에 대한 응답').length===3");
   await evaluate("document.querySelector('.message.agent .source-button').click()");
   await until(()=>evaluate("document.querySelector('#source').textContent.includes('Safety reviews')"));

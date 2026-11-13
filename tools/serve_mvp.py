@@ -13,6 +13,7 @@ for item in (ROOT,ROOT/'src'):
     if str(item) not in sys.path:sys.path.insert(0,str(item))
 
 from commentscope.agents.grounded_web import GroundedApp
+from commentscope.agents import seed_policy
 from commentscope.agents.web import WebError
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
@@ -20,12 +21,14 @@ from commentscope.product.analysis import Analysis,from_factory
 from commentscope.product.app import ProductApp
 from commentscope.product.web import ProductServer
 from commentscope.providers import openrouter
+from commentscope.providers import openrouter_decisions as decisions
 from commentscope.providers.budget import InferenceBudget,BudgetExhausted
 from commentscope.providers.checkpoint_calls import CheckpointRunner,PendingCallError,run_origin
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.openrouter_budget import SpendLedger,units
 from commentscope.providers.remote_verification import WireBudget,WIRE_BUDGET
 from commentscope.providers.generation_limits import allocate
+from commentscope.providers.runtime_runner import RuntimeRunner
 from commentscope.storage import write_json_exclusive as write
 from experiments.openrouter_factory_pipeline import provider_preflight,archive_sources
 from experiments.openrouter_factory_probe import key_metadata,private,validate_spend_policy
@@ -79,6 +82,9 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
     if link is not None:
         plan.update(factory_trial=link,spend_scope_sha256=factory_plan['spend_scope_sha256'],
                     money_owner_limit_usd=factory_plan['maximum_cost_usd'])
+    if seed_policy.seeded(analysis.bundle):
+        plan['seeded_verifier_deployment']=deepcopy(decisions.DEPLOYMENT)
+        plan['seeded_verifier_at_prepare']=decisions.preflight(plan['seeded_verifier_deployment'])
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
     archive_sources(directory,plan['code_sha256'])
     return plan
@@ -107,6 +113,9 @@ def validate(directory):
     elif plan['spend_scope_sha256']!=sha(plan['cycle_file']):raise ValueError('Product cycle money changed')
     if plan['generation_allocation']!=openrouter.generation_allocation(plan['deployment'],require_explicit=True):
         raise ValueError('Product generation allocation changed')
+    expected=decisions.DEPLOYMENT if seed_policy.seeded(plan['analysis']['bundle']) else None
+    if plan.get('seeded_verifier_deployment')!=expected:
+        raise ValueError('Seeded product verifier deployment changed or missing')
     return plan
 
 
@@ -126,6 +135,19 @@ class Broker:
             maximum_run_usd=plan.get('money_owner_limit_usd',plan['maximum_cost_usd']),paid_provider=client.generate,
             key_metadata=key_metadata,spend_scope_sha256=plan['spend_scope_sha256'])
         self.runner=CheckpointRunner(openrouter.Runner(self.directory,plan,paid,client),plan['generation_allocation'])
+        self.typed_client=None;self.typed_runner=None
+        if 'seeded_verifier_deployment' in plan:
+            deployment=plan['seeded_verifier_deployment']
+            self.typed_client=decisions.Client(deployment)
+            owner_limit=plan.get('money_owner_limit_usd',plan['maximum_cost_usd'])
+            typed_paid=decisions.DecisionsBudget(paid.base,self.ledger,
+                plan_sha256=plan_sha,deployment=deployment,spend_scope_sha256=plan['spend_scope_sha256'],
+                parent_limit_usd=owner_limit,opening_scope_charge_usd='0',additional_limit_usd=owner_limit,
+                paid_provider=self.typed_client.generate,key_metadata=key_metadata)
+            alias=deepcopy(plan);alias['decisions_deployment']=deepcopy(deployment)
+            alias['limits']['call_seconds']=deployment['call_seconds']
+            self.typed_runner=CheckpointRunner(RuntimeRunner(self.directory,alias,typed_paid,
+                self.typed_client,deployment_key='decisions_deployment'),{})
 
     def reservation(self,request):
         return str(self.runner.base.budget.maximum_charge(allocate(request,self.plan['generation_allocation'])))
@@ -157,16 +179,45 @@ class Broker:
             status=self.status()
             if status!='ready':raise WebError(503,status)
             if not self.client.measure(request)['fits']:raise WebError(422,'context_capacity')
-            before=self.runner.reused
+            before=self._charged()
             self.inflight=True
-            try:result=self.runner.call('product-'+stage,request)
-            except BudgetExhausted:
-                raise WebError(503,'reconcile_required' if self.ledger.summary()['uncertain_calls'] else 'budget_exhausted') from None
-            except PendingCallError:raise WebError(503,'reconcile_required') from None
+            try:result=self._dispatch(lambda:self.runner.call('product-'+stage,request),before)
             finally:self.inflight=False
             result=deepcopy(result)
-            result['new_cost_usd']='0' if self.runner.reused>before else str((result.get('usage') or {}).get('cost',0))
+            result['new_cost_usd']=str(self._charged()-before)
             return result
+
+    def _charged(self):
+        return Decimal(self.ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])['charged_usd'])
+
+    def _dispatch(self,callback,before):
+        try:return callback()
+        except Exception as exc:
+            error=exc
+            if isinstance(exc,BudgetExhausted):
+                error=WebError(503,'reconcile_required' if self.ledger.summary()['uncertain_calls'] else 'budget_exhausted')
+            elif isinstance(exc,PendingCallError):error=WebError(503,'reconcile_required')
+            error.new_cost_usd=str(self._charged()-before)
+            raise error from None
+
+    def decision_reservation(self):
+        if self.typed_client is None:raise ValueError('No seeded verifier registered')
+        return str(decisions.reservation(self.plan['seeded_verifier_deployment']))
+
+    def verify(self,stage,payload):
+        with self.lock:
+            validate(self.directory)
+            if self.typed_runner is None:raise ValueError('No seeded verifier registered')
+            decisions.validate_request(payload,self.plan['seeded_verifier_deployment'])
+            status=self.status()
+            if status!='ready':raise WebError(503,status)
+            before=self._charged();self.inflight=True
+            try:
+                result=self._dispatch(lambda:self.typed_runner.call('product-verification-'+
+                    decisions.wire_sha256(payload,self.plan['seeded_verifier_deployment'])[:20],
+                    payload,provider=self.typed_client.generate),before)
+            finally:self.inflight=False
+            return {**deepcopy(result),'new_cost_usd':str(self._charged()-before)}
 
     def legacy_provider(self,system,data,schema,*,max_tokens):
         result=self.model('legacy',{'system':system,'data':data,'schema':schema,'max_tokens':max_tokens})
@@ -178,13 +229,16 @@ def build(directory):
     directory=Path(directory);plan=validate(directory)
     if not os.environ.get('OPENROUTER_API_KEY','').strip():raise ValueError('OPENROUTER_API_KEY required')
     provider_preflight(plan['deployment'])
+    if 'seeded_verifier_deployment' in plan:decisions.preflight(plan['seeded_verifier_deployment'])
     analysis=Analysis(plan['analysis']['bundle'],plan['analysis']['provenance'])
     if analysis.id!=plan['analysis']['analysis_id'] or analysis.revision!=plan['analysis']['bundle_revision']:
         raise ValueError('Registered product analysis changed')
     broker=Broker(directory,plan)
     product=ProductApp(directory/'app.sqlite',[analysis],broker.model,
         session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
-        reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status)
+        reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
+        decision=broker.verify if broker.typed_client is not None else None,
+        decision_reservation=broker.decision_reservation if broker.typed_client is not None else None)
     class Legacy(GroundedApp):
         def public(self,item):
             value=super().public(item);value['remote_status']=broker.status()
