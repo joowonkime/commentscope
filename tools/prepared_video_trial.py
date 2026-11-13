@@ -65,9 +65,8 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
     if (policy['maximum_usd']!='150' or owner['maximum_usd']!='150'
             or owner.get('historical_charges_preserved') is not True
             or Path(owner['shared_policy_file']).resolve()!=policy_file
-            or owner['shared_policy_sha256']!=sha(policy_file)
-            or owner['generation_deployment']!=e.remote.SOL):
-        raise ValueError('Original cumulative150 owner/policy and pinned roles required')
+            or owner['shared_policy_sha256']!=sha(policy_file)):
+        raise ValueError('Original cumulative150 owner and policy required')
     for doc in refs['documents']:e.fact_checks.live(doc['expires_at'])
     for selection in refs['selections']:
         doc=next(d for d in refs['documents'] if d['id']==selection['document_id'])
