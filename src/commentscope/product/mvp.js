@@ -77,7 +77,8 @@ function renderPerspectives(){
     const top=node('header'),choice=node('label',undefined,'card-select'),check=node('input');check.type='checkbox';check.checked=state.selected.has(p.id);check.setAttribute('aria-label','Select '+label(p.id));
     check.onchange=()=>{if(check.checked){if(state.selected.size>=3){check.checked=false;status('한 대화에서 최대 세 관점을 선택할 수 있습니다.');return;}state.selected.add(p.id);}else state.selected.delete(p.id);card.classList.toggle('selected',check.checked);updateSelection();};
     choice.append(check,node('span','✓'));top.append(avatar(p.id),choice);
-    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+' source comments','source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
+    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
+    if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
     card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
     const grounds=p.grounds||[];
     if(grounds.length){card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));for(const g of grounds){const row=node('p',undefined,'card-ground');row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));card.append(row);}}
@@ -87,7 +88,7 @@ function renderPerspectives(){
   updateSelection();
 }
 async function source(id){try{const value=await api(base()+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
-function sourceButtons(container,point){for(const [index,evidence] of (point.citations?.comment_evidence||[]).entries()){const b=node('button','원문 '+(index+1),'source-button');b.type='button';b.onclick=()=>source(evidence.source_id);container.append(b);}}
+function sourceButtons(container,point){for(const [index,evidence] of (point.citations?.comment_evidence||[]).entries()){const b=node('button','원문 '+(index+1),'source-button');b.type='button';b.onclick=()=>source(evidence.source_id);container.append(b);}for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
 // API span offsets are Unicode code points. Build text nodes, including for untrusted markup.
 function highlighted(container,text,spans){
   const chars=[...text],bounds=new Set([0,chars.length]);
@@ -133,7 +134,8 @@ function renderMessages(){
     if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')bubble.append(node('small',label(reply.agent_id)+'의 앞선 발언에 대한 응답'));}
     if(m.body)bubble.append(node('p',m.body));
     if(m.author_kind==='agent'&&!m.points?.length)bubble.append(node('p',m.evidence_scope==='expired'?'근거 자료의 기한이 지났습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
-    for(const point of m.points||[]){bubble.append(node('p',point.text));sourceButtons(bubble,point);}
+    for(const point of m.points||[]){if(point.origin)bubble.append(node('small',({original_comment:'댓글 근거',ai_reasoning:'AI 추론 · 원작성자의 발언이 아닙니다',external_evidence:'외부 자료 기반 주장'})[point.origin]));bubble.append(node('p',point.text));sourceButtons(bubble,point);}
+    if(m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
     box.append(bubble);$('messages').append(box);
   }
@@ -199,7 +201,7 @@ $('opening').onsubmit=async event=>{event.preventDefault();try{await api('/rooms
 for(const [id,action] of [['pause','pause'],['resume','resume'],['next-round','next_round'],['close-room','close']])$(id).onclick=()=>control(action).catch(e=>status(e.message));
 $('interject').onsubmit=async event=>{event.preventDefault();try{await refreshRoom();if(state.room.state==='running')await control('pause');while(state.room.state==='pausing'){await wait(600);await refreshRoom();}await api('/rooms/'+state.room.room_id+'/messages','POST',{text:$('question').value,reply_to_message_id:null,expected_revision:state.room.revision,request_id:requestId()});$('question').value='';await refreshRoom();}catch(e){status(e.message);}};
 document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('question').value=button.dataset.prompt;$('question').focus();});
-$('agent-info').onclick=()=>{$('perspective-info').replaceChildren();for(const id of state.room?.participant_ids||[]){const p=perspective(id),entry=node('section',undefined,'perspective-info-entry');entry.append(node('h3',label(id)),node('p',p.text),node('small',p.source_count+' source comments'));$('perspective-info').append(entry);}openDialog('perspective-dialog');};
+$('agent-info').onclick=()=>{$('perspective-info').replaceChildren();for(const id of state.room?.participant_ids||[]){const p=perspective(id),entry=node('section',undefined,'perspective-info-entry');entry.append(node('h3',label(id)),node('p',p.text),node('small',p.source_count+(p.admission_policy?' verified source comments':' source comments')));$('perspective-info').append(entry);}openDialog('perspective-dialog');};
 for(const [button,id] of [['close-comparison','comparison'],['close-source','source-dialog'],['close-perspective','perspective-dialog']])$(button).onclick=()=>closeDialog(id);
 $('comparison').addEventListener('close',()=>{$('comparison').hidden=true;});
 $('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));

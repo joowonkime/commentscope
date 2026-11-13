@@ -2,6 +2,7 @@
 from copy import deepcopy
 from pathlib import Path
 
+from commentscope.agents import seed_policy
 from commentscope.agents.grounded_inputs import compile_inputs, prompt_input
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
@@ -21,6 +22,7 @@ class Analysis:
     def live(self):
         if digest(self.bundle)!=self.revision:raise ValueError('Registered analysis changed')
         live(self.bundle['expires_at'])
+        seed_policy.references(self.bundle)
 
     def public(self):
         expired = False
@@ -43,6 +45,10 @@ class Analysis:
                     memberships.setdefault(canonical[evidence['source_id']],set()).add(cid)
                 perspectives.append({'id': cid, 'text': core['text'], 'kind': core['kind'],
                                      'source_count': profile['model_core_support_count'],'grounds':grounds})
+        if seed_policy.seeded(self.bundle):
+            for perspective in perspectives:
+                perspective['admission_policy']=seed_policy.VERSION
+                perspective['support_scope']='verified_comment_sources_not_population_share'
         known=self.provenance.get('processing_count')
         analyzed=known if type(known) is int else len({s.get('canonical_id',s['id']) for s in self.bundle['sources']})
         composition=[{'perspective_id':p['id'],'count':sum(ids=={p['id']} for ids in memberships.values())} for p in perspectives]

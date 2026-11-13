@@ -54,7 +54,11 @@ def _source_reasons(record,cid,core,verdicts,observed,runtime_scope,*,multilingu
     return sorted(set(reasons))
 
 
-def prepare(snapshot, candidates, memberships, records, cores, audits, *, model, documents=(), checks=(), _draft_single_source=False, source_policy='all_members'):
+def prepare(snapshot, candidates, memberships, records, cores, audits, *, model, documents=(), checks=(), _draft_single_source=False, source_policy='all_members', admission_policy=None, reference_selections=()):
+    from commentscope.agents import seed_policy
+    minimum_sources = seed_policy.minimum(admission_policy)
+    if _draft_single_source and admission_policy is not None:
+        raise ValueError('Private draft and product admission must remain separate')
     if source_policy not in ('all_members','verified_subset','candidate_verified_subset') or _draft_single_source and source_policy!='all_members':
         raise ValueError('Explicit supported Agent source policy required')
     mapped = mm.assemble_map(snapshot, candidates, memberships)
@@ -92,7 +96,8 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
             else:
                 contextual_runtime.validate(runtime_scope,candidate)
                 reasons.extend(runtime_scope['hold_reasons'])
-        if len(sids) < 3 and not _draft_single_source: reasons.append('fewer_than_three_core_sources')
+        if len(sids) < minimum_sources and not _draft_single_source:
+            reasons.append('fewer_than_three_core_sources' if admission_policy is None else 'fewer_than_required_seed_sources')
         if cid not in cr: reasons.append('core_type_unassessed')
         elif cr[cid]['output']['kind'] == 'uncertain': reasons.append('core_type_uncertain')
         if cid in cr: reasons.extend(cr[cid].get('hold_reasons', []))
@@ -116,7 +121,8 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
             if core_required:reasons.extend([*failures,'core_required_source_held'])
         if source_policy in ('verified_subset','candidate_verified_subset'):
             sids=verified
-            if len(sids)<3:reasons.append('fewer_than_three_verified_core_sources')
+            if len(sids)<minimum_sources:
+                reasons.append('fewer_than_three_verified_core_sources' if admission_policy is None else 'fewer_than_required_verified_seed_sources')
         if reasons:
             holds.append({'candidate_id': cid, 'reasons': sorted(set(reasons)), 'source_ids': original_sids})
             continue
@@ -151,8 +157,20 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
         for sid in sids:
             row = membership_lookup[cid, sid]
             relations[core['id'], sid] = relation(core, rr[sid]['source'], row['evidence'], digest(row))
+        major_facts=all_factual
+        if admission_policy is not None:
+            # Optional unverified autobiography cannot ground a new answer, but
+            # is not a premise of an independently supported value position.
+            # Keep every declared core dependency, including transitive facts.
+            essential=set()
+            def gather_essential(claim_id):
+                if claim_id not in essential:
+                    essential.add(claim_id)
+                    for dep in claims[claim_id]['requires']:gather_essential(dep)
+            gather_essential(core['id'])
+            major_facts=all_factual & essential
         prepared.append({'id': cid, 'core_claim_id': core['id'], 'reason_claim_ids': sorted(argument_ids),
-                         'major_fact_ids': sorted(all_factual), 'argument_roles': argument_roles})
+                         'major_fact_ids': sorted(major_facts), 'argument_roles': argument_roles})
         if runtime_scope is not None:
             contextual_runtime.validate_core(runtime_scope,cid,core)
             runtime_scopes[cid]=deepcopy(runtime_scope)
@@ -161,6 +179,11 @@ def prepare(snapshot, candidates, memberships, records, cores, audits, *, model,
               'checks': deepcopy(list(checks)), 'model': deepcopy(model)}
     if runtime_scopes:bundle['runtime_scopes']=runtime_scopes
     if source_contexts:bundle['source_contexts']=source_contexts
+    if admission_policy is not None:
+        bundle['admission_policy'] = deepcopy(admission_policy)
+        bundle['reference_selections'] = deepcopy(list(reference_selections))
+    elif reference_selections:
+        raise ValueError('Runtime reference selections require seeded admission')
     compiled = compile_inputs(bundle)
     if _draft_single_source and compiled['profiles']:
         raise ValueError('A source draft must never compile into an exposed Agent')

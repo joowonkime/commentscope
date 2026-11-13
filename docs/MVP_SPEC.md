@@ -1,11 +1,13 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v72`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v73`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v67`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v68`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
+
+**현재 구현:** 사용자 승인 [1출처 관점과 토론 논거 확장](design/SEEDED_PERSPECTIVE_DEBATE.md),DEC-028/TASK-026. 새 제품 opt-in은 검증출처1개 이상에서 생성하고 댓글/AI추론/외부근거를 구별한다. 기존3출처r5는 과거·legacy 기준으로 보존하며 새모드의 통과를 뜻하지 않는다. 구현/검증은 진행 중이다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
 [구현·검증 작업표](design/MVP_REDESIGN_PLAN.md). TASK-020의 무료 평가자료와 TASK-021의 B1 opt-in 구현/회귀를 완료했다. TASK-022의 [고정 비교](design/SOURCE_EVIDENCE_TRIAL.md)는 예산 보호로 중단됐다([결과](design/SOURCE_EVIDENCE_TRIAL_RESULT.md)).
@@ -61,7 +63,7 @@
 
 토론이 많은 YouTube 영상의 시청자가 댓글의 **서로 다른 입장·이유·조건을 이해하고,
 직접 질문하며 자신의 생각을 정리하도록 돕는다.** 의견 변화나 설득은 성공 조건이 아니다.
-관점은 실제 댓글에서 나온 입장과 출처별 논거다. 재미있는 대립 구도나 인물을 만들어내지 않는다.
+관점의 출발 입장은 실제 댓글에 근거한다. 출처별 논거와 토론 중 AI가 확장한 추론·외부자료는 구별한다. 작성자의 개인 이력이나 없는 댓글 지지를 만들어내지 않는다.
 
 팀 [Figma Deliverable](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=105-1767)의
 Before Use → Explore → Converse → Reflect를 제품 과업의 기준으로 유지한다.

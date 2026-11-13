@@ -16,7 +16,9 @@ SOURCE_SEMANTICS_VERSION = 'minimal-factory-pipeline-source-semantics-20261105-v
 SCHEDULE = {'extraction_sources': 1, 'membership_pairs': 1, 'equivalence_pairs': 1, 'argument_sources': 1}
 
 
-def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None,membership_search_policy=None,source_evidence_protocol=None):
+def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=(), selections=(), scope_ids=None, save=None, discovery_mode='free', membership_mode='scoped', verification_contract=raw_verification.LEGACY, shared_records=None, shared_memberships=None, source_entailment_required=False, extraction_protocol=None, review_interpretations=False, source_review_protocol=None, argument_audit_protocol=None, agent_source_policy='all_members', membership_retrieval_policy=cc.ALIAS_RETRIEVAL,membership_evidence_protocol=None,membership_batch_protocol=None,membership_judge_protocol=None,membership_search_policy=None,source_evidence_protocol=None,admission_policy=None):
+    from commentscope.agents import seed_policy
+    seed_policy.minimum(admission_policy)
     if discovery_mode not in ('free','literal','contextual','shared'):raise ValueError('Unknown Factory discovery mode')
     if membership_mode not in ('scoped','raw'):raise ValueError('Unknown membership comparison mode')
     if membership_evidence_protocol is not None and (membership_evidence_protocol!=raw_verification.QUALIFIED_CONTEXT
@@ -92,6 +94,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                              verification_contract=verification_contract, schedule=SCHEDULE,
                              extraction_protocol=extraction_protocol, review_interpretations=review_interpretations,
                              source_review_protocol=source_review_protocol)
+    execution.admission_policy=admission_policy
     execution.argument_audit_protocol=argument_audit_protocol
     execution.source_evidence_protocol=source_evidence_protocol
     execution.shared_typed=shared_typed
@@ -133,13 +136,14 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         discovery_mode=discovery_mode)
     arguments, cores, audits = owned.arguments, owned.cores, owned.audits
     agent_inputs, checks = pipeline_stages.compile_agents(snapshot, candidates, memberships,
-        arguments, cores, audits, fact_check, model=model, documents=documents, selections=selections,source_policy=agent_source_policy)
+        arguments, cores, audits, fact_check, model=model, documents=documents, selections=selections,source_policy=agent_source_policy,admission_policy=admission_policy)
     save('qualification-inventories',list(execution.shape_cache.values()));save('qualification-assessments',list(execution.assessment_cache.values()))
     save('fact-checks', checks); save('agent-inputs', agent_inputs)
     if engine is not None:
         errors.extend(engine.errors);holds.extend(engine.holds);capacity.extend(engine.capacity)
         save('contextual-engine',engine.diagnostics())
     return {'artifact_kind': SOURCE_SEMANTICS_VERSION if typed_source_review else VERSION,
+            **({'admission_policy':admission_policy} if admission_policy else {}),
             'canonical_population': len(registry), 'processing_ids': ids,
             **({'argument_audit_protocol':argument_audit_protocol} if argument_audit_protocol else {}),
             **({'source_evidence_protocol':source_evidence_protocol} if source_evidence_protocol else {}),

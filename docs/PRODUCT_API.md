@@ -104,3 +104,19 @@ node experiments/mvp_browser_check.cjs /PATH/TO/PYTHON /PATH/TO/CHROME runs/new-
 
 `experiments.mvp_live_smoke`는 실행 중 서버에 명시적 `--live`로만 요청하며 정상 경로에서 최대9개 모델 요청을 한다.
 CI는 이를 실행하지 않는다. 승인된 cycle/잔여/종료시각을 확인한 뒤에만 사용하며 실패 후 자동 재전송하지 않는다.
+
+
+### 명시적 1출처 관점 모드 (TASK-026 / DEC-028)
+
+[새 관점·토론 계약](design/SEEDED_PERSPECTIVE_DEBATE.md)의 bundle을 등록하면
+`ProductApp`은 생성 callback 외에 `decision(stage,payload)`와 `decision_reservation()`을 요구한다.
+기존 bundle은 기존 추출 대화와 API를 유지한다. 이 모드의 카드에는 admission policy와 실제
+확인 댓글 수가 들어가며 모집단 대표성/관점 중복 해소를 보장하지 않는다.
+
+메시지 `evidence_scope=seeded_provenance`, 각 point의 `origin`은 `original_comment`,
+`ai_reasoning`, `external_evidence` 중 하나다. 댓글은 원문 인용/지지 수를 유지하고 새 문단의
+`member_source_count`는0이다. 새 문단의 `requires`/`anchor_claim_ids`는 원댓글 claim을 가리킨다.
+`external_evidence`는 준비된 https문헌/정확한 구간이며 새 웹검색 구현을 뜻하지 않는다.
+허용되지 않은 문단은 숨기고 남은 답변은 partial/verification_hold로 기록한다.
+작성과 문단 판정의 비용은 같은 room·계정에 합산하며 첫 호출 전 둘의 예약 여유를 확인한다.
+외부 청구가 불명확하면 기존 needs_reconciliation 절차를 따르고 자동 재시도하지 않는다.

@@ -2,7 +2,7 @@
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from datetime import datetime, timezone, timedelta
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 import base64
 import hashlib
 import json
@@ -10,6 +10,8 @@ import re
 from urllib.parse import urlsplit, parse_qs
 from uuid import uuid4
 
+from commentscope.agents import seed_policy
+from commentscope.agents.seeded_runtime import SeededSession
 from commentscope.agents.grounded_runtime import GroundedSession
 from commentscope.agents.web import WebError
 from commentscope.factory.automatic_contract import digest
@@ -60,13 +62,17 @@ entries cannot address the point, select not_in_evidence.'''
 
 class ProductApp:
     def __init__(self,path,analyses,model,*,session_ttl_seconds,room_maximum_usd,reservation,
-                 revalidate=None,generation_status=None):
+                 revalidate=None,generation_status=None,decision=None,decision_reservation=None):
         if type(session_ttl_seconds) is not int or not 0<session_ttl_seconds<=86400:
             raise ValueError('Explicit session lifetime required')
         self.analyses={a.id:a for a in analyses}
         if not self.analyses:raise ValueError('Registered analyses required')
         self.ttl=session_ttl_seconds;self.room_limit=Decimal(room_maximum_usd)
         if not self.room_limit.is_finite() or self.room_limit<=0:raise ValueError('Explicit room limit required')
+        if any(seed_policy.seeded(a.bundle) for a in self.analyses.values()) and (
+                not callable(decision) or not callable(decision_reservation)):
+            raise ValueError('Seeded analyses require typed verifier and reservation')
+        self.decision=decision;self.decision_reservation=decision_reservation
         self.store=Store(path);self.model=model;self.reservation=reservation
         self.revalidate=revalidate or (lambda:None)
         self.generation_status=generation_status or (lambda:'ready')
@@ -183,7 +189,7 @@ class ProductApp:
         if turn is not None:
             value.update({key:deepcopy(turn[key]) for key in
                           ('points','required_premises','answerability','limitation','status')})
-            value['evidence_scope']='full_allowlist';value['_history']=deepcopy(history)
+            value['evidence_scope']='seeded_provenance' if turn.get('answer_mode')=='seeded_provenance' else 'full_allowlist';value['_history']=deepcopy(history)
         db.execute('INSERT INTO messages VALUES(?,?,?,?)',
                    (value['message_id'],room['room_id'],value['seq'],encode(value)))
         return value
@@ -487,19 +493,46 @@ class ProductApp:
                 question=room['question'] if task['phase']!='reply' else 'Respond to the preceding perspective using your own position and explicit grounds.'
                 cost_before=Decimal(room['cost_usd']);limit=Decimal(room['maximum_cost_usd'])
             charged=Decimal(0)
-            def provider(system,data,schema,*,max_tokens):
+            seeded=seed_policy.seeded(analysis.bundle)
+            def reserve(amount):
+                value=Decimal(str(amount))
+                if not value.is_finite() or value<0:raise ValueError('Invalid room reservation')
+                return value
+            def account(response):
                 nonlocal charged
-                request={'system':system,'data':data,'schema':schema,'max_tokens':max_tokens}
-                if cost_before+Decimal(self.reservation(request))>limit:raise WebError(503,'budget_exhausted')
-                response=self.model('room',request)
-                charged=Decimal(str(response.get('new_cost_usd',response.get('usage',{}).get('cost',0))))
-                if not charged.is_finite() or charged<0:raise ValueError('Unknown room charge')
+                raw=response.get('new_cost_usd',response.get('usage',{}).get('cost'))
+                if raw is None:raise BudgetExhausted('Unknown room charge')
+                try:cost=Decimal(str(raw))
+                except (InvalidOperation,ValueError):raise BudgetExhausted('Unknown room charge') from None
+                if not cost.is_finite() or cost<0:raise BudgetExhausted('Unknown room charge')
+                charged+=cost
+                if cost_before+charged>limit:raise BudgetExhausted('Room charge exceeds limit')
+            def remote(callback,*args):
+                try:response=callback(*args)
+                except Exception as exc:
+                    known=getattr(exc,'new_cost_usd',None)
+                    if known is not None:account({'new_cost_usd':known})
+                    raise
+                account(response);return response
+            def generate(request):
+                extra=reserve(self.decision_reservation()) if seeded else Decimal(0)
+                if cost_before+charged+reserve(self.reservation(request))+extra>limit:
+                    raise WebError(503,'budget_exhausted')
+                return remote(self.model,'room',request)
+            def provider(system,data,schema,*,max_tokens):
+                response=generate({'system':system,'data':data,'schema':schema,'max_tokens':max_tokens})
                 if response.get('errors'):raise ValueError('Invalid model response')
                 return {'choices':[{'finish_reason':'stop','message':{'content':json.dumps(response['output'])}}]}
+            def verify(payload):
+                if cost_before+charged+reserve(self.decision_reservation())>limit:
+                    raise WebError(503,'budget_exhausted')
+                return remote(self.decision,'room-verification',payload)
             self._analysis(session)
             context=None if peer is None else {'message_id':peer['message_id'],'agent_id':peer['agent_id'],
                                               'points':peer.get('points',[]),'body':peer.get('body')}
-            agent=RoomAgent(analysis.bundle,task['agent_id'],provider=provider,peer=context);agent.history=deepcopy(history)
+            agent=(SeededSession(analysis.bundle,task['agent_id'],generator=generate,verifier=verify,peer=context)
+                   if seeded else RoomAgent(analysis.bundle,task['agent_id'],provider=provider,peer=context))
+            agent.history=deepcopy(history)
             try:
                 turn=agent.ask(question)
                 if turn['status']=='error':raise ValueError('Invalid grounded turn')
