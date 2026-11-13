@@ -1,10 +1,10 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261113-v70`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261113-v71`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
-[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v65`에 있다.
+[상세 설계](design/README.md), 버전 `commentscope-detailed-design-20261113-v66`에 있다.
 현재 구현과 후보 설계의 차이, 실제로 대체할 호출과 유지할 검증을 구별했다.
 
 **현재 설계 검토:** [추천 구조와 근거](design/MVP_DESIGN_REVIEW.md), [원문 증거 계약](design/SOURCE_EVIDENCE_GRAPH.md),
@@ -25,6 +25,8 @@
   같은6후보의 검색 범위 확대는 저장된 임베딩으로 먼저 준비한다. 미평가는 반대나 노이즈가 아니다.
 
 현재 [104신규관계 확대 결과](design/SOURCE_SEARCH_EXPANSION_RESULT.md): 실제276요청/0.917447514달러, compiler2개/지지5·4개. 모두 찬성 계열이고 출처3개가 겹치며 이유 질문은1개 보류했다. 실질적으로 구별되는 유용한2관점·전체r5/MVP 완료는 미달/미검증이다.
+
+현재 [CNBC 첫 기능 실행 결과](design/FIRST_FUNCTIONAL_VIDEO_RESULT.md): 고정96개/192쌍에서501요청·2.151337702달러를 사용했으나 Agent0개/질문0턴으로 첫 기능 검증에 실패했다. 원문19→graph complete8→후보 기록 complete4로 줄었고 모든 후보가3유효지지에 미달했다. 검색15후보 미평가와 후보별 veto의 source 전체 전파도 확인했다. 다음은 저장 응답의 무료 계약·회귀이며 현재 활성 유료 작업은 없다.
 
 팀 누적150달러와 과거 지출/보수 차감은 유지한다. 이전 실행의5달러 owner·종료 기한을
 재개하지 않으며,6달러 제안은 철회된 상태다. 무료 수정은 PR98로 병합됐고 [고정3질문 실검증](design/FIXED_PROFILE_RUNTIME_CHECK.md)도 별도 plan으로 완료했다. 새 source/지지/embedding 실험은 이 범위에 포함하지 않는다.
