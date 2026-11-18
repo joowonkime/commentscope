@@ -153,6 +153,8 @@ flowchart TB
 {"version":"candidate-first-evidence-search-20261110-v1","sources_per_candidate":12,"maximum_pairs":60,"maximum_sources":30,"maximum_snapshot_comments":3000}
 ```
 
+2026-11-18 실행기 대조: 아래는 모듈/정책의 선언 범위다. 일반 `prepared_video_trial`의 prepare/guard/Session과 제품 `from_factory`는 기본1000 registry 호출을 유지하고 있어3000 전체 경로 지원을 뜻하지 않는다. 실제1001 prepare 거절은 [현재 구현 구조](IMPLEMENTED_STRUCTURE.md#4-댓글-capacity-서로-다른-숫자)와 무료 진단에서 확인했다.
+
 sources_per_candidate는1~64, maximum_pairs는1~1000000, maximum_sources와 maximum_snapshot_comments는
 1~3000이며 maximum_sources는 maximum_snapshot_comments 이하다. 실제 snapshot이 선언 상한을 넘으면
 시작 전에 거절한다. 기존 경로의1000 상한은 유지한다. 새 선택 경로만 명시한 상한을 쓴다.

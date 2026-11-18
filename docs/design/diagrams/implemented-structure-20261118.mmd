@@ -1,0 +1,11 @@
+flowchart LR
+    snapshot["원문 댓글과 직접 parent의 고정 snapshot"] --> factory["준비 CLI와 Factory"]
+    factory --> bundle["불변 Agent bundle과 검증 artifact"]
+    bundle --> product["ProductApp HTTP와 단일 worker"]
+    browser["기존 MVP 웹 화면"] <--> product
+    product <--> store[("개인 의견 대화 성찰 SQLite")]
+    factory -.-> models["OpenRouter Sol과 Jev"]
+    factory -.-> embedding["OpenRouter embedding"]
+    product -.-> models
+    factory -.-> budget["공유 장부와 checkpoint 가드"]
+    product -.-> budget

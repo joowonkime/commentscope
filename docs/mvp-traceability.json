@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261113-v77",
+  "spec_version": "commentscope-mvp-20261118-v78",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
-  "observed_date": "2026-11-13",
+  "observed_date": "2026-11-18",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -3903,6 +3903,52 @@
         "docs/PRODUCT_API.md",
         "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
       ]
+    },
+    {
+      "id": "TASK-029",
+      "title": "현재 구현 구조·댓글 용량 경계와 실행 인수인계",
+      "requirements": [
+        "REQ-001",
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010"
+      ],
+      "decisions": [
+        "DEC-028"
+      ],
+      "depends_on": [
+        "TASK-028"
+      ],
+      "status": "done",
+      "deliverables": [
+        "현재 구현과 품질 한계를 구별한 역할 표/전체 구조·Controller 상호작용 Mermaid",
+        "999고정코호트·기본1000·명시3000·상세검색상한과실효prepare경계의무료재현",
+        "새 담당자의 합성 실행/검사·실제 자료 필요 목록/비공개 경계·남은 작업·tracked코드 전달 묶음"
+      ],
+      "done_when": [
+        "상호작용 미구현/999고정상한이라는 오해를 코드·실제 증거와 대조하고미검증을승격하지않는다.",
+        "새로운 API/모델 호출 없이1000/1001/3000registry와실제prepare거절을재현하고3천전체지원미완료를구별한다.",
+        "키/댓글/개인기록/장부없이전달가능한자료와무료실행방법을검사하고PR/필수양OS CI결과를남긴다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Code/actual-run audit distinguishes implemented1:1/group/reflection from incomplete semantic usefulness. Synthetic registry1000 accepted/1001 default rejected/explicit3000 accepted; actual prepared_video.prepare1001 rejects before provider preflight,0model calls.34related tests passed; documented synthetic preview comparison/group4turns/reflection save/read passed with0paid calls. Both Mermaid sources rendered and match embedded document blocks. Private inputs/expired grants/portable-import gaps and incomplete home/history are explicit; existing production code unchanged.",
+          "reference": "docs/design/IMPLEMENTED_STRUCTURE.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/HANDOFF.md",
+        "docs/design/IMPLEMENTED_STRUCTURE.md",
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
+      ]
     }
   ],
   "changes": [
@@ -4251,8 +4297,12 @@
     {
       "spec_version": "commentscope-mvp-20261113-v77",
       "reason": "PR109/110및고정Jubilee180→기존웹실제검증완료를반영.898요청/3.383771486달러,2profile각1출처/원문이유0·기본비교0/2·별도관련의견차이1·12게시턴·성찰수정/재열람·실제브라우저와양OS CI를구별해보존. TASK028완료와TASK027유용성/범위계약미완료를구별하고무료진단을next로설정. 원150owner/과거차감/종료grant/legacy기준불변;전체MVP완료아님."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261118-v78",
+      "reason": "사용자요청현재구조/조원인계문서화. 기존1:1/그룹/성찰실제구현과유용성미달을구별하고999코호트와일반prepare의기본1000전달결함·명시3000모듈검사를무료대조한다. 인계진입/도표/재현/안전한코드묶음을TASK029로추적하며실행알고리즘·기존금융·사용자기록·legacy품질기준은변경하지않음."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261113-v72",
+  "design_version": "commentscope-detailed-design-20261118-v73",
   "design_document": "docs/design/README.md"
 }

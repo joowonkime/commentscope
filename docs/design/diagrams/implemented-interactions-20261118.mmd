@@ -1,0 +1,28 @@
+sequenceDiagram
+    actor user as 사용자
+    participant web as 기존 웹 화면
+    participant controller as ProductApp Controller
+    participant agent as 해당 관점 SeededSession
+    participant sol as Sol
+    participant jev as Jev
+    participant state as 제품 SQLite
+    user->>web: 질문과 참여 관점 선택
+    web->>controller: 대화 시작 또는 후속 질문
+    controller->>state: job과 발화 순서 저장
+    controller-->>web: job ID
+    loop Controller의 opening과 reply 순서
+        controller->>state: 자기 이력 조회
+        opt 그룹 reply
+            controller->>state: 다른 Agent의 직전 발화 조회
+        end
+        controller->>agent: 자기 근거와 이력 및 reply 문맥
+        agent->>sol: 문단 제안 생성
+        sol-->>agent: 원문 선택과 새 문단
+        agent->>jev: 문단 유형 귀속 범위 근거 관측
+        jev-->>agent: 판정
+        agent->>agent: Host가 문단 제거와 출처 결합
+        agent-->>controller: 응답 또는 부분 응답 보류
+        controller->>state: 게시 발화와 비용 저장
+        web->>controller: 상태와 발화 조회
+        controller-->>web: 게시된 발화
+    end
