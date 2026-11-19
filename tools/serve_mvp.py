@@ -14,6 +14,7 @@ for item in (ROOT,ROOT/'src'):
 
 from commentscope.agents.grounded_web import GroundedApp
 from commentscope.agents import seed_policy
+from commentscope.agents.debate_contracts import VERSION as DEBATE_PROTOCOL
 from commentscope.agents.web import WebError
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
@@ -40,7 +41,7 @@ ASSETS=[ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','m
 ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 
-def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,factory_trial=None):
+def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,factory_trial=None,automatic_debate=False):
     directory=Path(directory);factory_run=Path(factory_run);cycle_file=Path(cycle_file)
     for path in (directory,factory_run,cycle_file):private(path)
     cycle=read_json(cycle_file);cycle_guard(cycle)
@@ -64,6 +65,8 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         files.extend([Path(link['file']),factory_run/'completed.json',factory_run/'artifacts/runtime.json',
                       Path(factory_trial),ROOT/'tools/product_trial_budget.py'])
         files.extend(ROOT/p for p in trial_budget.shared.TOOL_FILES)
+    if automatic_debate and not seed_policy.seeded(analysis.bundle):
+        raise ValueError('Automatic debate requires registered comment-seeded perspectives')
     provider=provider_preflight(deployment)
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),
           'factory_run':str(factory_run.resolve()),'cycle_file':str(cycle_file.resolve()),'cycle':cycle,
@@ -79,6 +82,8 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
           'quality_gate_passed':False,'semantic_reliability':'not_assessed',
           'cross_run_response_reuse':False,'development_product_scope':True}
     plan['billing_policy']=WIRE_BUDGET
+    if automatic_debate:
+        plan['debate_protocol']=DEBATE_PROTOCOL
     if link is not None:
         plan.update(factory_trial=link,spend_scope_sha256=factory_plan['spend_scope_sha256'],
                     money_owner_limit_usd=factory_plan['maximum_cost_usd'])
@@ -116,6 +121,8 @@ def validate(directory):
     expected=decisions.DEPLOYMENT if seed_policy.seeded(plan['analysis']['bundle']) else None
     if plan.get('seeded_verifier_deployment')!=expected:
         raise ValueError('Seeded product verifier deployment changed or missing')
+    if 'debate_protocol' in plan and (plan['debate_protocol']!=DEBATE_PROTOCOL or expected is None):
+        raise ValueError('Automatic debate protocol or admission policy changed')
     return plan
 
 
@@ -172,6 +179,16 @@ class Broker:
         own=self.ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])
         if own['calls'] and Decimal(own['remaining_usd'])<=0:return 'budget_exhausted'
         return 'ready'
+
+    def debate_balance(self):
+        ledger = self.ledger
+        own = ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])
+        available = [Decimal(ledger.summary()['remaining_usd']),
+                     Decimal(self.plan.get('money_owner_limit_usd',self.plan['maximum_cost_usd'])) -
+                     Decimal(own['charged_usd'])]
+        if self.factory is not None:
+            available.append(trial_budget.remaining(ledger,self.plan['factory_trial'],self.factory))
+        return max(Decimal(0), min(available))
 
     def model(self,stage,request):
         with self.lock:
@@ -238,7 +255,9 @@ def build(directory):
         session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
         reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
         decision=broker.verify if broker.typed_client is not None else None,
-        decision_reservation=broker.decision_reservation if broker.typed_client is not None else None)
+        decision_reservation=broker.decision_reservation if broker.typed_client is not None else None,
+        debate_execution_binding=sha(directory/'plan.json') if 'debate_protocol' in plan else None,
+        debate_balance=broker.debate_balance if 'debate_protocol' in plan else None)
     class Legacy(GroundedApp):
         def public(self,item):
             value=super().public(item);value['remote_status']=broker.status()
@@ -255,6 +274,7 @@ def main(argv=None):
     p.add_argument('--factory-run',type=Path,required=True);p.add_argument('--cycle-file',type=Path,required=True)
     p.add_argument('--session-ttl-seconds',type=int,required=True);p.add_argument('--room-maximum-usd',required=True)
     p.add_argument('--factory-trial',type=Path)
+    p.add_argument('--automatic-debate',action='store_true',help='Enable the experimental DS-v2 backend in a new product plan')
     p=actions.add_parser('serve');p.add_argument('directory',type=Path)
     p.add_argument('--key-file',type=Path);p.add_argument('--port',type=int,default=8767)
     p.add_argument('--bind',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1')
@@ -264,7 +284,7 @@ def main(argv=None):
     if args.action=='prepare':
         plan=prepare(args.directory,args.factory_run,args.cycle_file,
                      session_ttl_seconds=args.session_ttl_seconds,room_maximum_usd=args.room_maximum_usd,
-                     factory_trial=args.factory_trial)
+                     factory_trial=args.factory_trial,automatic_debate=args.automatic_debate)
         print(json.dumps({'prepared':str(args.directory),'analysis_id':plan['analysis']['analysis_id'],
                           'quality_gate_passed':False,'inference_calls':0}));return
     if args.key_file is not None:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
