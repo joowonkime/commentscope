@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261119-v82",
+  "spec_version": "commentscope-mvp-20261119-v83",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-19",
   "intent_document": "docs/MVP_SPEC.md",
@@ -4417,6 +4417,55 @@
         "docs/design/DEBATE_SYNTHESIS_API.md",
         "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
       ]
+    },
+    {
+      "id": "TASK-038",
+      "title": "최신 M4 공식 채점기준과 현재 MVP 준비도 감사",
+      "requirements": [
+        "REQ-005",
+        "REQ-006",
+        "REQ-007",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012"
+      ],
+      "decisions": [
+        "DEC-029",
+        "DEC-030"
+      ],
+      "depends_on": [
+        "TASK-031"
+      ],
+      "status": "done",
+      "deliverables": [
+        "최신 공식M4원문/강의/TA메일과기존스냅샷대조 및전체6항목/제출물 정리",
+        "현재실제제한검증·새무료UI/HTTP/회귀와설계미구현을구별한MVP흐름대응",
+        "핵심사용자3과업·대본밖QA·접근/운영·최종인계/제출준비우선순위"
+      ],
+      "done_when": [
+        "공식배점/조건과내부r5/모델지표를구별하고공식세부배점이나가채점을발명하지않는다.",
+        "실제모델의과거성공/실패,신규합성기능검사,미구현/미검증과서비스가동상태를분리해판정한다.",
+        "제품/M3/Figma/금융을임의변경하거나새유료추론없이결함/검증/인계목록을제공한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Fresh officialM4 export20261119HTTP200/30040bytes/hashbc30a49... andLecture15PDF4-6/TAprovidedemail compared; all6weights100%/deliverables mapped. Fresh existing syntheticChromium25checks andproduct/API/seeded28tests pass;12syntheticprofileAPI returnsall,selectedlast2/group4/cachedstart0additionalcallbacks/foreign404/4participants422/longtext400 confirmed. NewautomaticdebatePOST404,legacyroomawaiting_user withoutconclusion/consensusAgent;local8767/8768unreachable. Prioractual180profile/answerfailurespreserved. No product/M3/Figma/ledger/newmodelcallschanged; fullMVP/semantics/TA readiness notapproved.",
+          "reference": "docs/M4_PROTOTYPE_REVIEW.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/M4_PROTOTYPE_REVIEW.md",
+        "docs/HANDOFF.md",
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
     }
   ],
   "changes": [
@@ -4785,6 +4834,10 @@
     {
       "spec_version": "commentscope-mvp-20261119-v82",
       "reason": "사용자가최종제품흐름을명시:근거제약통과Agent전부생성/제공→사용자직접참가자선택→자동턴제토론기록→최종결론/합의Agent→사용가치. REQ012/DEC030accepted를추가하고DS-v2로수동합의·compile단계를자동완료로수정한다. 생성수와토론정원을구별하고DEC029기술선택은proposed/기능미구현/유료HOLD를유지한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261119-v83",
+      "reason": "사용자가Milestone4전체채점기준과선언MVP범위의정확작동여부감사를요청. TASK038로공식원문최신export/강의/제공TA메일을대조하고실제검증·새무료UI/HTTP·신규자동흐름미구현·제출/운영공백을분리한다. TASK027next/DEC029proposed/DEC030accepted/기존품질과금융을유지하며제품·M3·Figma나유료실행은변경하지않음."
     }
   ],
   "design_version": "commentscope-detailed-design-20261119-v75",
