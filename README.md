@@ -12,6 +12,8 @@ Agent 생성 이후의1:1/그룹·근거·성찰도 구현돼 있지만 실제 �
 구현 AI가 미결정 역할·API·합의 정책을 임의로 정하지 않습니다.
 토론→합의→통합 Agent의 [DS-v2 상세 설계·구현 인계](docs/design/DEBATE_SYNTHESIS.md)는
 검토안(DEC-029 proposed)이며 수락 후 담당 Issue로 구현을 배정합니다.
+**M4 제출 준비도:** [최신 공식 전체 기준과 실제/합성/미구현 대조](docs/M4_PROTOTYPE_REVIEW.md).
+기존 화면과 제한 실행은 있으나 자동 토론→최종 결론/합의 Agent는 아직 미구현입니다.
 
 **작업 정본:** [MVP 명세](docs/MVP_SPEC.md) → [작업·재개 절차](docs/SPEC_WORKFLOW.md).
 구현 후보의 모듈·알고리즘·입출력·API·상태·비용·검증 사례는 [상세 설계](docs/design/README.md)에 있습니다.
