@@ -1,0 +1,1525 @@
+{
+  "artifact_kind": "commentscope-debate-synthesis-v1-design-examples",
+  "synthetic_only": true,
+  "semantic_observations": "Prespecified fixtures; not model or independent human results. Hashes rebound by checker per case.",
+  "base_fixture": {
+    "protocol": "commentscope-debate-synthesis-v1",
+    "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+    "owner_session_id": "S-demo",
+    "request_session_id": "S-demo",
+    "evaluation_time": "2026-11-19T00:00:00+00:00",
+    "expires_at": "2026-12-01T00:00:00+00:00",
+    "participants": [
+      {
+        "agent_id": "A",
+        "kind": "comment_seeded",
+        "source_ids": [
+          "source-A"
+        ],
+        "condition_ids": [
+          "high-risk"
+        ]
+      },
+      {
+        "agent_id": "B",
+        "kind": "comment_seeded",
+        "source_ids": [
+          "source-B"
+        ],
+        "condition_ids": [
+          "low-risk"
+        ]
+      }
+    ],
+    "source_ids": [
+      "source-A",
+      "source-B"
+    ],
+    "reference_ids": [],
+    "condition_ids": [
+      "high-risk",
+      "low-risk"
+    ],
+    "points": [
+      {
+        "point_id": "OA",
+        "message_id": "M2",
+        "agent_id": "A",
+        "seq": 2,
+        "phase": "opening",
+        "text": "고위험 용도에는 검증이 필요합니다.",
+        "origin": "original_comment",
+        "source_ids": [
+          "source-A"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk"
+        ],
+        "requires_point_ids": [],
+        "target_point_ids": [],
+        "verification": "passed",
+        "task_fit": "adequate"
+      },
+      {
+        "point_id": "OB",
+        "message_id": "M3",
+        "agent_id": "B",
+        "seq": 3,
+        "phase": "opening",
+        "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+        "origin": "original_comment",
+        "source_ids": [
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "low-risk"
+        ],
+        "requires_point_ids": [],
+        "target_point_ids": [],
+        "verification": "passed",
+        "task_fit": "adequate"
+      },
+      {
+        "point_id": "RA",
+        "message_id": "M4",
+        "agent_id": "A",
+        "seq": 4,
+        "phase": "reply",
+        "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+        "origin": "ai_reasoning",
+        "source_ids": [],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "requires_point_ids": [
+          "OA"
+        ],
+        "target_point_ids": [
+          "OB"
+        ],
+        "verification": "passed",
+        "task_fit": "adequate"
+      },
+      {
+        "point_id": "RB",
+        "message_id": "M5",
+        "agent_id": "B",
+        "seq": 5,
+        "phase": "reply",
+        "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+        "origin": "ai_reasoning",
+        "source_ids": [],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "requires_point_ids": [
+          "OB"
+        ],
+        "target_point_ids": [
+          "OA"
+        ],
+        "verification": "passed",
+        "task_fit": "adequate"
+      }
+    ],
+    "opening_cutoff_seq": 3,
+    "cutoff_seq": 5,
+    "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+    "proposals": [
+      {
+        "proposal_id": "P1",
+        "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+        "origin": "ai_reasoning",
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "premise_point_ids": [
+          "RA",
+          "RB"
+        ],
+        "reference_ids": [],
+        "direct_comment_support_count": 0,
+        "verification": "passed"
+      }
+    ],
+    "ratifications": [
+      {
+        "agent_id": "A",
+        "proposal_id": "P1",
+        "decision": "accept",
+        "reason_point_ids": [
+          "RA"
+        ],
+        "missing_condition_ids": [],
+        "verification": "passed",
+        "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      },
+      {
+        "agent_id": "B",
+        "proposal_id": "P1",
+        "decision": "accept",
+        "reason_point_ids": [
+          "RB"
+        ],
+        "missing_condition_ids": [],
+        "verification": "passed",
+        "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+      }
+    ],
+    "pair_checks": []
+  },
+  "cases": [
+    {
+      "id": "unanimous_conditional_agreement",
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P1"
+        ]
+      }
+    },
+    {
+      "id": "explicit_dissent",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/ratifications/1/decision",
+          "value": "reject"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "no_consensus",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "missing_condition_is_not_accept",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/ratifications/1/decision",
+          "value": "needs_condition"
+        },
+        {
+          "op": "replace",
+          "path": "/ratifications/1/missing_condition_ids",
+          "value": [
+            "low-risk"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "no_consensus",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "undecided_is_not_opposed_or_accept",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/ratifications/1/decision",
+          "value": "undecided"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "no_consensus",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "missing_ratifier",
+      "changes": [
+        {
+          "op": "remove",
+          "path": "/ratifications/1"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "verification_hold",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "held_vote",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/ratifications/1/verification",
+          "value": "held"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "verification_hold",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "held_draft",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/verification",
+          "value": "held"
+        },
+        {
+          "op": "replace",
+          "path": "/ratifications",
+          "value": []
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "verification_hold",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "no_candidate",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals",
+          "value": []
+        },
+        {
+          "op": "replace",
+          "path": "/ratifications",
+          "value": []
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "no_proposal",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "support_count_spoof",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/direct_comment_support_count",
+          "value": 3
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "new_claim_disguised_as_original",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/origin",
+          "value": "original_comment"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "empirical_claim_without_reference",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/origin",
+          "value": "external_evidence"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "unknown_premise",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/premise_point_ids",
+          "value": [
+            "NOT_PUBLISHED"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "future_or_cyclic_point_reference",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/points/2/requires_point_ids",
+          "value": [
+            "RB"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "cross_session",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/request_session_id",
+          "value": "S-another"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "derived_parent_recursion",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/participants/0/kind",
+          "value": "derived_consensus"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "background_after_filter",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/points/2/task_fit",
+          "value": "background"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "incomplete",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "held_reply_after_filter",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/points/2/verification",
+          "value": "held"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "incomplete",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "target_id_without_substantive_response",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/points/3/task_fit",
+          "value": "uncertain"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "incomplete",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "reply_reference_in_opening_only_phase",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/points/3/target_point_ids",
+          "value": [
+            "RA"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "duplicate_vote",
+      "changes": [
+        {
+          "op": "add",
+          "path": "/ratifications/-",
+          "value": {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "reject",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "foreign_reason_in_own_vote",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/ratifications/0/reason_point_ids",
+          "value": [
+            "RB"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "expired_sources",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/expires_at",
+          "value": "2026-11-18T00:00:00+00:00"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "expired",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "transcript_digest_mismatch",
+      "changes": [],
+      "binding": "draft_only",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "draft_digest_mismatch",
+      "changes": [],
+      "binding": "transcript_only",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "unknown_client_trust_field",
+      "changes": [
+        {
+          "op": "add",
+          "path": "/approved_by_host",
+          "value": true
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "one_shared_one_dissent",
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P1"
+        ]
+      },
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v1",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M4",
+            "agent_id": "A",
+            "seq": 4,
+            "phase": "reply",
+            "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M5",
+            "agent_id": "B",
+            "seq": 5,
+            "phase": "reply",
+            "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 3,
+        "cutoff_seq": 5,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          },
+          {
+            "proposal_id": "P2",
+            "text": "모든 용도의 검증을 의무화한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "A",
+            "proposal_id": "P2",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P2",
+            "decision": "reject",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": [
+          {
+            "left": "P1",
+            "right": "P2",
+            "choice": "compatible"
+          }
+        ]
+      }
+    },
+    {
+      "id": "independent_candidate_hold_is_local",
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P1"
+        ]
+      },
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v1",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M4",
+            "agent_id": "A",
+            "seq": 4,
+            "phase": "reply",
+            "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M5",
+            "agent_id": "B",
+            "seq": 5,
+            "phase": "reply",
+            "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 3,
+        "cutoff_seq": 5,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          },
+          {
+            "proposal_id": "P2",
+            "text": "모든 용도의 검증을 의무화한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "A",
+            "proposal_id": "P2",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "held",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P2",
+            "decision": "reject",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": [
+          {
+            "left": "P1",
+            "right": "P2",
+            "choice": "compatible"
+          }
+        ]
+      }
+    },
+    {
+      "id": "three_participants_fixed_phase",
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P1"
+        ]
+      },
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v1",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          },
+          {
+            "agent_id": "C",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-C"
+            ],
+            "condition_ids": []
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B",
+          "source-C"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OC",
+            "message_id": "M4",
+            "agent_id": "C",
+            "seq": 4,
+            "phase": "opening",
+            "text": "위험 수준을 구분하는 기준을 명확히 해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-C"
+            ],
+            "reference_ids": [],
+            "condition_ids": [],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M5",
+            "agent_id": "A",
+            "seq": 5,
+            "phase": "reply",
+            "text": "저위험의 선택권과 명확한 기준을 함께 고려할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB",
+              "OC"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M6",
+            "agent_id": "B",
+            "seq": 6,
+            "phase": "reply",
+            "text": "저위험 선택권은 고위험 검증 및 명확한 기준과 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA",
+              "OC"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RC",
+            "message_id": "M7",
+            "agent_id": "C",
+            "seq": 7,
+            "phase": "reply",
+            "text": "두 위험 범주를 명확히 구분한다면 각각의 기준을 함께 적용할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OC"
+            ],
+            "target_point_ids": [
+              "OA",
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 4,
+        "cutoff_seq": 7,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB",
+              "RC"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "C",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RC"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": []
+      }
+    },
+    {
+      "id": "ratification_of_unoffered_candidate",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/proposals/0/verification",
+          "value": "held"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": []
+      }
+    },
+    {
+      "id": "conflicting_pair_does_not_veto_independent_third",
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v1",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M4",
+            "agent_id": "A",
+            "seq": 4,
+            "phase": "reply",
+            "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M5",
+            "agent_id": "B",
+            "seq": 5,
+            "phase": "reply",
+            "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 3,
+        "cutoff_seq": 5,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          },
+          {
+            "proposal_id": "P2",
+            "text": "대안2에 대한 합성 후보입니다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          },
+          {
+            "proposal_id": "P3",
+            "text": "검토 기준을 명확히 공개한다는 독립 합성 후보입니다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P3",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P3",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": [
+          {
+            "left": "P1",
+            "right": "P2",
+            "choice": "incompatible"
+          },
+          {
+            "left": "P1",
+            "right": "P3",
+            "choice": "compatible"
+          },
+          {
+            "left": "P2",
+            "right": "P3",
+            "choice": "compatible"
+          }
+        ]
+      },
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P3"
+        ]
+      }
+    }
+  ]
+}

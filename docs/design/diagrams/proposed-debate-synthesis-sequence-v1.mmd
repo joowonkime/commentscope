@@ -1,0 +1,25 @@
+sequenceDiagram
+    actor user as 사용자
+    participant control as DebateController
+    participant agent as 각 부모 Agent
+    participant writer as Proposer
+    participant jev as Jev
+    participant host as Host Compiler
+    user->>control: 질문과 관점으로 토론 시작
+    loop 각 Agent opening과 고정 문맥 reply
+        control->>agent: 자기 근거와 원질문 및 지정 target
+        agent->>jev: 발언 문단 검증
+        jev-->>control: 관측 결과
+        control->>control: 제거 후 coverage 계산과 게시
+    end
+    user->>control: 합의 정리 요청
+    control->>writer: 고정된 게시 토론
+    writer->>jev: 최대3 후보 명제 검증
+    loop 각 Agent의 봉인된 명시 수락
+        control->>agent: 동일 후보와 자기 조건
+        agent->>jev: 수락 결정과 이유 검증
+        jev-->>control: 수락의 유효성 관측
+    end
+    control-->>user: 공통 명제와 이견 및 보류
+    user->>host: 통합 Agent 생성
+    host-->>user: 별도 Agent 또는 합의 없음
