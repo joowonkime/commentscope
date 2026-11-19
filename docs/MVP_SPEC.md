@@ -1,6 +1,6 @@
 # Re.View / CommentScope MVP 명세
 
-버전: `commentscope-mvp-20261119-v83`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
+버전: `commentscope-mvp-20261120-v84`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 
 구현에 필요한 모듈별 계약·알고리즘·API·상태·저장·비용·검증 사례는
@@ -10,6 +10,8 @@
 [최신 M4 전체 기준과 현재 준비도](M4_PROTOTYPE_REVIEW.md)는 TASK-038에서 공식 원문/강의/TA안내와 실제·합성·설계 증거를 구별한다. 문서/CI 성공을 전체MVP의일관성·접근성·사용성완료로쓰지않는다.
 
 DEC-030 accepted 제품 흐름은 **근거 적격 Agent 전부 제공 → 사용자 직접 선택 → 자동 턴제 토론과 기록 → 최종 결론·유효한 합의 Agent → 판단/질문/성찰의 사용 가치**다. 생성 Agent 총수와 동시 토론 정원은 다르다. 상세 기술 선택 DEC-029와 실제 구현/품질은 별도다.
+
+[완주 구현 목록과 선택 인계](MVP_IMPLEMENTATION_HANDOFF.md)는 TASK-039에서 이 흐름을 현재 기능·담당 경계·완료 조건에 연결한다.
 
 [토론·합의·통합 Agent 상세 설계안](design/DEBATE_SYNTHESIS.md)은 TASK-031/DEC-029 proposed다. 사용자 요청은 설계·인계 작성이며 구체적인 제안의 최종 수락·기능 구현과 구별한다. 기존 Agent/세 과업을 보존하고 REQ-011과 후속 TASK-032~037을 추적한다. 현재 품질 작업 TASK-027과 유료 HOLD는 유지한다.
 
