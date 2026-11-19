@@ -1,9 +1,9 @@
 {
-  "artifact_kind": "commentscope-debate-synthesis-v1-design-examples",
+  "artifact_kind": "commentscope-debate-synthesis-v2-design-examples",
   "synthetic_only": true,
   "semantic_observations": "Prespecified fixtures; not model or independent human results. Hashes rebound by checker per case.",
   "base_fixture": {
-    "protocol": "commentscope-debate-synthesis-v1",
+    "protocol": "commentscope-debate-synthesis-v2",
     "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
     "owner_session_id": "S-demo",
     "request_session_id": "S-demo",
@@ -173,7 +173,30 @@
         "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
       }
     ],
-    "pair_checks": []
+    "pair_checks": [],
+    "qualification_records": [
+      {
+        "agent_id": "A",
+        "status": "passed"
+      },
+      {
+        "agent_id": "B",
+        "status": "passed"
+      },
+      {
+        "agent_id": "HELD",
+        "status": "held"
+      },
+      {
+        "agent_id": "UNASSESSED",
+        "status": "unassessed"
+      }
+    ],
+    "catalog_agent_ids": [
+      "A",
+      "B"
+    ],
+    "completion_mode": "automatic_conclusion_and_agent"
   },
   "cases": [
     {
@@ -184,7 +207,9 @@
         "outcome": "consensus_ready",
         "accepted_proposal_ids": [
           "P1"
-        ]
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
       }
     },
     {
@@ -199,7 +224,9 @@
       "binding": "all",
       "expected": {
         "outcome": "no_consensus",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -221,7 +248,9 @@
       "binding": "all",
       "expected": {
         "outcome": "no_consensus",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -236,7 +265,9 @@
       "binding": "all",
       "expected": {
         "outcome": "no_consensus",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -250,7 +281,9 @@
       "binding": "all",
       "expected": {
         "outcome": "verification_hold",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -265,7 +298,9 @@
       "binding": "all",
       "expected": {
         "outcome": "verification_hold",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -285,7 +320,9 @@
       "binding": "all",
       "expected": {
         "outcome": "verification_hold",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -305,7 +342,9 @@
       "binding": "all",
       "expected": {
         "outcome": "no_proposal",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -320,7 +359,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -335,7 +376,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -350,7 +393,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -367,7 +412,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -384,7 +431,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -399,7 +448,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -414,7 +465,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -429,7 +482,9 @@
       "binding": "all",
       "expected": {
         "outcome": "incomplete",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -444,7 +499,9 @@
       "binding": "all",
       "expected": {
         "outcome": "incomplete",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -459,7 +516,9 @@
       "binding": "all",
       "expected": {
         "outcome": "incomplete",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -476,7 +535,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -501,7 +562,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -518,7 +581,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -533,7 +598,9 @@
       "binding": "all",
       "expected": {
         "outcome": "expired",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -542,7 +609,9 @@
       "binding": "draft_only",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -551,7 +620,9 @@
       "binding": "transcript_only",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -566,7 +637,9 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
@@ -577,10 +650,12 @@
         "outcome": "consensus_ready",
         "accepted_proposal_ids": [
           "P1"
-        ]
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
       },
       "fixture": {
-        "protocol": "commentscope-debate-synthesis-v1",
+        "protocol": "commentscope-debate-synthesis-v2",
         "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
         "owner_session_id": "S-demo",
         "request_session_id": "S-demo",
@@ -794,7 +869,30 @@
             "right": "P2",
             "choice": "compatible"
           }
-        ]
+        ],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
       }
     },
     {
@@ -805,10 +903,12 @@
         "outcome": "consensus_ready",
         "accepted_proposal_ids": [
           "P1"
-        ]
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
       },
       "fixture": {
-        "protocol": "commentscope-debate-synthesis-v1",
+        "protocol": "commentscope-debate-synthesis-v2",
         "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
         "owner_session_id": "S-demo",
         "request_session_id": "S-demo",
@@ -1022,7 +1122,30 @@
             "right": "P2",
             "choice": "compatible"
           }
-        ]
+        ],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
       }
     },
     {
@@ -1033,10 +1156,12 @@
         "outcome": "consensus_ready",
         "accepted_proposal_ids": [
           "P1"
-        ]
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
       },
       "fixture": {
-        "protocol": "commentscope-debate-synthesis-v1",
+        "protocol": "commentscope-debate-synthesis-v2",
         "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
         "owner_session_id": "S-demo",
         "request_session_id": "S-demo",
@@ -1271,7 +1396,35 @@
             "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
           }
         ],
-        "pair_checks": []
+        "pair_checks": [],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "C",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B",
+          "C"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
       }
     },
     {
@@ -1286,13 +1439,15 @@
       "binding": "all",
       "expected": {
         "outcome": "invalid",
-        "accepted_proposal_ids": []
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     },
     {
       "id": "conflicting_pair_does_not_veto_independent_third",
       "fixture": {
-        "protocol": "commentscope-debate-synthesis-v1",
+        "protocol": "commentscope-debate-synthesis-v2",
         "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
         "owner_session_id": "S-demo",
         "request_session_id": "S-demo",
@@ -1510,7 +1665,30 @@
             "right": "P3",
             "choice": "compatible"
           }
-        ]
+        ],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
       },
       "changes": [],
       "binding": "all",
@@ -1518,7 +1696,592 @@
         "outcome": "consensus_ready",
         "accepted_proposal_ids": [
           "P3"
-        ]
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
+      }
+    },
+    {
+      "id": "all_12_qualified_visible_only_2_selected",
+      "changes": [],
+      "binding": "all",
+      "expected": {
+        "outcome": "consensus_ready",
+        "accepted_proposal_ids": [
+          "P1"
+        ],
+        "final_conclusion_available": true,
+        "synthesis_agent_created": true
+      },
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v2",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M4",
+            "agent_id": "A",
+            "seq": 4,
+            "phase": "reply",
+            "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M5",
+            "agent_id": "B",
+            "seq": 5,
+            "phase": "reply",
+            "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 3,
+        "cutoff_seq": 5,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": [],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          },
+          {
+            "agent_id": "Q0",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q1",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q2",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q3",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q4",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q5",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q6",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q7",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q8",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q9",
+            "status": "passed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B",
+          "Q0",
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4",
+          "Q5",
+          "Q6",
+          "Q7",
+          "Q8",
+          "Q9"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
+      }
+    },
+    {
+      "id": "catalog_truncated_by_debate_capacity",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/catalog_agent_ids",
+          "value": [
+            "A",
+            "B"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
+      },
+      "fixture": {
+        "protocol": "commentscope-debate-synthesis-v2",
+        "question": "위험 수준에 따라 검토 의무를 다르게 둘 수 있을까요?",
+        "owner_session_id": "S-demo",
+        "request_session_id": "S-demo",
+        "evaluation_time": "2026-11-19T00:00:00+00:00",
+        "expires_at": "2026-12-01T00:00:00+00:00",
+        "participants": [
+          {
+            "agent_id": "A",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-A"
+            ],
+            "condition_ids": [
+              "high-risk"
+            ]
+          },
+          {
+            "agent_id": "B",
+            "kind": "comment_seeded",
+            "source_ids": [
+              "source-B"
+            ],
+            "condition_ids": [
+              "low-risk"
+            ]
+          }
+        ],
+        "source_ids": [
+          "source-A",
+          "source-B"
+        ],
+        "reference_ids": [],
+        "condition_ids": [
+          "high-risk",
+          "low-risk"
+        ],
+        "points": [
+          {
+            "point_id": "OA",
+            "message_id": "M2",
+            "agent_id": "A",
+            "seq": 2,
+            "phase": "opening",
+            "text": "고위험 용도에는 검증이 필요합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-A"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "OB",
+            "message_id": "M3",
+            "agent_id": "B",
+            "seq": 3,
+            "phase": "opening",
+            "text": "저위험 용도에서는 선택권을 존중해야 합니다.",
+            "origin": "original_comment",
+            "source_ids": [
+              "source-B"
+            ],
+            "reference_ids": [],
+            "condition_ids": [
+              "low-risk"
+            ],
+            "requires_point_ids": [],
+            "target_point_ids": [],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RA",
+            "message_id": "M4",
+            "agent_id": "A",
+            "seq": 4,
+            "phase": "reply",
+            "text": "저위험 선택권을 인정하면서 고위험 검증을 요구할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OA"
+            ],
+            "target_point_ids": [
+              "OB"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          },
+          {
+            "point_id": "RB",
+            "message_id": "M5",
+            "agent_id": "B",
+            "seq": 5,
+            "phase": "reply",
+            "text": "선택권 주장은 저위험에 한정하며 고위험의 별도 검토와 양립할 수 있습니다.",
+            "origin": "ai_reasoning",
+            "source_ids": [],
+            "reference_ids": [],
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "requires_point_ids": [
+              "OB"
+            ],
+            "target_point_ids": [
+              "OA"
+            ],
+            "verification": "passed",
+            "task_fit": "adequate"
+          }
+        ],
+        "opening_cutoff_seq": 3,
+        "cutoff_seq": 5,
+        "transcript_sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+        "proposals": [
+          {
+            "proposal_id": "P1",
+            "text": "고위험 용도에는 검증을 적용하고 저위험 용도에는 선택권을 보장한다.",
+            "origin": "ai_reasoning",
+            "condition_ids": [
+              "high-risk",
+              "low-risk"
+            ],
+            "premise_point_ids": [
+              "RA",
+              "RB"
+            ],
+            "reference_ids": [],
+            "direct_comment_support_count": 0,
+            "verification": "passed"
+          }
+        ],
+        "ratifications": [
+          {
+            "agent_id": "A",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RA"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          },
+          {
+            "agent_id": "B",
+            "proposal_id": "P1",
+            "decision": "accept",
+            "reason_point_ids": [
+              "RB"
+            ],
+            "missing_condition_ids": [],
+            "verification": "passed",
+            "draft_sha256": "0000000000000000000000000000000000000000000000000000000000000000"
+          }
+        ],
+        "pair_checks": [],
+        "qualification_records": [
+          {
+            "agent_id": "A",
+            "status": "passed"
+          },
+          {
+            "agent_id": "B",
+            "status": "passed"
+          },
+          {
+            "agent_id": "HELD",
+            "status": "held"
+          },
+          {
+            "agent_id": "UNASSESSED",
+            "status": "unassessed"
+          },
+          {
+            "agent_id": "Q0",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q1",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q2",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q3",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q4",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q5",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q6",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q7",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q8",
+            "status": "passed"
+          },
+          {
+            "agent_id": "Q9",
+            "status": "passed"
+          }
+        ],
+        "catalog_agent_ids": [
+          "A",
+          "B",
+          "Q0",
+          "Q1",
+          "Q2",
+          "Q3",
+          "Q4",
+          "Q5",
+          "Q6",
+          "Q7",
+          "Q8",
+          "Q9"
+        ],
+        "completion_mode": "automatic_conclusion_and_agent"
+      }
+    },
+    {
+      "id": "held_candidate_not_usable_agent",
+      "changes": [
+        {
+          "op": "add",
+          "path": "/catalog_agent_ids/-",
+          "value": "HELD"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
+      }
+    },
+    {
+      "id": "selected_agent_not_qualified",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/qualification_records/0/status",
+          "value": "held"
+        },
+        {
+          "op": "replace",
+          "path": "/catalog_agent_ids",
+          "value": [
+            "B"
+          ]
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
+      }
+    },
+    {
+      "id": "manual_completion_not_v2",
+      "changes": [
+        {
+          "op": "replace",
+          "path": "/completion_mode",
+          "value": "manual"
+        }
+      ],
+      "binding": "all",
+      "expected": {
+        "outcome": "invalid",
+        "accepted_proposal_ids": [],
+        "final_conclusion_available": false,
+        "synthesis_agent_created": false
       }
     }
   ]

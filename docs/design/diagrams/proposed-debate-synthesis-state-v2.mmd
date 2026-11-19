@@ -2,14 +2,14 @@ stateDiagram-v2
     [*] --> idle
     idle --> opening: start
     opening --> replying: opening snapshot complete
-    replying --> awaitingSynthesis: target coverage complete
+    replying --> synthesizing: target coverage complete and automatic transition
     opening --> incomplete: required content missing
     replying --> incomplete: required target missing
-    awaitingSynthesis --> synthesizing: explicit synthesis request
-    synthesizing --> consensusReady: shared claim exists
-    synthesizing --> noConsensus: valid decisions without shared claim
-    synthesizing --> verificationHold: unresolved verification
-    consensusReady --> agentCreated: explicit compile without inference
+    synthesizing --> compiling: shared claim exists
+    compiling --> completed: auto agent and conclusion persisted
+    synthesizing --> completedNoConsensus: no agreement and conclusion persisted
+    synthesizing --> completedNoProposal: no valid proposal and conclusion persisted
+    synthesizing --> verificationHold: unresolved verification and conclusion persisted
     opening --> paused: pause after current call
     replying --> paused: pause after current call
     synthesizing --> paused: pause after current call

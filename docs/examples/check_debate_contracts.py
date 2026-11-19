@@ -1,4 +1,4 @@
-"""Check synthetic DS-v1 DESIGN fixtures; no product, model, DB or network run.
+"""Check synthetic DS-v2 DESIGN fixtures; no product, model, DB or network run.
 
 Semantic observations in these fixtures are prescribed inputs, never inferred
 gold. This oracle checks the documented shape/reference/aggregation examples.
@@ -81,17 +81,25 @@ def require(condition):
 
 
 def evaluate(value, schema):
+    def result(outcome, accepted=()):
+        return {'outcome': outcome, 'accepted_proposal_ids': list(accepted),
+                'final_conclusion_available': outcome in ('consensus_ready', 'no_consensus', 'verification_hold', 'no_proposal', 'incomplete'),
+                'synthesis_agent_created': outcome == 'consensus_ready' and bool(accepted)}
     checked = check_output(schema, value)
     if not checked['checked'] or checked['errors']:
-        return {'outcome': 'invalid', 'accepted_proposal_ids': []}
-    def result(outcome, accepted=()):
-        return {'outcome': outcome, 'accepted_proposal_ids': list(accepted)}
+        return result('invalid')
     try:
         require(value['owner_session_id'] == value['request_session_id'])
         require(bool(value['question'].strip()))
         require(value['transcript_sha256'] == digest(value['points']))
         actors = {p['agent_id']: p for p in value['participants']}
         require(len(actors) == len(value['participants']))
+        qualifications = {r['agent_id']: r['status'] for r in value['qualification_records']}
+        require(len(qualifications) == len(value['qualification_records']))
+        eligible = {a for a, status in qualifications.items() if status == 'passed'}
+        require(set(value['catalog_agent_ids']) == eligible)
+        require(set(actors) <= eligible)
+
         sources, refs, conditions = map(set, (value['source_ids'], value['reference_ids'], value['condition_ids']))
         for actor in actors.values():
             require(set(actor['source_ids']) <= sources and set(actor['condition_ids']) <= conditions)
@@ -197,8 +205,8 @@ def bounded_choice_examples():
 
 def main():
     directory = ROOT / 'docs/design/contracts'
-    schema = expand_local_schema(json.loads((directory / 'debate-synthesis-v1.schema.json').read_text(encoding='utf-8')))
-    pack = json.loads((directory / 'debate-synthesis-v1.examples.json').read_text(encoding='utf-8'))
+    schema = expand_local_schema(json.loads((directory / 'debate-synthesis-v2.schema.json').read_text(encoding='utf-8')))
+    pack = json.loads((directory / 'debate-synthesis-v2.examples.json').read_text(encoding='utf-8'))
     if pack['synthetic_only'] is not True:
         raise ValueError('Only public synthetic design inputs allowed')
     failures = []

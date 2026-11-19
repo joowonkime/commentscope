@@ -12,7 +12,7 @@ sequenceDiagram
         jev-->>control: 관측 결과
         control->>control: 제거 후 coverage 계산과 게시
     end
-    user->>control: 합의 정리 요청
+    control->>control: 토론 종료 후 자동 snapshot과 합의 단계
     control->>writer: 고정된 게시 토론
     writer->>jev: 최대3 후보 명제 검증
     loop 각 Agent의 봉인된 명시 수락
@@ -20,6 +20,6 @@ sequenceDiagram
         agent->>jev: 수락 결정과 이유 검증
         jev-->>control: 수락의 유효성 관측
     end
-    control-->>user: 공통 명제와 이견 및 보류
-    user->>host: 통합 Agent 생성
-    host-->>user: 별도 Agent 또는 합의 없음
+    control->>host: 자동 집계와 무료 Compiler 및 결론 작성
+    host-->>control: 별도 Agent 또는 합의 없음과 최종 결론
+    control-->>user: 기록 끝에서 결론과 합의 Agent 및 이견 확인

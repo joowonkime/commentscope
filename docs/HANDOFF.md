@@ -8,7 +8,7 @@ GitHub에서 각자 AI로 코딩을 시작하려면 [조원 시작 안내](TEAM_
 무료 실행·담당 Issue·시작 프롬프트·브랜치/PR 순서를 따른다.
 구현을 맡길 때는 [구현 보존 기준과 설계 확정 경계](IMPLEMENTATION_BASELINE.md)의
 확정 계약 참조를 함께 준다. 미래 debate/merge 등의 미결정 구조를 개별 AI에 맡겨 채우지 않는다.
-토론·합의·통합은 [DS-v1 상세안과 구현 인계](design/DEBATE_SYNTHESIS.md)에 정리했다.
+토론·합의·통합은 [DS-v2 상세안과 구현 인계](design/DEBATE_SYNTHESIS.md)에 정리했다.
 DEC-029 수락 전 설계 검토 패킷이며 기능 구현/원가·품질 완료가 아니다.
 
 ## 1. 세 문장으로 보는 현재 상태

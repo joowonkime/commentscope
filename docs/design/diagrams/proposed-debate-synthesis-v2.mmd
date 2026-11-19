@@ -1,12 +1,17 @@
 flowchart LR
     web["기존 웹과 향후 Figma 화면"] --> api["제품 API와 세션 권한"]
     api --> controller["DebateController와 고정 Plan"]
-    parent["기존 불변 Analysis와 Agent"] --> controller
+    parent["기존 불변 Analysis와 모든 적격 Agent"] --> catalog["전체 적격 Agent 목록"]
+    catalog --> web
+    parent --> controller
     controller --> runtime["관점별 StructuredRuntime"]
     runtime --> proposer["공통 명제 Proposer"]
     proposer --> ratifier["관점별 명시 Ratification"]
     ratifier --> compiler["Host SynthesisCompiler"]
-    compiler --> derived["별도 불변 SynthesisAgent"]
+    compiler -->|"유효 합의"| derived["별도 불변 SynthesisAgent"]
+    compiler --> conclusion["최종 결론과 합의 및 이견"]
+    derived --> conclusion
+    conclusion --> web
     derived --> childChat["통합 Agent 1대1 Runtime"]
     runtime -.-> sol["Sol 생성 역할"]
     proposer -.-> sol
