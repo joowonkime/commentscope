@@ -1,10 +1,12 @@
 # MVP 상세 설계
 
-설계 버전: `commentscope-detailed-design-20261118-v73`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
-연결: REQ-001~REQ-010, TASK-001~029, DEC-001~028.
+설계 버전: `commentscope-detailed-design-20261119-v74`. B1 구현 병합 기준: `b361afce`, 완료된 확대 실행 코드: `096cb98`.
+연결: REQ-001~REQ-011, TASK-001~037, DEC-001~029.
 상태: **구현 후보의 구체적 설계**. 문서 작성·PR 병합은 새 알고리즘의 품질/원가 채택이 아니다.
 이전 S1/S2 host 계약은 opt-in 구현과 실패한 실제 진단을 보존한다. 새 B1의 채택 근거가 아니다.
 설계 검토 관측을 전체 core 유형·지지·사실 승인으로 사용하지 않는다.
+
+**구현 전 검토할 신규 설계:** [토론·합의·파생 Agent](DEBATE_SYNTHESIS.md), [프로토콜/자료](DEBATE_SYNTHESIS_PROTOCOL.md), [API/저장/화면](DEBATE_SYNTHESIS_API.md), [작업/검증 인계](DEBATE_SYNTHESIS_HANDOFF.md). TASK031 문서 작업과 DEC029 proposed를 구별한다. 상세 제안의 수락 전032~037을구현완료/활성으로바꾸지않는다.
 
 **인수인계 진입:** [현재 구조·역할·용량 경계](IMPLEMENTED_STRUCTURE.md)와 [새 담당자 실행 안내](../HANDOFF.md). 999코호트/기본1000전달결함/명시3000설정을구별하며현재웹의1:1·그룹·성찰을미구현으로기록하지않는다.
 

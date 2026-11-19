@@ -1,0 +1,21 @@
+stateDiagram-v2
+    [*] --> idle
+    idle --> opening: start
+    opening --> replying: opening snapshot complete
+    replying --> awaitingSynthesis: target coverage complete
+    opening --> incomplete: required content missing
+    replying --> incomplete: required target missing
+    awaitingSynthesis --> synthesizing: explicit synthesis request
+    synthesizing --> consensusReady: shared claim exists
+    synthesizing --> noConsensus: valid decisions without shared claim
+    synthesizing --> verificationHold: unresolved verification
+    consensusReady --> agentCreated: explicit compile without inference
+    opening --> paused: pause after current call
+    replying --> paused: pause after current call
+    synthesizing --> paused: pause after current call
+    paused --> opening: resume opening checkpoint
+    paused --> replying: resume reply checkpoint
+    paused --> synthesizing: resume synthesis checkpoint
+    opening --> executionStopped: failure budget close or reconciliation
+    replying --> executionStopped: failure budget close or reconciliation
+    synthesizing --> executionStopped: failure budget close or reconciliation

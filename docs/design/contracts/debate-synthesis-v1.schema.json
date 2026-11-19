@@ -1,0 +1,477 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$ref": "#/$defs/fixture",
+  "$defs": {
+    "participant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "kind",
+        "source_ids",
+        "condition_ids"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "kind": {
+          "type": "string",
+          "const": "comment_seeded"
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "condition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        }
+      }
+    },
+    "point": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "point_id",
+        "message_id",
+        "agent_id",
+        "seq",
+        "phase",
+        "text",
+        "origin",
+        "source_ids",
+        "reference_ids",
+        "condition_ids",
+        "requires_point_ids",
+        "target_point_ids",
+        "verification",
+        "task_fit"
+      ],
+      "properties": {
+        "point_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "message_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "seq": {
+          "type": "integer"
+        },
+        "phase": {
+          "type": "string",
+          "enum": [
+            "opening",
+            "reply"
+          ]
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Host restores original text without truncation. Generated text has a separate 600-code-point bound."
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "original_comment",
+            "ai_reasoning",
+            "external_evidence"
+          ]
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "reference_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "condition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "requires_point_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "target_point_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "maxItems": 2,
+          "uniqueItems": true
+        },
+        "verification": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "held"
+          ]
+        },
+        "task_fit": {
+          "type": "string",
+          "enum": [
+            "adequate",
+            "background",
+            "uncertain"
+          ]
+        }
+      }
+    },
+    "proposal": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "proposal_id",
+        "text",
+        "origin",
+        "condition_ids",
+        "premise_point_ids",
+        "reference_ids",
+        "direct_comment_support_count",
+        "verification"
+      ],
+      "properties": {
+        "proposal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "text": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 600
+        },
+        "origin": {
+          "type": "string",
+          "enum": [
+            "ai_reasoning",
+            "external_evidence"
+          ]
+        },
+        "condition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "premise_point_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "reference_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "direct_comment_support_count": {
+          "type": "integer",
+          "const": 0
+        },
+        "verification": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "held"
+          ]
+        }
+      }
+    },
+    "ratification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "agent_id",
+        "proposal_id",
+        "decision",
+        "reason_point_ids",
+        "missing_condition_ids",
+        "verification",
+        "draft_sha256"
+      ],
+      "properties": {
+        "agent_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "proposal_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "decision": {
+          "type": "string",
+          "enum": [
+            "accept",
+            "needs_condition",
+            "reject",
+            "undecided"
+          ]
+        },
+        "reason_point_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 1,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "missing_condition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "verification": {
+          "type": "string",
+          "enum": [
+            "passed",
+            "held"
+          ]
+        },
+        "draft_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        }
+      }
+    },
+    "fixture": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocol",
+        "question",
+        "owner_session_id",
+        "request_session_id",
+        "evaluation_time",
+        "expires_at",
+        "participants",
+        "source_ids",
+        "reference_ids",
+        "condition_ids",
+        "points",
+        "opening_cutoff_seq",
+        "cutoff_seq",
+        "transcript_sha256",
+        "proposals",
+        "ratifications",
+        "pair_checks"
+      ],
+      "properties": {
+        "protocol": {
+          "type": "string",
+          "const": "commentscope-debate-synthesis-v1"
+        },
+        "question": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "owner_session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "request_session_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "evaluation_time": {
+          "type": "string",
+          "minLength": 1
+        },
+        "expires_at": {
+          "type": "string",
+          "minLength": 1
+        },
+        "participants": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/participant"
+          },
+          "minItems": 2,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "source_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "reference_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "condition_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          },
+          "minItems": 0,
+          "uniqueItems": true
+        },
+        "points": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/point"
+          },
+          "minItems": 0,
+          "maxItems": 18,
+          "uniqueItems": true
+        },
+        "opening_cutoff_seq": {
+          "type": "integer"
+        },
+        "cutoff_seq": {
+          "type": "integer"
+        },
+        "transcript_sha256": {
+          "type": "string",
+          "pattern": "^[a-f0-9]{64}$"
+        },
+        "proposals": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/proposal"
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        },
+        "ratifications": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ratification"
+          },
+          "minItems": 0,
+          "maxItems": 9,
+          "uniqueItems": true
+        },
+        "pair_checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "left",
+              "right",
+              "choice"
+            ],
+            "properties": {
+              "left": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "right": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "choice": {
+                "type": "string",
+                "enum": [
+                  "compatible",
+                  "incompatible",
+                  "uncertain"
+                ]
+              }
+            }
+          },
+          "minItems": 0,
+          "maxItems": 3,
+          "uniqueItems": true
+        }
+      }
+    }
+  },
+  "description": "Synthetic DS-v1 design fixture shape only. Trusted bindings and semantic observations are not client fields; runtime API is unimplemented."
+}

@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261119-v80",
+  "spec_version": "commentscope-mvp-20261119-v81",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-19",
   "intent_document": "docs/MVP_SPEC.md",
@@ -1105,6 +1105,38 @@
         "docs/design/FIRST_FUNCTIONAL_VIDEO_TRIAL.md",
         "docs/design/SEEDED_WEB_INTEGRATION.md"
       ]
+    },
+    {
+      "id": "REQ-011",
+      "title": "이견과 출처를 보존하는 토론 합의·통합 Agent",
+      "implementation": "not_implemented",
+      "sources": [
+        "docs/design/DEBATE_SYNTHESIS.md"
+      ],
+      "code": [],
+      "checks": [
+        "docs/examples/check_debate_contracts.py"
+      ],
+      "acceptance": [
+        "기존 Agent·bundle을 보존하고 질문과 명시한 반박 대상에 응답하는 구조화 토론의 원문/AI추론/외부근거를 구별한다.",
+        "Agent의 명시적 수락과 별도 검증을 구별하고 만장일치한 유효 명제만 통합한다. 합의0개면 토론 결과만 남기고 가짜 합의 Agent를 만들지 않는다.",
+        "통합 Agent는 별도 kind·불변 계보·조건·이견·출처와 함께 생성하며 원댓글 지지 수/작성자 동의·진실성으로 AI 합의를 승격하지 않는다.",
+        "기존 API/DB/Figma/비용·기한과 호환하며 정상·실패·복구·시나리오 밖 사용을 검증한다. 같은 근거를 준 단일 Agent와의 실제 비교 없이 더 강하다고 주장하지 않는다."
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "DS-v1 design fixtures only:30synthetic shape/reference/phase-coverage/unanimity/hold-isolation cases and16/15/12Choice payload bounds. No product protocol/API/DB/derivedAgent or real semantic quality implemented/checked.",
+          "reference": "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
     }
   ],
   "decisions": [
@@ -2064,6 +2096,34 @@
       "design_refs": [
         "docs/design/SEEDED_PERSPECTIVE_DEBATE.md",
         "docs/design/SEEDED_PERSPECTIVE_RUNTIME_RESULT.md"
+      ]
+    },
+    {
+      "id": "DEC-029",
+      "title": "명시적 토론 수락과 출처를 보존하는 파생 합의 Agent 설계",
+      "status": "proposed",
+      "requirements": [
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "question": "기존 Agent를 유지하면서 토론·합의·별도 통합 Agent를 어떤 역할/자료/API/검증 계약으로 구현할 것인가?",
+      "options": [
+        "원 Agent의 입장/지식을 토론마다 덮어쓰고 최종 요약을 합의 Agent로 사용",
+        "별도 파생 Agent: 구조화 opening/reply→후보합의→각Agent의봉인된명시수락→별도검증→Host Compiler,합의없음/이견보존",
+        "원 Agent를 유지하고 읽기 전용 토론 요약만 제공"
+      ],
+      "selection": null,
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
       ]
     }
   ],
@@ -3998,6 +4058,276 @@
         "docs/PRODUCT_API.md",
         "docs/IMPLEMENTATION_BASELINE.md"
       ]
+    },
+    {
+      "id": "TASK-031",
+      "title": "토론·합의·통합 Agent 상세 설계와 구현 인계 패킷",
+      "requirements": [
+        "REQ-003",
+        "REQ-005",
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-030"
+      ],
+      "status": "done",
+      "deliverables": [
+        "기존 구조/실패/연구와 대조한 역할·계층·호출/상태 Mermaid 및 상세 프로토콜",
+        "자료형/출처/계보·API/DB migration·프론트 대응과 예산/오류 계약",
+        "합성 계약 예시·정상/부정 검증표·실험계획·팀원별 구현 작업/변경 경계와 수락 항목"
+      ],
+      "done_when": [
+        "기존 기능/미래 설계·사용자 승인 방향/개별 제안 결정을 구별하고 자기 설계를 자가 수락하거나 기능 코드를 구현하지 않는다.",
+        "호출·자료·명시수락/검증·합의없음·이견·파생Agent근거와최종게시유용성경계를일관되게정의한다.",
+        "문서참조·schema/examples·Mermaid를무료검사하고지급/예산권한을만들지않는구현순서와인계링크를제공한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Design-only main/protocol/API/handoff plus3matching rendered Mermaid sources,versioned JSON schema and30synthetic contract cases. Existing subset/fullDraft202012shapecheck agree30cases;18spec tests pass;choice payload16/15/12and28KBnegativeguard pass;freshbaseeditablevenv runsdesignchecker without extra packages. Major review fixes:3total responsepoints keep16question bound;max3candidate pair checks isolate conflicts;finalcoverage gates synthesis. No service/runtime/Figma/new model/network inference/financial change. DEC029 remains proposed,REQ011notimplemented,032~037todo,TASK027next/paidHOLD preserved.",
+          "reference": "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-032",
+      "title": "확정된 토론/통합 계약의 자료형·저장·합성 기반",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-031"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "고정schema·host ID/참조/상태 validator·합성 fixture",
+        "제품DB v1→v2 migration과revision/idempotency·기록읽기회귀"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-033",
+      "title": "구조화 토론 Runtime·Controller·API",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-032"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "opening/reply와공정한phase문맥·대상별최종게시적합성",
+        "기존방보존·토론API/job/중단/부분실패연결"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-034",
+      "title": "합의 후보·명시수락·별도검증",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-032"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "최대3명제의고정합의초안과봉인된Agent별수락",
+        "Jev의별도문단/수락검증·Host만장일치·이견/미평가보존"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-035",
+      "title": "파생 Agent Compiler·Runtime·소유 API",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-033",
+        "TASK-034"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "별도kind/계보/근거/기한의불변파생Agent와무료compile",
+        "합의범위1:1질문·이견조회·원Agent/legacy보존"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-036",
+      "title": "기존 Figma 과업에 토론·통합 화면 연결",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-032"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "실제API대응/합성mock·토론진행/합의·이견/생성/질문상태",
+        "reload/중복/오류/소유권과기존세과업회귀,확정디자인범위준수"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
+    },
+    {
+      "id": "TASK-037",
+      "title": "토론·통합 전체 QA와 같은근거 단일Agent 대조",
+      "requirements": [
+        "REQ-006",
+        "REQ-008",
+        "REQ-009",
+        "REQ-010",
+        "REQ-011"
+      ],
+      "decisions": [
+        "DEC-029"
+      ],
+      "depends_on": [
+        "TASK-027",
+        "TASK-033",
+        "TASK-034",
+        "TASK-035",
+        "TASK-036"
+      ],
+      "status": "todo",
+      "deliverables": [
+        "무료end-to-end/시나리오밖동작/출처·비용감사",
+        "별도승인된실험에서단일/동일근거단일/MAS품질·cold/warm비용·속도비교"
+      ],
+      "done_when": [
+        "DEC029의상세계약이명시적으로수락되고해당고정revision/절을Issue/PR에연결한다.",
+        "DEBATE_SYNTHESIS_HANDOFF의담당범위·정상/부정완료조건을충족하고기존기능/자료·실패/비용을보존한다."
+      ],
+      "required_evidence": [
+        "offline",
+        "limited_live",
+        "product_e2e"
+      ],
+      "evidence": [],
+      "design_refs": [
+        "docs/design/DEBATE_SYNTHESIS.md",
+        "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
+        "docs/design/DEBATE_SYNTHESIS_API.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+      ]
     }
   ],
   "changes": [
@@ -4358,8 +4688,12 @@
     {
       "spec_version": "commentscope-mvp-20261119-v80",
       "reason": "사용자가 각자 AI 코딩 중 임의 구조 결정 방지를 요청했다. TASK030 같은협업PR에 현재구현 보존기준/확정계약과미결정 구분·구현Issue 설계참조·구조변경 제안/권한 근거 경계를 추가한다. debate/merge/홈의 새구조는 확정하거나 구현하지 않으며 기존계약 내자율수정·TASK027next·과거품질/금융을유지한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261119-v81",
+      "reason": "사용자가 조원 구현 전 토론→합의→통합Agent 상세설계/인계를 진행하도록 요청. TASK031/REQ011/DEC029proposed 및후속032~037todo를추가해역할·자료·API·상태·출처·비용·검증·분담을문서화한다. 중앙설계작성범위이며구체제안의자가수락/기능구현/유료실행승인은아니다. TASK027next·기존품질/실패/금융유지."
     }
   ],
-  "design_version": "commentscope-detailed-design-20261118-v73",
+  "design_version": "commentscope-detailed-design-20261119-v74",
   "design_document": "docs/design/README.md"
 }
