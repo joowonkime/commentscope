@@ -4,6 +4,8 @@
 이 문서는 새 담당자가 현재 코드·검증 범위·실행 방법을 빠르게 찾기 위한 진입점이다.
 구현 구조는 [현재 구현 구조](design/IMPLEMENTED_STRUCTURE.md), 다음 작업 정본은
 [MVP 명세](MVP_SPEC.md)와 [추적표](mvp-traceability.json)다.
+GitHub에서 각자 AI로 코딩을 시작하려면 [조원 시작 안내](TEAM_START.md)의
+무료 실행·담당 Issue·시작 프롬프트·브랜치/PR 순서를 따른다.
 
 ## 1. 세 문장으로 보는 현재 상태
 

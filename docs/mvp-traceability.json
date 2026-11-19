@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261118-v78",
+  "spec_version": "commentscope-mvp-20261119-v79",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
-  "observed_date": "2026-11-18",
+  "observed_date": "2026-11-19",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -3949,6 +3949,46 @@
         "docs/design/IMPLEMENTED_STRUCTURE.md",
         "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
       ]
+    },
+    {
+      "id": "TASK-030",
+      "title": "GitHub 기반 AI 협업 시작 안내 정비",
+      "requirements": [
+        "REQ-009",
+        "REQ-010"
+      ],
+      "decisions": [],
+      "depends_on": [
+        "TASK-029"
+      ],
+      "status": "done",
+      "deliverables": [
+        "현재 제품 합성 preview와 최신 상태를 연결한 조원 시작 문서",
+        "Issue별 담당·계약·AI 시작 프롬프트·검사·PR 인계 방법",
+        "기존 Issue 양식과 README/인수인계 진입 링크 정비"
+      ],
+      "done_when": [
+        "조원이 저장소 main의 새 checkout에서 API 키 없이 현재 /mvp를 실행할 수 있고 Agent 생성/그룹/merge/최종 Figma의 구현 경계를 구별한다.",
+        "담당 Issue의 범위·완료 조건·API 계약·관련 TASK와 브랜치를 고정하고 공통 명세/예산을 임의 변경하지 않도록 안내한다.",
+        "문서·합성 실행·참조/명세 검사를 확인하고 기능 구현·유료 검증·기존 TASK027 상태를 변경하지 않는다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Updated team startup/README/HANDOFF/AGENTS/Issue template with current free MVP, scoped Issue AI prompt, contract ownership and branch/PR flow. New isolated Python3.12.3 base editable install, spec validation/18tests and synthetic /mvp HTTP200 passed; comparisons2/group4/direct2/reflection revision2 save/read succeeded with9synthetic generation6synthetic typed calls and0paid/model calls. Initial system venv ensurepip failure preserved/documented; isolated --without-pip plus existing pip --python bootstrap used without system package changes. Task027next/paid HOLD and existing production/Figma/private data unchanged. Not new debate/merge/home implementation or real quality approval.",
+          "reference": "docs/TEAM_START.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/TEAM_START.md",
+        "docs/HANDOFF.md",
+        "docs/design/IMPLEMENTED_STRUCTURE.md",
+        "docs/PRODUCT_API.md"
+      ]
     }
   ],
   "changes": [
@@ -4301,6 +4341,10 @@
     {
       "spec_version": "commentscope-mvp-20261118-v78",
       "reason": "사용자요청현재구조/조원인계문서화. 기존1:1/그룹/성찰실제구현과유용성미달을구별하고999코호트와일반prepare의기본1000전달결함·명시3000모듈검사를무료대조한다. 인계진입/도표/재현/안전한코드묶음을TASK029로추적하며실행알고리즘·기존금융·사용자기록·legacy품질기준은변경하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261119-v79",
+      "reason": "사용자 요청 GitHub/각자 AI 코딩 협업 시작 방법을 TASK030으로 문서화. 오래된 TEAM_START의 2Agent 데모 안내를 현재 합성3과업 preview로 갱신하고 Issue/계약/브랜치/프롬프트/PR/통합 담당 경계를 정리한다. TASK027next·기존 금융과 품질 기준·Figma 원본을 유지하며 debate/merge/홈의 신규 구현을 승인하거나 실행하지 않는다."
     }
   ],
   "design_version": "commentscope-detailed-design-20261118-v73",

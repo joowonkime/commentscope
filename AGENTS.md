@@ -11,6 +11,8 @@ TASK와 관련 REQ/DEC의 본문·의존성·완료 조건을 확인한 뒤 필�
 요약이나 과거 실행 기록을 현재 의도·완료 기준의 대체물로 쓰지 않는다.
 
 처음 조원 환경을 이해할 때는 `README.md` → `docs/TEAM_START.md`도 확인한다.
+담당 Issue가 있으면 관련 TASK/REQ/DEC와 범위를 대조한다. `--resume`의 주 작업을 모든
+담당자의 작업으로 복제하지 않는다. 공통 API/명세 변경은 Issue의 조율 담당자와 맞춘다.
 담당 부분의 개발 안내는 `docs/PIPELINE_DRAFT.md`, 기존 API는 `docs/COMPARE_BACKEND_API.md`다.
 `docs/TEAM_STATUS.md`, `docs/NEXT_SESSION.md`와 날짜별 문서의 과거 수치를 현재 완료 증거로 쓰지 않는다.
 일반 팀 작업에서 과거 실험을 전부 읽거나 재개하지 않는다.
