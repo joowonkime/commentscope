@@ -2,7 +2,7 @@
 
 DEC-030 제품 흐름 accepted, DEC-029 기술 상세 proposed.
 [백엔드 구현과 통합 안내](DEBATE_IMPLEMENTATION.md)에 신규 endpoint와 DB v2의 opt-in 상태, 실행 방법을 기록했다.
-새 제품 화면은 I6에서 연결한다.
+I6의 `/mvp` 연결은 자동 토론 기능을 활성화한 환경에서 확인할 수 있다.
 기존 [PRODUCT_API](../PRODUCT_API.md)를 보존하고 opt-in capability로 추가한다.
 [프로토콜](DEBATE_SYNTHESIS_PROTOCOL.md)의 의미를 프론트나 API 계층에서 다시 정하지 않는다.
 

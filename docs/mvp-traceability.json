@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261120-v85",
+  "spec_version": "commentscope-mvp-20261120-v86",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-20",
   "intent_document": "docs/MVP_SPEC.md",
@@ -4404,12 +4404,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Chromium에서 화면 조작으로 참가자 선택·자동 시작·중복 클릭·reload·결론·합의 Agent 원문·후속 질문·성찰 저장 및 재열람. 합의 없음과 검증 보류 분기, pause/resume 및 종료 결과 보존을 합성 transport로 검증. 실제 답변 품질은 별도.",
+          "reference": "experiments/mvp_browser_check.cjs",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4926,6 +4934,10 @@
     {
       "spec_version": "commentscope-mvp-20261120-v85",
       "reason": "사용자가 맡은 자동 토론 백엔드의 역할과 내부 계약을 분리해 구현하고 무료 API·저장·오류 회귀로 검증. DEC-029 상세 수락, 실제 품질, I6·I7·Q1 통합을 구별하고 TASK-027·유료 HOLD를 유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261120-v86",
+      "reason": "사용자가 요청한 자동 토론과 Agent 합성의 사용자 완주를 위해 I6 화면을 DS-v2 API에 연결했다. 실제 Chromium의 합성 과업 검증·지속 Agent 기록과 실제 선정 영상 모델 품질 및 Q1을 구별한다."
     }
   ],
   "design_version": "commentscope-detailed-design-20261119-v75",

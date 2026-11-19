@@ -59,6 +59,12 @@ python -m experiments.mvp_browser_fixture runs/my-first-preview --seeded
 마지막 명령은 서버이므로 터미널을 켜 둔다. 출력된 `origin` 뒤에 `/mvp`를 붙여 연다.
 종료는 `Ctrl+C`다. 다시 실행할 때는 아직 없는 다른 `runs/` 경로를 사용한다.
 GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 실행에 필요 없다.
+
+자동 토론을 포함해 확인할 때는
+`python -m experiments.mvp_browser_fixture runs/my-first-debate --automatic-debate`를 실행한다.
+같은 `/mvp`에서 두 관점을 선택해 질문을 제출하고 결론, 합의 Agent 원문·후속 질문,
+Reflect 저장으로 이동한다. 합의 없음과 검증 보류는 새 디렉터리에서 각각
+`--debate-result no-consensus`, `--debate-result hold`로 재현할 수 있다.
 댓글·관점·생성/판정 응답은 모두 합성이고 유료 호출은 0건이다.
 
 초기 의견에 `Safety reviews should be required.`를 적고 관점 비교 → 1:1/그룹 →
@@ -71,7 +77,7 @@ GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 �
 | --- | --- |
 | 관점·Agent 생성 | 등록 snapshot → Factory → 불변 bundle. [구조](design/IMPLEMENTED_STRUCTURE.md), TASK-027 품질 보완 |
 | 사용자 대화·그룹 | 1:1·2~3Agent opening/reply·원문·성찰 API와 /mvp 구현. 실질 반박/대응 품질 부족 |
-| 합의·통합 Agent | 미구현. [DS-v2 상세안](design/DEBATE_SYNTHESIS.md)의 DEC029 수락 후 TASK032~037로 구현 |
+| 합의·통합 Agent | 기능을 활성화한 화면에서 자동 결론·합의 Agent·후속 질문의 합성 흐름을 확인했다. [백엔드와 연결 안내](design/DEBATE_IMPLEMENTATION.md) |
 | 댓글 용량 | 과거 999는 데이터 수. 일반 prepare 등의 기본 1000 전달 결함이 남음. [무료 진단](examples/check_snapshot_capacity.py) |
 | 최종 프론트 | 기존 확인 화면은 있음. 최종 Figma 최신화·홈/URL/개인 기록·합의 화면은 별도 작업 |
 | 실제 실행 자료 | 실제 댓글·키·DB·장부는 Git에 없음. [비공개 인계 경계](HANDOFF.md#4-넘겨야-할-것과-따로-관리할-것)를 따름 |
@@ -80,7 +86,7 @@ GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 �
 Sol이 생성하고 Jev 관측/Host 검사 후 게시한다. 댓글/AI 추론/외부 근거를 구별한다.
 토론 기록 저장은 Agent의 입장·bundle을 갱신하지 않는다. 기존 그룹을 합의·통합 기능으로 보고하지 않는다.
 Figma 파일도 이 안내로 변경되지 않는다.
-사용자가 확정한 목표는 적격 Agent 전부 제공→참가자 직접 선택→자동 턴제 토론/기록→최종 결론·유효 합의 Agent다. 새 상세 흐름은 DS-v2/DEC030이며 현재 합성 화면에 구현됐다는 뜻이 아니다.
+사용자가 확정한 목표는 적격 Agent 전부 제공→참가자 직접 선택→자동 턴제 토론/기록→최종 결론·유효 합의 Agent다. 자동 토론을 활성화한 합성 화면으로 DS-v2/DEC030의 기능을 확인할 수 있다. 선정 영상의 답변 품질은 별도 검증이 필요하다.
 
 ## 4. 분담은 Issue로 정하고 계약부터 공유
 

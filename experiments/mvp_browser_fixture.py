@@ -51,7 +51,7 @@ class SyntheticModel:
     def __call__(self,stage,request):
         self.calls+=1
         self.metrics()
-        time.sleep(.35 if stage=='room' else .02)
+        time.sleep(.55 if stage=='turn-generate' else .35 if stage=='room' else .02)
         data=request['data']
         if 'DEBATE_SCOPE' in data:
             output=self.debate_output(stage,data)
