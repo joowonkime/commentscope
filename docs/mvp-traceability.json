@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261119-v83",
+  "spec_version": "commentscope-mvp-20261120-v84",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
-  "observed_date": "2026-11-19",
+  "observed_date": "2026-11-20",
   "intent_document": "docs/MVP_SPEC.md",
   "workflow_document": "docs/SPEC_WORKFLOW.md",
   "acceptance_contract": {
@@ -4466,6 +4466,48 @@
         "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
         "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
       ]
+    },
+    {
+      "id": "TASK-039",
+      "title": "MVP 완주 경로와 선택 인계 작업표",
+      "requirements": [
+        "REQ-009",
+        "REQ-010",
+        "REQ-011",
+        "REQ-012"
+      ],
+      "decisions": [
+        "DEC-029",
+        "DEC-030"
+      ],
+      "depends_on": [
+        "TASK-038"
+      ],
+      "status": "done",
+      "deliverables": [
+        "사용자 과업과 현재 기능·미구현 단계·실제 검증 증거의 대응표",
+        "기존 구조와 제안 구조의 책임·입출력·구현 순서 및 선택 전달용 작업 설명"
+      ],
+      "done_when": [
+        "확정 제품 흐름·제안 기술 상세 및 실제·합성 검증의 차이를 설명한다.",
+        "TASK027·032~037·용량·제출 운영의 선행 작업과 완료 확인을 제시하고 구현 책임을 나눠 선택 전달할 수 있다."
+      ],
+      "required_evidence": [
+        "offline"
+      ],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Reviewed main 0bf22f7 against current source and saved M4 HTTP/browser and actual quality evidence. Source/runner tree matches b7738275, 28 product regressions and 35 design examples passed, 1001 raw prepared-video rejection reproduced before provider calls. Maps DEC030 user flow to code gaps, proposed DS-v2 layers, TASK027/032~037, release and optional capacity. Separate frontend, QA, and capacity handoff entries. Product code and model execution outside this documentation task.",
+          "reference": "docs/MVP_IMPLEMENTATION_HANDOFF.md",
+          "result": "pass"
+        }
+      ],
+      "design_refs": [
+        "docs/MVP_IMPLEMENTATION_HANDOFF.md",
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/M4_PROTOTYPE_REVIEW.md"
+      ]
     }
   ],
   "changes": [
@@ -4838,6 +4880,10 @@
     {
       "spec_version": "commentscope-mvp-20261119-v83",
       "reason": "사용자가Milestone4전체채점기준과선언MVP범위의정확작동여부감사를요청. TASK038로공식원문최신export/강의/제공TA메일을대조하고실제검증·새무료UI/HTTP·신규자동흐름미구현·제출/운영공백을분리한다. TASK027next/DEC029proposed/DEC030accepted/기존품질과금융을유지하며제품·M3·Figma나유료실행은변경하지않음."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261120-v84",
+      "reason": "사용자 요청에 따라 MVP 완주에 필요한 기능, 구현 책임과 선행 작업 및 일부만 전달할 수 있는 프론트·QA·용량 작업을 TASK039에서 연결한다. DEC030제품흐름과 DEC029기술상세, TASK027과 032~037의 진행 상태를 구별한다."
     }
   ],
   "design_version": "commentscope-detailed-design-20261119-v75",
