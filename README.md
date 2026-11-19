@@ -8,6 +8,8 @@ Agent 생성 이후의1:1/그룹·근거·성찰도 구현돼 있지만 실제 �
 
 **각자 AI로 GitHub 협업을 시작하려면:** [조원 시작 안내](docs/TEAM_START.md)의
 담당 Issue·복사용 AI 프롬프트·무료 `/mvp` 실행·브랜치/PR 절차를 따릅니다.
+구조 결정은 [구현 보존 기준과 설계 확정 경계](docs/IMPLEMENTATION_BASELINE.md)를 따르며,
+구현 AI가 미결정 역할·API·합의 정책을 임의로 정하지 않습니다.
 
 **작업 정본:** [MVP 명세](docs/MVP_SPEC.md) → [작업·재개 절차](docs/SPEC_WORKFLOW.md).
 구현 후보의 모듈·알고리즘·입출력·API·상태·비용·검증 사례는 [상세 설계](docs/design/README.md)에 있습니다.

@@ -6,6 +6,8 @@
 [MVP 명세](MVP_SPEC.md)와 [추적표](mvp-traceability.json)다.
 GitHub에서 각자 AI로 코딩을 시작하려면 [조원 시작 안내](TEAM_START.md)의
 무료 실행·담당 Issue·시작 프롬프트·브랜치/PR 순서를 따른다.
+구현을 맡길 때는 [구현 보존 기준과 설계 확정 경계](IMPLEMENTATION_BASELINE.md)의
+확정 계약 참조를 함께 준다. 미래 debate/merge 등의 미결정 구조를 개별 AI에 맡겨 채우지 않는다.
 
 ## 1. 세 문장으로 보는 현재 상태
 

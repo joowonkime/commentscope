@@ -4,6 +4,8 @@
 상태·품질 근거는 [인수인계](HANDOFF.md), 구조와 Mermaid는
 [현재 구현 구조](design/IMPLEMENTED_STRUCTURE.md), 작업 정본은
 [MVP 명세](MVP_SPEC.md)·[추적표](mvp-traceability.json)를 따른다.
+구현 담당자는 [구현 보존 기준과 설계 확정 경계](IMPLEMENTATION_BASELINE.md)를 먼저 확인한다.
+현재 구조 설명과 미래 기능의 확정 설계는 다르다. 담당 AI가 미결정 구조를 정해 구현하지 않는다.
 
 ## 1. 팀원에게 그대로 전달할 메시지
 
@@ -85,6 +87,9 @@ Figma 파일도 이 안내로 변경되지 않는다.
 목표·담당자·관련 TASK/REQ/DEC·변경 범위·완료 조건·확인 방법을 적는다.
 GitHub Issue 번호와 명세의 TASK ID는 다른 식별자다. 관련 TASK가 없으면 새 변경의 계약과
 TASK를 기록하고 시작한다. Issue를 만든 것만으로 미결정 설계나 유료 실행이 승인되지는 않는다.
+구현 Issue에는 적용할 확정 설계의 절·기준 commit/PR와 구조 변경 유무를 적는다.
+필요한 계약이 비어 있으면 설계 변경안을 먼저 정리하고 수락 근거가 생긴 뒤 그 범위를 구현한다.
+기존 계약 안의 수정은 다시 승인받지 않는다.
 
 다음은 작업을 나누는 예시이며 인원·담당자를 확정한 표가 아니다.
 
@@ -119,15 +124,17 @@ TASK를 기록하고 시작한다. Issue를 만든 것만으로 미결정 설계
 1. README.md, AGENTS.md, docs/TEAM_START.md, docs/HANDOFF.md를 읽어줘.
    docs/MVP_SPEC.md → docs/SPEC_WORKFLOW.md를 읽고
    python tools/check_mvp_spec.py --resume을 실행해줘.
-   Issue와 연결한 TASK/REQ/DEC, design_refs, 현재 구조 및 API를 대조해줘.
+   docs/IMPLEMENTATION_BASELINE.md와 Issue의 확정 설계 절·기준 commit/PR,
+   관련 TASK/REQ/DEC, design_refs, 현재 구조 및 API를 대조해줘.
 2. 현재 구현/제안/미구현과 이번 담당 범위를 짧게 정리해줘.
    지정 Issue가 주 작업 TASK-027과 다르면 그 담당 범위를 따라줘.
    다른 담당자의 코드, Figma, 비공개 실행 자료와 미커밋 변경을 보존해줘.
 3. 최신 main에서 작업 브랜치를 만들어줘. 기존 수정이 있으면 보존하고
    별도 checkout/worktree를 써줘. 다른 사람의 미병합 PR을 시작점으로 삼지 마.
-4. API/책임 변경은 정상·실패 예시와 상세 계약부터 맞춰줘.
+4. 정해진 구조·계약 안에서 구현해줘. 필요한 역할/API/자료형·저장·합의 정책이
+   미결정이면 설계 변경안을 먼저 제안하고 새 구조로 구현하거나 자가 승인하지 마.
+   기존 수락 근거가 있으면 연결하고 재승인을 요구하지 마.
    공통 명세·TASK 상태의 변경은 통합 담당자와 조율해줘.
-   합의가 필요한 새 제품 범위까지 임의로 확장하지 마.
 5. 합성 fixture로 현재 화면을 확인하고, 동작 변경에 필요한 실패 재현과
    관련 검사를 수행한 뒤 구현해줘. 테스트 기대값을 결과에 맞춰 낮추지 마.
    API 키·로컬 모델 없이 진행하고 별도 실행 계약 없는 유료 호출은 하지 마.
