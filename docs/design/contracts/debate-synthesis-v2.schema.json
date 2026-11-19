@@ -329,12 +329,15 @@
         "transcript_sha256",
         "proposals",
         "ratifications",
-        "pair_checks"
+        "pair_checks",
+        "qualification_records",
+        "catalog_agent_ids",
+        "completion_mode"
       ],
       "properties": {
         "protocol": {
           "type": "string",
-          "const": "commentscope-debate-synthesis-v1"
+          "const": "commentscope-debate-synthesis-v2"
         },
         "question": {
           "type": "string",
@@ -469,9 +472,51 @@
           "minItems": 0,
           "maxItems": 3,
           "uniqueItems": true
+        },
+        "qualification_records": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "agent_id",
+              "status"
+            ],
+            "properties": {
+              "agent_id": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 80
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "passed",
+                  "held",
+                  "unassessed"
+                ]
+              }
+            }
+          }
+        },
+        "catalog_agent_ids": {
+          "type": "array",
+          "minItems": 2,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 80
+          }
+        },
+        "completion_mode": {
+          "type": "string",
+          "const": "automatic_conclusion_and_agent"
         }
       }
     }
   },
-  "description": "Synthetic DS-v1 design fixture shape only. Trusted bindings and semantic observations are not client fields; runtime API is unimplemented."
+  "description": "Synthetic DS-v2 design shape: every qualified Agent in catalog, user-selected participants, automatic turn-based conclusion/valid consensus Agent. Product pipeline remains unimplemented."
 }

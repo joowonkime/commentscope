@@ -71,7 +71,7 @@ GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 �
 | --- | --- |
 | 관점·Agent 생성 | 등록 snapshot → Factory → 불변 bundle. [구조](design/IMPLEMENTED_STRUCTURE.md), TASK-027 품질 보완 |
 | 사용자 대화·그룹 | 1:1·2~3Agent opening/reply·원문·성찰 API와 /mvp 구현. 실질 반박/대응 품질 부족 |
-| 합의·통합 Agent | 미구현. [DS-v1 상세안](design/DEBATE_SYNTHESIS.md)의 DEC029 수락 후 TASK032~037로 구현 |
+| 합의·통합 Agent | 미구현. [DS-v2 상세안](design/DEBATE_SYNTHESIS.md)의 DEC029 수락 후 TASK032~037로 구현 |
 | 댓글 용량 | 과거 999는 데이터 수. 일반 prepare 등의 기본 1000 전달 결함이 남음. [무료 진단](examples/check_snapshot_capacity.py) |
 | 최종 프론트 | 기존 확인 화면은 있음. 최종 Figma 최신화·홈/URL/개인 기록·합의 화면은 별도 작업 |
 | 실제 실행 자료 | 실제 댓글·키·DB·장부는 Git에 없음. [비공개 인계 경계](HANDOFF.md#4-넘겨야-할-것과-따로-관리할-것)를 따름 |
@@ -80,6 +80,7 @@ GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 �
 Sol이 생성하고 Jev 관측/Host 검사 후 게시한다. 댓글/AI 추론/외부 근거를 구별한다.
 토론 기록 저장은 Agent의 입장·bundle을 갱신하지 않는다. 기존 그룹을 합의·통합 기능으로 보고하지 않는다.
 Figma 파일도 이 안내로 변경되지 않는다.
+사용자가 확정한 목표는 적격 Agent 전부 제공→참가자 직접 선택→자동 턴제 토론/기록→최종 결론·유효 합의 Agent다. 새 상세 흐름은 DS-v2/DEC030이며 현재 합성 화면에 구현됐다는 뜻이 아니다.
 
 ## 4. 분담은 Issue로 정하고 계약부터 공유
 
@@ -97,7 +98,7 @@ TASK를 기록하고 시작한다. Issue를 만든 것만으로 미결정 설계
 | --- | --- | --- |
 | Factory·용량 | 1001/2000/3000 합성 입력의 prepare→등록 실패 재현과 수정 | 기존 source/parent/hash·지지 정책 보존. 실제 3000 실행은 별도 |
 | 토론 품질 | 상대 쟁점에 대한 응답과 문단 제거 후 최종 답변의 완료 조건 | seeded_runtime.py, Controller. 최종 답변이 질문에 응답하는지 별도 확인 |
-| 합의·통합 | [DS-v1 계약/합성/인계](design/DEBATE_SYNTHESIS.md)의 검토와 수락 후 담당 구현 | 기존 Agent 보존. AI 발언을 댓글 지지로 더하지 않음. 계약 후 구현 |
+| 합의·통합 | [DS-v2 계약/합성/인계](design/DEBATE_SYNTHESIS.md)의 검토와 수락 후 담당 구현 | 기존 Agent 보존. AI 발언을 댓글 지지로 더하지 않음. 계약 후 구현 |
 | 프론트 | 확정 Figma 화면과 [현재 API](PRODUCT_API.md)의 대응표 | 기존 3과업·출처 origin·partial/abstain·job/오류 상태를 표시 |
 | 통합·QA | 공통 API/명세 조율과 시나리오 밖 동작 점검 | 새로고침·중복 클릭·다른 Agent·빈 결과·실패·저장 복원 |
 

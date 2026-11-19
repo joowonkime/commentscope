@@ -1,11 +1,14 @@
-# DS-v1 프로토콜·자료·판정·실행 계약
+# DS-v2 프로토콜·자료·판정·실행 계약
 
-상태: DEC-029 proposed. [중앙 선택 DS-01~10](DEBATE_SYNTHESIS.md#3-중앙에서-검토할-선택)의 상세안이다.
+상태: DEC-030 제품 흐름 accepted, DEC-029 기술 상세 proposed.
+[중앙 선택 DS-01~10](DEBATE_SYNTHESIS.md#3-중앙에서-검토할-선택)의 상세안이다.
 기존 group/SeededSession을 이 계약으로 이미 교체했다고 읽지 않는다.
-version은 `commentscope-debate-synthesis-v1`, 모든 artifact에 결합한다.
+version은 `commentscope-debate-synthesis-v2`, 모든 artifact에 결합한다.
 
 ## P-01. 진입·범위·불변성
 
+- Factory의 근거 적격 Agent 전부를 catalog로 제공한다. 토론 정원은 출력 목록을 자르는 규칙이 아니다.
+  사용자가 선택한 참가자가 적격 catalog에 있어야 한다. 정원초과면 명시적으로 거절/안내하고 대체/절단하지 않는다.
 - 같은 소유 세션·동일 Analysis/bundle revision의 실제 가용 댓글 Agent 2~3개를 선택한다.
   없는 Agent를 합성하거나 유사한 Agent를 반대 입장으로 재라벨하지 않는다.
 - 부모는 명시적 DEC-028 seeded policy의 profile이다. legacy는 기존 화면으로 유지하고,
@@ -20,13 +23,15 @@ version은 `commentscope-debate-synthesis-v1`, 모든 artifact에 결합한다.
 
 ## P-02. 명시 대상이 있는 토론
 
-`start` 한 번은 아래 opening/reply만 수행하고 합의 단계는 사용자의 별도 요청을 기다린다.
+`start` 한 번이 아래 발언·합의·무료 Compiler·최종 결론까지 하나의 job/plan에서 자동 진행한다.
+추가 `next turn`·합의 정리·Agent 생성 클릭을 요구하지 않는다. pause/close는 사용자의 선택적 개입이다.
 
 | 단계 | 입력 문맥 | 생성·검증·게시 |
 | --- | --- | --- |
 | opening | 원질문·자기 core/조건/허용근거·준비문헌. peer 입력 없음 | 참가자별1턴. 자신의 입장과 질문 관련 근거/한계를 제시 |
 | reply | 원질문·자기 opening·모든 다른 Agent의 게시 opening | 참가자별1턴. 다른 Agent마다 명시 target1개에 대응 |
-| 토론 종료 | 게시 opening+reply | awaiting_synthesis. 새 free-form 질문은 기존1:1/group에서 처리 |
+| 토론 종료 | 게시 opening+reply | Controller가 snapshot을 고정하고 자동 synthesizing으로 진행 |
+| 합의/종료 처리 | 검증된 명제·명시 수락·집계 | 유효하면무료compile,항상최종결론/기록을저장하고조회가능하게함 |
 
 opening이 모두 게시된 시점의 cutoff를 고정한다. 모든 reply는 **동일한 opening snapshot**을 본다.
 먼저 생성된 reply를 나중 Agent에게 보여 주지 않는다. 원질문을 일반적인 reply 문구로 교체하지 않는다.
@@ -115,7 +120,7 @@ sequenceDiagram
         jev-->>control: 관측 결과
         control->>control: 제거 후 coverage 계산과 게시
     end
-    user->>control: 합의 정리 요청
+    control->>control: 토론 종료 후 자동 snapshot과 합의 단계
     control->>writer: 고정된 게시 토론
     writer->>jev: 최대3 후보 명제 검증
     loop 각 Agent의 봉인된 명시 수락
@@ -123,12 +128,12 @@ sequenceDiagram
         agent->>jev: 수락 결정과 이유 검증
         jev-->>control: 수락의 유효성 관측
     end
-    control-->>user: 공통 명제와 이견 및 보류
-    user->>host: 통합 Agent 생성
-    host-->>user: 별도 Agent 또는 합의 없음
+    control->>host: 자동 집계와 무료 Compiler 및 결론 작성
+    host-->>control: 별도 Agent 또는 합의 없음과 최종 결론
+    control-->>user: 기록 끝에서 결론과 합의 Agent 및 이견 확인
 ```
 
-원본: [sequence](diagrams/proposed-debate-synthesis-sequence-v1.mmd).
+원본: [sequence](diagrams/proposed-debate-synthesis-sequence-v2.mmd).
 
 ## P-04. 자료형과 참조
 
@@ -140,9 +145,10 @@ sequenceDiagram
 | CandidateAgreement | id,text,origin,condition_ids,premise_point_ids,reference_ids,후보쌍관측 | 새 명제 origin은 ai_reasoning/external_evidence,원댓글 직접지지0. 충돌 후보만 보류 |
 | Ratification | agent_id,proposal_id,decision,reason_point_ids,missing_condition_ids,검증참조 | 참가자별/후보별1개,같은draft hash,자기 이유/조건,봉인된 입력 |
 | SynthesisReport | shared,disagreements,unassessed/unmerged,holds,outcome,snapshot/hash | 명제별 집계·중복방지·유효수락 목록·원댓글/AI 구별 |
+| ConclusionReport | status,shared/conditions,disagreements,unanswered,target/source refs,agent_id또는null | Host가검증자료로구조화·렌더링. 별도새주장/모델호출없이마지막결과제공 |
 | SynthesisAgent | kind,id,revision,parent_refs,report_hash,accepted_claims,이견참조,근거/조건,expires_at | 별도kind/immutable·direct_comment_support_count=0·재귀통합불가 |
 
-[JSON schema](contracts/debate-synthesis-v1.schema.json)는 **공개 합성 계약 예시**의 자료형을 정의한다.
+[JSON schema](contracts/debate-synthesis-v2.schema.json)는 **공개 합성 계약 예시**의 자료형을 정의한다.
 모델 입력/출력의 alias enum은 매 요청의 실제 허용 inventory로 Host가 동적으로 제한한다.
 schema 통과만으로 소유권·참조 존재·조건 충실도·만장일치를 승인하지 않는다.
 검증결과/ID/지원 수 같은 Host 필드는 클라이언트나 모델 요청 본문에서 받지 않는다.
@@ -163,6 +169,7 @@ draft_sha256은 고정 transcript hash·후보 목록·후보쌍 관측을 함�
 
 ## P-05. 파생 Agent Compiler·Runtime
 
+Controller는 유효 shared가 생기면 추가 사용자 요청 없이 Compiler를 실행한다.
 Compiler는 모델 호출 없이 다음을 검증한다.
 
 1. 같은 유효 snapshot/draft/참가자,유효 shared claim1개 이상,참가자 전원의 accept/검증 binding.
@@ -177,7 +184,16 @@ Compiler는 모델 호출 없이 다음을 검증한다.
 설명하며 자기 합의 주장이나 검증 사실로 승격하지 않는다. 보류된 초안은 허용 주장에 넣지 않는다.
 추가 질문은 같은 원문/AI추론/준비문헌 분리와 게시 후 과업 충족 검사를 사용한다.
 질문에 답할 수 없으면 합의 범위/없는 자료를 설명한다. 새 외부 사실·원 Agent의 변심을 만들지 않는다.
-가중치 학습/병합·원 Agent 갱신·통합 Agent 재귀 합의는 v1에서 실행하지 않는다.
+가중치 학습/병합·원 Agent 갱신·통합 Agent 재귀 합의는 v2에서 실행하지 않는다.
+
+### 마지막 결론과 사용 가치
+
+Controller는 공통 명제/조건·남은 이견·미답변·근거/발화 참조·합의Agent ID(없으면null)를
+ConclusionReport로 자동 저장한다. Host의 구조화 렌더링으로 기존 검증된 내용을 정리하며
+새로운 모델 요약 호출을 추가하지 않는다. 결론은 '전원합의', '일부공통점과이견',
+'합의없음', '제안없음', '검증미결/실행불완전'을 구별한다. 원댓글 작성자의 공동 결론이라고 표시하지 않는다.
+원 Agent/조건과 비교하고 합의 Agent에 후속 질문하거나 Reflect로 이동하는 다음 행동을 제공한다.
+최종 결론과 Agent참조가 저장된 뒤에만 정상 completed로 표시한다. 합의0도 결론은 남는다.
 
 ## P-06. 상태·중단·복구
 
@@ -186,14 +202,14 @@ stateDiagram-v2
     [*] --> idle
     idle --> opening: start
     opening --> replying: opening snapshot complete
-    replying --> awaitingSynthesis: target coverage complete
+    replying --> synthesizing: target coverage complete and automatic transition
     opening --> incomplete: required content missing
     replying --> incomplete: required target missing
-    awaitingSynthesis --> synthesizing: explicit synthesis request
-    synthesizing --> consensusReady: shared claim exists
-    synthesizing --> noConsensus: valid decisions without shared claim
-    synthesizing --> verificationHold: unresolved verification
-    consensusReady --> agentCreated: explicit compile without inference
+    synthesizing --> compiling: shared claim exists
+    compiling --> completed: auto agent and conclusion persisted
+    synthesizing --> completedNoConsensus: no agreement and conclusion persisted
+    synthesizing --> completedNoProposal: no valid proposal and conclusion persisted
+    synthesizing --> verificationHold: unresolved verification and conclusion persisted
     opening --> paused: pause after current call
     replying --> paused: pause after current call
     synthesizing --> paused: pause after current call
@@ -205,7 +221,7 @@ stateDiagram-v2
     synthesizing --> executionStopped: failure budget close or reconciliation
 ```
 
-원본: [state](diagrams/proposed-debate-synthesis-state-v1.mmd).
+원본: [state](diagrams/proposed-debate-synthesis-state-v2.mmd).
 executionStopped는 그림의 묶음이며 API는 exhausted/failed/closed/needs_reconciliation을 구별한다.
 paused는 resume_phase·cursor를 저장해 하나의 이전 phase로만 돌아간다.
 pause는 진행 중 호출을 회수하지 않고 완료/정산 후 새 호출을 멈춘다.
@@ -223,7 +239,8 @@ close는 늦은 결과를 게시하지 않으며 비용은 남긴다. known/unkn
 | Host 집계/Compiler/저장·열람 | 0 | 0 | 0 |
 | 합계 | 3N+1 | 3N+1 | 6N+2:2인14,3인20 |
 
-합의 단계 미요청이면4N,초안0개/실패/보류이면 후속 호출을 생략한다.
+정상 start는 전체 흐름을 예약한다. 중단·불완전 토론·초안0개/실패/보류이면 불필요한 후속 호출을 생략한다.
+최종 결론의 Host 렌더링과 유효 합의 Agent 자동 compile은 추가 모델 호출0이다.
 통합 Agent의 후속 질문은 별도 대화 한도 안에서 생성1+검증1이다.
 모든 시도·전송 실패·첫 생성 비용을 기록하며 부정 결과도 원가 분모에 포함한다.
 

@@ -1,7 +1,9 @@
-# DS-v1 구현·검증 인계
+# DS-v2 구현·검증 인계
 
 TASK031의 설계 패킷이며 TASK032~037은 **todo / DEC029 수락 후 구현**이다.
 수락 전에는 상세 검토·합성 예시 확인까지 수행한다. 이 문서가 구조나 유료 실행을 자가 승인하지 않는다.
+DEC030의 '적격Agent전부→사용자선택→자동턴제→최종결론/합의Agent→사용가치'는 사용자 명시로 확정됐다.
+이 제품 흐름을 다시 미결정으로 만들거나 수동 합의/생성 클릭을 필수 단계로 되돌리지 않는다.
 처음에는 [선택표](DEBATE_SYNTHESIS.md#3-중앙에서-검토할-선택) →
 [프로토콜](DEBATE_SYNTHESIS_PROTOCOL.md) → [API/저장/화면](DEBATE_SYNTHESIS_API.md)을 읽는다.
 
@@ -9,8 +11,8 @@ TASK031의 설계 패킷이며 TASK032~037은 **todo / DEC029 수락 후 구현*
 
 - 저장소·고정 설계 commit/PR·DEC029 수락 근거와 담당 Issue.
 - 담당 TASK와 아래 변경 소유 범위·선행 작업·완료 조건.
-- [합성 계약 예시](contracts/debate-synthesis-v1.examples.json)와
-  [schema](contracts/debate-synthesis-v1.schema.json). 실제 댓글/키/DB/장부는 Git에 없음.
+- [합성 계약 예시](contracts/debate-synthesis-v2.examples.json)와
+  [schema](contracts/debate-synthesis-v2.schema.json). 실제 댓글/키/DB/장부는 Git에 없음.
 - 기존 [AGENTS](../../AGENTS.md), [협업 시작](../TEAM_START.md),
   [구현 기준](../IMPLEMENTATION_BASELINE.md), [현재 API](../PRODUCT_API.md).
 
@@ -25,11 +27,11 @@ API/DB·새 Runtime과 위임받은 범위 외의 구조 변경은 통합 담당
 
 | TASK | 예정 모듈·주 책임 | 선행 | 완료 조건 |
 | --- | --- | --- | --- |
-|032 계약/저장 | `product/debate_contracts.py`,`debate_store.py`;기존 `store.py` migration |031 및 DEC029 수락 | 타입·동적 alias·불변 참조 validator,같은 DB v1→v2,옛 기록/requests/jobs/restart 호환 |
-|033 구조화 토론 | `agents/structured_runtime.py`,`product/debate_service.py`;`app.py`의 얇은 dispatch |032 | 고정 phase snapshot·원질문·명시 target,16질문 상한과제거후 coverage,API/start/control,부분실패·늦은응답 |
+|032 계약/저장 | `product/debate_contracts.py`,`debate_store.py`;기존 `store.py` migration |031 및 DEC029 수락 | 적격전체catalog/선택분리,타입·alias·참조·자동완료계약,같은DBv1→v2·기존기록호환 |
+|033 자동 토론 Controller | `agents/structured_runtime.py`,`product/debate_service.py`;`app.py`의 얇은 dispatch |032 | 시작1회에서발언→합의→compile/결론으로전이,16질문·coverage·중단/부분실패. 후속모듈은계약callback으로합성검증 |
 |034 합의/수락 | `agents/synthesis_proposal.py`,`synthesis_ratification.py`,`product/synthesis_service.py` |032 | 초안1회+검증1회,Agent별 봉인된 명시 수락+검증,명제별집계/no_consensus/hold·예산 |
-|035 파생 Agent | `agents/synthesis_compiler.py`,`synthesis_runtime.py`,`product/synthesis_agents.py` |033·034 | 불변계보·새kind·직접댓글지지0,무료compile/cache,1:1/출처API·원Agent/legacy회귀 |
-|036 프론트 | `product/debate_client.js`,`debate_ui.js`,기존`mvp.js/html/css`연결 또는 확정 팀프론트 adapter |032 계약 | capability·토론/합의/이견/생성/질문·source origin·Reflect·reload·오류/중복·확정디자인 대응 |
+|035 파생 Agent/최종화 | `agents/synthesis_compiler.py`,`synthesis_runtime.py`,`product/synthesis_agents.py` |033·034 | 자동무료compile/결론·계보/새kind/직접지지0,보고서/Agent원자저장,1:1/출처·원Agent/legacy회귀 |
+|036 프론트 | `product/debate_client.js`,`debate_ui.js`,기존`mvp.js/html/css`연결 또는 확정 팀프론트 adapter |032 계약 | 전체catalog→선택→시작1회→순서있는기록→마지막결론/Agent·후속질문,별도합의/생성클릭없음 |
 |037 통합/품질 | 관련 test/브라우저와별도실험계약 |027·033~036 | 정상·부정E2E·같은근거단일Agent대조·전체청구/시간·초행사용 QA. 단순CI를품질로승격하지않음 |
 
 032 이후033/034/036은 확정 인터페이스와 합성 fixture로 병행할 수 있다.
@@ -38,6 +40,8 @@ API/DB·새 Runtime과 위임받은 범위 외의 구조 변경은 통합 담당
 034/036이 공통파일에 각자의 실행/상태 체계를 추가하지 않는다.
 기존 `seeded_runtime.py`는 공개 계약을 유지하고 공통 순수 helper 추출이 필요하면 관련 회귀를 먼저 둔다.
 옛 frozen 실행 checkout이나 private 원본을 직접 수정하지 않는다.
+033의 합성 callback 단계 통과는034/035의 실제 연결 완료가 아니다. 실제 모듈이 준비되기 전
+capability를 false로 두고035/037에서 전체자동경로를 연결·검증한다.
 
 ## 3. 정상·부정 완료 사례
 
@@ -65,6 +69,10 @@ API/DB·새 Runtime과 위임받은 범위 외의 구조 변경은 통합 담당
 | V18 |통합Agent를새합의의부모로사용 |v1미지원거절,자기반복동의로계보/확신증폭금지 |
 | V19 |한글/영문·Unicode한도·Jev28KB초과 |길이/byte를구분,필수내용조용히절단하지않음 |
 | V20 |겹치는부모관점/실제Agent부족 |반대Agent합성금지. 중복가능성표시,가용수부족안내 |
+| V21 |적격Agent12개,사용자가2개선택 |목록12개전부,선택2개로만토론. 생성수를2/3으로절단금지 |
+| V22 |토론시작한번후정상합의 |추가합의/compile버튼없이기록→결론/Agent저장. 마지막결과에서후속질문가능 |
+| V23 |합의없음/검증미결 |결론/이견/미답변과Agent없음을표시. 기록과사용가치를전부없애지않음 |
+| V24 |다른참가자선택/정원초과 |선택ID그대로실행또는명시거절. 몰래대체/일부제외금지 |
 
 기존 source fidelity·조건·필수 사실·금융 검사를 낮추지 않는다.
 negative fixture를 통과시키기 위해 schema나 기대값을 현재 출력에 맞춰 바꾸지 않는다.
@@ -84,6 +92,8 @@ python -m unittest discover -s tests -p test_mvp_spec.py
 
 이 설계 PR의 검사기는 계약 예시의 shape·참조·집계 규칙만 확인하며,
 현재 product가 새 프로토콜을 실행한다는 뜻이 아니다. 구현되지 않은 endpoint를 호출하지 않는다.
+이 fixture는 참가자2~3명을선택한토론계약예시다. 적격catalog자체가0/1개일때의실제화면/1:1검사는
+V20에서따로확인하며출력catalog의최소Agent수를2로강제하지않는다.
 합성 case의 지정된 의미 관측을 실제 모델/독립 human gold로 쓰지 않는다.
 양OS CI는 해당 commit의 코드 회귀이며 DEC029 수락·새기능·전체MVP 승인이 아니다.
 이 설계의 합성 계약 검사도 양OS workflow에 연결한다. 이는 제안/예시의 정합성만 확인하며
@@ -94,13 +104,21 @@ python -m unittest discover -s tests -p test_mvp_spec.py
 이번 설계 작업의 모델 호출은0이다. 아래 실험은 입력·코드·예산·기한·평가를 별도로
 고정/수락한 뒤 실행할 계획이다. 과거 만료 plan이나 팀 잔액을 새 권한으로 해석하지 않는다.
 
+### 사용자 가치의 우선 완료 기준
+
+초행 사용자가 전체 적격 목록에서 참가자를 고르고 한 번 시작해,기록과 마지막 결론/합의Agent로
+이동할 수 있어야 한다. 사용자에게 서로 다른 주장/근거·어떤 조건에서 합의했는지·어디에 이견이
+남았는지 설명해 보도록 하고,원문 이동과 후속 질문/자기 의견 정리까지 확인한다.
+Agent수·합의율·내부판정정확도만으로 이 가치를 달성했다고 하지 않는다.
+의견이 유지되는 경우도 정상이며 설득/의견 변화가 목표가 아니다.
+
 ### 비교 arm과 공정성
 
 | Arm | 조건 | 구별하려는 효과 |
 | --- | --- | --- |
 | A 원Agent |고정된부모1개,동일모델/질문 |기본체험기준. 근거범위차이가있어MAS원인비교로단독사용불가 |
 | B 동일근거단일Agent |부모전원의동일허용원문/조건/문헌,토론없음 |정보를더준효과와MAS효과구별 |
-| C 토론→파생Agent |같은부모/근거/모델에서DS-v1으로생성 |실제토론/명시수락/컴파일효과·추가비용 |
+| C 토론→파생Agent |같은부모/근거/모델에서DS-v2으로생성 |실제토론/명시수락/컴파일효과·추가비용 |
 
 원문/문헌·초기관점·질문·모델/provider·총비용상한을 맞춘다.
 실제 토큰/호출/시간은 같다고 가정하지 않고 모두 기록한다. B에 추가 reasoning budget을
@@ -143,10 +161,11 @@ pause/close,세션/자료만료,저장후재열람을 초행 사용자가 수행
 ## 6. 구현 AI에게 전달할 추가 문장
 
 ```text
-담당 TASK/Issue의 구조 기준은 DEC029에서 수락한 DS-v1 고정 revision이다.
+담당 TASK/Issue의 구조 기준은 DEC029에서 수락한 DS-v2 고정 revision이다.
 DEBATE_SYNTHESIS의 DS-01~10, PROTOCOL의 담당 P절, API의 담당 A절,
 이 문서의 담당 TASK와 완료 사례를 읽고 구현해줘.
 DEC029가 아직 proposed면 설계를 자가 수락하거나 기능 구현을 시작하지 마.
+DEC030의 사용자선택자동완료와전체적격목록은이미명시된요구이므로임의로다른흐름으로바꾸지마.
 기존 계약 안의 내부 구현은 자율적으로 진행하고, 새로운 구조 변경은 근거와 대안을 제안해줘.
 기존 Agent/legacy·API·Figma·private데이터·장부와 실패를 보존해줘.
 합성 shape/집계 성공, 실제 모델 의미 품질, 사용자 QA와 전체MVP를 구별해줘.
