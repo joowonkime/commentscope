@@ -42,6 +42,9 @@ flowchart TD
 
 ## 팀에서 바로 확인하는 방법
 
+브라우저만으로 기능을 확인하는 팀원은 [MVP 사용 안내](../MVP_PREVIEW_GUIDE.md)를 먼저 봅니다.
+아래는 API와 연결을 확인하는 개발자용 절차입니다.
+
 1. 이 백엔드 PR의 브랜치를 기준으로
    `python -m experiments.mvp_browser_fixture runs/debate-local --automatic-debate`를 실행한다.
    출력된 로컬 주소가 I6 연결용 서버다. 합성 API를 사용하므로 실험 키가 필요 없다.

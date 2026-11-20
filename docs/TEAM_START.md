@@ -7,6 +7,9 @@
 구현 담당자는 [구현 보존 기준과 설계 확정 경계](IMPLEMENTATION_BASELINE.md)를 먼저 확인한다.
 현재 구조 설명과 미래 기능의 확정 설계는 다르다. 담당 AI가 미결정 구조를 정해 구현하지 않는다.
 
+**화면부터 테스트할 팀원은 [MVP 사용 안내](MVP_PREVIEW_GUIDE.md)에서 검증 브랜치를 받으면 됩니다.**
+아래 내용은 GitHub에서 코드 수정을 시작하는 팀원용입니다.
+
 ## 1. 팀원에게 그대로 전달할 메시지
 
 > 공통 저장소는 https://github.com/joowonkime/commentscope 입니다.
@@ -60,12 +63,9 @@ python -m experiments.mvp_browser_fixture runs/my-first-preview --seeded
 종료는 `Ctrl+C`다. 다시 실행할 때는 아직 없는 다른 `runs/` 경로를 사용한다.
 GPU·로컬 모델·OpenRouter 키·clustering/openjev 추가 의존성은 이 실행에 필요 없다.
 
-자동 토론을 포함해 확인할 때는
-`python -m experiments.mvp_browser_fixture runs/my-first-debate --automatic-debate`를 실행한다.
-같은 `/mvp`에서 두 관점을 선택해 질문을 제출하고 결론, 합의 Agent 원문·후속 질문,
-Reflect 저장으로 이동한다. 합의 없음과 검증 보류는 새 디렉터리에서 각각
-`--debate-result no-consensus`, `--debate-result hold`로 재현할 수 있다.
-댓글·관점·생성/판정 응답은 모두 합성이고 유료 호출은 0건이다.
+자동 토론과 합의 Agent는 검증 브랜치의 화면에서 확인합니다. 코드 받기, 버튼 순서,
+합의 없음·검증 보류 실행은 [MVP 사용 안내](MVP_PREVIEW_GUIDE.md)에 있습니다.
+댓글·관점·생성/판정 응답은 모두 합성이며 유료 호출은 0건입니다.
 
 초기 의견에 `Safety reviews should be required.`를 적고 관점 비교 → 1:1/그룹 →
 원문 조회 → Reflect 직접 수정·저장 → 새로고침 재열람을 확인한다.
@@ -79,7 +79,7 @@ Reflect 저장으로 이동한다. 합의 없음과 검증 보류는 새 디렉�
 | 사용자 대화·그룹 | 1:1·2~3Agent opening/reply·원문·성찰 API와 /mvp 구현. 실질 반박/대응 품질 부족 |
 | 합의·통합 Agent | 기능을 활성화한 화면에서 자동 결론·합의 Agent·후속 질문의 합성 흐름을 확인했다. [백엔드와 연결 안내](design/DEBATE_IMPLEMENTATION.md) |
 | 댓글 용량 | 과거 999는 데이터 수. 일반 prepare 등의 기본 1000 전달 결함이 남음. [무료 진단](examples/check_snapshot_capacity.py) |
-| 최종 프론트 | 기존 확인 화면은 있음. 최종 Figma 최신화·홈/URL/개인 기록·합의 화면은 별도 작업 |
+| 프론트 | 검증 브랜치에서 자동 토론·결론·합의 Agent·Reflect까지 연결. 홈·URL 등록·장기 기록과 공개 운영은 별도 작업 |
 | 실제 실행 자료 | 실제 댓글·키·DB·장부는 Git에 없음. [비공개 인계 경계](HANDOFF.md#4-넘겨야-할-것과-따로-관리할-것)를 따름 |
 
 현재 발언은 자기 관점·허용 댓글·준비 문헌·최근 자기 발언 2개·직전 상대 발언을 입력으로
