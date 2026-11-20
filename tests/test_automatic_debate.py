@@ -116,6 +116,10 @@ class AutomaticDebateTests(unittest.TestCase):
         gens = [req['data'] for stage, req in self.events if stage == 'turn-generate']
         self.assertTrue(all(g['QUESTION'] == final['plan']['question'] for g in gens))
         self.assertFalse(any(g['OTHER_CONTEXT_ONLY'] for g in gens[:2]))
+        verified = [req['state'] for stage, req in self.events if stage == 'turn-verify']
+        self.assertEqual([g['PHASE_TASK'] for g in gens], [v['PHASE_TASK'] for v in verified])
+        self.assertIn('Leave peer responses', gens[0]['PHASE_TASK'])
+        self.assertIn('each supplied peer target', gens[2]['PHASE_TASK'])
         self.assertEqual({p['message_id'] for g in gens[2:] for p in g['OWN_CONTEXT']+g['OTHER_CONTEXT_ONLY']},
                          {m['message_id'] for m in messages[1:3]})
         votes = [req['data'] for stage, req in self.events if stage == 'ratify-generate']

@@ -116,11 +116,14 @@ class DebateService:
     def preflight(self, room, plan, *, starting=False):
         if plan['execution_sha256'] != self.binding or digest(plan) != room['plan_sha256']:
             raise WebError(409, 'execution_binding_conflict')
-        ceiling = amount(self.app.reservation({'system': '', 'data': {}, 'schema': {},
-                                                'max_tokens': MAX_GENERATION_TOKENS}))
-        ceiling += amount(self.app.decision_reservation())
         if starting:
-            maximum = (plan['max_physical_calls']//2)*ceiling
+            # Include the output allowance and verifier for every possible pair.
+            # Execution checks the actual input payload separately at each stage.
+            estimate = amount(self.app.reservation({
+                'system': '', 'data': {}, 'max_tokens': MAX_GENERATION_TOKENS,
+                'schema': {'type': 'object', 'properties': {}, 'additionalProperties': False},
+            })) + amount(self.app.decision_reservation())
+            maximum = (plan['max_physical_calls']//2)*estimate
             available = amount(room['maximum_cost_usd'])
             if self.app.debate_balance is not None:
                 available = min(available, amount(self.app.debate_balance()))

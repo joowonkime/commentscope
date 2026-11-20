@@ -16,6 +16,7 @@ from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.storage import write_json_exclusive as write
 from commentscope.providers.openrouter_budget import SpendLedger
 from commentscope.providers.budget import BudgetExhausted
+from commentscope.providers.remote_verification import SOL
 from experiments.grounding_contract_demo import fixture
 from test_openrouter import deployment
 
@@ -286,6 +287,35 @@ class ProductServerPlanTests(unittest.TestCase):
         with app.store.transaction() as db:
             stored=decode(db.execute('SELECT data FROM rooms WHERE id=?',(room['room_id'],)).fetchone())
             return Decimal(stored['cost_usd'])
+
+    def test_automatic_debate_start_uses_strict_provider_reservation(self):
+        self.seeded()
+        bundle = deepcopy(self.analysis.bundle)
+        bundle['candidates'].append({**deepcopy(bundle['candidates'][0]), 'id': 'P2'})
+        self.analysis = Analysis(bundle, {'synthetic': True})
+        server.from_factory.return_value = self.analysis
+        self.cycle['selected_deployment'] = deepcopy(SOL)
+        self.cycle_file.write_text(json.dumps(self.cycle))
+        directory = self.root/'automatic-debate'
+        server.prepare(directory, self.factory, self.cycle_file, session_ttl_seconds=3600,
+                       room_maximum_usd='1', automatic_debate=True)
+        product, _, _ = server.build(directory)
+        try:
+            token = secrets.token_urlsafe(32)
+            _, session = product.handle('POST', '/api/v1/sessions', token, {
+                'analysis_id': self.analysis.id, 'bundle_revision': self.analysis.revision,
+                'initial_opinion': '', 'request_id': 'create'})
+            _, debate = product.handle('POST', '/api/v1/sessions/'+session['session_id']+'/debates', token, {
+                'analysis_revision': self.analysis.revision, 'participant_ids': ['P1', 'P2'],
+                'initial_revision': 1, 'question': 'What should we do?', 'request_id': 'debate'})
+            with patch.object(product, '_job', return_value=(202, {'job_id': 'queued'})) as enqueue:
+                status, _ = product.handle('POST', '/api/v1/debates/'+debate['debate_id']+'/start', token,
+                                           {'expected_revision': debate['revision'], 'request_id': 'start'})
+                self.assertEqual(status, 202)
+                enqueue.assert_called_once()
+            self.base.call.assert_not_called()
+        finally:
+            product.close()
 
     def test_seeded_server_freezes_verifier_and_routes_both_charges_without_duplicate_dispatch(self):
         self.seeded();directory,plan=self.prepare()

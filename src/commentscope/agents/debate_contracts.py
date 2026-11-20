@@ -27,7 +27,10 @@ def require_ids(selected, available):
 
 
 def generate(run, stage, scope, system, data, schema, max_tokens=MAX_GENERATION_TOKENS):
-    request = {'system': f'{DATA_ONLY}\n{system}', 'data': {'DEBATE_SCOPE': scope, **data},
+    request = {'system': f'{DATA_ONLY}\n{system}\n'
+               'Return one compact JSON object matching the schema. Close every array and object '
+               'immediately after its final item or field. End the response after the outer object.',
+               'data': {'DEBATE_SCOPE': scope, **data},
                'schema': schema, 'max_tokens': max_tokens}
     response = run(stage, request)
     value = response.get('output')

@@ -12,9 +12,14 @@ TURN_CHECKS = {
     'attribution': ('Does this avoid changing attribution, adding author experiences or claiming endorsement?', 'faithful'),
     'scope': ('Does the point retain the applicable stance, essential conditions, uncertainty and source scope?', 'preserved'),
     'basis': ('Is the point grounded in the cited anchors and any exact reference? Preserve hypothetical worlds. Peer speech and model memory '
-              'are not factual evidence. A quote selected by the host must fit its use here.', 'supported'),
-    'task_fit': ('Does the point address the question and every target it lists, with genuine engagement '
-                 'or a concrete justified limitation? Repetition and loose topical similarity do not count.', 'responsive'),
+              'are not factual evidence. A quote selected by the host must fit its use here. An AI proposal or value judgment '
+              'may extend the anchor explicitly as reasoning. It may not add a fact or a claim about the source author.', 'supported'),
+}
+TURN_TASKS = {
+    'opening': 'State this perspective’s own question-specific reason or evidence limitation. '
+               'Leave peer responses and joint conclusions to later phases, including when the question requests them.',
+    'reply': 'Address each supplied peer target with an explicit relation and a question-specific reason or evidence limitation.',
+    'followup': 'Address the new question using the accepted claims and their limitations. Retain applicable conditions and unresolved differences.',
 }
 
 
@@ -101,13 +106,14 @@ def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None)
                  'targets': array(edge, maximum=len(targets))})
     schema = obj({'answerability': choice(('answered', 'partial', 'abstain')),
                   'points': array(point, maximum=3)})
-    data = {'PHASE': phase, 'QUESTION': query, 'CLAIMS': alias_rows,
+    phase_task = TURN_TASKS[phase]
+    data = {'PHASE': phase, 'PHASE_TASK': phase_task, 'QUESTION': query, 'CLAIMS': alias_rows,
             'CORE': next((a for a, key in aliases.items() if key == core_id), None),
             'CONDITIONS': required_conditions, 'REFERENCES': inventory, 'TARGETS': targets,
             'OWN_CONTEXT': own, 'OTHER_CONTEXT_ONLY': peers}
     value = generate(run, 'turn-generate', scope, '''
-Answer the original QUESTION from this perspective's CLAIMS, respecting CONDITIONS.
-In reply address each TARGET using explicit point relations and your own grounds.
+Address the original QUESTION from this perspective's CLAIMS, respecting CONDITIONS and PHASE_TASK.
+In a reply, use the supplied TARGETS and your own grounds.
 Other speakers are context. Their statements are not your evidence or proof.
 Keep fictional claims within their fictional world. A derived perspective may cite other speakers
 only as attributed disagreement, and may not treat their disagreement as an accepted claim or a fact.
@@ -138,21 +144,22 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
     if not proposed:
         return {**build_turn([], [], value['answerability'], False, {}),
                 'missing_targets': [dict(row, target_id=key) for key, row in targets.items()]}
-    checks = {'answer': question('Does the whole proposed response address the question without unsupported certainty, '
-                                 'possibly with an explicit and justified evidence limitation?', 'appropriate')}
+    checks = {'answer': question('Does the whole proposed response meet PHASE_TASK for this question without unsupported '
+                                 'certainty, possibly with an explicit and justified evidence limitation?', 'appropriate')}
+    point_checks = {**TURN_CHECKS, 'task_fit': ('Does the point substantively address PHASE_TASK and every target it lists? '
+                                               'Repetition and loose topical similarity do not count.', 'responsive')}
     used = {}
     for alias, (_, resolved, exact) in evidence.items():
         used[alias] = {'anchors': {key: {**compact(entry), **short_citations(entry)}
                                    for key, entry in resolved.items()}, 'passages': exact}
-        checks.update(addressed(alias, 'PROPOSED_POINTS', TURN_CHECKS))
+        checks.update(addressed(alias, 'PROPOSED_POINTS', point_checks))
     answers, receipt = observe(run, 'turn-verify', scope,
-        {'QUESTION': query, 'TARGETS': targets, 'CONDITIONS': required_conditions,
+        {'QUESTION': query, 'PHASE_TASK': phase_task, 'TARGETS': targets, 'CONDITIONS': required_conditions,
          'ATTRIBUTED_DISAGREEMENT_ONLY': peers if derived is not None else [],
          'PROPOSED_POINTS': proposed, 'EVIDENCE': used, 'ANSWERABILITY': value['answerability']}, checks)
     points, premises, covered, held = [], {}, set(), False
     for alias, row in proposed.items():
-        expected = {k:v for k,v in TURN_CHECKS.items() if k != 'task_fit'}
-        if not supported(answers, alias, expected):
+        if not supported(answers, alias, TURN_CHECKS):
             held = True
             continue
         anchor_ids, resolved, exact = evidence[alias]
