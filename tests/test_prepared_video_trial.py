@@ -187,7 +187,10 @@ class PreparedVideoTests(unittest.TestCase):
             return {'provider':'OpenAI','model':t.e.remote.SOL['model'],
                 'choices':[{'finish_reason':'stop','message':{'content':json.dumps(value)}}],
                 'usage':{'cost':0.00001,'prompt_tokens':1,'completion_tokens':1}}
-        with patch.object(t,'from_factory',return_value=analysis),patch.object(t.e,'check_quota'),patch.object(t.e,'InferenceBudget') as budget:
+        with (patch.object(t, 'from_factory', return_value=analysis),
+              patch.object(t.e, 'check_quota'),
+              patch.object(t.e.api_resources.SpaceGuard, 'check'),
+              patch.object(t.e, 'InferenceBudget') as budget):
             budget.return_value.call.side_effect=reply
             app,legacy,session=t.build(root)
             try:

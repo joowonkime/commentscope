@@ -57,6 +57,8 @@ def draft(analysis, participants, points, query, frozen, scope, run):
     value = generate(run, 'draft-generate', scope, '''
 Propose up to three independent possible common claims answering the QUESTION.
 Use only the published POINTS and their REFERENCES. These are proposals, not participant votes.
+Write each claim as one short, complete sentence. Keep essential qualifiers in that sentence.
+Aim for at most 350 characters to leave room below the 600-character schema limit.
 Preserve all relevant CONDITIONS and uncertainty. Ground conditional/value reasoning in points.
 Use external_evidence only with exact passages that were cited by named points.
 Return no candidates if you cannot find a useful common proposition. Use the user's language.''',

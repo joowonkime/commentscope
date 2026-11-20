@@ -4456,7 +4456,20 @@
         "limited_live",
         "product_e2e"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "limited_live",
+          "scope": "2026-11-21 two archived real videos with new Sol/Jev calls: four published CNBC turns and two grounded drafts, no verified acceptance or derived agent; same-evidence single-agent follow-up 6/6, paired derived answers 0/6; 31 charged requests with provider and ledger reconciliation.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Real Chromium user actions reached Explore, automatic opening/reply, held conclusion, original source and persisted reflection; live consensus and external-user availability remain unverified.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",

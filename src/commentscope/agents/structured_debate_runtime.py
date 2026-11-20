@@ -120,6 +120,7 @@ only as attributed disagreement, and may not treat their disagreement as an acce
 For original_comment select exactly one anchor and supply empty text. The host restores the verified claim.
 For ai_reasoning use only conditional/value reasoning anchored in claims and supply no references.
 For external_evidence cite exact supplied passages for every empirical assertion.
+Keep each free-text point short and complete, with its essential qualifiers. Aim for at most 350 characters.
 An abstention may have a grounded explanation. Never claim agreement, public consensus,
 invented sources, or knowledge beyond the allowed scope. Use the user's language.''', data, schema)
     proposed, evidence = {}, {}
