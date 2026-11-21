@@ -3964,6 +3964,12 @@
           "scope": "Frozen Jubilee180 discovery60/search33/384pairs ->383saved relations/37supports ->34F4sources/29graphs(11complete)/11candidate records(5complete) ->2profiles each1source/no admitted own reasons. Different responsibility/detector concerns, not opposed learning policies. Baseline comparisons0/2; direct developed reason1/2,studies0/2,substantive unavailable-IQ limitation2/2. Proposal relevance before filtering and core-inherited new-paragraph scope remain. Source/candidate loss and17of28new-paragraph holds uncalibrated; no human gold or fullMVP.",
           "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Exact saved-schedule replay with the same pair and source ceilings: CNBC96 direct-source candidate coverage 13/32 to 32/32, Jubilee180 33/60 to 60/60. All 72 saved support pairs and sources for all six existing profiles stay selected. New relation approval and Agent quality remain unmeasured.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
         }
       ],
       "design_refs": [
@@ -3971,7 +3977,8 @@
         "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/SEEDED_WEB_INTEGRATION.md",
-        "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {

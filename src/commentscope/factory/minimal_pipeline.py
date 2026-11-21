@@ -54,6 +54,8 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                 or shared_memberships is not None or membership_batch_protocol is not None
                 or membership_retrieval_policy != cc.ALIAS_RETRIEVAL):
             raise ValueError('Mining search requires fresh shared typed/full-scope raw inputs')
+        if membership_search_policy['version'] == perspective_mining.SEEDED and admission_policy is None:
+            raise ValueError('Direct nominee search requires the single-source admission policy')
     if membership_judge_protocol is not None and (membership_judge_protocol != jev_membership.VERSION
             or not shared_typed or membership_mode != 'raw' or verification_contract != raw_verification.FULL_SCOPE
             or shared_memberships is not None or membership_batch_protocol is not None

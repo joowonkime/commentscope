@@ -5,11 +5,12 @@ from commentscope.factory import minimal_claims as mc, candidate_consolidation a
 from commentscope.factory.automatic_contract import digest
 
 VERSION = 'candidate-first-evidence-search-20261110-v1'
+SEEDED = 'candidate-first-evidence-search-20261121-v2'
 FIELDS = {'version', 'sources_per_candidate', 'maximum_pairs', 'maximum_sources', 'maximum_snapshot_comments'}
 
 
 def policy(value):
-    if not isinstance(value, dict) or set(value) != FIELDS or value['version'] != VERSION:
+    if not isinstance(value, dict) or set(value) != FIELDS or value['version'] not in (VERSION, SEEDED):
         raise ValueError('Closed versioned perspective-mining policy required')
     for key, maximum in (('sources_per_candidate', 64), ('maximum_pairs', 1000000),
                          ('maximum_sources', 3000), ('maximum_snapshot_comments', 3000)):
@@ -49,6 +50,7 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
         parent = ss[sid].get('parent')
         return parent['id'] if parent else sid
     queues = {}
+    nominees = {}
     for cid in sorted(cs):
         scores = {}
         for sid in ss:
@@ -56,6 +58,8 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
             inherited = dot(sv[parent['id']], cv[cid]) if parent and parent['id'] in sv else None
             scores[sid] = max(own, inherited) if inherited is not None else own
         ordered = sorted(ss, key=lambda sid: (sid not in cs[cid]['nominees'], -scores[sid], sid))
+        if configuration['version'] == SEEDED:
+            nominees[cid] = sorted(cs[cid]['nominees'], key=lambda sid: (-dot(sv[sid], cv[cid]), sid))
         groups = defaultdict(deque)
         for sid in ordered:
             groups[thread(sid)].append(sid)
@@ -67,22 +71,43 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
             if group:
                 threads.append(group)
         queues[cid] = ranked
-    pairs = []; selected = set(); counts = dict.fromkeys(cs, 0)
+    pairs = []
+    selected = set()
+    selected_by_candidate = {cid: set() for cid in cs}
     order = sorted(cs, key=lambda cid: (-len({thread(sid) for sid in cs[cid]['nominees']}),
                                        -len(cs[cid]['nominees']), cid))
-    # Fund an evidence-search batch before opening the next candidate. Spreading
-    # one pair to every hypothesis can leave all of them below the 3-source gate.
-    # Priority is retrieval only; low-priority hypotheses remain unassessed.
+    def select(cid, sid):
+        chosen = selected_by_candidate[cid]
+        if (sid in chosen or len(pairs) >= configuration['maximum_pairs']
+                or len(chosen) >= configuration['sources_per_candidate']
+                or sid not in selected and len(selected) >= configuration['maximum_sources']):
+            return False
+        pairs.append({'source_id': sid, 'candidate_id': cid})
+        chosen.add(sid)
+        selected.add(sid)
+        return True
+
+    if configuration['version'] == SEEDED:
+        # A directly nominated original can qualify a seeded perspective after
+        # independent verification. Let each candidate try one before spending
+        # comparisons on other nominees and embedding-based neighbors.
+        for cid in order:
+            for sid in nominees[cid]:
+                if select(cid, sid):
+                    break
+        for cid in order:
+            for sid in nominees[cid]:
+                select(cid, sid)
+
+    # The original search funds a whole retrieval batch before moving on.
+    # Keep that order for legacy plans and for remaining seeded comparisons.
     for cid in order:
-        while (queues[cid] and counts[cid] < configuration['sources_per_candidate']
+        while (queues[cid] and len(selected_by_candidate[cid]) < configuration['sources_per_candidate']
                and len(pairs) < configuration['maximum_pairs']):
-            sid = queues[cid].popleft()
-            if sid not in selected and len(selected) >= configuration['maximum_sources']:
-                continue
-            pairs.append({'source_id': sid, 'candidate_id': cid})
-            selected.add(sid); counts[cid] += 1
+            select(cid, queues[cid].popleft())
         if len(pairs) >= configuration['maximum_pairs']:
             break
+    counts = {cid: len(chosen) for cid, chosen in selected_by_candidate.items()}
     stops = []
     if len(pairs) == configuration['maximum_pairs']: stops.append('pair_limit')
     if len(selected) == configuration['maximum_sources']: stops.append('source_limit')
@@ -92,7 +117,7 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
         return {**pair, 'own_similarity': dot(sv[sid], cv[cid]),
                 'parent_similarity': dot(sv[parent['id']], cv[cid]) if parent and parent['id'] in sv else None,
                 'nominated': sid in cs[cid]['nominees'], 'semantic_approval': False}
-    return {'artifact_kind': VERSION, 'policy': configuration,
+    return {'artifact_kind': configuration['version'], 'policy': configuration,
             'input_sha256': digest([sources, candidates, source_vectors, candidate_vectors]),
             'source_count': len(ss), 'candidate_count': len(cs), 'pairs': pairs,
             'candidate_search_order': order,

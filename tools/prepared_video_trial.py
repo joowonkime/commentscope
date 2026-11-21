@@ -38,7 +38,7 @@ from tools.serve_mvp import ASSETS
 e=shared.executor
 VERSION='prepared-video-product-20261113-v1'
 MAX_CALLS=2400
-SEARCH={'version':perspective_mining.VERSION,'sources_per_candidate':12,
+SEARCH={'version':perspective_mining.SEEDED,'sources_per_candidate':12,
         'maximum_pairs':384,'maximum_sources':96,'maximum_snapshot_comments':3000}
 FAMILIES=(*previous.FAMILIES,'embedding','membership-jev','runtime-verification')
 TOOLS=('tools/prepared_video_trial.py','tools/shared_factory_trial.py','tools/source_search_expansion.py')

@@ -62,6 +62,29 @@ class RetrievalTests(unittest.TestCase):
         self.assertEqual(len(funded),2)
         self.assertTrue(all(s['selected_source_count']==3 for s in funded))
         self.assertEqual(result['unassessed_pair_count'],54)
+    def test_seeded_search_considers_later_candidate_nominee_before_expanding_first(self):
+        first = deepcopy(self.target)
+        first['nominees']['reply'] = digest(self.reply)
+        second = candidate(self.other, self.other['text'])
+        cs = [first, second]
+        cv = {c['id']: [1., 0.] for c in cs}
+        limits = dict(maximum_pairs=2, maximum_sources=2, sources_per_candidate=2)
+        old = self.schedule(candidates=cs, cv=cv, configuration=policy(**limits))
+        self.assertEqual([p['candidate_id'] for p in old['pairs']], [first['id']] * 2)
+
+        result = self.schedule(candidates=cs, cv=cv, configuration=policy(version=mining.SEEDED, **limits))
+        self.assertEqual(result['pairs'], [
+            {'candidate_id': first['id'], 'source_id': 'root'},
+            {'candidate_id': second['id'], 'source_id': 'other'},
+        ])
+        self.assertTrue(all(p['nominated'] and not p['semantic_approval'] for p in result['pair_retrieval']))
+    def test_seeded_search_uses_remaining_capacity_for_direct_nominees_first(self):
+        first = deepcopy(self.target)
+        first['nominees']['reply'] = digest(self.reply)
+        result = self.schedule(candidates=[first], configuration=policy(version=mining.SEEDED,
+                                sources_per_candidate=2, maximum_pairs=3, maximum_sources=2))
+        self.assertEqual([p['source_id'] for p in result['pairs']], ['root', 'reply'])
+        self.assertEqual(result['unassessed_pair_count'], 1)
     def test_changed_original_invalidates_nomination_before_judging(self):
         bad = deepcopy(self.target); bad['nominees']['root'] = '0'*64
         with self.assertRaises(ValueError): self.schedule(candidates=[bad], cv={bad['id']: [1.,0.]})
@@ -152,6 +175,19 @@ class PipelineTests(unittest.TestCase):
         runner=MiningRunner()
         with self.assertRaises(ValueError):self.process(runner,discovery_mode='free')
         self.assertFalse(runner.calls);self.assertFalse(runner.typed_calls)
+    def test_direct_nominee_search_requires_explicit_seeded_admission(self):
+        from commentscope.agents import seed_policy
+        runner = MiningRunner()
+        search = policy(version=mining.SEEDED, maximum_pairs=2, maximum_sources=2)
+        with self.assertRaisesRegex(ValueError, 'single-source admission'):
+            self.process(runner, membership_search_policy=search)
+        self.assertFalse(runner.calls)
+        result = self.process(runner, membership_search_policy=search, admission_policy=seed_policy.POLICY)
+        self.assertFalse(result['errors'])
+        planned = self.h.saved['membership-search']['pair_retrieval']
+        self.assertEqual(len(planned), 2)
+        self.assertEqual(len({row['candidate_id'] for row in planned}), 2)
+        self.assertTrue(all(row['nominated'] for row in planned))
 
 
 class CostTests(unittest.TestCase):
