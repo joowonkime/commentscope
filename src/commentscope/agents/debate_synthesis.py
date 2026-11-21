@@ -15,10 +15,16 @@ DRAFT_CHECKS = {
     'relevance': ('The claim provides a concrete, relevant common proposition in response to the original question.', 'relevant'),
 }
 VOTE_CHECKS = {
-    'stance': ('The decision represents this perspective faithfully; accept requires evidence of genuine agreement.', 'faithful'),
-    'conditions': ('The choice respects the conditions and does not omit a required qualifier.', 'preserved'),
-    'basis': ('The cited own points support the stated decision, including an explicit limitation if undecided.', 'grounded'),
-    'fit': ('The reason and decision address this particular candidate and its exact scope.', 'responsive'),
+    'stance': ('Treat this as an AI participant deciding on a proposal. For accept, the cited own published points '
+               'must support the candidate without contradicting the source perspective in PROFILE. Own points '
+               'can support a grounded value judgment or conditional proposal that the commenter did not explicitly state. '
+               'Reject any invented commenter endorsement or expansion of the participant’s stance. Check other decisions '
+               'against the same profile and cited own points.', 'faithful'),
+    'conditions': ('Compare the candidate, its linked CONDITIONS and the cited own points with OWN_CONDITIONS. '
+                   'For accept preserve all essential qualifications. For needs_condition the named condition must be missing.', 'preserved'),
+    'basis': ('Use only the listed reason_points to support this decision on the candidate. An undecided vote must '
+              'cite a point that explains an evidence limitation.', 'grounded'),
+    'fit': ('The reason_points and decision specifically address this candidate at its proposed scope.', 'responsive'),
 }
 
 
@@ -142,23 +148,26 @@ def ratify(analysis, speaker, points, query, sealed, scope, run):
                        'missing_condition_ids': ids(required, maximum=len(required))})
     value = generate(run, 'ratify-generate', scope, '''
 Independently decide for each sealed candidate using only your PROFILE, OWN_POINTS and OWN_CONDITIONS.
-Other speakers are context, not your evidence. Accept only when your own position genuinely supports
-the exact claim and conditions. List at least one of your own reasons by ID. Use needs_condition if an
+Other speakers are context. Accept only if a published own point supports the exact proposal and conditions
+without contradicting your source perspective. You can accept reasoning you explicitly supported as an AI participant.
+Never attribute your acceptance or that reasoning to a commenter. List your own supporting point IDs. Use needs_condition if an
 essential condition is missing, reject if your position conflicts, or undecided if your evidence is insufficient.
 List missing condition IDs only with needs_condition. Do not invent a new version or vote for anyone else.''',
         data, obj({a: vote_schema for a in candidates}))
-    checks, votes = {}, {}
+    checks, votes, ratifications = {}, {}, {}
     for a, row in value.items():
         require_ids(row['reason_ids'], own)
         require_ids(row['missing_condition_ids'], required)
         if bool(row['missing_condition_ids']) != (row['decision'] == 'needs_condition'):
             continue
         votes[a] = row
-        checks.update(addressed(a, 'VOTES', VOTE_CHECKS))
+        ratifications[a] = {'candidate': data['CANDIDATES'][a], 'decision': row['decision'],
+                            'missing_condition_ids': row['missing_condition_ids'],
+                            'reason_points': {key: compact(own[key]) for key in row['reason_ids']}}
+        checks.update(addressed(a, 'RATIFICATIONS', VOTE_CHECKS))
     observations, receipt = observe(run, 'ratify-verify', scope, {
-        'QUESTION': query, 'CANDIDATES': data['CANDIDATES'], 'OWN_CONDITIONS': required,
-        'CONDITIONS': sealed['conditions'], 'OWN_POINTS': data['OWN_POINTS'],
-        'PROFILE': data['PROFILE'], 'VOTES': votes,
+        'QUESTION': query, 'DRAFT_SHA256': sealed['draft_sha256'], 'OWN_CONDITIONS': required,
+        'CONDITIONS': sealed['conditions'], 'PROFILE': data['PROFILE'], 'RATIFICATIONS': ratifications,
     }, checks) if checks else ({}, {})
     return [{'agent_id': speaker, 'proposal_id': row['claim_id'], 'draft_sha256': sealed['draft_sha256'],
              'verified': a in votes and supported(observations, a, VOTE_CHECKS),

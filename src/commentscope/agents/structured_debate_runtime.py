@@ -19,8 +19,10 @@ TURN_TASKS = {
     'opening': 'State this perspective’s own question-specific reason or evidence limitation. '
                'Leave peer responses and joint conclusions to later phases, including when the question requests them.',
     'reply': 'Address each supplied peer target with an explicit relation and a question-specific reason or evidence limitation.',
-    'followup': 'Address the new question using the accepted claims and their limitations. Retain applicable conditions and unresolved differences.',
+    'followup': 'Address the new question using the accepted claims and their limitations. These claims record agreement '
+                'among selected AI participants. Retain conditions and unresolved differences, and do not infer commenter agreement.',
 }
+POINT_SLOTS = ('P1', 'P2', 'P3')
 
 
 def perspective(analysis, agent_id):
@@ -104,8 +106,8 @@ def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None)
                  'anchor_ids': ids(aliases, minimum=1),
                  'reference_ids': ids(inventory),
                  'targets': array(edge, maximum=len(targets))})
-    schema = obj({'answerability': choice(('answered', 'partial', 'abstain')),
-                  'points': array(point, maximum=3)})
+    schema = obj({'points': obj(dict.fromkeys(POINT_SLOTS, {'anyOf': [point, {'type': 'null'}]})),
+                  'answerability': choice(('answered', 'partial', 'abstain'))})
     phase_task = TURN_TASKS[phase]
     data = {'PHASE': phase, 'PHASE_TASK': phase_task, 'QUESTION': query, 'CLAIMS': alias_rows,
             'CORE': next((a for a, key in aliases.items() if key == core_id), None),
@@ -121,11 +123,14 @@ For original_comment select exactly one anchor and supply empty text. The host r
 For ai_reasoning use only conditional/value reasoning anchored in claims and supply no references.
 For external_evidence cite exact supplied passages for every empirical assertion.
 Keep each free-text point short and complete, with its essential qualifiers. Aim for at most 350 characters.
+Fill P1 through P3 in order and use null for every unused slot.
 An abstention may have a grounded explanation. Never claim agreement, public consensus,
 invented sources, or knowledge beyond the allowed scope. Use the user's language.''', data, schema)
     proposed, evidence = {}, {}
-    for i, row in enumerate(value['points'], 1):
-        alias = f'P{i}'
+    for alias in POINT_SLOTS:
+        row = value['points'][alias]
+        if row is None:
+            continue
         require_ids(row['anchor_ids'], aliases)
         require_ids(row['reference_ids'], inventory)
         require_ids([e['target_id'] for e in row['targets']], targets)
@@ -158,11 +163,13 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
         {'QUESTION': query, 'PHASE_TASK': phase_task, 'TARGETS': targets, 'CONDITIONS': required_conditions,
          'ATTRIBUTED_DISAGREEMENT_ONLY': peers if derived is not None else [],
          'PROPOSED_POINTS': proposed, 'EVIDENCE': used, 'ANSWERABILITY': value['answerability']}, checks)
-    points, premises, covered, held = [], {}, set(), False
-    for alias, row in proposed.items():
-        if not supported(answers, alias, TURN_CHECKS):
-            held = True
-            continue
+    surviving = {alias: row for alias, row in proposed.items() if supported(answers, alias, TURN_CHECKS)}
+    held = len(surviving) != len(proposed)
+    # A verdict on the entire draft only applies when that draft will be posted.
+    # After a hold, each surviving point must earn credit on its own.
+    draft_fit = held or answers['answer'] == 'appropriate'
+    points, premises, covered = [], {}, set()
+    for alias, row in surviving.items():
         anchor_ids, resolved, exact = evidence[alias]
         original = row['origin'] == 'original_comment'
         selected = entries[anchor_ids[0]]
@@ -173,7 +180,7 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
             citation = {'comment_evidence': [], 'external_evidence': exact, 'anchor_claim_ids': anchor_ids}
         for cid, item in resolved.items():
             premises[cid] = {**item, 'claim_id': cid}
-        fit = answers[f'{alias}_task_fit'] == 'responsive' and answers['answer'] == 'appropriate'
+        fit = draft_fit and answers[f'{alias}_task_fit'] == 'responsive'
         edges = [{**targets[e['target_id']], 'relation': e['relation']} for e in row['targets']] if fit else []
         if fit:
             covered.update(e['target_id'] for e in row['targets'])

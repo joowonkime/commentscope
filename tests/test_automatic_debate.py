@@ -27,6 +27,7 @@ class AutomaticDebateTests(unittest.TestCase):
         self.no_proposal = False
         self.use_reference = False
         self.pair_conflict = False
+        self.extra_opening_point = False
         fixtures.ProductAppTests.setUp(self)
 
     def build(self):
@@ -47,10 +48,13 @@ class AutomaticDebateTests(unittest.TestCase):
         if stage == 'turn-generate':
             origin = ('external_evidence' if self.use_reference else 'original_comment'
                       if scope['phase'] == 'opening' else 'ai_reasoning')
-            output = {'answerability': 'answered', 'points': [{
+            point = {
                 'origin': origin, 'text': '' if origin == 'original_comment' else 'Checks can help when hazards matter.',
                 'anchor_ids': ['E1'], 'reference_ids': ['D1'] if self.use_reference else [],
-                'targets': [{'target_id': key, 'relation': 'conditional'} for key in data['TARGETS']]}]}
+                'targets': [{'target_id': key, 'relation': 'conditional'} for key in data['TARGETS']]}
+            output = {'answerability': 'answered', 'points': {'P1': point, 'P2': None, 'P3': None}}
+            if self.extra_opening_point and (scope['phase'], scope['agent_id']) == ('opening', 'P2'):
+                output['points']['P2'] = {**point, 'origin': 'ai_reasoning', 'text': 'This claim exceeds the evidence.'}
         elif stage == 'draft-generate':
             candidate = {
                 'origin': 'external_evidence' if self.use_reference else 'ai_reasoning',
@@ -63,7 +67,7 @@ class AutomaticDebateTests(unittest.TestCase):
         else:
             self.assertEqual(stage, 'ratify-generate')
             output = {key: {'decision': 'reject' if scope['agent_id'] in self.reject else 'accept',
-                            'reason_ids': [next(iter(data['OWN_POINTS']))], 'missing_condition_ids': []}
+                            'reason_ids': [next(reversed(data['OWN_POINTS']))], 'missing_condition_ids': []}
                       for key in data['CANDIDATES']}
         return {'output': output, 'errors': [], 'new_cost_usd': '0.001'}
 
@@ -126,6 +130,18 @@ class AutomaticDebateTests(unittest.TestCase):
         self.assertEqual(votes[0]['CANDIDATES'], votes[1]['CANDIDATES'])
         self.assertEqual(votes[0]['DRAFT_SHA256'], votes[1]['DRAFT_SHA256'])
         self.assertFalse(any('VOTES' in v for v in votes))
+        vote_reviews = [req for stage, req in self.events if stage == 'ratify-verify']
+        for generation, review in zip(votes, vote_reviews, strict=True):
+            state = review['state']
+            self.assertEqual(state['DRAFT_SHA256'], generation['DRAFT_SHA256'])
+            ballot = state['RATIFICATIONS']['A1']
+            self.assertEqual(ballot['candidate'], generation['CANDIDATES']['A1'])
+            self.assertEqual(list(ballot['reason_points']), [next(reversed(generation['OWN_POINTS']))])
+            reason, = ballot['reason_points'].values()
+            self.assertEqual(reason['origin'], 'ai_reasoning')
+            self.assertNotIn('targets', reason)
+            self.assertNotIn('OTHER_CONTEXT_ONLY', state)
+            self.assertIn('RATIFICATIONS.A1', review['questions']['A1_stance']['instructions'])
         report_path = '/api/v1/syntheses/'+final['conclusion']['synthesis_id']
         report = self.call('GET', report_path)[1]
         self.assertEqual(report['outcome'], 'consensus_ready')
@@ -169,6 +185,24 @@ class AutomaticDebateTests(unittest.TestCase):
         self.assertEqual(self.job(reflect)['result']['context_message_ids'], mids)
         self.assertNotIn('_lineage_sources', json.dumps(self.calls))
         self.assertEqual(len(self.events), 16)
+
+    def test_draft_assessment_does_not_block_a_surviving_responsive_point(self):
+        self.extra_opening_point = True
+        turn = ('turn-verify', 'opening', 'P2')
+        self.overrides[(*turn, 'answer')] = 'reject'
+        self.overrides[(*turn, 'P2_basis')] = 'reject'
+        _, final = self.complete()
+        opening = final['messages'][1]
+        self.assertEqual(opening['coverage'], 'complete')
+        self.assertEqual(opening['answerability'], 'partial')
+        self.assertEqual([p['task_fit'] for p in opening['points']], ['responsive'])
+        self.assertEqual(final['state'], 'completed')
+
+    def test_draft_assessment_still_applies_when_the_entire_draft_is_published(self):
+        self.overrides[('turn-verify', 'opening', 'P2', 'answer')] = 'reject'
+        _, final = self.complete()
+        self.assertEqual(final['state'], 'incomplete')
+        self.assertEqual(final['messages'][1]['coverage'], 'incomplete')
 
     def test_incomplete_reply_keeps_turns_and_skips_entire_agreement(self):
         self.overrides[('turn-verify', 'reply', 'P2', 'P1_task_fit')] = 'reject'

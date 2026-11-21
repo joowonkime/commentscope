@@ -86,14 +86,15 @@ class SyntheticModel:
         scope=data['DEBATE_SCOPE']
         if stage=='turn-generate':
             if scope['phase']=='opening':
-                return {'answerability':'answered','points':[{'origin':'original_comment','text':'',
-                    'anchor_ids':[data['CORE']],'reference_ids':[],'targets':[]}]}
-            text='When a choice affects others, give the risks and the cost of checks separate consideration.'
-            if scope['phase']=='followup':
-                text='The shared point only calls for discussing risks and costs. It sets no mandatory threshold.'
-            return {'answerability':'answered','points':[{'origin':'ai_reasoning','text':text,
-                'anchor_ids':[data['CORE'] or next(iter(data['CLAIMS']))],'reference_ids':[],
-                'targets':[{'target_id':key,'relation':'conditional'} for key in data['TARGETS']]}]}
+                point={'origin':'original_comment','text':'','anchor_ids':[data['CORE']],
+                       'reference_ids':[],'targets':[]}
+            else:
+                text='When a choice affects others, give the risks and the cost of checks separate consideration.'
+                if scope['phase']=='followup':
+                    text='The shared point only calls for discussing risks and costs. It sets no mandatory threshold.'
+                point={'origin':'ai_reasoning','text':text,'anchor_ids':[data['CORE'] or next(iter(data['CLAIMS']))],
+                       'reference_ids':[],'targets':[{'target_id':key,'relation':'conditional'} for key in data['TARGETS']]}
+            return {'answerability':'answered','points':{'P1':point,'P2':None,'P3':None}}
         if stage=='draft-generate':
             return {'candidates': [{'origin':'ai_reasoning','text':'Consider the risks and costs of safety checks publicly.',
                 'premise_ids':[key for key,row in data['POINTS'].items() if row['phase']=='reply'],

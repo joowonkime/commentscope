@@ -4468,6 +4468,18 @@
           "scope": "Real Chromium user actions reached Explore, automatic opening/reply, held conclusion, original source and persisted reflection; live consensus and external-user availability remain unverified.",
           "result": "partial",
           "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Subsequent pinned CNBC live route, 96 archived comments: real Chromium selected two automatically generated agents, ran four turns and two independently verified shared claims, opened the persisted derived agent and source, asked a follow-up and restored reflection. Windows localhost HTTP 200. One focused video and no external user or submission URL.",
+          "result": "pass",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Same sealed vote replay isolated ratification; later automatic live run and separate follow-ups yielded two complete answers and one partial. Thirty-five reconciled calls in follow-up exploration; independent effect and cross-video quality are unverified.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
         }
       ],
       "design_refs": [

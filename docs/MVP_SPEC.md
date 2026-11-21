@@ -15,7 +15,7 @@ DEC-030 accepted 제품 흐름은 **근거 적격 Agent 전부 제공 → 사용
 
 [토론·합의·통합 Agent 상세 설계안](design/DEBATE_SYNTHESIS.md)은 TASK-031/DEC-029 proposed다. [자동 토론 백엔드 검토본](design/DEBATE_IMPLEMENTATION.md)은 TASK-032~035의 opt-in 구현과 합성 검증을 기록한다. TASK-036에서 자동 토론 화면과 합의 Agent 후속 질문·성찰까지 합성 Chromium으로 확인했다. 실제 품질과 기술 상세의 수락은 별도 상태다. 현재 품질 작업 TASK-027과 유료 HOLD는 유지한다.
 
-[실영상 자동 토론 검증](MVP_REAL_VIDEO_VALIDATION.md)은 종료된 별도 TASK-037 검증 기록이다. 기존 분석을 재사용한 두 영상에서 실제 4턴 자동 토론과 보류 결론을 확인했다. 합의 Agent는 생성되지 않았고, 같은 근거의 단일 Agent는 고정 질문 6개에 답했다. 현재 품질 작업과 제품 기술 계약의 상태는 유지한다.
+[실영상 자동 토론 검증](MVP_REAL_VIDEO_VALIDATION.md)의 후속 TASK-037 실행에서 CNBC 댓글 분석 96개로 실제 4턴 토론, 공통 주장 2개와 합의 Agent 1개, 원문·후속 질문·성찰 저장과 재열람까지 로컬 브라우저에서 확인했다. 고정 후속 질문 3개 중 1개는 부분 응답이다. 기존 보류와 단일 Agent 비교 이력, 외부 접근성과 실제 사용자 검증의 범위는 기록에서 확인할 수 있다.
 
 인수인계는 [현재 상태·실행·필요 자료](HANDOFF.md)와 [현재 구현 구조](design/IMPLEMENTED_STRUCTURE.md)를 따른다. 999는 과거 코호트 크기다. 명시3000 설정과 일반 prepare/제품 import의 기본1000 호출이 섞여 있어3000 end-to-end 지원은 미완료다. TASK-029는 이 경계와 기존 상호작용 구현을 무료 재현/문서로 정리하며 기능·품질 기준을 바꾸지 않는다.
 
