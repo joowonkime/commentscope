@@ -3976,6 +3976,12 @@
           "scope": "Fresh fixed CNBC and Jubilee direct-nominee probe: four pairs, Jev supported4, independently verified2, final profiles0, answers0. Two host core-syntax holds; one candidate certificate hold and one full evidence graph hold. 32 physical requests at 0.189681352 USD reconciled to official use with no unknown charges. No full corpus or product quality pass.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
           "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered single-source search v3 binds literal candidate qualifications and scopes verified graph-unit failures to the candidate dependency chain. Synthetic end-to-end yields two grounded profiles with reasons and holds omitted reasons, scope changes and related or globally unresolved evidence. Archived proof revalidation and human-annotated syntax controls passed; fresh proposal and Agent utility remain unmeasured.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
         }
       ],
       "design_refs": [

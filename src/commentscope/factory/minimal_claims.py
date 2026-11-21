@@ -284,6 +284,7 @@ def validate_candidate(candidate):
     fields(candidate, 'id text aliases nominees extraction_refs equivalence_refs'+
            (' meaning_context' if isinstance(candidate,dict) and 'meaning_context' in candidate else '')+
            (' source_interpretation' if isinstance(candidate,dict) and 'source_interpretation' in candidate else '')+
+           (' qualifications' if isinstance(candidate,dict) and 'qualifications' in candidate else '')+
            (' representative_choice' if isinstance(candidate,dict) and 'representative_choice' in candidate else ''))
     expected=claim_id(candidate['text'])
     if 'meaning_context' in candidate:
@@ -292,6 +293,11 @@ def validate_candidate(candidate):
         if candidate['text']!=normalize(context['assertion']['text']):raise ValueError('Contextual assertion cannot be rewritten')
     if candidate['text'] != normalize(candidate['text']) or candidate['id'] != expected:
         raise ValueError('Candidate text identity changed')
+    if 'qualifications' in candidate:
+        from commentscope.factory.core_shape import qualification_spans
+        if 'meaning_context' in candidate or 'source_interpretation' in candidate:
+            raise ValueError('Scoped common candidates require their own qualification contract')
+        qualification_spans(candidate['text'], candidate['qualifications'])
     for key in ('aliases', 'extraction_refs', 'equivalence_refs'):
         values = candidate[key]
         if (not isinstance(values, list) or any(not isinstance(v, str) or not v for v in values)
@@ -338,11 +344,14 @@ def validate_candidate(candidate):
 def candidate_context_hashes(candidate):
     return {name: digest(candidate[key]) for key, name in (
         ('meaning_context', 'candidate_context_sha256'),
-        ('source_interpretation', 'candidate_interpretation_sha256')) if key in candidate}
+        ('source_interpretation', 'candidate_interpretation_sha256'),
+        ('qualifications', 'candidate_qualifications_sha256')) if key in candidate}
 
 
 def candidate_packet(candidate, *, include_source_interpretation=True):
     validate_candidate(candidate);value={'text':candidate['text']}
+    if 'qualifications' in candidate:
+        value['QUALIFICATIONS_IN_TEXT'] = deepcopy(candidate['qualifications'])
     if 'meaning_context' in candidate:
         from commentscope.factory import contextual_propositions as cp
         value['BOUND_MEANING']=cp.packet(candidate['meaning_context'])

@@ -211,6 +211,8 @@ def collect(sources, candidates, batches):
                 raise ValueError('Membership candidate context changed')
             if row.get('candidate_interpretation_sha256') != mc.candidate_context_hashes(cs[cid]).get('candidate_interpretation_sha256'):
                 raise ValueError('Membership source interpretation changed')
+            if row.get('candidate_qualifications_sha256') != mc.candidate_context_hashes(cs[cid]).get('candidate_qualifications_sha256'):
+                raise ValueError('Membership candidate qualifications changed')
             if key in rows:
                 raise ValueError('Duplicate membership; reuse checkpoint, not votes')
             rows[key] = row

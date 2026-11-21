@@ -116,6 +116,21 @@ class JevContractTests(unittest.TestCase):
         task=j.task(self.source,self.target,**bad)
         self.assertIn('independent_world_scope_unapproved',j.bind(task,responses(task,observation()))['guards'])
 
+    def test_qualified_candidate_reaches_both_judges_without_overriding_scope_veto(self):
+        qualifier={'role':'condition','text':'only if hospital funding stays intact.'}
+        target={**self.target,'qualifications':[qualifier]}
+        task=j.task(self.source,target,**self.kw)
+        data=task['requests'][0]['state']['READING_INPUT']
+        self.assertEqual(data['CANDIDATE']['QUALIFICATIONS_IN_TEXT'],[qualifier])
+        self.assertFalse(j.bind(task,responses(task,{**observation(),'scope_preserved':'no'}))['passed'])
+        proof=j.bind(task,responses(task,observation()))
+        req=verify.evidence_request(proof,verify.FULL_SCOPE,protocol=verify.QUALIFIED_CONTEXT)
+        self.assertEqual(req['data']['CANDIDATE']['QUALIFICATIONS_IN_TEXT'],[qualifier])
+        rejected=verify.bind_evidence(proof,{'output':dict(reference_basis='self_contained',
+            target_alignment='different_target',source_basis='own_assertion',verdict='extra_assertion',
+            basis='The quoted author attaches another condition.')},verify.FULL_SCOPE,protocol=verify.QUALIFIED_CONTEXT)
+        self.assertFalse(rejected['passed'])
+
     def test_many_segments_partition_questions_without_dropping_any(self):
         source={'id':'many','text':' '.join('Claim '+str(i)+'.' for i in range(28)),'parent':None}
         context=contexts.bind(source,{'output':{'source_use':'substantive_assertion','reported_descriptors':[]}})

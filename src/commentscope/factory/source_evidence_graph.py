@@ -345,6 +345,43 @@ def unit_applicability(unit, edges):
         not_applicable_fields=['commitment','polarity'] if context else [])
 
 
+def unit_holds(unit, observation, applicability):
+    reasons=[]
+    if (any(observation[k]!='pass' for k in UNIT_CHECKS)
+            or blocking_codes(observation['issue_codes'])):
+        reasons.append('unit_fidelity_unresolved')
+    inactive=applicability['not_applicable_fields']
+    if (unit['interpretation']!='resolved' or unit['kind'] in ('mixed','unresolved') or unit['speech_act']=='unresolved'
+            or unit['kind']=='not_applicable' and not inactive
+            or 'commitment' not in inactive and unit['commitment']=='unclear'
+            or 'polarity' not in inactive and unit['scope']['polarity']=='unresolved'
+            or unit['epistemic']=='unknown' or unit['world']=='unknown'
+            or unit['kind'] in ('fact','prediction') and unit['world']=='unspecified'
+            or unit['scope']['change_or_state']=='unresolved' or unit['assertion_mode']=='unresolved'):
+        reasons.append('unit_interpretation_unresolved')
+    return reasons
+
+
+def local_unit_holds(verified):
+    """Return known unusable units, or None if the source cannot be localized."""
+    validate_verified(verified)
+    if set(verified['issues']) - {'unit_fidelity_unresolved','unit_interpretation_unresolved','unresolved_issue'}:
+        return None
+    proposed=verified['proposal']['output']
+    observed=verified['observation']['output']
+    units={u['local_id']:u for u in proposed['units']}
+    rows={r['unit_id']:r for r in observed['unit_observations']}
+    affected={lid for lid,u in units.items() if unit_holds(u,rows[lid],verified['unit_applicability'][lid])}
+    for issue in [*proposed['issues'],*observed['issues']]:
+        if issue['status']!='unresolved':
+            continue
+        ids=set(issue['target_ids'])
+        if issue['scope']!='unit' or not ids or not ids<=units.keys():
+            return None
+        affected.update(ids)
+    return affected
+
+
 def verify(proposal, observation):
     validate_proposal(proposal)
     if bind_observation(proposal,{'output':observation['output']})!=observation:raise ValueError('Observation provenance changed')
@@ -352,15 +389,7 @@ def verify(proposal, observation):
     applicability={u['local_id']:unit_applicability(u,out['edges']) for u in out['units']}
     for u in out['units']:
         row=seen[u['local_id']]
-        if any(row[k]!='pass' for k in UNIT_CHECKS) or blocking_codes(row['issue_codes']):issues.append('unit_fidelity_unresolved')
-        inactive=applicability[u['local_id']]['not_applicable_fields']
-        if (u['interpretation']!='resolved' or u['kind'] in ('mixed','unresolved') or u['speech_act']=='unresolved'
-                or u['kind']=='not_applicable' and not inactive
-                or 'commitment' not in inactive and u['commitment']=='unclear'
-                or 'polarity' not in inactive and u['scope']['polarity']=='unresolved'
-                or u['epistemic']=='unknown' or u['world']=='unknown'
-                or u['kind'] in ('fact','prediction') and u['world']=='unspecified'
-                or u['scope']['change_or_state']=='unresolved' or u['assertion_mode']=='unresolved'):issues.append('unit_interpretation_unresolved')
+        issues.extend(unit_holds(u,row,applicability[u['local_id']]))
         if u['assertion_mode']=='conditional_antecedent' and not any(e['from_unit']==u['local_id'] and e['relation'] in CONDITION_RELATIONS for e in out['edges']):
             issues.append('unbound_conditional_antecedent')
     if any(r['fidelity']!='pass' or blocking_codes(r['issue_codes']) for r in obs['edge_observations']):issues.append('edge_fidelity_unresolved')

@@ -1,8 +1,4 @@
-"""Explicit new-protocol lowering into the existing Agent data interface.
-
-New receipts stay new receipts. All-source completeness and required facts are
-retained; inability to represent a literal claim holds the source, never trims it.
-"""
+"""Lower verified literal evidence into the existing Agent data interface."""
 from copy import deepcopy
 from commentscope.factory import source_evidence_graph as g, source_evidence_requests as requests
 from commentscope.factory import source_arguments as sa, argument_observations as obs
@@ -22,6 +18,15 @@ def lower(batches):
     if len(ids)!=len(set(ids)):raise ValueError('Duplicate candidate certificate')
     units={u['local_id']:u for u in verified['proposal']['output']['units']};edges=verified['proposal']['output']['edges']
     holds=list(verified['issues'])+[r for c in certificates for r in c['hold_reasons']]
+    if all(b['artifact_kind']==requests.SCOPED_BATCH for b in batches):
+        certificates=[c for c in certificates if c['status']=='eligible_for_existing_checks']
+        ids=[c['candidate']['id'] for c in certificates]
+        wanted={lid for c in certificates
+                for lid in requests.relevant_inventory(verified,c['output']['position_unit_ids'])}
+        units={lid:u for lid,u in units.items() if lid in wanted}
+        edges=[e for e in edges if e['to_unit'] in units and e['from_unit'] in units]
+        if certificates:
+            holds=[]
     lowered=[];surfaces={}
     for lid,u in units.items():
         try:surfaces[lid]=scoped_source_quotes.quote(env,u)
@@ -38,6 +43,7 @@ def lower(batches):
             roles[cid]=('core_restatement' if lid in row['position_unit_ids'] else
                 'reason' if lid in row['reason_unit_ids'] else
                 'concession' if lid in row['concession_unit_ids'] else
+                'additional_position' if lid in row.get('elaboration_unit_ids',()) else
                 'essential_condition' if lid in row['essential_condition_unit_ids'] else 'factual_premise')
         conditions=[units[e['from_unit']] for e in edges if e['to_unit']==lid and e['relation'] in g.CONDITION_RELATIONS]
         if any(any(e['to_unit']==c['local_id'] and e['relation'] in g.CONDITION_RELATIONS for e in edges) for c in conditions):
@@ -120,17 +126,25 @@ def process(snapshot, candidates, memberships, execution, cores, core_checks):
         observations=execution.work('source-evidence-observation',[proposal],lambda a:g.observation_request(a[0]),lambda a,r:g.bind_observation(a[0],r),1)
         if not observations:continue
         verified=g.verify(proposal,observations[0]);execution.save('source-evidence-graphs/'+sid,verified)
-        if verified['status']!='complete':
+        if (verified['status']!='complete' and
+                (not requests.scoped(needed) or g.local_unit_holds(verified) is None)):
             execution.holds.append(dict(stage='source-evidence-observation',source_id=sid,
                 reason='source_graph_unresolved_no_retry',issues=verified['issues']))
             continue
         batches=[]
-        scoped=[b for b in memberships if any(r['source_id']==sid and r['candidate_id'] in {c['id'] for c in needed} for r in b['memberships'])]
         for start in range(0,len(needed),8):
             group=needed[start:start+8]
+            group_ids={c['id'] for c in group}
+            scoped=[b for b in memberships if any(r['source_id']==sid and r['candidate_id'] in group_ids
+                                                   for r in b['memberships'])]
             batches.extend(execution.work('source-evidence-candidates',[group],lambda a:requests.candidate_request(verified,a[0]),
                 lambda a,r:requests.bind_candidates(verified,a[0],scoped,r),1))
         if sum(len(b['candidates']) for b in batches)!=len(needed):continue
+        for b in batches:
+            if b['artifact_kind']==requests.SCOPED_BATCH:
+                execution.holds.extend(dict(stage='source-evidence-candidates',source_id=sid,
+                    candidate_id=c['candidate']['id'],reason='scoped_candidate_evidence_unresolved',
+                    issues=c['hold_reasons']) for c in b['certificates'] if c['hold_reasons'])
         record=lower(batches);records.append(record);execution.save('source-evidence-arguments/'+sid,record)
     # Include every adaptable core; missing source records must remain visible
     # to the existing Compiler and cannot be filled by a successful subset.

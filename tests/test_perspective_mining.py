@@ -114,6 +114,56 @@ class RetrievalTests(unittest.TestCase):
 
 
 class DiscoveryTests(unittest.TestCase):
+    def test_condition_and_exception_survive_discovery_routing_and_core(self):
+        from commentscope.factory import core_shape, minimal_claims, owned_arguments
+        from commentscope.factory import raw_membership_verification as verification
+        for text,qualification,role in (
+                ('I would oppose this schedule if it required longer shifts.', 'if it required longer shifts.', 'condition'),
+                ('AI use should be restricted beyond lessons on when its use is appropriate.',
+                 'beyond lessons on when its use is appropriate.', 'exception')):
+            with self.subTest(role=role):
+                source={'id':'s','text':text,'parent':None}
+                row={'text':text,'nominees':['A0'],'assertion_kind':'value',
+                     'qualifications':[{'role':role,'text':qualification}]}
+                record=shared.bind([source],{'output':{'candidates':[row]}},version=shared.SCOPED_MINING)
+                candidate=shared.candidates([record])[0]
+                self.assertEqual(minimal_claims.candidate_packet(candidate)['QUALIFICATIONS_IN_TEXT'],row['qualifications'])
+                self.assertEqual(core_shape.candidate_holds(candidate),[])
+                self.assertTrue(core_shape.candidate_holds({**candidate,'qualifications':[]}))
+                req=verification.route_request(candidate,source,version=verification.FULL_SCOPE)
+                focus=next(iter(req['data']['FOCUS_TOKENS']))
+                response={'output':dict(focus_token=focus,focus_domain='substantive_issue',
+                                        role='subject_position',interpretation='clear')}
+                self.assertTrue(verification.bind_route(candidate,response,source,version=verification.FULL_SCOPE)['passed'])
+                core=owned_arguments.bind_core(candidate,{'output':dict(kind='value',entity='the issue',time_ids=[])})
+                self.assertEqual(core['output']['scope']['conditions'],qualification)
+                self.assertFalse(core['hold_reasons'])
+
+    def test_unbound_duplicate_and_interrogative_qualifiers_hold(self):
+        from commentscope.factory import core_shape
+        text='I ask if workers want longer shifts?'
+        candidate={'id':'s','text':text,'qualifications':[{'role':'condition','text':'if workers want longer shifts?'}]}
+        self.assertTrue(core_shape.candidate_holds(candidate))
+        for invalid in ('if', 'while nobody answers'):
+            with self.assertRaises(ValueError):
+                core_shape.qualification_spans(text,[{'role':'condition','text':invalid}])
+        with self.assertRaises(ValueError):
+            core_shape.qualification_spans('Stay if funded. Repeat if funded.',
+                                           [{'role':'condition','text':'if funded'}])
+        text='Adopt P if it is funded and if local hosts agree.'
+        candidate={'id':'s','text':text,'qualifications':[{'role':'condition','text':text[text.index('if'):]}]}
+        self.assertTrue(core_shape.candidate_holds(candidate))
+
+    def test_bad_qualification_preserves_other_candidates_and_original_receipt(self):
+        source={'id':'one','text':'A substantive source.','parent':None}
+        rows=[{'text':'Support P if it saves time.','nominees':['A0'],'assertion_kind':'value',
+               'qualifications':[{'role':'condition','text':'if it improves safety'}]},
+              {'text':'Adopt another policy.','nominees':['A0'],'assertion_kind':'value','qualifications':[]}]
+        record=shared.bind([source],{'output':{'candidates':rows}},version=shared.SCOPED_MINING)
+        self.assertEqual(record['qualification_holds'],[0])
+        self.assertEqual(record['output']['candidates'],rows)
+        self.assertEqual([c['text'] for c in shared.candidates([record])],[rows[1]['text']])
+
     def test_one_source_hypothesis_is_preserved_without_changing_legacy_common_rule(self):
         s = {'id':'single','text':'Buses should be free only if hospitals keep their funding.','parent':None}
         output = {'candidates':[{'text':s['text'],'nominees':['A0'],'assertion_kind':'value'}]}

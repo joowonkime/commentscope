@@ -80,7 +80,8 @@ def temporal_anchors(text):
 
 def runtime_target(candidate, proof):
     if proof is None:
-        return (mc.candidate_packet(candidate) if 'meaning_context' in candidate or 'source_interpretation' in candidate
+        return (mc.candidate_packet(candidate) if any(key in candidate for key in
+                ('meaning_context','source_interpretation','qualifications'))
                 else candidate['text'])
     runtime.validate(proof,candidate)
     if not proof['ready']:return mc.candidate_packet(candidate)
@@ -88,10 +89,20 @@ def runtime_target(candidate, proof):
 
 
 def core_request(candidate, runtime_scope=None):
+    from commentscope.factory.core_shape import qualification_spans
     mc.validate_candidate(candidate)
     graph=ed.parse({'id':candidate['id'],'text':candidate['text'],'parent':None})
     anchors=temporal_anchors(candidate['text']);lookup={n['id']:n for n in graph['nodes']}
     fixed=[lookup[e['ground_id']]['span'] for e in graph['edges'] if e['relation']=='necessary_condition']
+    explicit = qualification_spans(candidate['text'], candidate.get('qualifications', []))
+    if explicit:
+        combined=[]
+        for span in sorted([*fixed,*explicit],key=lambda s:s['start']):
+            if combined and span['start']<combined[-1]['end']:
+                prev=combined.pop()
+                span=ed.span(candidate['text'],prev['start'],max(span['end'],prev['end']))
+            combined.append(span)
+        fixed=combined
     target=runtime_target(candidate,runtime_scope)
     return mc.request(CORE,{'TARGET':target,'FIXED_CONDITIONS':fixed,'TEMPORAL_ANCHORS':anchors},obj({
         'kind':{'type':'string','enum':list(KINDS)},'entity':{'type':'string','minLength':1,'maxLength':600},
@@ -116,7 +127,8 @@ def bind_core(candidate,result,runtime_scope=None):
             if raw['kind']=='fact' and runtime_scope['interpretation_scope']['world']!='actual':
                 holds.append('nonactual_factual_scope_unsupported')
     from commentscope.factory import core_shape
-    holds.extend(core_shape.holds(graph))
+    holds.extend(core_shape.holds(graph,core_shape.qualification_spans(
+        candidate['text'],candidate.get('qualifications',[]))))
     value={'kind':raw['kind'],'scope':{'entity':raw['entity'],'time':'; '.join(anchors[i]['text'] for i in sorted(ids)),
         'conditions':'; '.join(c['text'] for c in req['data']['FIXED_CONDITIONS'])}}
     record = {'artifact_kind':VERSION+'-core','candidate':deepcopy(candidate),'request_sha256':digest(req),

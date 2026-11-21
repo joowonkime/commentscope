@@ -6,11 +6,13 @@ from commentscope.factory.automatic_contract import digest
 
 VERSION = 'candidate-first-evidence-search-20261110-v1'
 SEEDED = 'candidate-first-evidence-search-20261121-v2'
+QUALIFIED = 'candidate-first-evidence-search-20261121-v3'
+SEED_VERSIONS = (SEEDED, QUALIFIED)
 FIELDS = {'version', 'sources_per_candidate', 'maximum_pairs', 'maximum_sources', 'maximum_snapshot_comments'}
 
 
 def policy(value):
-    if not isinstance(value, dict) or set(value) != FIELDS or value['version'] not in (VERSION, SEEDED):
+    if not isinstance(value, dict) or set(value) != FIELDS or value['version'] not in (VERSION, *SEED_VERSIONS):
         raise ValueError('Closed versioned perspective-mining policy required')
     for key, maximum in (('sources_per_candidate', 64), ('maximum_pairs', 1000000),
                          ('maximum_sources', 3000), ('maximum_snapshot_comments', 3000)):
@@ -58,7 +60,7 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
             inherited = dot(sv[parent['id']], cv[cid]) if parent and parent['id'] in sv else None
             scores[sid] = max(own, inherited) if inherited is not None else own
         ordered = sorted(ss, key=lambda sid: (sid not in cs[cid]['nominees'], -scores[sid], sid))
-        if configuration['version'] == SEEDED:
+        if configuration['version'] in SEED_VERSIONS:
             nominees[cid] = sorted(cs[cid]['nominees'], key=lambda sid: (-dot(sv[sid], cv[cid]), sid))
         groups = defaultdict(deque)
         for sid in ordered:
@@ -87,7 +89,7 @@ def schedule(sources, candidates, source_vectors, candidate_vectors, *, configur
         selected.add(sid)
         return True
 
-    if configuration['version'] == SEEDED:
+    if configuration['version'] in SEED_VERSIONS:
         # A directly nominated original can qualify a seeded perspective after
         # independent verification. Let each candidate try one before spending
         # comparisons on other nominees and embedding-based neighbors.
