@@ -38,7 +38,7 @@ from tools.serve_mvp import ASSETS
 e=shared.executor
 VERSION='prepared-video-product-20261113-v1'
 MAX_CALLS=2400
-SEARCH={'version':perspective_mining.VERSION,'sources_per_candidate':12,
+SEARCH={'version':perspective_mining.QUALIFIED,'sources_per_candidate':12,
         'maximum_pairs':384,'maximum_sources':96,'maximum_snapshot_comments':3000}
 FAMILIES=(*previous.FAMILIES,'embedding','membership-jev','runtime-verification')
 TOOLS=('tools/prepared_video_trial.py','tools/shared_factory_trial.py','tools/source_search_expansion.py')
@@ -96,7 +96,7 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
           'deployment':deepcopy(e.remote.SOL),'verification_deployment':deepcopy(e.remote.SOL),
           'embedding_deployment':deepcopy(e.remote.EMBEDDING),'membership_deployment':deepcopy(decisions.DEPLOYMENT),
           'membership_judge_protocol':jev_membership.VERSION,'membership_search_policy':deepcopy(SEARCH),
-          'source_evidence_protocol':graph.VERSION,'admission_policy':deepcopy(seed_policy.POLICY),
+          'source_evidence_protocol':graph.GROUND_RELATIONS,'admission_policy':deepcopy(seed_policy.POLICY),
           'verification_policy':graph.VERIFICATION_POLICY,'role_registry':deepcopy(e.remote.ROLES),
           'billing_policy':e.remote.WIRE_BUDGET,'classifier':e.model_identity(),'model_files':{},
           'resource_policy':host_resources.HTTP_API_POLICY,'artifact_storage_policy':e.api_resources.STORAGE_POLICY,
@@ -132,7 +132,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False,require_settled=True):
             or any(plan[k]!='150' for k in ('maximum_cost_usd','subcap_usd','room_maximum_usd'))
             or plan['opening_scope_charge_usd']!='0' or plan['admission_policy']!=seed_policy.POLICY
             or plan['membership_search_policy']!=SEARCH or plan['membership_judge_protocol']!=jev_membership.VERSION
-            or plan['source_evidence_protocol']!=graph.VERSION or plan['deployment']!=e.remote.SOL
+            or plan['source_evidence_protocol']!=graph.GROUND_RELATIONS or plan['deployment']!=e.remote.SOL
             or plan['verification_policy']!=graph.VERIFICATION_POLICY or plan['role_registry']!=e.remote.ROLES
             or plan['verification_deployment']!=e.remote.SOL or plan['embedding_deployment']!=e.remote.EMBEDDING
             or plan['membership_deployment']!=decisions.DEPLOYMENT or plan['model_files']!={}
@@ -288,7 +288,7 @@ def run(directory):
                 verification_contract=raw.FULL_SCOPE,argument_audit_protocol=obs.SHARED_TYPED_CHAT,
                 agent_source_policy='candidate_verified_subset',membership_evidence_protocol=raw.QUALIFIED_CONTEXT,
                 membership_judge_protocol=jev_membership.VERSION,membership_search_policy=SEARCH,
-                source_evidence_protocol=graph.VERSION,admission_policy=seed_policy.POLICY)
+                source_evidence_protocol=plan['source_evidence_protocol'],admission_policy=seed_policy.POLICY)
             save('output',output)
         guard(plan)
         if previous.history(plan['spend_policy'],auth['history_cutoff'])!=(auth['history_cutoff'],auth['history_sha256']):

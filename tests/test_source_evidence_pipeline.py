@@ -5,6 +5,7 @@ from commentscope.factory import source_evidence_graph as g, source_evidence_req
 from commentscope.factory import source_evidence_adapter as adapter, minimal_claims as mc
 from commentscope.factory import argument_observations as obs, raw_membership_verification as verification
 from commentscope.factory import cost_planning as cost, minimal_pipeline
+from commentscope.factory import owned_arguments, source_arguments
 from commentscope.providers import remote_verification
 from test_source_evidence_graph import example, observation_example
 from test_minimal_factory import extraction, membership
@@ -16,6 +17,13 @@ def candidate_output(candidates):
     return {'candidates':[dict(candidate_id=c['id'],position_unit_ids=['U1'],alignment='supports_core',
         reason_unit_ids=['U2'],concession_unit_ids=[],essential_condition_unit_ids=[],dependency_edge_ids=[],core_required_fact_unit_ids=[],
         full_original_coverage='pass',ownership='pass',scope_preserved='pass',issue_codes=[]) for c in candidates]}
+
+def scoped_output(candidates):
+    output=candidate_output(candidates)
+    for row in output['candidates']:
+        row['candidate_original_coverage']=row.pop('full_original_coverage')
+        row.update(reference_unit_ids=[],elaboration_unit_ids=[])
+    return output
 
 
 class CandidateEvidenceTests(TestCase):
@@ -115,6 +123,102 @@ class CandidateEvidenceTests(TestCase):
         nested=lower();self.assertIn('unrepresentable_hold',nested['hold_reasons']);self.assertEqual(nested['status'],'unresolved')
 
 
+class ScopedEvidenceTests(TestCase):
+    def setUp(self):
+        self.source,self.env,self.output,_,_=example('Adopt P because fairness matters. P is the local bus plan. More riders benefit.')
+        for lid,text in [('U3','P is the local bus plan.'),('U4','More riders benefit.')]:
+            start=self.source['text'].index(text)
+            ref=dict(source_id='s',start=start,end=start+len(text))
+            unit=deepcopy(self.output['units'][1])
+            unit.update(local_id=lid,own_spans=[ref],envelope_spans=[ref])
+            unit['scope'].update(subject_refs=[ref],predicate_refs=[ref])
+            self.output['units'].append(unit)
+            self.output['coverage'][0]['unit_ids'].append(lid)
+        self.output['edges'].append(dict(local_id='E2',from_unit='U4',to_unit='U1',
+                                          relation='elaborates',cue_refs=[],interpretation='resolved'))
+        self.candidate={**mc.candidates(extraction([self.source],{'s':['Adopt P.']}))[0],'qualifications':[]}
+
+    def bind(self, *, observe=None, edit=None, second_segment=False):
+        proposal=g.bind_annotation(self.env,{'output':self.output})
+        observation=observation_example(proposal)
+        if observe:observe(observation)
+        verified=g.verify(proposal,g.bind_observation(proposal,{'output':observation}))
+        candidates=[self.candidate]
+        pairs=[dict(source_id='s',candidate_id=self.candidate['id'])]
+        evidence={'s':{'evidence_segment_ids':['S000','S001']}} if second_segment else None
+        support=[membership([self.source],candidates,pairs,evidence)]
+        response=scoped_output(candidates)
+        row=response['candidates'][0]
+        row['elaboration_unit_ids']=['U4']
+        if edit:edit(row)
+        return reqs.bind_candidates(verified,candidates,support,{'output':response})
+
+    def test_only_local_unrelated_error_can_be_scoped_away(self):
+        def fail_at(idx):return lambda o:o['unit_observations'][idx].update(typing_fidelity='fail')
+        unrelated=self.bind(observe=fail_at(2))
+        self.assertEqual(unrelated['verified']['status'],'unresolved')
+        lowered=adapter.validate(adapter.lower([unrelated]))
+        self.assertEqual(lowered['status'],'complete')
+        self.assertEqual([u['local_id'] for u in lowered['units']],['U1','U2','U4'])
+        self.assertEqual(lowered['units'][-1]['role'],'additional_position')
+        for observation in (fail_at(1),fail_at(3),lambda o:o.update(dependency_coverage='unknown')):
+            record=adapter.lower([self.bind(observe=observation)])
+            self.assertEqual(record['status'],'unresolved')
+            self.assertFalse(record['candidate_ids'])
+
+    def test_reference_is_cited_context_and_never_becomes_a_core_fact(self):
+        choose=lambda row:row.update(reference_unit_ids=['U3'])
+        blocked=adapter.lower([self.bind(edit=choose)])
+        self.assertIn('candidate_reference_unverified',blocked['hold_reasons'])
+        accepted=adapter.lower([self.bind(edit=choose,second_segment=True)])
+        self.assertEqual(accepted['status'],'complete')
+        self.assertTrue(all(u['local_id']!='U3' and not u['core_requires_for'] for u in accepted['units']))
+        blocked=adapter.lower([self.bind(edit=choose,second_segment=True,
+                               observe=lambda o:o['unit_observations'][2].update(typing_fidelity='fail'))])
+        self.assertIn('source_graph_unresolved',blocked['hold_reasons'])
+
+    def test_omitting_connected_reason_or_elaboration_holds(self):
+        for field in ('reason_unit_ids','elaboration_unit_ids'):
+            record=adapter.lower([self.bind(edit=lambda row:row.update({field:[]}))])
+            self.assertIn('candidate_inventory_incomplete',record['hold_reasons'])
+
+    def test_grounded_chain_keeps_indirect_reasons_and_holds_missing_or_broadened_evidence(self):
+        self.env=g.envelope(self.source,snapshot_id=self.env['snapshot_id'],snapshot_sha256=self.env['snapshot_sha256'],
+                            protocol=g.GROUND_RELATIONS)
+        self.output['edges'][-1].update(to_unit='U2',relation='reason_for')
+        def chain(row):
+            row.update(reason_unit_ids=['U2','U4'],elaboration_unit_ids=[])
+        batch=self.bind(edit=chain)
+        self.assertEqual(batch['artifact_kind'],reqs.GROUNDED_BATCH)
+        record=adapter.validate(adapter.lower([batch]))
+        self.assertEqual(record['status'],'complete')
+        self.assertEqual([unit['local_id'] for unit in record['units'] if unit['role']=='reason'],['U2','U4'])
+        missing={key:value for key,value in self.output['edges'][0].items() if key!='local_id'}
+        missing.update(from_unit='U3',to_unit='U4',relation='reason_for')
+        held=self.bind(edit=chain,observe=lambda observed:observed['missing_edges'].append(missing))
+        self.assertIn('source_graph_unresolved',held['certificates'][0]['hold_reasons'])
+        def broadened(row):
+            chain(row)
+            row.update(scope_preserved='fail')
+        self.assertIn('candidate_obligations_unresolved',self.bind(edit=broadened)['certificates'][0]['hold_reasons'])
+
+    def test_qualified_core_does_not_rewrite_a_type_disagreement(self):
+        for text,kind,entity in [('I came to prefer the early schedule.','value','early schedule'),
+                                 ('I worked six early shifts.','fact','early shifts')]:
+            candidate={**mc.candidates(extraction([self.source],{'s':[text]}))[0],'qualifications':[]}
+            core=owned_arguments.bind_core(candidate,{'output':{'kind':kind,'entity':entity,'time_ids':[]}},
+                                           protocol=owned_arguments.QUALIFIED_CORE)
+            self.assertEqual(source_arguments.validate_core(core),core)
+            independent=obs.core_request(core,protocol=obs.CORE_QUALIFIED)
+            self.assertNotIn('kind',independent['data']['CORE_TARGET'])
+            observed=dict(actual_kind=kind,time_ids=[],entity_fidelity='yes',conditions_fidelity='yes',
+                          basis='normative_assertion' if kind=='value' else 'empirical_assertion')
+            response={'output':{'observations':[observed]}}
+            self.assertTrue(obs.bind_core(core,response,protocol=obs.CORE_QUALIFIED)['passed'])
+            observed['actual_kind']='fact' if kind=='value' else 'value'
+            self.assertIn('declared_kind_mismatch',obs.bind_core(core,response,protocol=obs.CORE_QUALIFIED)['guards'])
+
+
 class GraphRunner(JevRunner):
     def __init__(self,*,bad_graph=False,drop_reason=False,veto=False):
         super().__init__(veto=veto);self.bad_graph=bad_graph;self.drop_reason=drop_reason;self.proposals={}
@@ -138,7 +242,8 @@ class GraphRunner(JevRunner):
             sid=data['ORIGINAL']['source_id'];value=observation_example({'output':self.proposals[sid]})
             if self.bad_graph:value['dependency_coverage']='unknown'
         elif system.startswith(reqs.SYSTEM):
-            value=candidate_output(data['CANDIDATES'])
+            output=scoped_output if data.get('EVIDENCE_PROTOCOL') in (reqs.SCOPED_BATCH,reqs.GROUNDED_BATCH) else candidate_output
+            value=output(data['CANDIDATES'])
             if self.drop_reason:value['candidates'][0]['reason_unit_ids']=[]
         else:return super().call(stage,request)
         self.calls.append((stage,request));return {'output':value,'raw':'synthetic fixture','errors':[]}
@@ -171,6 +276,38 @@ class SourceEvidencePipelineTests(TestCase):
         self.assertTrue(all(r['audit_verdicts']==25 for r in inventories))
         self.assertFalse(result['quality_gate_passed'])
 
+    def test_registered_qualified_mining_reaches_compiled_source_reasons(self):
+        from commentscope.agents import seed_policy
+        from commentscope.factory import jev_membership, perspective_mining, shared_claims
+        from tools.prepared_video_trial import SEARCH
+        class QualifiedRunner(GraphRunner):
+            def call(self,stage,request):
+                if request['system'].startswith(shared_claims.SCOPED_SYSTEM):
+                    grouped={}
+                    for row in request['data']['ORIGINALS']:
+                        text=row['ORIGINAL_SEGMENTS'][0]['text'].split(' because ')[0].rstrip('.')+'.'
+                        grouped.setdefault(text,[]).append(row['author_id'])
+                    self.calls.append((stage,request))
+                    return {'output':{'candidates':[dict(text=text,nominees=authors,assertion_kind='value',qualifications=[])
+                            for text,authors in grouped.items()]},'raw':'synthetic fixture','errors':[]}
+                return super().call(stage,request)
+        runner=QualifiedRunner()
+        result=self.h.process(runner,discovery_mode='shared',membership_mode='raw',verification_contract=verification.FULL_SCOPE,
+            argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset',
+            membership_judge_protocol=jev_membership.VERSION,source_evidence_protocol=g.GROUND_RELATIONS,
+            membership_evidence_protocol=verification.QUALIFIED_CONTEXT,
+            membership_search_policy=SEARCH,admission_policy=seed_policy.POLICY)
+        self.assertEqual(SEARCH['version'],perspective_mining.QUALIFIED)
+        self.assertFalse(result['errors'])
+        self.assertEqual(result['shared_discovery'][0]['artifact_kind'],shared_claims.GROUNDED_MINING)
+        self.assertTrue(all(c['artifact_kind']==owned_arguments.QUALIFIED_CORE for c in result['cores']))
+        self.assertTrue(all(c['artifact_kind']==obs.CORE_QUALIFIED for c in self.h.saved['core-fidelity-checks']))
+        self.assertIn(reqs.GROUNDED_BATCH,{r['data'].get('EVIDENCE_PROTOCOL') for _,r in runner.calls})
+        self.assertTrue(all('qualifications' in c for c in result['candidates']))
+        profiles=result['agent_inputs']['compiled']['profiles']
+        self.assertEqual(len(profiles),2)
+        self.assertTrue(all(any('matters' in e['text'] for e in p['prompt_entries']) for p in profiles))
+
     def test_unresolved_source_or_omitted_reason_cannot_be_rescued_by_subset_policy(self):
         for runner in [GraphRunner(bad_graph=True),GraphRunner(drop_reason=True),GraphRunner(veto=True)]:
             self.h.saved={};result=self.process(runner)
@@ -200,9 +337,13 @@ class SourceEvidencePipelineTests(TestCase):
 
     def test_all_new_requests_compile_through_real_strict_wire_schema_without_network(self):
         from commentscope.providers.openrouter import Client
+        from commentscope.factory import shared_claims
         source,env,_,p,o=example();v=g.verify(p,g.bind_observation(p,{'output':o}))
         cs=mc.candidates(extraction([source],{'s':['Adopt P.']}))
-        for request in [g.proposal_request(env),g.observation_request(p),reqs.candidate_request(v,cs)]:
+        scoped_candidates=[{**c,'qualifications':[]} for c in cs]
+        for request in [g.proposal_request(env),g.observation_request(p),reqs.candidate_request(v,cs),
+                        reqs.candidate_request(v,scoped_candidates),
+                        shared_claims.request([source],version=shared_claims.SCOPED_MINING)]:
             capacity=Client(remote_verification.SOL).measure(request)
             self.assertTrue(capacity['fits'])
             self.assertFalse(capacity['native_tokenization'])

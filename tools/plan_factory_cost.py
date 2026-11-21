@@ -82,7 +82,10 @@ def audit(directory):
             # profile must bind both its frozen plan and exact request protocol.
             declared=request.get('data',{}).get('EVIDENCE_PROTOCOL')
             historical=('source-evidence-graph-20261111-v1','source-evidence-graph-20261112-v2')
-            if not protocol or declared!=protocol and not (declared is None and protocol in historical):
+            expected={protocol}
+            if protocol and family=='source-evidence-candidates':
+                expected.add(protocol+'/scoped-candidate-batch-v2')
+            if not protocol or declared not in expected and not (declared is None and protocol in historical):
                 raise cost.CostPlanError('Source evidence cost protocol differs from frozen request/plan')
             row['source_evidence_protocol']=protocol
         row['calls']+=1;row['cost_usd']+=charge;row['maximum_cost_usd']=max(row['maximum_cost_usd'],charge)

@@ -3964,6 +3964,42 @@
           "scope": "Frozen Jubilee180 discovery60/search33/384pairs ->383saved relations/37supports ->34F4sources/29graphs(11complete)/11candidate records(5complete) ->2profiles each1source/no admitted own reasons. Different responsibility/detector concerns, not opposed learning policies. Baseline comparisons0/2; direct developed reason1/2,studies0/2,substantive unavailable-IQ limitation2/2. Proposal relevance before filtering and core-inherited new-paragraph scope remain. Source/candidate loss and17of28new-paragraph holds uncalibrated; no human gold or fullMVP.",
           "reference": "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Exact saved-schedule replay with the same pair and source ceilings: CNBC96 direct-source candidate coverage 13/32 to 32/32, Jubilee180 33/60 to 60/60. All 72 saved support pairs and sources for all six existing profiles stay selected. New relation approval and Agent quality remain unmeasured.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh fixed CNBC and Jubilee direct-nominee probe: four pairs, Jev supported4, independently verified2, final profiles0, answers0. Two host core-syntax holds; one candidate certificate hold and one full evidence graph hold. 32 physical requests at 0.189681352 USD reconciled to official use with no unknown charges. No full corpus or product quality pass.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "fail"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered single-source search v3 binds literal candidate qualifications and scopes verified graph-unit failures to the candidate dependency chain. Synthetic end-to-end yields two grounded profiles with reasons and holds omitted reasons, scope changes and related or globally unresolved evidence. Archived proof revalidation and human-annotated syntax controls passed; fresh proposal and Agent utility remain unmeasured.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh qualified search on two fixed originals per video completed both revised cases. CNBC 3 candidates, 4 verified source-candidate supports, 0 Agents; Jubilee 4 candidates, 4 verified supports, 1 original-grounded Agent and 1 actual answer with no distinct original rationale. Strict evidence-preserving contrast gate 0/2. Fresh prior-path CNBC 0 Agents; prior-path Jubilee stopped at the physical request cap. Same-graph offline control attributes the retained Jubilee stance to candidate-scoped verification. 112 physical requests, 0.550450128 USD reconciled; 0.740131480 USD including the prior probe. Full pools, latency, and generalization unverified.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered source evidence v6 aligns the typing rubric for experienced preferences across independent stages and asks for complete restrictions and original-owned reasoning chains. Verified two grounded synthetic profiles and held omissions, scope loss, and kind disagreement. Four archived live graphs and seven core observations revalidate unchanged. Fresh contrast and submission environment remain unverified.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh source evidence v6 on the same two frozen CNBC originals retained the explicit consecutive-shift restriction, independently verified both candidate-source supports and matched both core kinds. One core passed full fidelity; the experienced preference retained an unresolved condition check. The first source graph call was not sent because its 0.354025 USD reservation exceeded the remaining 0.215152226 USD diagnostic allowance. 23 receipts at 0.044716294 USD reconciled, 0.784847774 USD cumulative; final graphs, Agents and answer quality not reached.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
@@ -3971,7 +4007,8 @@
         "docs/design/PIPELINE_HISTORY_AND_JEV_AUDIT.md",
         "docs/design/SOURCE_EVIDENCE_GRAPH.md",
         "docs/design/SEEDED_WEB_INTEGRATION.md",
-        "docs/design/PREPARED_VIDEO_WEB_RESULT.md"
+        "docs/design/PREPARED_VIDEO_WEB_RESULT.md",
+        "docs/design/PREPARED_VIDEO_MINING.md"
       ]
     },
     {

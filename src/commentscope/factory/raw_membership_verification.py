@@ -201,6 +201,8 @@ def route_request(candidate, origin=None, *, version=None):
         return substantive_contribution.request(candidate, origin, substantive_contribution.CONTENT)
     mc.validate_candidate(candidate)
     target = {'text': candidate['text']}
+    if 'qualifications' in candidate:
+        target['QUALIFICATIONS_IN_TEXT'] = deepcopy(candidate['qualifications'])
     if 'meaning_context' in candidate:
         target['BOUND_CONTEXT_ONLY'] = mc.candidate_packet(candidate)['BOUND_MEANING']
     data = {'CANDIDATE': target}; system = ROUTE
@@ -326,6 +328,8 @@ def independent_candidate_view(record, candidate_scope=None):
     if context is not None and not same_origin and not closed:
         guards.append('cross_source_candidate_requires_unavailable_origin_context')
     view = {'text': candidate['text']}
+    if 'qualifications' in candidate:
+        view['QUALIFICATIONS_IN_TEXT'] = deepcopy(candidate['qualifications'])
     if closed: view['world'] = candidate_scope['interpretation_scope']['world']
     return view, guards
 

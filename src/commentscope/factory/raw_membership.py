@@ -88,6 +88,8 @@ def request(source, candidate, *, version=VERSION, source_context=None, source_w
     if version not in VERSIONS: raise ValueError('Unknown raw membership protocol')
     parts = mc.validate_source(source); mc.validate_candidate(candidate)
     target = {'text': candidate['text']}
+    if 'qualifications' in candidate:
+        target['QUALIFICATIONS_IN_TEXT'] = deepcopy(candidate['qualifications'])
     if 'meaning_context' in candidate:
         context = candidate['meaning_context']
         target['ORIGINAL_CONTEXT_ONLY'] = mc.packet(context['source'])

@@ -24,6 +24,37 @@ An assertion can have no reasons. Do not invent any to complete the candidate.
 issue_codes contains blocking problems; use [] when none. Informational status
 codes never override a failed, unknown, unassessed or missing obligation.'''
 
+SCOPED_SYSTEM = SYSTEM + '''
+Identify the owned position and all context units needed to resolve its target
+and scope. A fact that only identifies what "it" or a named proposal refers to
+belongs in reference_unit_ids. Such a unit must occur in the same author's
+selected own evidence; it is never a separate claim or fact required to prove
+the position. An asserted factual part of the actual core is different and
+belongs in position_unit_ids and core_required_fact_unit_ids.
+Keep verified elaborations in elaboration_unit_ids. Do not mark an elaboration
+as a causal reason or omit a concession that applies through a chain of units.
+If an essential qualification, relation or rationale is missing in the graph,
+mark candidate_original_coverage fail and identify the issue. That field is
+about this candidate's complete support in the whole ORIGINAL. Record issues
+that affect the position, its reference units, or its supporting evidence.
+An invalid unrelated assertion does not license rewriting or hiding any
+element needed by this candidate.'''
+SCOPED_BATCH = g.VERSION+'/scoped-candidate-batch-v2'
+GROUNDED_BATCH = g.GROUND_RELATIONS+'/scoped-candidate-batch-v2'
+
+
+def scoped(candidates):
+    return bool(candidates) and all('qualifications' in c for c in candidates)
+
+
+def batch_protocol(verified, candidates):
+    version = g.envelope_protocol(verified['proposal']['envelope'])
+    if version == g.GROUND_RELATIONS:
+        if not scoped(candidates):
+            raise ValueError('Qualified candidates required for grounded relation evidence')
+        return GROUNDED_BATCH
+    return SCOPED_BATCH if scoped(candidates) else version+'/candidate-batch'
+
 
 def candidate_request(verified, candidates):
     g.validate_verified(verified)
@@ -33,16 +64,33 @@ def candidate_request(verified, candidates):
     edges=verified['proposal']['output']['edges'];edge_ids=[e['local_id'] for e in edges if e['relation'] in ('required_premise_for',*g.CONDITION_RELATIONS)]
     fact_ids=[u['local_id'] for u in units if u['kind']=='fact' and u['commitment']=='endorsed' and u['assertion_mode']=='assertion' and u['world']=='actual']
     id_list=lambda:array(g.choice(ids),maximum=len(ids))
-    row=obj(dict(candidate_id=g.choice(sorted(cs)),position_unit_ids=id_list(),
+    fields=dict(candidate_id=g.choice(sorted(cs)),position_unit_ids=id_list(),
         alignment=g.choice(('supports_core','equivalent','conditional','opposed','unrelated','uncertain')),
         reason_unit_ids=id_list(),concession_unit_ids=id_list(),essential_condition_unit_ids=id_list(),
         dependency_edge_ids=array(g.choice(edge_ids),maximum=len(edge_ids)),core_required_fact_unit_ids=array(g.choice(fact_ids),maximum=len(fact_ids)),
         full_original_coverage=g.choice(g.VERDICTS),ownership=g.choice(g.VERDICTS),scope_preserved=g.choice(g.VERDICTS),
-        issue_codes=array(g.choice(g.CODES),maximum=16)))
-    return mc.request(SYSTEM,{'EVIDENCE_PROTOCOL':g.VERSION,'ORIGINAL':mc.packet(verified['proposal']['source']),
+        issue_codes=array(g.choice(g.CODES),maximum=16))
+    versioned=scoped(candidates)
+    if versioned:
+        fields['candidate_original_coverage']=fields.pop('full_original_coverage')
+        fields.update(reference_unit_ids=id_list(),elaboration_unit_ids=id_list())
+    protocol = batch_protocol(verified, candidates)
+    system = SCOPED_SYSTEM if versioned else SYSTEM
+    if protocol == GROUNDED_BATCH:
+        system += '''
+Trace source-owned reasons and concessions through the existing edges to this
+position. Report omitted links as a coverage issue instead of supplying a new
+edge or presenting neighboring content as this position's reason.
+Compare the full candidate with the original restriction, including qualifiers
+expressed in other sentences about the same proposed arrangement. Report scope
+loss when a change in duration, frequency or consecutiveness would make the
+candidate apply to circumstances the original does not cover. Check the whole
+position for preserved scope; a partial match to a qualifying phrase is insufficient.'''
+    return mc.request(system,{'EVIDENCE_PROTOCOL':protocol if versioned else g.VERSION,
+        'ORIGINAL':mc.packet(verified['proposal']['source']),
         'UNITS':deepcopy(units),'SOURCE_EDGES':deepcopy(verified['proposal']['output']['edges']),
         'CANDIDATES':[{'id':cid,**mc.candidate_packet(cs[cid])} for cid in sorted(cs)]},
-        obj({'candidates':array(row,minimum=len(cs),maximum=len(cs))}),8192)
+        obj({'candidates':array(obj(fields),minimum=len(cs),maximum=len(cs))}),8192)
 
 
 def relevant_inventory(verified, positions):
@@ -55,27 +103,55 @@ def relevant_inventory(verified, positions):
     return active
 
 
+def covered(span, evidence):
+    end=span['start']
+    for ref in sorted(evidence,key=lambda r:r['start']):
+        if ref['start']>end:
+            break
+        end=max(end,ref['end'])
+        if end>=span['end']:
+            return True
+    return False
+
+
 def bind_candidates(verified, candidates, support_batches, result):
     req=candidate_request(verified,candidates)
     if result.get('errors'):raise ValueError('Failed candidate evidence observation')
     out=result.get('output');g.check(req['schema'],out)
     cs={c['id']:c for c in candidates};source=verified['proposal']['source'];sid=source['id']
     # Receipts must be current independently verified supports, never nominations.
-    support=mm.collect([source],candidates,support_batches)
-    if {r['candidate_id'] for r in support if r['relation']=='supported'}!=set(cs):raise ValueError('Exact current verified membership required')
+    support={r['candidate_id']:r for r in mm.collect([source],candidates,support_batches) if r['relation']=='supported'}
+    if set(support)!=set(cs):raise ValueError('Exact current verified membership required')
     ids=[r['candidate_id'] for r in out['candidates']]
     if sorted(ids)!=sorted(cs):raise ValueError('Every candidate requires one certificate')
     units={u['local_id']:u for u in verified['proposal']['output']['units']};edges=verified['proposal']['output']['edges'];bound=[]
     edge_map={e['local_id']:e for e in edges}
+    versioned=scoped(candidates)
+    version = g.envelope_protocol(verified['proposal']['envelope'])
+    unsafe_units=g.local_unit_holds(verified) if versioned else None
     for row in out['candidates']:
         reasons=[];cid=row['candidate_id'];positions=set(row['position_unit_ids']);active=relevant_inventory(verified,positions)
-        for field in ('position_unit_ids','reason_unit_ids','concession_unit_ids','essential_condition_unit_ids','core_required_fact_unit_ids'):
+        extra_fields=('reference_unit_ids','elaboration_unit_ids') if versioned else ()
+        for field in ('position_unit_ids','reason_unit_ids','concession_unit_ids','essential_condition_unit_ids','core_required_fact_unit_ids',*extra_fields):
             if len(set(row[field]))!=len(row[field]):raise ValueError('Duplicate candidate evidence unit')
         if len(set(row['dependency_edge_ids']))!=len(row['dependency_edge_ids']):raise ValueError('Duplicate dependency edge selection')
         selected=[deepcopy(edge_map[eid]) for eid in row['dependency_edge_ids']]
         for field,rels in [('reason_unit_ids',('reason_for',)),('concession_unit_ids',('concession_to',)),('essential_condition_unit_ids',g.CONDITION_RELATIONS)]:
             expected={e['from_unit'] for e in edges if e['to_unit'] in active and e['relation'] in rels}
             if set(row[field])!=expected:reasons.append('candidate_inventory_incomplete')
+        references=set()
+        if versioned:
+            references=set(row['reference_unit_ids'])
+            aligned_roles=positions|set(row['reason_unit_ids']+row['concession_unit_ids']+
+                                        row['essential_condition_unit_ids']+row['core_required_fact_unit_ids'])
+            elaborations={e['from_unit'] for e in edges if e['to_unit'] in active and e['relation']=='elaborates'}-aligned_roles
+            if set(row['elaboration_unit_ids'])!=elaborations:
+                reasons.append('candidate_inventory_incomplete')
+            if references&(aligned_roles|elaborations) or any(
+                    u['commitment']!='endorsed' or u['assertion_mode']!='assertion'
+                    or not all(covered(span,support[cid]['evidence']) for span in u['own_spans'])
+                    for lid,u in units.items() if lid in references):
+                reasons.append('candidate_reference_unverified')
         expected_edges=[e for e in edges if e['to_unit'] in active and e['relation'] in ('required_premise_for',*g.CONDITION_RELATIONS)]
         if {e['local_id'] for e in expected_edges}!=set(row['dependency_edge_ids']):reasons.append('candidate_dependencies_changed')
         if any(units[u]['kind']!='fact' or units[u]['commitment']!='endorsed' or units[u]['assertion_mode']!='assertion'
@@ -87,12 +163,16 @@ def bind_candidates(verified, candidates, support_batches, result):
                for u in row['reason_unit_ids']+row['concession_unit_ids']):reasons.append('reason_ownership_unverified')
         if (not positions or any(units[u]['commitment']!='endorsed' or units[u]['assertion_mode']!='assertion' for u in positions)
                 or row['alignment'] not in ('supports_core','equivalent')):reasons.append('owned_position_unverified')
-        if any(row[k]!='pass' for k in ('full_original_coverage','ownership','scope_preserved')) or g.blocking_codes(row['issue_codes']):reasons.append('candidate_obligations_unresolved')
-        if verified['status']!='complete':reasons.append('source_graph_unresolved')
-        bound.append(dict(artifact_kind=g.VERSION+'/candidate-certificate',candidate=deepcopy(cs[cid]),source_id=sid,
+        coverage='candidate_original_coverage' if versioned else 'full_original_coverage'
+        if any(row[k]!='pass' for k in (coverage,'ownership','scope_preserved')) or g.blocking_codes(row['issue_codes']):reasons.append('candidate_obligations_unresolved')
+        if verified['status']!='complete' and (unsafe_units is None
+                or unsafe_units&relevant_inventory(verified,active|references)):
+            reasons.append('source_graph_unresolved')
+        bound.append(dict(artifact_kind=version+('/scoped-candidate-certificate-v2' if versioned else '/candidate-certificate'),
+            candidate=deepcopy(cs[cid]),source_id=sid,
             verified_sha256=digest(verified),request_sha256=digest(req),output={**deepcopy(row),'dependency_edges':selected},
             status='held' if reasons else 'eligible_for_existing_checks',hold_reasons=sorted(set(reasons)),semantic_approval=False))
-    return dict(artifact_kind=g.VERSION+'/candidate-batch',verified=deepcopy(verified),candidates=deepcopy(candidates),
+    return dict(artifact_kind=batch_protocol(verified, candidates),verified=deepcopy(verified),candidates=deepcopy(candidates),
         support_batches=deepcopy(support_batches),response=deepcopy(out),request_sha256=digest(req),certificates=bound)
 
 

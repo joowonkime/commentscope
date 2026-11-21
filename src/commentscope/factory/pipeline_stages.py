@@ -15,7 +15,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory import argument_observations
 from commentscope.factory import compact_claims
 from commentscope.factory import owner_observations
-from commentscope.factory import assertion_counterexamples, perspective_mining
+from commentscope.factory import assertion_counterexamples, perspective_mining, source_evidence_graph
 
 
 @dataclass
@@ -61,6 +61,9 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
     elif discovery_mode=='shared':
         shared_version=(shared_claims.MINING if getattr(execution,'membership_search_policy',None)
                         else shared_claims.COMMON_TYPED if getattr(execution,'shared_typed',False) else shared_claims.COMMON)
+        if getattr(execution,'membership_search_policy',None) and execution.membership_search_policy['version']==perspective_mining.QUALIFIED:
+            shared_version=(shared_claims.GROUNDED_MINING
+                if execution.source_evidence_protocol==source_evidence_graph.GROUND_RELATIONS else shared_claims.SCOPED_MINING)
         if shared_records is not None:
             shared_discovery=shared_claims.for_scope(shared_records,sources,version=shared_version)
         else:
@@ -68,7 +71,7 @@ def discover(sources, vectors, execution, *, discovery_mode, shared_records):
                 shared_discovery.extend(work('shared-discovery',group,
                     lambda rows:shared_claims.request(rows,version=shared_version),
                     lambda rows,result:shared_claims.bind(rows,result,version=shared_version),
-                    shared_claims.BATCH_SIZE,minimum=1 if shared_version==shared_claims.MINING else 2))
+                    shared_claims.BATCH_SIZE,minimum=1 if shared_version in shared_claims.MINING_VERSIONS else 2))
         records=[]  # A common proposal is not a per-source extraction/completeness approval.
     elif getattr(execution, 'extraction_protocol', None) in compact_claims.VERSIONS:
         records = compact_claims.discover(sources, work, protocol=execution.extraction_protocol)
@@ -210,8 +213,11 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     runtime_scopes = {c['id']: contextual_runtime.bind(c,engine.scope(c)) for c in eligible
                       if engine is not None and c['id'] in engine.scopes}
     save('contextual-runtime-scopes',runtime_scopes)
-    cores = work('core', eligible, lambda group: oa.core_request(group[0],runtime_scopes.get(group[0]['id'])),
-                 lambda group, result: oa.bind_core(group[0],result,runtime_scopes.get(group[0]['id'])), 1)
+    grounded = getattr(execution,'source_evidence_protocol',None)==source_evidence_graph.GROUND_RELATIONS
+    declaration = oa.QUALIFIED_CORE if grounded else oa.CORE_VERSION
+    cores = work('core', eligible,
+                 lambda group: oa.core_request(group[0],runtime_scopes.get(group[0]['id']),protocol=declaration),
+                 lambda group, result: oa.bind_core(group[0],result,runtime_scopes.get(group[0]['id']),protocol=declaration), 1)
     # A held core remains held in the map. It cannot contaminate the separate
     # argument declaration for a usable core supported by the same source.
     adaptable_ids = {r['candidate']['id'] for r in cores if not r.get('hold_reasons') and r['output']['kind']!='uncertain'}
@@ -220,6 +226,8 @@ def arguments(snapshot, candidates, memberships, discourse, execution, *, discov
     observed = all('meaning_context' not in c['candidate'] for c in cores)
     split = observed and (execution.extraction_protocol in compact_claims.INDEPENDENT_CONTEXT or getattr(execution,'shared_typed',False))
     core_protocol = argument_observations.CORE_CODED if split else argument_observations.CORE_VERSION
+    if grounded:
+        core_protocol = argument_observations.CORE_QUALIFIED
     core_checks = (work('core-fidelity', [c for c in cores if c['candidate']['id'] in adaptable_ids],
                        lambda group: argument_observations.core_request(group[0], protocol=core_protocol),
                        lambda group, result: argument_observations.bind_core(group[0], result, protocol=core_protocol), 1)

@@ -26,7 +26,7 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
         raise ValueError('Source-context evidence requires explicit full-scope raw verification')
     if agent_source_policy not in ('all_members','verified_subset','candidate_verified_subset'):raise ValueError('Unknown Agent source policy')
     from commentscope.factory import source_evidence_graph
-    if source_evidence_protocol is not None and (source_evidence_protocol!=source_evidence_graph.VERSION
+    if source_evidence_protocol is not None and (source_evidence_protocol not in source_evidence_graph.VERSIONS
             or discovery_mode!='shared' or membership_mode!='raw' or verification_contract!=raw_verification.FULL_SCOPE):
         raise ValueError('Source evidence requires explicit shared/raw/full-scope protocol')
     from commentscope.factory import candidate_hierarchy
@@ -54,6 +54,14 @@ def process(snapshot, runner, embed, inspect, fact_check, *, model, documents=()
                 or shared_memberships is not None or membership_batch_protocol is not None
                 or membership_retrieval_policy != cc.ALIAS_RETRIEVAL):
             raise ValueError('Mining search requires fresh shared typed/full-scope raw inputs')
+        if membership_search_policy['version'] in perspective_mining.SEED_VERSIONS and admission_policy is None:
+            raise ValueError('Direct nominee search requires the single-source admission policy')
+        if (membership_search_policy['version'] == perspective_mining.QUALIFIED
+                and source_evidence_protocol not in source_evidence_graph.VERSIONS):
+            raise ValueError('Qualified candidates require independent source evidence')
+    if source_evidence_protocol == source_evidence_graph.GROUND_RELATIONS and (
+            not membership_search_policy or membership_search_policy['version'] != perspective_mining.QUALIFIED):
+        raise ValueError('Grounded relation evidence requires qualified candidate search')
     if membership_judge_protocol is not None and (membership_judge_protocol != jev_membership.VERSION
             or not shared_typed or membership_mode != 'raw' or verification_contract != raw_verification.FULL_SCOPE
             or shared_memberships is not None or membership_batch_protocol is not None
