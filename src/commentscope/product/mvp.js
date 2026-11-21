@@ -4,6 +4,7 @@ const categories = {stayed:'What stayed the same', changed:'What changed', newly
 const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
+const savedSessionKey = 'commentscope-mvp-session';
 function node(tag, text, cls) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(cls)n.className=cls; return n; }
 function asset(name) { const img=node('img'); img.src='/mvp/assets/'+name+'.svg'; img.alt=''; return img; }
 function status(text) { $('status').textContent=text; }
@@ -38,7 +39,13 @@ async function pollJob(value){
   while(Date.now()<end){const job=await api('/jobs/'+value.job_id); if(!['queued','running'].includes(job.state)){if(job.state!=='succeeded')throw new Error(errorText(job.error?.code)); return job;} await wait(600);}
   throw new Error('작업이 아직 진행 중입니다. 대화 상태에서 확인해 주세요.');
 }
-async function refreshSession(){state.session=await api(base()); $('initial-edit').value=state.session.initial_opinion.text; renderRooms(); renderSaved();}
+function setSession(session){
+  state.session=session;
+  $('initial-edit').value=session.initial_opinion.text;
+  renderRooms();
+  renderSaved();
+}
+async function refreshSession(){setSession(await api(base()));}
 function renderAnalysis(){
   const a=state.analysis, video=a.video||{}, title=video.title||'This discussion', vid=video.video_id||video.id;
   $('video-title').textContent=title; $('sidebar-video-title').textContent=title;
@@ -425,17 +432,23 @@ function renderSaved(){
   for(const item of state.session.reflections){const button=node('button','성찰 보기 · 저장본 '+item.revision,'secondary');button.type='button';button.onclick=async()=>{try{const value=await api(base()+'/reflections/'+item.reflection_id);state.saved=value;clearInsights();const view=$('saved-view');view.replaceChildren(node('h3',value.stale?'이전 의견으로 저장한 성찰':'저장한 성찰'));
       for(const [key,title] of Object.entries(categories)){view.append(node('h3',title));$(key).value=value.user_items[key].map(i=>i.text).join('\n');for(const entry of value.user_items[key]){view.append(node('p',entry.text));for(const mid of entry.related_message_ids){const link=node('button','관련 대화','source-button');link.type='button';link.onclick=()=>jumpTo(mid,value.context_message_refs).catch(e=>status(e.message));view.append(link);}}}$('reflection-save-panel').open=true;$('save-state').textContent='이 저장본을 수정할 수 있습니다. 이전 저장본은 보존됩니다.';}catch(e){status(e.message);}};list.append(button);}
 }
-async function enter(){
-  await refreshSession();
-  state.analysis=state.session.analysis;
+async function enter(session){
+  setSession(session);
+  state.analysis=session.analysis;
   renderAnalysis();
   $('before').hidden=true;
   $('workspace').hidden=false;
   renderPerspectives();
   const last=JSON.parse(sessionStorage.getItem(lastRoomKey)||'null');
-  if(last?.session_id===state.session.session_id&&state.session.rooms.some(room=>room.room_id===last.room_id)){
-    await chooseRoom(last.room_id);
-    status('');
+  if(last?.session_id===session.session_id&&session.rooms.some(room=>room.room_id===last.room_id)){
+    try{
+      await chooseRoom(last.room_id);
+      status('');
+    }catch(error){
+      setRoom(null);
+      showStep('explore');
+      status('최근 대화를 불러오지 못했습니다. Converse의 대화 목록에서 다시 열어 주세요.');
+    }
     return;
   }
   showStep('explore');
@@ -443,7 +456,21 @@ async function enter(){
 }
 $('initial').oninput=()=>{$('initial-count').textContent='Characters: '+[...$('initial').value].length+' / 500';};
 $('clear-initial').onclick=()=>{$('initial').value='';$('initial').oninput();$('initial').focus();};
-$('begin').onsubmit=async event=>{event.preventDefault();const button=$('begin').querySelector('button[type=submit]');button.disabled=true;const bytes=crypto.getRandomValues(new Uint8Array(32));state.token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');try{const value=await api('/sessions','POST',{analysis_id:state.analysis.analysis_id,bundle_revision:state.analysis.bundle_revision,initial_opinion:$('initial').value,request_id:requestId()});state.session=value;localStorage.setItem('commentscope-mvp-session',JSON.stringify({token:state.token,session_id:value.session_id}));await enter();}catch(e){status(e.message);}finally{button.disabled=false;}};
+$('begin').onsubmit=async event=>{
+  event.preventDefault();
+  const button=$('begin').querySelector('button[type=submit]');
+  if(button.disabled)return;
+  button.disabled=true;
+  const bytes=crypto.getRandomValues(new Uint8Array(32));
+  state.token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  try{
+    const session=await api('/sessions','POST',{analysis_id:state.analysis.analysis_id,
+      bundle_revision:state.analysis.bundle_revision,initial_opinion:$('initial').value,request_id:requestId()});
+    localStorage.setItem(savedSessionKey,JSON.stringify({token:state.token,session_id:session.session_id}));
+    await enter(session);
+  }catch(error){status(error.message);}
+  finally{button.disabled=false;}
+};
 $('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
 $('open-room').onclick=async()=>{
   const button=$('open-room');
@@ -550,5 +577,37 @@ $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};
 $('save-reflection').onsubmit=async event=>{event.preventDefault();try{await saveCurrent();const user_items={};for(const key of Object.keys(categories)){const values=$(key).value.split('\n').filter(s=>s.trim());user_items[key]=values.map(value=>{const savedMatches=state.saved&&['initial','current'].every(kind=>state.saved[kind+'_revision']===state.session[kind+'_opinion'].revision);const original=state.reflectionResult?.categories[key].find(i=>i.explanation===value)||(savedMatches?state.saved.user_items[key].find(i=>i.text===value):null);return {text:value,initial_span_ids:original?.initial_span_ids||[],current_span_ids:original?.current_span_ids||[],related_message_ids:original?.related_message_ids||[]};});}const path=base()+'/reflections'+(state.saved?'/'+state.saved.reflection_id:'');const value=await api(path,state.saved?'PUT':'POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,analysis_job_id:state.reflectionJob,user_items,expected_revision:state.saved?.revision||0,request_id:requestId()});state.saved=value;$('save-state').textContent='저장했습니다. '+value.revision+'번째 저장본';await refreshSession();}catch(e){status(e.message);}};
-$('new-session').onclick=()=>{clearTimeout(state.roomTimer);localStorage.removeItem('commentscope-mvp-session');sessionStorage.removeItem(lastRoomKey);location.reload();};
-(async()=>{try{const available=await api('/analyses');state.analysis=available.analyses.find(a=>a.status==='experimental'||a.status==='available');if(!state.analysis){status('아직 사용할 수 있는 분석이 없습니다.');$('begin').querySelector('button[type=submit]').disabled=true;return;}renderAnalysis();const previous=localStorage.getItem('commentscope-mvp-session');if(previous){const saved=JSON.parse(previous);state.token=saved.token;state.session={session_id:saved.session_id};try{await enter();return;}catch(_){localStorage.removeItem('commentscope-mvp-session');state.session=null;state.token='';}}status('먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.');}catch(e){status(e.message);}})();
+$('new-session').onclick=()=>{clearTimeout(state.roomTimer);localStorage.removeItem(savedSessionKey);sessionStorage.removeItem(lastRoomKey);location.reload();};
+
+async function start(){
+  const previous=localStorage.getItem(savedSessionKey);
+  let resumeMessage='';
+  if(previous){
+    const saved=JSON.parse(previous);
+    state.token=saved.token;
+    let session;
+    try{
+      session=await api('/sessions/'+encodeURIComponent(saved.session_id));
+    }catch(error){
+      if(!['session_expired','session_token_required','resource_missing'].includes(error.code)){
+        status('기존 기록을 불러오지 못했습니다. 잠시 뒤 새로고침해 다시 시도해 주세요.');
+        return;
+      }
+      localStorage.removeItem(savedSessionKey);
+      sessionStorage.removeItem(lastRoomKey);
+      state.token='';
+      resumeMessage=error.code==='session_expired'
+        ? '이전 세션 기한이 지났습니다. 새로 시작해 주세요.'
+        : '이전 세션을 찾을 수 없습니다. 새로 시작해 주세요.';
+    }
+    if(session){await enter(session);return;}
+  }
+  const available=await api('/analyses');
+  state.analysis=available.analyses.find(a=>a.status==='experimental'||a.status==='available');
+  if(!state.analysis){status('아직 사용할 수 있는 분석이 없습니다.');return;}
+  renderAnalysis();
+  $('begin').querySelector('button[type=submit]').disabled=false;
+  status(resumeMessage||'먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.');
+}
+
+start().catch(error=>status(error.message));

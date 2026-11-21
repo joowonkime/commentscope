@@ -282,6 +282,31 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await until(()=>evaluate("document.body.dataset.step==='converse'&&!document.querySelector('#debate-conclusion').hidden"));
   checks.mobile_conclusion_fits=await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth');
   await screenshot('mobile-debate-result.png');
+  if(debateResult==='consensus'){
+    const savedSession=await evaluate("JSON.parse(localStorage.getItem('commentscope-mvp-session')).session_id");
+    const beforeRestore=metrics();
+    const inject=await command('Page.addScriptToEvaluateOnNewDocument',{source:`
+      const realFetch=window.fetch;
+      window.fetch=(url, options)=>
+        /^\\/api\\/v1\\/sessions\\/[^/]+$/.test(url)&&options?.method==='GET'
+          ? Promise.resolve(new Response(JSON.stringify({error:{code:'temporarily_unavailable'}}),{status:503}))
+          : realFetch(url,options);
+    `});
+    const timeOrigin=await evaluate('performance.timeOrigin');
+    await command('Page.reload');
+    await until(()=>evaluate(`performance.timeOrigin!==${timeOrigin}&&document.readyState==='complete'`));
+    await until(()=>evaluate("!document.querySelector('#status').textContent.startsWith('Loading')"));
+    checks.temporary_restore_error_keeps_session=await evaluate(`
+      JSON.parse(localStorage.getItem('commentscope-mvp-session'))?.session_id===${JSON.stringify(savedSession)}
+      &&document.querySelector('#begin button[type=submit]').disabled
+    `);
+    await command('Page.removeScriptToEvaluateOnNewDocument',{identifier:inject.identifier});
+    if(!checks.temporary_restore_error_keeps_session)throw Error('A temporary session read failure discarded saved access');
+    await reload();
+    await until(()=>evaluate("document.body.dataset.step==='converse'&&!document.querySelector('#debate-conclusion').hidden"));
+    checks.recovers_same_session_and_debate=await evaluate(`state.session.session_id===${JSON.stringify(savedSession)}`)
+      &&JSON.stringify(beforeRestore)===JSON.stringify(metrics());
+  }
   await click('#close-room');
   await until(()=>evaluate("document.querySelector('#room-state').textContent.includes('종료한 대화')"));
   checks.close_uses_debate_and_keeps_conclusion=postCount(/\/debates\/[^/]+\/control$/)>0&&
