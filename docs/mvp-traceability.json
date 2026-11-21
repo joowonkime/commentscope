@@ -3994,6 +3994,12 @@
           "scope": "Registered source evidence v6 aligns the typing rubric for experienced preferences across independent stages and asks for complete restrictions and original-owned reasoning chains. Verified two grounded synthetic profiles and held omissions, scope loss, and kind disagreement. Four archived live graphs and seven core observations revalidate unchanged. Fresh contrast and submission environment remain unverified.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh source evidence v6 on the same two frozen CNBC originals retained the explicit consecutive-shift restriction, independently verified both candidate-source supports and matched both core kinds. One core passed full fidelity; the experienced preference retained an unresolved condition check. The first source graph call was not sent because its 0.354025 USD reservation exceeded the remaining 0.215152226 USD diagnostic allowance. 23 receipts at 0.044716294 USD reconciled, 0.784847774 USD cumulative; final graphs, Agents and answer quality not reached.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
