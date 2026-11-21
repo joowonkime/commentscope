@@ -3982,6 +3982,12 @@
           "scope": "Registered single-source search v3 binds literal candidate qualifications and scopes verified graph-unit failures to the candidate dependency chain. Synthetic end-to-end yields two grounded profiles with reasons and holds omitted reasons, scope changes and related or globally unresolved evidence. Archived proof revalidation and human-annotated syntax controls passed; fresh proposal and Agent utility remain unmeasured.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh qualified search on two fixed originals per video completed both revised cases. CNBC 3 candidates, 4 verified source-candidate supports, 0 Agents; Jubilee 4 candidates, 4 verified supports, 1 original-grounded Agent and 1 actual answer with no distinct original rationale. Strict evidence-preserving contrast gate 0/2. Fresh prior-path CNBC 0 Agents; prior-path Jubilee stopped at the physical request cap. Same-graph offline control attributes the retained Jubilee stance to candidate-scoped verification. 112 physical requests, 0.550450128 USD reconciled; 0.740131480 USD including the prior probe. Full pools, latency, and generalization unverified.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "partial"
         }
       ],
       "design_refs": [
