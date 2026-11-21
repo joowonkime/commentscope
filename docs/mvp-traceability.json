@@ -3970,6 +3970,12 @@
           "scope": "Exact saved-schedule replay with the same pair and source ceilings: CNBC96 direct-source candidate coverage 13/32 to 32/32, Jubilee180 33/60 to 60/60. All 72 saved support pairs and sources for all six existing profiles stay selected. New relation approval and Agent quality remain unmeasured.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
           "result": "pass"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Fresh fixed CNBC and Jubilee direct-nominee probe: four pairs, Jev supported4, independently verified2, final profiles0, answers0. Two host core-syntax holds; one candidate certificate hold and one full evidence graph hold. 32 physical requests at 0.189681352 USD reconciled to official use with no unknown charges. No full corpus or product quality pass.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "fail"
         }
       ],
       "design_refs": [
