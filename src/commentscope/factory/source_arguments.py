@@ -102,7 +102,7 @@ def bind_core(candidate, result):
 
 def validate_core(record):
     from commentscope.factory import owned_arguments as oa
-    if record['artifact_kind'] == oa.VERSION+'-core':
+    if record['artifact_kind'] in oa.CORE_VERSIONS:
         return oa.validate_core(record)
     if bind_core(record['candidate'], {'output': record['output']}) != record:
         raise ValueError('Core declaration changed')

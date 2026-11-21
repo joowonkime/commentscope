@@ -19,8 +19,8 @@ GENERATION.add('source-evidence-proposal')
 def stages(plan):
     protocol=plan.get('source_evidence_protocol')
     if protocol is None:return STAGES
-    from commentscope.factory.source_evidence_graph import VERSION as GRAPH_VERSION
-    if protocol!=GRAPH_VERSION:raise CostPlanError('Unknown source evidence cost protocol')
+    from commentscope.factory.source_evidence_graph import VERSIONS
+    if protocol not in VERSIONS:raise CostPlanError('Unknown source evidence cost protocol')
     return (*STAGES,*GRAPH_STAGES)
 
 

@@ -7,7 +7,7 @@ ordinary membership, ownership, argument, fact and Agent gates.
 from copy import deepcopy
 
 from commentscope.contracts.perspective_draft import obj, array
-from commentscope.factory import minimal_claims as mc
+from commentscope.factory import minimal_claims as mc, owned_arguments
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.framed_corpus import normalized, similarity
 from commentscope.factory.position_frames import fields
@@ -17,7 +17,9 @@ COMMON = 'original-shared-intersections-20261023-v2'
 COMMON_TYPED = 'original-shared-typed-intersections-20261110-v3'
 MINING = 'original-mining-hypotheses-20261110-v4'
 SCOPED_MINING = 'original-mining-qualified-hypotheses-20261121-v5'
-MINING_VERSIONS = (MINING, SCOPED_MINING)
+GROUNDED_MINING = 'original-mining-qualified-hypotheses-20261122-v6'
+QUALIFIED_MINING_VERSIONS = (SCOPED_MINING, GROUNDED_MINING)
+MINING_VERSIONS = (MINING, *QUALIFIED_MINING_VERSIONS)
 TYPED = (COMMON_TYPED, *MINING_VERSIONS)
 BATCH_SIZE = 12
 SYSTEM = '''Propose substantive common positions from the complete ORIGINALS.
@@ -90,6 +92,13 @@ spans in sentence order without overlaps. Do not mark indirect questions or
 quoted assertions as qualifications. Use [] for an unqualified position.
 Regardless of these annotations, the whole claim and qualifications are checked
 independently against each supporting original.'''
+GROUNDED_SYSTEM = SCOPED_SYSTEM + owned_arguments.POSITION_KIND_GUIDANCE + '''
+Read every sentence that describes the same arrangement. Keep restrictions
+such as number of shifts, hours per shift, whether those shifts are consecutive,
+and named exceptions when they distinguish the policy actually discussed.
+For example, opposing four consecutive night shifts does not express opposition
+to working any four nights; keep "consecutive" with the full condition. Do not
+combine restrictions from multiple authors or unrelated scenarios.'''
 
 
 def batches(sources, vectors):
@@ -121,16 +130,16 @@ def request(sources, *, version=VERSION):
                      'nominees': array({'type': 'string', 'enum': aliases},
                                        minimum=2 if common else 1, maximum=len(sources)),
                      **({'assertion_kind':{'type':'string','enum':['value','prediction','fact']}} if version in TYPED else {})}
-    if version == SCOPED_MINING:
+    if version in QUALIFIED_MINING_VERSIONS:
         properties['qualifications'] = array(obj({'role':{'type':'string','enum':['condition','exception']},
                                                  'text':{'type':'string','minLength':3,'maxLength':319}}),maximum=4)
-    system = {MINING:MINING_SYSTEM,SCOPED_MINING:SCOPED_SYSTEM,COMMON_TYPED:COMMON_TYPED_SYSTEM,
+    system = {MINING:MINING_SYSTEM,SCOPED_MINING:SCOPED_SYSTEM,GROUNDED_MINING:GROUNDED_SYSTEM,COMMON_TYPED:COMMON_TYPED_SYSTEM,
               COMMON:COMMON_SYSTEM,VERSION:SYSTEM}[version]
     return mc.request(system, {'ORIGINALS': [
         {'author_id': aid, **mc.packet(source)}
         for aid, source in zip(aliases, sources, strict=True)]},
         obj({'candidates': array(obj(properties), maximum=4 if bounded else 16)}),
-        1536 if version==SCOPED_MINING else 1024 if bounded else 2048)
+        1536 if version in QUALIFIED_MINING_VERSIONS else 1024 if bounded else 2048)
 
 
 def bind(sources, result, *, version=VERSION):
@@ -148,14 +157,14 @@ def bind(sources, result, *, version=VERSION):
     qualification_holds=[]
     for index,row in enumerate(output['candidates']):
         fields(row, 'text nominees'+(' assertion_kind' if version in TYPED else '')+
-               (' qualifications' if version==SCOPED_MINING else ''))
+               (' qualifications' if version in QUALIFIED_MINING_VERSIONS else ''))
         if version in TYPED and row['assertion_kind'] not in ('value','prediction','fact'):
             raise ValueError('One explicit proposed assertion kind required')
         text = mc.normalize(row['text'])
         limit = 320 if bounded else 600
         if len(row['text']) > limit or len(text) >= limit or text in seen:
             raise ValueError('Duplicate, truncated or oversized shared stance')
-        if version == SCOPED_MINING:
+        if version in QUALIFIED_MINING_VERSIONS:
             from commentscope.factory.core_shape import qualification_spans
             try:qualification_spans(text,row['qualifications'])
             except ValueError:qualification_holds.append(index)
@@ -167,7 +176,7 @@ def bind(sources, result, *, version=VERSION):
             raise ValueError('Unknown, duplicate or missing nominee author')
     return {'artifact_kind': version, 'sources': deepcopy(sources),
             'request_sha256': digest(req), 'output': deepcopy(output),
-            **({'qualification_holds':qualification_holds} if version==SCOPED_MINING else {}),
+            **({'qualification_holds':qualification_holds} if version in QUALIFIED_MINING_VERSIONS else {}),
             'semantic_approval': False}
 
 

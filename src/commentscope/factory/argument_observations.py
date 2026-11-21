@@ -23,6 +23,8 @@ SPLIT_PROTOCOLS = (LEGACY_SPLIT, DEPENDENCY_SCOPED, *GRAPH_SPLITS)
 PROTOCOLS = (VERSION, *SPLIT_PROTOCOLS)
 CORE_VERSION = 'core-fidelity-observations-20261102-v1'
 CORE_CODED = 'core-fidelity-observations-20261102-v2'
+CORE_QUALIFIED = 'core-fidelity-observations-20261122-v3'
+CODED_CORE_PROTOCOLS = (CORE_CODED, CORE_QUALIFIED)
 BASIS_CODES = ('normative_assertion', 'empirical_assertion', 'modal_possibility',
                'mixed_or_uncertain', 'reported_or_rejected', 'scope_agrees', 'scope_differs',
                'dependency_agrees', 'dependency_differs', 'coverage_agrees', 'coverage_missing',
@@ -246,15 +248,21 @@ owner_relations is supplied here. Do not perform that comparison in this task.''
 
 
 def core_request(core, *, protocol=CORE_VERSION):
-    if protocol not in (CORE_VERSION, CORE_CODED): raise ValueError('Unknown core observation protocol')
+    if protocol not in (CORE_VERSION, *CODED_CORE_PROTOCOLS): raise ValueError('Unknown core observation protocol')
     from commentscope.factory import source_arguments as sa
     sa.validate_core(core)
     if 'meaning_context' in core['candidate']:
         raise ValueError('Contextual cores require their scoped verifier')
     t = target(core['candidate']['text'], core['output']['scope'], core['candidate']['id'])
     props = {**typed_props(t), 'basis': {'type': 'string', 'minLength': 1, 'maxLength': 240}}
-    if protocol == CORE_CODED: props['basis'] = enum(BASIS_CODES)
-    return {'system': CORE_SYSTEM + (CODED_BASIS if protocol == CORE_CODED else ''), 'data': {'CORE_TARGET': t},
+    if (protocol == CORE_QUALIFIED) != (core['artifact_kind'] == oa.QUALIFIED_CORE):
+        raise ValueError('Core declaration and fidelity protocols disagree')
+    system = CORE_SYSTEM
+    if protocol == CORE_QUALIFIED: system += oa.POSITION_KIND_GUIDANCE
+    if protocol in CODED_CORE_PROTOCOLS:
+        props['basis'] = enum(BASIS_CODES)
+        system += CODED_BASIS
+    return {'system': system, 'data': {'CORE_TARGET': t},
             'schema': obj({'observations': arr(obj(props), 1, 1)}), 'max_tokens': 1024}
 
 
@@ -304,7 +312,7 @@ def scope_guards(row, text, kind, scope):
 
 def bind_core(core, result, *, protocol=CORE_VERSION):
     req = core_request(core, protocol=protocol); row = observations(result, 1)[0]
-    fields(row, 'actual_kind time_ids entity_fidelity conditions_fidelity basis'); basis(row, coded=protocol==CORE_CODED)
+    fields(row, 'actual_kind time_ids entity_fidelity conditions_fidelity basis'); basis(row, coded=protocol in CODED_CORE_PROTOCOLS)
     guards = scope_guards(row, core['candidate']['text'], core['output']['kind'], core['output']['scope'])
     return {'artifact_kind': protocol, 'core_id': core['candidate']['id'],
             'core_sha256': digest(core), 'request_sha256': digest(req),

@@ -5,6 +5,7 @@ from commentscope.factory import source_evidence_graph as g, source_evidence_req
 from commentscope.factory import source_evidence_adapter as adapter, minimal_claims as mc
 from commentscope.factory import argument_observations as obs, raw_membership_verification as verification
 from commentscope.factory import cost_planning as cost, minimal_pipeline
+from commentscope.factory import owned_arguments, source_arguments
 from commentscope.providers import remote_verification
 from test_source_evidence_graph import example, observation_example
 from test_minimal_factory import extraction, membership
@@ -181,6 +182,42 @@ class ScopedEvidenceTests(TestCase):
             record=adapter.lower([self.bind(edit=lambda row:row.update({field:[]}))])
             self.assertIn('candidate_inventory_incomplete',record['hold_reasons'])
 
+    def test_grounded_chain_keeps_indirect_reasons_and_holds_missing_or_broadened_evidence(self):
+        self.env=g.envelope(self.source,snapshot_id=self.env['snapshot_id'],snapshot_sha256=self.env['snapshot_sha256'],
+                            protocol=g.GROUND_RELATIONS)
+        self.output['edges'][-1].update(to_unit='U2',relation='reason_for')
+        def chain(row):
+            row.update(reason_unit_ids=['U2','U4'],elaboration_unit_ids=[])
+        batch=self.bind(edit=chain)
+        self.assertEqual(batch['artifact_kind'],reqs.GROUNDED_BATCH)
+        record=adapter.validate(adapter.lower([batch]))
+        self.assertEqual(record['status'],'complete')
+        self.assertEqual([unit['local_id'] for unit in record['units'] if unit['role']=='reason'],['U2','U4'])
+        missing={key:value for key,value in self.output['edges'][0].items() if key!='local_id'}
+        missing.update(from_unit='U3',to_unit='U4',relation='reason_for')
+        held=self.bind(edit=chain,observe=lambda observed:observed['missing_edges'].append(missing))
+        self.assertIn('source_graph_unresolved',held['certificates'][0]['hold_reasons'])
+        def broadened(row):
+            chain(row)
+            row.update(scope_preserved='fail')
+        self.assertIn('candidate_obligations_unresolved',self.bind(edit=broadened)['certificates'][0]['hold_reasons'])
+
+    def test_qualified_core_does_not_rewrite_a_type_disagreement(self):
+        for text,kind,entity in [('I came to prefer the early schedule.','value','early schedule'),
+                                 ('I worked six early shifts.','fact','early shifts')]:
+            candidate={**mc.candidates(extraction([self.source],{'s':[text]}))[0],'qualifications':[]}
+            core=owned_arguments.bind_core(candidate,{'output':{'kind':kind,'entity':entity,'time_ids':[]}},
+                                           protocol=owned_arguments.QUALIFIED_CORE)
+            self.assertEqual(source_arguments.validate_core(core),core)
+            independent=obs.core_request(core,protocol=obs.CORE_QUALIFIED)
+            self.assertNotIn('kind',independent['data']['CORE_TARGET'])
+            observed=dict(actual_kind=kind,time_ids=[],entity_fidelity='yes',conditions_fidelity='yes',
+                          basis='normative_assertion' if kind=='value' else 'empirical_assertion')
+            response={'output':{'observations':[observed]}}
+            self.assertTrue(obs.bind_core(core,response,protocol=obs.CORE_QUALIFIED)['passed'])
+            observed['actual_kind']='fact' if kind=='value' else 'value'
+            self.assertIn('declared_kind_mismatch',obs.bind_core(core,response,protocol=obs.CORE_QUALIFIED)['guards'])
+
 
 class GraphRunner(JevRunner):
     def __init__(self,*,bad_graph=False,drop_reason=False,veto=False):
@@ -205,7 +242,7 @@ class GraphRunner(JevRunner):
             sid=data['ORIGINAL']['source_id'];value=observation_example({'output':self.proposals[sid]})
             if self.bad_graph:value['dependency_coverage']='unknown'
         elif system.startswith(reqs.SYSTEM):
-            output=scoped_output if data.get('EVIDENCE_PROTOCOL')==reqs.SCOPED_BATCH else candidate_output
+            output=scoped_output if data.get('EVIDENCE_PROTOCOL') in (reqs.SCOPED_BATCH,reqs.GROUNDED_BATCH) else candidate_output
             value=output(data['CANDIDATES'])
             if self.drop_reason:value['candidates'][0]['reason_unit_ids']=[]
         else:return super().call(stage,request)
@@ -254,13 +291,18 @@ class SourceEvidencePipelineTests(TestCase):
                     return {'output':{'candidates':[dict(text=text,nominees=authors,assertion_kind='value',qualifications=[])
                             for text,authors in grouped.items()]},'raw':'synthetic fixture','errors':[]}
                 return super().call(stage,request)
-        result=self.h.process(QualifiedRunner(),discovery_mode='shared',membership_mode='raw',verification_contract=verification.FULL_SCOPE,
+        runner=QualifiedRunner()
+        result=self.h.process(runner,discovery_mode='shared',membership_mode='raw',verification_contract=verification.FULL_SCOPE,
             argument_audit_protocol=obs.SHARED_TYPED_CHAT,agent_source_policy='candidate_verified_subset',
-            membership_judge_protocol=jev_membership.VERSION,source_evidence_protocol=g.VERSION,
+            membership_judge_protocol=jev_membership.VERSION,source_evidence_protocol=g.GROUND_RELATIONS,
             membership_evidence_protocol=verification.QUALIFIED_CONTEXT,
             membership_search_policy=SEARCH,admission_policy=seed_policy.POLICY)
         self.assertEqual(SEARCH['version'],perspective_mining.QUALIFIED)
         self.assertFalse(result['errors'])
+        self.assertEqual(result['shared_discovery'][0]['artifact_kind'],shared_claims.GROUNDED_MINING)
+        self.assertTrue(all(c['artifact_kind']==owned_arguments.QUALIFIED_CORE for c in result['cores']))
+        self.assertTrue(all(c['artifact_kind']==obs.CORE_QUALIFIED for c in self.h.saved['core-fidelity-checks']))
+        self.assertIn(reqs.GROUNDED_BATCH,{r['data'].get('EVIDENCE_PROTOCOL') for _,r in runner.calls})
         self.assertTrue(all('qualifications' in c for c in result['candidates']))
         profiles=result['agent_inputs']['compiled']['profiles']
         self.assertEqual(len(profiles),2)

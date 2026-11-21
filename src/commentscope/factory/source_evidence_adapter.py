@@ -18,7 +18,7 @@ def lower(batches):
     if len(ids)!=len(set(ids)):raise ValueError('Duplicate candidate certificate')
     units={u['local_id']:u for u in verified['proposal']['output']['units']};edges=verified['proposal']['output']['edges']
     holds=list(verified['issues'])+[r for c in certificates for r in c['hold_reasons']]
-    if all(b['artifact_kind']==requests.SCOPED_BATCH for b in batches):
+    if all(b['artifact_kind'] in (requests.SCOPED_BATCH, requests.GROUNDED_BATCH) for b in batches):
         certificates=[c for c in certificates if c['status']=='eligible_for_existing_checks']
         ids=[c['candidate']['id'] for c in certificates]
         wanted={lid for c in certificates
@@ -118,7 +118,8 @@ def process(snapshot, candidates, memberships, execution, cores, core_checks):
     records=[]
     for sid in supporting:
         source=execution.registry[sid];needed=[c for c in candidates if any(r['source_id']==sid and r['candidate_id']==c['id'] for r in rows)]
-        env=g.envelope(source,snapshot_id=snapshot.snapshot_id,snapshot_sha256=digest(snapshot.to_dict()))
+        env=g.envelope(source,snapshot_id=snapshot.snapshot_id,snapshot_sha256=digest(snapshot.to_dict()),
+                       protocol=execution.source_evidence_protocol)
         proposals=execution.work('source-evidence-proposal',[env],lambda a:g.proposal_request(a[0]),lambda a,r:g.bind_proposal(a[0],r),1)
         if not proposals:continue
         proposal=proposals[0]

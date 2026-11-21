@@ -208,6 +208,13 @@ class CostReviewTests(unittest.TestCase):
         report=tool.audit(self.run)
         self.assertEqual(report['stages']['source-evidence-observation']['source_evidence_protocol'],self.plan['source_evidence_protocol'])
 
+    def test_grounded_candidate_batch_cost_binds_its_parent_graph_version(self):
+        from commentscope.factory import source_evidence_graph, source_evidence_requests
+        self.plan['source_evidence_protocol']=source_evidence_graph.GROUND_RELATIONS
+        self.archived_response(family='source-evidence-candidates',protocol=source_evidence_requests.GROUNDED_BATCH)
+        measured=tool.audit(self.run)['stages']['source-evidence-candidates']
+        self.assertEqual(measured['source_evidence_protocol'],self.plan['source_evidence_protocol'])
+
     def test_audit_binds_real_receipt_cost_cache_and_archive_without_any_model_call(self):
         request_file,_=self.archived_response()
         write(request_file.with_name('0002-verification-source-world-'+ 'b'*20+'.request.json'),

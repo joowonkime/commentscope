@@ -6,11 +6,13 @@ Host binding is deterministic; semantic observations remain fallible model input
 from copy import deepcopy
 
 from commentscope.contracts.perspective_draft import obj, array
-from commentscope.factory import minimal_claims as mc
+from commentscope.factory import minimal_claims as mc, owned_arguments
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory import source_quote_anchors as anchors
 
 VERSION = 'source-evidence-graph-20261112-v5'
+GROUND_RELATIONS = 'source-evidence-graph-20261122-v6'
+VERSIONS = (VERSION, GROUND_RELATIONS)
 VERIFICATION_POLICY = 'source-role-applicability-20261113-v1'
 UNIT_IDS = tuple(f'U{i}' for i in range(1,33))
 EDGE_IDS = tuple(f'E{i}' for i in range(1,65))
@@ -93,17 +95,25 @@ def issue_schema(ids):
         obligation=choice(OBLIGATIONS),evidence_refs=array(span_schema(),maximum=16),status=choice(('unresolved','resolved'))))
 
 
-def envelope(source, *, snapshot_id, snapshot_sha256, language='unknown'):
+def envelope(source, *, snapshot_id, snapshot_sha256, language='unknown', protocol=VERSION):
     mc.validate_source(source)
-    if (not isinstance(snapshot_id,str) or not snapshot_id or not isinstance(snapshot_sha256,str)
+    if (protocol not in VERSIONS or not isinstance(snapshot_id,str) or not snapshot_id or not isinstance(snapshot_sha256,str)
             or len(snapshot_sha256)!=64 or any(c not in '0123456789abcdef' for c in snapshot_sha256)
             or language not in ('en','ko','other','unknown')): raise ValueError('Pinned source envelope required')
-    return dict(artifact_kind=VERSION+'/envelope',snapshot_id=snapshot_id,snapshot_sha256=snapshot_sha256,
+    return dict(artifact_kind=protocol+'/envelope',snapshot_id=snapshot_id,snapshot_sha256=snapshot_sha256,
                 source=deepcopy(source),source_sha256=digest(source),language=language)
 
 
+def envelope_protocol(env):
+    version, _, suffix = env['artifact_kind'].partition('/')
+    if version not in VERSIONS or suffix != 'envelope':
+        raise ValueError('Unknown source envelope protocol')
+    return version
+
+
 def validate_envelope(value):
-    if envelope(value['source'],snapshot_id=value['snapshot_id'],snapshot_sha256=value['snapshot_sha256'],language=value['language']) != value:
+    if envelope(value['source'],snapshot_id=value['snapshot_id'],snapshot_sha256=value['snapshot_sha256'],
+                language=value['language'],protocol=envelope_protocol(value)) != value:
         raise ValueError('Source envelope changed')
     return value
 
@@ -214,6 +224,26 @@ OBSERVE+=''' issue_codes contains actual blocking problems; use [] when none.
 represented/context_only/nonpropositional are informational statuses, not errors.
 No status code overrides fail, unknown, unassessed or a missing obligation.'''
 
+GROUND_GUIDANCE = '''
+Trace each endorsed substantive position back to its actual support across the
+whole original. A reason can occur in an earlier or later sentence without a
+causal word. Use reason_for when the author presents it to explain this specific
+position; topical proximity and compatibility alone do not establish a reason.
+Link the actual immediate endpoints along a chain. For example, "My commute is
+short, so I have time before dinner. I would miss that time. I would decline
+the evening schedule" can connect the commute to time, time to what the author
+would miss, and that loss to declining the schedule. Retain each source-bound
+link the author actually makes rather than merely listing shared-topic units.
+Concessions are acknowledged counterpoints, and elaborations restate, specify
+or illustrate content without explaining why it is held. A standalone fact
+that identifies what "it" refers to supplies reference context. A reason for
+one position cannot be attached to another solely because they share a topic.
+Preserve the complete restriction (including duration, recurrence or
+consecutiveness when relevant). An explicit carve-out such as "except for
+orientation" limits the position it belongs to; it is not assent to a blanket
+rule or merely an unrelated concession. If the link is unclear, keep it
+unresolved. Never turn an unstated link into a verified edge.'''
+
 
 def canonical_schema(env):
     validate_envelope(env);ids=UNIT_IDS
@@ -227,7 +257,9 @@ def canonical_schema(env):
 
 
 def proposal_request(env):
-    return mc.request(PROPOSE,{'EVIDENCE_PROTOCOL':VERSION,'PROPOSAL_TRANSPORT':anchors.VERSION,
+    version = envelope_protocol(env)
+    system = PROPOSE + owned_arguments.POSITION_KIND_GUIDANCE + GROUND_GUIDANCE if version == GROUND_RELATIONS else PROPOSE
+    return mc.request(system,{'EVIDENCE_PROTOCOL':version,'PROPOSAL_TRANSPORT':anchors.VERSION,
         'ORIGINAL':mc.packet(env['source']),'LANGUAGE_HINT':env['language']},anchors.schema(canonical_schema(env)),12288)
 
 
@@ -236,7 +268,7 @@ def bind_proposal(env, result):
     if result.get('errors'):raise ValueError('Failed evidence proposal')
     wire=result.get('output');check(req['schema'],wire);out=anchors.decode(env,wire)
     validate_output(env,out)
-    return dict(artifact_kind=VERSION+'/proposal',source=deepcopy(env['source']),envelope=deepcopy(env),
+    return dict(artifact_kind=envelope_protocol(env)+'/proposal',source=deepcopy(env['source']),envelope=deepcopy(env),
                 request_sha256=digest(req),wire_output=deepcopy(wire),output=deepcopy(out),semantic_approval=False)
 
 
@@ -266,7 +298,7 @@ def bind_annotation(env,result):
 
 
 def validate_proposal(value):
-    if value.get('artifact_kind')!=VERSION+'/proposal':raise ValueError('Evidence protocol changed')
+    if value.get('artifact_kind')!=envelope_protocol(value['envelope'])+'/proposal':raise ValueError('Evidence protocol changed')
     if bind_proposal(value['envelope'],{'output':value['wire_output']})!=value:raise ValueError('Evidence proposal provenance changed')
     return value
 
@@ -288,7 +320,9 @@ def observation_request(proposal):
         issues=array(issue_schema([*ids,*edge_ids,proposal['source']['id']]),maximum=64)))
     schema['properties']['source_language']=choice(('en','ko','other','unknown'))
     schema['required'].append('source_language')
-    return mc.request(OBSERVE,{'EVIDENCE_PROTOCOL':VERSION,'ORIGINAL':mc.packet(proposal['source']),
+    version = envelope_protocol(proposal['envelope'])
+    system = OBSERVE + owned_arguments.POSITION_KIND_GUIDANCE + GROUND_GUIDANCE if version == GROUND_RELATIONS else OBSERVE
+    return mc.request(system,{'EVIDENCE_PROTOCOL':version,'ORIGINAL':mc.packet(proposal['source']),
         'UNITS':deepcopy(out['units']),'SOURCE_EDGES':deepcopy(out['edges']),
         'COVERAGE':deepcopy(out['coverage']),'PROPOSAL_ISSUES':deepcopy(out['issues'])},schema,12288)
 
@@ -306,7 +340,7 @@ def bind_observation(proposal, result):
     for row in out['missing_units']:spans(env,row['own_spans'])
     for row in out['missing_edges']:spans(env,row['cue_refs'])
     validate_issues(env,out['issues'],ids+edge_ids)
-    return dict(artifact_kind=VERSION+'/observation',proposal_sha256=digest(proposal),
+    return dict(artifact_kind=envelope_protocol(env)+'/observation',proposal_sha256=digest(proposal),
                 request_sha256=digest(req),output=deepcopy(out),semantic_approval=False)
 
 
@@ -402,7 +436,7 @@ def verify(proposal, observation):
     if any(obs[k]!='pass' for k in ('scope_coverage','ownership_coverage','dependency_coverage')):issues.append('source_obligations_unresolved')
     if any(i['status']=='unresolved' for i in out['issues']+obs['issues']):issues.append('unresolved_issue')
     obligations={k:('unknown' if issues else 'pass') for k in OBLIGATION_CHECKS}
-    return dict(artifact_kind=VERSION+'/verified',verification_policy=VERIFICATION_POLICY,unit_applicability=applicability,
+    return dict(artifact_kind=envelope_protocol(proposal['envelope'])+'/verified',verification_policy=VERIFICATION_POLICY,unit_applicability=applicability,
         proposal=deepcopy(proposal),observation=deepcopy(observation),
         binding_checks={k:'pass' for k in BINDING_CHECKS},obligation_results=obligations,
         status='unresolved' if issues else 'complete',issues=sorted(set(issues)),semantic_approval=False)
@@ -418,6 +452,6 @@ def audit_workload(proposal, *, candidate_count):
     validate_proposal(proposal)
     if type(candidate_count) is not int or candidate_count<0:raise ValueError('Nonnegative candidate count required')
     out=proposal['output'];u=len(out['units']);e=len(out['edges']);k=len(out['coverage'])
-    return dict(artifact_kind=VERSION+'/workload',proposal_sha256=digest(proposal),units=u,edges=e,coverage_partitions=k,
+    return dict(artifact_kind=envelope_protocol(proposal['envelope'])+'/workload',proposal_sha256=digest(proposal),units=u,edges=e,coverage_partitions=k,
         audit_verdicts=len(UNIT_CHECKS)*u+e+k+3,source_calls=2,candidate_calls=(candidate_count+7)//8,
         semantic_approval=False)

@@ -3988,6 +3988,12 @@
           "scope": "Fresh qualified search on two fixed originals per video completed both revised cases. CNBC 3 candidates, 4 verified source-candidate supports, 0 Agents; Jubilee 4 candidates, 4 verified supports, 1 original-grounded Agent and 1 actual answer with no distinct original rationale. Strict evidence-preserving contrast gate 0/2. Fresh prior-path CNBC 0 Agents; prior-path Jubilee stopped at the physical request cap. Same-graph offline control attributes the retained Jubilee stance to candidate-scoped verification. 112 physical requests, 0.550450128 USD reconciled; 0.740131480 USD including the prior probe. Full pools, latency, and generalization unverified.",
           "reference": "docs/design/PREPARED_VIDEO_MINING.md",
           "result": "partial"
+        },
+        {
+          "kind": "offline",
+          "scope": "Registered source evidence v6 aligns the typing rubric for experienced preferences across independent stages and asks for complete restrictions and original-owned reasoning chains. Verified two grounded synthetic profiles and held omissions, scope loss, and kind disagreement. Four archived live graphs and seven core observations revalidate unchanged. Fresh contrast and submission environment remain unverified.",
+          "reference": "docs/design/PREPARED_VIDEO_MINING.md",
+          "result": "pass"
         }
       ],
       "design_refs": [

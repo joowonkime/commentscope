@@ -15,6 +15,9 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.position_frames import fields
 
 VERSION = 'owned-source-arguments-20261016-v2'
+CORE_VERSION = VERSION+'-core'
+QUALIFIED_CORE = 'owned-source-core-20261122-v1'
+CORE_VERSIONS = (CORE_VERSION, QUALIFIED_CORE)
 KINDS = ('fact','value','prediction','uncertain')
 RELATIONS = ('equivalent','position_narrower','candidate_narrower','different','opposed','uncertain')
 TEMPORAL = re.compile(r'\b(?:immediately|now|today|tomorrow|yesterday|(?:in|since|until|before|after|during)\s+\d{4}|\d{4}-\d{2}-\d{2})\b|즉시|지금|오늘|내일|어제|\d{4}년(?:\s*\d{1,2}월)?',re.I)
@@ -65,6 +68,19 @@ prediction forecast/possibility, uncertain mixed/unresolved. Do not relabel fact
 to avoid verification. entity names the subject. Select only supplied time anchors
 that restrict the assertion. Code preserves FIXED_CONDITIONS from the original
 text; do not invent conditions or confuse a demand with a support contingency.'''
+POSITION_KIND_GUIDANCE = '''
+Classify the main assertion by what the author commits to. An author expressing
+approval, disapproval or a preference makes a value claim even if the stance
+was formed through experience: "After trying the evening schedule, I came to
+prefer it" expresses a preference about that schedule. Keep the stated actual
+experience and timing as scope; do not infer an experience that is not stated.
+"I worked the evening schedule for six weeks" reports an actual event (fact).
+"Our survey found that six people changed their preference" reports an
+empirical finding (fact). "People might prefer the evening schedule" is a
+prediction. A separately asserted experience or observable consequence remains
+an empirical assertion even when it explains a preference. Preserve a forecast,
+report or quoted stance as such; do not turn it into the author's own preference.
+When independent assertions cannot be separated faithfully, keep the typing unresolved.'''
 
 
 def selected(graph,node):
@@ -88,9 +104,13 @@ def runtime_target(candidate, proof):
     return {'text':candidate['text'],'interpretation_scope':deepcopy(proof['interpretation_scope'])}
 
 
-def core_request(candidate, runtime_scope=None):
+def core_request(candidate, runtime_scope=None, *, protocol=CORE_VERSION):
     from commentscope.factory.core_shape import qualification_spans
     mc.validate_candidate(candidate)
+    if protocol not in CORE_VERSIONS:
+        raise ValueError('Unknown owned core protocol')
+    if protocol == QUALIFIED_CORE and ('qualifications' not in candidate or 'meaning_context' in candidate or runtime_scope is not None):
+        raise ValueError('Qualified core requires a self-contained candidate with qualifications')
     graph=ed.parse({'id':candidate['id'],'text':candidate['text'],'parent':None})
     anchors=temporal_anchors(candidate['text']);lookup={n['id']:n for n in graph['nodes']}
     fixed=[lookup[e['ground_id']]['span'] for e in graph['edges'] if e['relation']=='necessary_condition']
@@ -104,13 +124,14 @@ def core_request(candidate, runtime_scope=None):
             combined.append(span)
         fixed=combined
     target=runtime_target(candidate,runtime_scope)
-    return mc.request(CORE,{'TARGET':target,'FIXED_CONDITIONS':fixed,'TEMPORAL_ANCHORS':anchors},obj({
+    system = CORE + POSITION_KIND_GUIDANCE if protocol == QUALIFIED_CORE else CORE
+    return mc.request(system,{'TARGET':target,'FIXED_CONDITIONS':fixed,'TEMPORAL_ANCHORS':anchors},obj({
         'kind':{'type':'string','enum':list(KINDS)},'entity':{'type':'string','minLength':1,'maxLength':600},
         'time_ids':array({'type':'string','enum':[a['id'] for a in anchors]} if anchors else {'type':'string'},maximum=len(anchors))}),512)
 
 
-def bind_core(candidate,result,runtime_scope=None):
-    req=core_request(candidate,runtime_scope)
+def bind_core(candidate,result,runtime_scope=None, *, protocol=CORE_VERSION):
+    req=core_request(candidate,runtime_scope,protocol=protocol)
     if result.get('errors'):raise ValueError('Failed owned core typing')
     raw=result.get('output');fields(raw,'kind entity time_ids')
     if raw['kind'] not in KINDS or not isinstance(raw['entity'],str) or not 1<=len(raw['entity'].strip())<=600:
@@ -131,14 +152,15 @@ def bind_core(candidate,result,runtime_scope=None):
         candidate['text'],candidate.get('qualifications',[]))))
     value={'kind':raw['kind'],'scope':{'entity':raw['entity'],'time':'; '.join(anchors[i]['text'] for i in sorted(ids)),
         'conditions':'; '.join(c['text'] for c in req['data']['FIXED_CONDITIONS'])}}
-    record = {'artifact_kind':VERSION+'-core','candidate':deepcopy(candidate),'request_sha256':digest(req),
+    record = {'artifact_kind':protocol,'candidate':deepcopy(candidate),'request_sha256':digest(req),
         'response':deepcopy(raw),'output':value,'output_sha256':digest(value),'hold_reasons':holds,'semantic_approval':False}
     if runtime_scope is not None:record['runtime_scope']=deepcopy(runtime_scope)
     return record
 
 
 def validate_core(record):
-    if bind_core(record['candidate'],{'output':record['response']},record.get('runtime_scope'))!=record:raise ValueError('Owned core declaration changed')
+    if bind_core(record['candidate'],{'output':record['response']},record.get('runtime_scope'),
+                 protocol=record['artifact_kind'])!=record:raise ValueError('Owned core declaration changed')
     return record
 
 

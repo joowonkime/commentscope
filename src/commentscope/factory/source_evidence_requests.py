@@ -40,10 +40,21 @@ that affect the position, its reference units, or its supporting evidence.
 An invalid unrelated assertion does not license rewriting or hiding any
 element needed by this candidate.'''
 SCOPED_BATCH = g.VERSION+'/scoped-candidate-batch-v2'
+GROUNDED_BATCH = g.GROUND_RELATIONS+'/scoped-candidate-batch-v2'
 
 
 def scoped(candidates):
     return bool(candidates) and all('qualifications' in c for c in candidates)
+
+
+def batch_protocol(verified, candidates):
+    version = g.envelope_protocol(verified['proposal']['envelope'])
+    if version == g.GROUND_RELATIONS:
+        if not scoped(candidates):
+            raise ValueError('Qualified candidates required for grounded relation evidence')
+        return GROUNDED_BATCH
+    return SCOPED_BATCH if scoped(candidates) else version+'/candidate-batch'
+
 
 def candidate_request(verified, candidates):
     g.validate_verified(verified)
@@ -63,7 +74,19 @@ def candidate_request(verified, candidates):
     if versioned:
         fields['candidate_original_coverage']=fields.pop('full_original_coverage')
         fields.update(reference_unit_ids=id_list(),elaboration_unit_ids=id_list())
-    return mc.request(SCOPED_SYSTEM if versioned else SYSTEM,{'EVIDENCE_PROTOCOL':SCOPED_BATCH if versioned else g.VERSION,
+    protocol = batch_protocol(verified, candidates)
+    system = SCOPED_SYSTEM if versioned else SYSTEM
+    if protocol == GROUNDED_BATCH:
+        system += '''
+Trace source-owned reasons and concessions through the existing edges to this
+position. Report omitted links as a coverage issue instead of supplying a new
+edge or presenting neighboring content as this position's reason.
+Compare the full candidate with the original restriction, including qualifiers
+expressed in other sentences about the same proposed arrangement. Report scope
+loss when a change in duration, frequency or consecutiveness would make the
+candidate apply to circumstances the original does not cover. Check the whole
+position for preserved scope; a partial match to a qualifying phrase is insufficient.'''
+    return mc.request(system,{'EVIDENCE_PROTOCOL':protocol if versioned else g.VERSION,
         'ORIGINAL':mc.packet(verified['proposal']['source']),
         'UNITS':deepcopy(units),'SOURCE_EDGES':deepcopy(verified['proposal']['output']['edges']),
         'CANDIDATES':[{'id':cid,**mc.candidate_packet(cs[cid])} for cid in sorted(cs)]},
@@ -104,6 +127,7 @@ def bind_candidates(verified, candidates, support_batches, result):
     units={u['local_id']:u for u in verified['proposal']['output']['units']};edges=verified['proposal']['output']['edges'];bound=[]
     edge_map={e['local_id']:e for e in edges}
     versioned=scoped(candidates)
+    version = g.envelope_protocol(verified['proposal']['envelope'])
     unsafe_units=g.local_unit_holds(verified) if versioned else None
     for row in out['candidates']:
         reasons=[];cid=row['candidate_id'];positions=set(row['position_unit_ids']);active=relevant_inventory(verified,positions)
@@ -144,11 +168,11 @@ def bind_candidates(verified, candidates, support_batches, result):
         if verified['status']!='complete' and (unsafe_units is None
                 or unsafe_units&relevant_inventory(verified,active|references)):
             reasons.append('source_graph_unresolved')
-        bound.append(dict(artifact_kind=g.VERSION+('/scoped-candidate-certificate-v2' if versioned else '/candidate-certificate'),
+        bound.append(dict(artifact_kind=version+('/scoped-candidate-certificate-v2' if versioned else '/candidate-certificate'),
             candidate=deepcopy(cs[cid]),source_id=sid,
             verified_sha256=digest(verified),request_sha256=digest(req),output={**deepcopy(row),'dependency_edges':selected},
             status='held' if reasons else 'eligible_for_existing_checks',hold_reasons=sorted(set(reasons)),semantic_approval=False))
-    return dict(artifact_kind=SCOPED_BATCH if versioned else g.VERSION+'/candidate-batch',verified=deepcopy(verified),candidates=deepcopy(candidates),
+    return dict(artifact_kind=batch_protocol(verified, candidates),verified=deepcopy(verified),candidates=deepcopy(candidates),
         support_batches=deepcopy(support_batches),response=deepcopy(out),request_sha256=digest(req),certificates=bound)
 
 
