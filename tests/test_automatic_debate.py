@@ -7,6 +7,7 @@ import threading
 import unittest
 
 from commentscope.agents.web import WebError
+from commentscope.agents.debate_quantities import changes_weekly_hours
 from commentscope.product.analysis import Analysis
 from commentscope.product.app import ProductApp
 from commentscope.product.debate_execution import room_at
@@ -80,10 +81,10 @@ class AutomaticDebateTests(unittest.TestCase):
                                       else next(iter(q['criteria'])))
         return receipt(payload, choose)
 
-    def debate(self, participants=('P2', 'P1'), request_id='debate'):
+    def debate(self, participants=('P2', 'P1'), request_id='debate', question='Should we require a safety check?'):
         status, value = self.call('POST', self.base+'/debates', {
             'analysis_revision': self.analysis.revision, 'participant_ids': list(participants),
-            'initial_revision': 1, 'question': 'Should we require a safety check?', 'request_id': request_id})
+            'initial_revision': 1, 'question': question, 'request_id': request_id})
         self.assertEqual(status, 201)
         return '/api/v1/debates/'+value['debate_id'], value
 
@@ -197,6 +198,67 @@ class AutomaticDebateTests(unittest.TestCase):
         self.assertEqual(opening['answerability'], 'partial')
         self.assertEqual([p['task_fit'] for p in opening['points']], ['responsive'])
         self.assertEqual(final['state'], 'completed')
+
+    def test_user_rate_scope_hold_keeps_valid_conversion_and_discards_changed_unit(self):
+        query = 'Would you accept four workdays while keeping 40 hours per week?'
+        convert = 'If work is split equally, four ten-hour days total 40 hours per week.'
+        changed = 'I would support four forty-hour days.'
+
+        def draft(stage, request):
+            result = self.model(stage, request)
+            scope = request['data']['DEBATE_SCOPE']
+            if (stage, scope.get('phase'), scope.get('agent_id')) == ('turn-generate', 'opening', 'P2'):
+                self.assertIn('rate denominators', request['system'])
+                point = {**result['output']['points']['P1'], 'origin': 'ai_reasoning'}
+                result['output']['points'].update(P1={**point, 'text':convert}, P2={**point, 'text':changed})
+            return result
+
+        self.app.model = draft
+        path, debate = self.debate(question=query)
+        self.assertEqual(self.job(self.start(path, debate)[1])['state'], 'succeeded')
+        final = self.call('GET', path)[1]
+        opening = final['messages'][1]
+        self.assertEqual(opening['answerability'], 'partial')
+        self.assertEqual([point['text'] for point in opening['points']], [convert])
+        decision = next(req for stage, req in self.events if stage == 'turn-verify')
+        self.assertEqual(decision['state']['QUESTION'], query)
+        self.assertIn('rate denominators', decision['questions']['P1_scope']['instructions'])
+        self.assertNotIn('P2', decision['state']['PROPOSED_POINTS'])
+        proposals = next(req for stage, req in self.events if stage == 'draft-generate')
+        self.assertNotIn(changed, json.dumps(proposals))
+
+    def test_quantity_guard_is_limited_to_reused_weekly_values(self):
+        question = 'What if four workdays maintain forty weekly hours?'
+        for text in ('Working four forty-hour days might help.', 'I would compare four 40-hour workdays.',
+                     'That means working 40 hours per day.', '그러면 하루 40시간 근무하게 됩니다.'):
+            self.assertTrue(changes_weekly_hours(question, text), text)
+        for text in ('Four ten-hour days still total 40 hours a week.',
+                     'An alternative could be four eight-hour days for a 32-hour week.',
+                     'This means four ten-hour days, not four forty-hour days.',
+                     'One forty-hour workday would total 40 hours across the week.',
+                     'Four forty-hour days would be a different scenario.',
+                     'In a separate scenario, four forty-hour days would mean 160 hours a week.'):
+            self.assertFalse(changes_weekly_hours(question, text), text)
+        self.assertTrue(changes_weekly_hours('주당 36시간이면 조건이 달라지나요?', '하루 36시간입니다.'))
+        self.assertFalse(changes_weekly_hours('Compare a 40-hour week and 40 hours per day.', '40 hours per day.'))
+        self.assertFalse(changes_weekly_hours('Compare 32 hours a week and 40 hours a week.', '40 hours per day.'))
+
+    def test_quantity_guard_holds_a_changed_synthesis_proposal_before_voting(self):
+        query = 'What if weekly work stayed at 40 hours per week?'
+
+        def draft(stage, request):
+            output = self.model(stage, request)
+            if stage == 'draft-generate':
+                output['output']['candidates'][0]['text'] = 'Both support four 40-hour days.'
+            return output
+
+        self.app.model = draft
+        path, debate = self.debate(question=query)
+        self.assertEqual(self.job(self.start(path, debate)[1])['state'], 'succeeded')
+        final = self.call('GET', path)[1]
+        self.assertEqual(final['state'], 'verification_hold')
+        self.assertIsNone(final['synthesis_agent'])
+        self.assertNotIn('ratify-generate', [stage for stage, _ in self.events])
 
     def test_draft_assessment_still_applies_when_the_entire_draft_is_published(self):
         self.overrides[('turn-verify', 'opening', 'P2', 'answer')] = 'reject'

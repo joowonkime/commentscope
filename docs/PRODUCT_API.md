@@ -71,6 +71,9 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 | 사용자 성찰 저장/수정/읽기 | `POST {session}/reflections`, `PUT/GET {session}/reflections/{id}` |
 | 작업/원문 | `GET /api/v1/jobs/{id}`, `GET {session}/sources/{source_id}` |
 
+등록 분석의 관점 카드와 이유·조건 항목은 각 주장에 결합된 원댓글의 `source_ids`를 포함한다.
+원문 열람은 기존 세션 출처 endpoint를 사용하며 출처 주소에는 원문이나 발언자의 정보가 없다.
+
 비교는 실제 사용자 구간·허용 claim·필수 전제와 인용을 연결한다. 빈 의견은 생성 없이 비교 불가다.
 같은 입력 revision의 완료된 비교/성찰은 새로운 request_id에도 재사용한다. 의견 수정은 이전 분석을 stale로 만든다.
 1:1은 한 Agent, 그룹은2~3Agent다. 그룹은 각 Agent의 opening/reply 후 사용자 입력을 기다린다.

@@ -1,16 +1,19 @@
 """Grounded turn generation, independent decisions, and binding of published points."""
 from commentscope.agents import seed_policy
 from commentscope.agents.debate_contracts import (
-    ORIGINS, VERSION, addressed, array, choice, compact, generate, ids, obj, observe,
+    ORIGINS, QUESTION_SCOPE, VERSION, addressed, array, choice, compact, generate, ids, obj, observe,
     question, require_ids, short_citations, supported, unique_rows,
 )
+from commentscope.agents.debate_quantities import changes_weekly_hours
 from commentscope.factory.automatic_contract import digest
 
 TURN_CHECKS = {
     'kind': ('Does the text match the claimed origin? AI reasoning is conditional or normative '
              'and cannot contain new empirical assertions.', 'matches_origin'),
     'attribution': ('Does this avoid changing attribution, adding author experiences or claiming endorsement?', 'faithful'),
-    'scope': ('Does the point retain the applicable stance, essential conditions, uncertainty and source scope?', 'preserved'),
+    'scope': ('Compare this point with QUESTION as well as the source anchors and applicable CONDITIONS. '
+              'Reject a changed user scenario even if the source stance is faithfully represented. '
+              'Keep the stance, required conditions and uncertainty. '+QUESTION_SCOPE, 'preserved'),
     'basis': ('Is the point grounded in the cited anchors and any exact reference? Preserve hypothetical worlds. Peer speech and model memory '
               'are not factual evidence. A quote selected by the host must fit its use here. An AI proposal or value judgment '
               'may extend the anchor explicitly as reasoning. It may not add a fact or a claim about the source author.', 'supported'),
@@ -125,8 +128,10 @@ For external_evidence cite exact supplied passages for every empirical assertion
 Keep each free-text point short and complete, with its essential qualifiers. Aim for at most 350 characters.
 Fill P1 through P3 in order and use null for every unused slot.
 An abstention may have a grounded explanation. Never claim agreement, public consensus,
-invented sources, or knowledge beyond the allowed scope. Use the user's language.''', data, schema)
+invented sources, or knowledge beyond the allowed scope. Use the user's language.
+''' + QUESTION_SCOPE, data, schema)
     proposed, evidence = {}, {}
+    scope_hold = False
     for alias in POINT_SLOTS:
         row = value['points'][alias]
         if row is None:
@@ -141,6 +146,9 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
             raise ValueError('Empty proposed debate point')
         if bool(row['reference_ids']) != (row['origin'] == 'external_evidence'):
             raise ValueError('Point origin and supplied passages disagree')
+        if row['origin'] == 'ai_reasoning' and changes_weekly_hours(query, row['text']):
+            scope_hold = True
+            continue
         anchor_ids = [aliases[a] for a in row['anchor_ids']]
         selected = entries[anchor_ids[0]]
         resolved = closure(entries, anchor_ids + ([core_id] if core_id else []))
@@ -164,10 +172,10 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
          'ATTRIBUTED_DISAGREEMENT_ONLY': peers if derived is not None else [],
          'PROPOSED_POINTS': proposed, 'EVIDENCE': used, 'ANSWERABILITY': value['answerability']}, checks)
     surviving = {alias: row for alias, row in proposed.items() if supported(answers, alias, TURN_CHECKS)}
-    held = len(surviving) != len(proposed)
+    verification_hold = len(surviving) != len(proposed)
     # A verdict on the entire draft only applies when that draft will be posted.
     # After a hold, each surviving point must earn credit on its own.
-    draft_fit = held or answers['answer'] == 'appropriate'
+    draft_fit = verification_hold or answers['answer'] == 'appropriate'
     points, premises, covered = [], {}, set()
     for alias, row in surviving.items():
         anchor_ids, resolved, exact = evidence[alias]
@@ -203,7 +211,7 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
         })
     fits = any(p['task_fit'] == 'responsive' for p in points) and set(targets) <= covered
     kind = value['answerability'] if fits else ('partial' if points else 'abstain')
-    if held and kind == 'answered':
+    if (scope_hold or verification_hold) and kind == 'answered':
         kind = 'partial'
     return {**build_turn(points, list(premises.values()), kind, fits, receipt),
             'missing_targets': [dict(row, target_id=key) for key, row in targets.items() if key not in covered]}

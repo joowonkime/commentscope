@@ -2,16 +2,18 @@
 from itertools import combinations
 
 from commentscope.agents.debate_contracts import (
-    VERSION, addressed, array, choice, compact, generate, ids, obj, observe,
+    QUESTION_SCOPE, VERSION, addressed, array, choice, compact, generate, ids, obj, observe,
     require_ids, supported, unique_rows,
 )
+from commentscope.agents.debate_quantities import changes_weekly_hours
 from commentscope.agents.structured_debate_runtime import conditions, perspective
 from commentscope.factory.automatic_contract import digest
 
 DRAFT_CHECKS = {
     'origin': ('The claim has the declared origin. Conditional reasoning contains no new empirical facts.', 'sound'),
     'grounds': ('The linked points ground the reasoning and every empirical claim is supported by exact linked passages.', 'grounded'),
-    'conditions': ('The proposed text and linked condition list preserve essential restrictions, uncertainty and scope.', 'preserved'),
+    'conditions': ('The proposed text and linked condition list preserve essential restrictions, uncertainty and scope. '
+                   + QUESTION_SCOPE, 'preserved'),
     'relevance': ('The claim provides a concrete, relevant common proposition in response to the original question.', 'relevant'),
 }
 VOTE_CHECKS = {
@@ -21,7 +23,8 @@ VOTE_CHECKS = {
                'Reject any invented commenter endorsement or expansion of the participant’s stance. Check other decisions '
                'against the same profile and cited own points.', 'faithful'),
     'conditions': ('Compare the candidate, its linked CONDITIONS and the cited own points with OWN_CONDITIONS. '
-                   'For accept preserve all essential qualifications. For needs_condition the named condition must be missing.', 'preserved'),
+                   'For accept preserve all essential qualifications. For needs_condition the named condition must be missing. '
+                   + QUESTION_SCOPE, 'preserved'),
     'basis': ('Use only the listed reason_points to support this decision on the candidate. An undecided vote must '
               'cite a point that explains an evidence limitation.', 'grounded'),
     'fit': ('The reason_points and decision specifically address this candidate at its proposed scope.', 'responsive'),
@@ -67,7 +70,8 @@ Write each claim as one short, complete sentence. Keep essential qualifiers in t
 Aim for at most 350 characters to leave room below the 600-character schema limit.
 Preserve all relevant CONDITIONS and uncertainty. Ground conditional/value reasoning in points.
 Use external_evidence only with exact passages that were cited by named points.
-Return no candidates if you cannot find a useful common proposition. Use the user's language.''',
+Return no candidates if you cannot find a useful common proposition. Use the user's language.
+''' + QUESTION_SCOPE,
         {'QUESTION': query, 'POINTS': public, 'REFERENCES': references,
          'CONDITIONS': {a: required[k] for a,k in condition_aliases.items()}}, schema)
     proposals, bindings, checks, held = {}, {}, {}, []
@@ -84,6 +88,7 @@ Return no candidates if you cannot find a useful common proposition. Use the use
         pid = 'C'+digest([frozen, alias, row])
         if (not row['text'].strip() or not expected <= set(linked_conditions)
                 or (row['origin'] == 'external_evidence') != bool(exact)
+                or row['origin'] == 'ai_reasoning' and changes_weekly_hours(query, row['text'])
                 or any(ref not in linked_refs for ref in exact)):
             held.append(pid)
             continue

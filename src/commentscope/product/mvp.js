@@ -97,15 +97,37 @@ function renderPerspectives(){
     const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
     if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
     card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
+    const stanceSources=node('div',undefined,'card-sources');
+    commentSourceButtons(stanceSources,p.source_ids||[],'입장 원문');
+    if(stanceSources.childElementCount)card.append(stanceSources);
     const grounds=p.grounds||[];
-    if(grounds.length){card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));for(const g of grounds){const row=node('p',undefined,'card-ground');row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));card.append(row);}}
+    if(grounds.length){
+      card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));
+      for(const g of grounds){
+        const row=node('p',undefined,'card-ground');
+        row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
+          node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
+        const sources=node('span',undefined,'card-ground-sources');
+        commentSourceButtons(sources,g.source_ids||[],'근거 원문');
+        if(sources.childElementCount)row.append(sources);
+        card.append(row);
+      }
+    }
     const compare=node('button','Compare with my view','secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
     card.append(compare);$('perspectives').append(card);
   }
   updateSelection();
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
-function sourceButtons(container,point){for(const [index,evidence] of (point.citations?.comment_evidence||[]).entries()){const b=node('button','원문 '+(index+1),'source-button');b.type='button';b.onclick=()=>source(evidence.source_id);container.append(b);}for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
+function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
+function commentSourceButtons(container,sourceIds,caption='원문'){
+  for(const [index,sourceId] of sourceIds.entries()){
+    const button=node('button',caption+' '+(index+1),'source-button');
+    button.type='button';
+    button.onclick=()=>source(sourceId);
+    container.append(button);
+  }
+}
 // API span offsets are Unicode code points. Build text nodes, including for untrusted markup.
 function highlighted(container,text,spans){
   const chars=[...text],bounds=new Set([0,chars.length]);

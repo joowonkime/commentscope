@@ -30,6 +30,8 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .debate-claim,.synthesis-card { padding: 14px; margin: 12px 0; border-radius: 10px; background: #f5f2ff; }
 .debate-claim p,.synthesis-card p { margin-bottom: 8px; }
 .debate-references { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.card-sources { margin: 0 0 12px; }
+.card-ground-sources { display: block; }
 
 .messages.structured-transcript { min-height: 0; max-height: none; overflow-y: visible; }
 .status-toast:empty { display: none; }
