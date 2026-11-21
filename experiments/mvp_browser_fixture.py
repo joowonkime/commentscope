@@ -24,7 +24,9 @@ def bundle():
 
 
 class SyntheticModel:
-    def __init__(self,directory):self.directory=Path(directory);self.calls=0;self.typed_calls=0
+    def __init__(self,directory,debate_result='consensus'):
+        self.directory=Path(directory);self.calls=0;self.typed_calls=0
+        self.debate_result=debate_result
     def metrics(self):
         (self.directory/'metrics.json').write_text(json.dumps({'synthetic_provider_calls':self.calls,
             'synthetic_typed_calls':self.typed_calls,'paid_calls':0}),encoding='utf-8')
@@ -32,6 +34,10 @@ class SyntheticModel:
     def verify(self,stage,payload):
         self.typed_calls+=1;self.metrics()
         def choose(key):
+            if 'DEBATE_SCOPE' in payload['state']:
+                if self.debate_result=='hold' and stage=='ratify-verify' and key.endswith('_basis'):
+                    return 'uncertain'
+                return next(iter(payload['questions'][key]['criteria']))
             if key=='answer':return 'appropriate'
             index,kind=key[1:].split('_',1)
             if kind=='kind':return 'reasoning' if payload['state']['PARAGRAPHS']['P'+index.zfill(3)]['origin']=='ai_reasoning' else 'empirical'
@@ -45,9 +51,11 @@ class SyntheticModel:
     def __call__(self,stage,request):
         self.calls+=1
         self.metrics()
-        time.sleep(.35 if stage=='room' else .02)
+        time.sleep(.55 if stage=='turn-generate' else .35 if stage=='room' else .02)
         data=request['data']
-        if stage=='comparison':
+        if 'DEBATE_SCOPE' in data:
+            output=self.debate_output(stage,data)
+        elif stage=='comparison':
             core=next(c for c in data['PERSPECTIVE_CLAIMS'] if c['role']=='core')
             output={'items':[{'relation':'agreement','user_span_ids':[data['INITIAL_SEGMENTS'][0]['id']],
                 'perspective_claim_ids':[core['id']],'explanation':'Both statements support requiring safety reviews.',
@@ -74,10 +82,37 @@ class SyntheticModel:
         return {'output':output,'errors':[],'usage':{'cost':0},'new_cost_usd':'0'}
 
 
+    def debate_output(self,stage,data):
+        scope=data['DEBATE_SCOPE']
+        if stage=='turn-generate':
+            if scope['phase']=='opening':
+                point={'origin':'original_comment','text':'','anchor_ids':[data['CORE']],
+                       'reference_ids':[],'targets':[]}
+            else:
+                text='When a choice affects others, give the risks and the cost of checks separate consideration.'
+                if scope['phase']=='followup':
+                    text='The shared point only calls for discussing risks and costs. It sets no mandatory threshold.'
+                point={'origin':'ai_reasoning','text':text,'anchor_ids':[data['CORE'] or next(iter(data['CLAIMS']))],
+                       'reference_ids':[],'targets':[{'target_id':key,'relation':'conditional'} for key in data['TARGETS']]}
+            return {'answerability':'answered','points':{'P1':point,'P2':None,'P3':None}}
+        if stage=='draft-generate':
+            return {'candidates': [{'origin':'ai_reasoning','text':'Consider the risks and costs of safety checks publicly.',
+                'premise_ids':[key for key,row in data['POINTS'].items() if row['phase']=='reply'],
+                'condition_ids':list(data['CONDITIONS']),'reference_ids':[]}]}
+        decision='reject' if self.debate_result=='no-consensus' and scope['agent_id']=='P2' else 'accept'
+        own=next(key for key,row in data['OWN_POINTS'].items() if row['origin']=='ai_reasoning')
+        return {key:{'decision':decision,'reason_ids':[own],'missing_condition_ids':[]}
+                for key in data['CANDIDATES']}
+
+
 def main():
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('directory',type=Path)
     parser.add_argument('--seeded',action='store_true',help='Synthetic seeded provenance UI, never a paid provider')
-    args=parser.parse_args();args.directory.mkdir(parents=True,exist_ok=False)
+    parser.add_argument('--automatic-debate',action='store_true',help='Expose the offline DS-v2 API')
+    parser.add_argument('--debate-result',choices=('consensus','no-consensus','hold'),default='consensus')
+    args=parser.parse_args()
+    args.seeded=args.seeded or args.automatic_debate
+    args.directory.mkdir(parents=True,exist_ok=False)
     generated=bundle()
     if args.seeded:
         generated['admission_policy']=deepcopy(seed_policy.POLICY)
@@ -85,11 +120,12 @@ def main():
         generated['reference_selections']=[{'id':'prepared','document_id':doc['id'],
             'span':{'start':0,'end':len(doc['text']),'text':doc['text']}}]
     analysis=Analysis(generated,{'synthetic_browser_fixture':True})
-    model=SyntheticModel(args.directory)
+    model=SyntheticModel(args.directory, args.debate_result)
     product=ProductApp(args.directory/'app.sqlite',[analysis],model,session_ttl_seconds=3600,
                        room_maximum_usd='1',reservation=lambda request:'0',
                        decision=model.verify if args.seeded else None,
-                       decision_reservation=(lambda:'0') if args.seeded else None)
+                       decision_reservation=(lambda:'0') if args.seeded else None,
+                       debate_execution_binding={'fixture':args.debate_result} if args.automatic_debate else None)
     def legacy_provider(system,data,schema,*,max_tokens):
         result=model('legacy',{'system':system,'data':data,'schema':schema,'max_tokens':max_tokens})
         return {'choices':[{'finish_reason':'stop','message':{'content':json.dumps(result['output'])}}]}

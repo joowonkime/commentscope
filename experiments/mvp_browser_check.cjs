@@ -3,18 +3,21 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {spawn}=require('node:child_process');
 const WebSocket=require('ws');
-const [python,chrome,destination,mode]=process.argv.slice(2);
+const [python,chrome,destination,mode,debateResult='consensus']=process.argv.slice(2);
+const automatic=mode==='--automatic-debate';
 if(!python||!chrome||!destination)throw Error('Usage: node mvp_browser_check.cjs PYTHON CHROME NEW_PRIVATE_OUTPUT');
-if(mode&&mode!=='--seeded')throw Error('Only explicit --seeded browser fixture mode is supported');
+if(mode&&!['--seeded','--automatic-debate'].includes(mode))throw Error('Unknown browser fixture mode');
+if(!['consensus','no-consensus','hold'].includes(debateResult))throw Error('Unknown debate fixture result');
 const output=path.resolve(destination);fs.mkdirSync(output,{recursive:false});
 const profile=fs.mkdtempSync(path.join(os.tmpdir(),'commentscope-mvp-browser-'));
 const report={synthetic_only:true,seeded_mode:mode==='--seeded',paid_calls:0,semantic_quality_measured:false,checks:{},page_errors:[],external_requests:[]};
+const requests=[];
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 async function until(fn,timeout=12000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(value)return value;await sleep(80);}throw Error('Browser assertion deadline');}
 let server,browser,socket;
 (async()=>{
   let stdout='';
-  server=spawn(python,['-m','experiments.mvp_browser_fixture',path.join(output,'fixture'),...(mode?[mode]:[])],{
+  server=spawn(python,['-m','experiments.mvp_browser_fixture',path.join(output,'fixture'),...(mode?[mode]:[]),...(automatic?['--debate-result',debateResult]:[])],{
     stdio:['ignore','pipe','pipe'],env:{...process.env,PYTHONPATH:[path.resolve('src'),process.cwd()].join(path.delimiter)}});
   server.stdout.on('data',chunk=>stdout+=chunk.toString());server.stderr.on('data',chunk=>fs.appendFileSync(path.join(output,'fixture.log'),chunk));
   const origin=await until(()=>{if(server.exitCode!==null)throw Error('Fixture exited');return stdout.includes('\n')?JSON.parse(stdout.split('\n')[0]).origin:null;});
@@ -29,6 +32,10 @@ let server,browser,socket;
   let sequence=0;const pending=new Map();
   socket.on('message',bytes=>{const value=JSON.parse(bytes.toString());if(value.id&&pending.has(value.id)){const target=pending.get(value.id);pending.delete(value.id);clearTimeout(target.timer);value.error?target.reject(Error(value.error.message)):target.resolve(value.result);}
     if(value.method==='Runtime.exceptionThrown')report.page_errors.push(value.params.exceptionDetails.text);
+    if(automatic&&value.method==='Network.requestWillBeSent'&&value.params.request.url.startsWith(origin+'/api/v1/')){
+      const {method,url}=value.params.request;
+      requests.push({method,path:new URL(url).pathname});
+    }
     if(value.method==='Network.requestWillBeSent'&&/^https?:/.test(value.params.request.url)&&!value.params.request.url.startsWith(origin+'/')){
       const url=value.params.request.url;
       if(report.media_fixture_mode&&(/^https:\/\/i\.ytimg\.com\/vi\/ABCDEFGHIJK\//.test(url)||/^https:\/\/www\.youtube-nocookie\.com\/embed\/ABCDEFGHIJK\?/.test(url)))report.media_fixture_requests.push(url);
@@ -49,6 +56,13 @@ let server,browser,socket;
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
   await command('Page.navigate',{url:origin+'/mvp'});
   await until(()=>evaluate("document.querySelector('#status')?.textContent.includes('먼저')"));
+  if(automatic){
+    await verifyAutomaticDebate({command,evaluate,screenshot});
+    report.passed=Object.values(report.checks).every(Boolean)&&report.page_errors.length===0&&
+      report.external_requests.length===0&&report.metrics.paid_calls===0;
+    if(!report.passed)throw Error('Automatic debate browser checks failed');
+    return;
+  }
   await evaluate("document.querySelector('[data-step=reflect]').click()");
   report.checks.opinion_step_precedes_workspace=await evaluate("document.querySelector('#workspace').hidden&&!document.querySelector('#before').hidden");
   await evaluate("document.querySelector('#initial').value='😀';document.querySelector('#initial').dispatchEvent(new Event('input'))");
@@ -57,7 +71,7 @@ let server,browser,socket;
   await evaluate("document.querySelector('#initial').value='<img src=x onerror=globalThis.xssExecuted=true> Safety reviews should be required.'");
   await submit('begin');await until(()=>evaluate("!document.querySelector('#workspace').hidden&&document.querySelectorAll('.card').length===2"));
   report.checks.session_and_two_perspectives=true;
-  await evaluate("document.querySelector('.card button').click()");
+  await evaluate("document.querySelector('.card .compare-button').click()");
   await until(()=>evaluate("!document.querySelector('#comparison').hidden&&document.querySelectorAll('.comparison-item').length===1"));
   report.checks.explore_comparison=true;
   report.checks.untrusted_text_is_text=await evaluate("!document.querySelector('#comparison-items img')&&!globalThis.xssExecuted&&document.querySelector('#comparison-items').textContent.includes('<img')");
@@ -66,7 +80,7 @@ let server,browser,socket;
   await until(()=>evaluate("!document.querySelector('#comparison').open&&document.querySelector('#comparison').hidden"));
   report.checks.comparison_keyboard_dismissal=true;
   const comparisonCalls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
-  await evaluate("document.querySelector('.card button').click()");
+  await evaluate("document.querySelector('.card .compare-button').click()");
   await until(()=>evaluate("document.querySelector('#comparison').open"));
   report.checks.repeat_comparison_does_not_generate=comparisonCalls===JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
   await evaluate('document.fonts.ready');
@@ -149,3 +163,163 @@ let server,browser,socket;
   fs.writeFileSync(path.join(output,'checks.json'),JSON.stringify(report,null,2),{flag:'wx'});
   console.log(JSON.stringify({output,...report},null,2));
 });
+
+
+async function verifyAutomaticDebate({command,evaluate,screenshot}){
+  const checks=report.checks;
+  const click=selector=>evaluate(`document.querySelector(${JSON.stringify(selector)}).click()`);
+  const fill=(selector,value)=>evaluate(`document.querySelector(${JSON.stringify(selector)}).value=${JSON.stringify(value)}`);
+  const postCount=pattern=>requests.filter(item=>item.method==='POST'&&pattern.test(item.path)).length;
+  const metrics=()=>JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8'));
+  const reload=async()=>{
+    const originalPage=await evaluate('performance.timeOrigin');
+    await command('Page.reload');
+    await until(()=>evaluate(`performance.timeOrigin!==${originalPage}&&document.querySelector('#workspace')?.hidden===false&&document.querySelectorAll('.card').length===2`));
+  };
+  report.mode='automatic_debate';
+  report.expected_outcome=debateResult;
+  await fill('#initial','Safety checks matter, but their cost depends on the risk.');
+  await click('#begin button[type=submit]');
+  await until(()=>evaluate("document.querySelectorAll('.card').length===2"));
+  await click('.card .card-sources .source-button');
+  await until(()=>evaluate("document.querySelector('#source-dialog').open"));
+  checks.explore_stance_original_visible=await evaluate("document.querySelector('#source').textContent.includes('Safety reviews should be required.')");
+  await click('#close-source');
+  await click('.card .card-ground-sources .source-button');
+  await until(()=>evaluate("document.querySelector('#source-dialog').open"));
+  checks.explore_ground_uses_own_original=await evaluate("document.querySelector('#source').textContent.includes('12 of 100 devices failed.')");
+  await click('#close-source');
+  checks.explore_source_access_does_not_generate=!fs.existsSync(path.join(output,'fixture/metrics.json')) ||
+    (metrics().synthetic_provider_calls===0 && metrics().synthetic_typed_calls===0);
+  await click('.card button.compare-button');
+  await until(()=>evaluate("document.querySelector('#comparison')?.open"));
+  checks.compare_selected_perspective=true;
+  await click('#close-comparison');
+  await click('.card:nth-child(2) input');
+  await click('.card:nth-child(1) input');
+  await click('#open-room');
+  await until(()=>evaluate("!document.querySelector('#converse').hidden&&!document.querySelector('#opening').hidden"));
+  checks.automatic_offered_for_two=await evaluate("document.querySelector('#opening-submit-label').textContent==='자동 토론 시작'");
+  await click('#opening button[type=submit]');
+  checks.blank_question_does_not_start=postCount(/\/debates$/)===0;
+  const question='어떤 위험에서는 안전 검토가 필요하며 어떤 예외를 둘 수 있나요?';
+  await fill('#opening-question',question);
+  await evaluate("document.querySelector('#opening button[type=submit]').click();document.querySelector('#opening').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
+  await until(()=>postCount(/\/debates\/[^/]+\/start$/)===1);
+  const debatePath=requests.find(item=>item.method==='POST'&&/\/debates\/[^/]+\/start$/.test(item.path)).path.replace(/\/start$/,'');
+  await reload();
+  await until(()=>evaluate("document.body.dataset.step==='converse'"));
+  checks.reopens_conversation_after_reload=true;
+  if(debateResult==='no-consensus'){
+    await until(()=>evaluate("!document.querySelector('#pause').disabled"));
+    await click('#pause');
+    await until(()=>evaluate("!document.querySelector('#resume').disabled"));
+    const saved=JSON.stringify(metrics());
+    await sleep(800);
+    checks.paused_debate_cost_stays_fixed=JSON.stringify(metrics())===saved;
+    await click('#resume');
+  }
+
+  const stateLabels={consensus:'완료','no-consensus':'합의 없음',hold:'검증 보류'};
+  await until(()=>evaluate(`!document.querySelector('#debate-conclusion').hidden&&document.querySelector('#debate-conclusion h2').textContent===${JSON.stringify('토론 결론 · '+stateLabels[debateResult])}`));
+  checks.single_start=postCount(/\/debates$/)===1&&postCount(/\/debates\/[^/]+\/start$/)===1;
+  checks.no_additional_turn_or_merge_clicks=!requests.some(item=>item.method==='POST'&&/\/syntheses\b|\/ratif/.test(item.path));
+  checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
+  checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
+  checks.selected_order=await evaluate("Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]).join(',')==='Perspective 2,Perspective 1,Perspective 2,Perspective 1'");
+  checks.visible_reply_links=await evaluate("Array.from(document.querySelectorAll('.message.agent .source-button')).filter(x=>x.textContent.startsWith('응답 대상')).length===2");
+  checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===8&&metrics().synthetic_typed_calls===7;
+  await click('#show-debate-result');
+  checks.conclusion_reachable=await evaluate("document.activeElement?.id==='debate-conclusion'");
+  await screenshot('debate-result.png');
+
+  if(debateResult==='consensus'){
+    checks.shared_claim_conditions_and_agent_card=await evaluate("document.querySelector('.debate-claim h3')?.textContent.includes('Consider the risks and costs')&&document.querySelector('.debate-claim').innerText.includes('조건 ·')&&!!document.querySelector('.synthesis-card #ask-synthesis-agent')");
+    await click('.debate-claim .debate-references button');
+    checks.claim_links_to_posted_turn=await evaluate("document.activeElement?.classList.contains('bubble')");
+    await click('.synthesis-card .source-button');
+    await until(()=>evaluate("document.querySelector('#source-dialog')?.open&&document.querySelector('#source').textContent.includes('Safety reviews')"));
+    checks.derived_agent_source_drawer=requests.some(item=>item.method==='GET'&&/\/synthesis-agents\/[^/]+\/sources\//.test(item.path));
+    await click('#close-source');
+    await click('#ask-synthesis-agent');
+    await until(()=>evaluate("document.querySelector('#room-title').textContent==='합의 Agent'&&!document.querySelector('#opening').hidden"));
+    checks.opened_derived_room=postCount(/\/synthesis-agents\/[^/]+\/rooms$/)===1;
+    await fill('#opening-question','What exactly was agreed and what remains uncertain?');
+    await click('#opening button[type=submit]');
+    await until(()=>evaluate("document.querySelector('.message.agent')?.innerText.includes('sets no mandatory threshold')"));
+    checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI 추론')");
+    await click('#agent-info');
+    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes('Perspective 2, Perspective 1')"));
+    checks.agent_parent_lineage_visible=true;
+    await click('#close-perspective');
+    await screenshot('synthesis-agent-followup.png');
+  }else{
+    checks.explanation_and_no_synthesis=await evaluate("!!document.querySelector('#debate-conclusion>p')&&!document.querySelector('.synthesis-card')&&!document.querySelector('#go-reflect').disabled");
+  }
+
+  await click('#go-reflect');
+  await until(()=>evaluate("!document.querySelector('#reflect').hidden&&document.querySelectorAll('#context-messages input').length>=2"));
+  await click('#context-messages .context-item:nth-child(2) input');
+  if(debateResult==='consensus'){
+    await click('#reflection-rooms .reflection-room:first-child button');
+    await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
+    await click('#context-messages .context-item:nth-child(2) input');
+  }
+  await fill('#current','I would separate justified review from a universal requirement.');
+  await click('#analyze');
+  await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
+  checks.reflection_analysis_works=true;
+  await click('#insight-stayed button.secondary');
+  await fill('#worth_more_thought','비용과 위험을 나누어 보는 것이 중요하다는 생각은 유지했습니다.');
+  await click('#save-reflection button[type=submit]');
+  await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('저장했습니다')"));
+  const beforeReload=metrics();
+  await reload();
+  await click('[data-step=reflect]');
+  await until(()=>evaluate("document.querySelector('#saved-reflections button')"));
+  await click('#saved-reflections button');
+  await until(()=>evaluate("document.querySelector('#saved-view').textContent.includes('비용과 위험을 나누어 보는 것이 중요')"));
+  checks.reflect_reopens_without_inference=JSON.stringify(beforeReload)===JSON.stringify(metrics());
+  await screenshot('reflected-after-reload.png');
+  if(debateResult==='consensus'){
+    await click('#saved-view .source-button');
+    await until(()=>evaluate("document.body.dataset.step==='converse'&&document.querySelector('#room-title').textContent==='합의 Agent'"));
+    checks.saved_reflection_links_to_derived_reply=true;
+    await click('#room-list .room-entry:first-child');
+  }
+  await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
+  await click('[data-step=converse]');
+  await until(()=>evaluate("document.body.dataset.step==='converse'&&!document.querySelector('#debate-conclusion').hidden"));
+  checks.mobile_conclusion_fits=await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth');
+  await screenshot('mobile-debate-result.png');
+  if(debateResult==='consensus'){
+    const savedSession=await evaluate("JSON.parse(localStorage.getItem('commentscope-mvp-session')).session_id");
+    const beforeRestore=metrics();
+    const inject=await command('Page.addScriptToEvaluateOnNewDocument',{source:`
+      const realFetch=window.fetch;
+      window.fetch=(url, options)=>
+        /^\\/api\\/v1\\/sessions\\/[^/]+$/.test(url)&&options?.method==='GET'
+          ? Promise.resolve(new Response(JSON.stringify({error:{code:'temporarily_unavailable'}}),{status:503}))
+          : realFetch(url,options);
+    `});
+    const timeOrigin=await evaluate('performance.timeOrigin');
+    await command('Page.reload');
+    await until(()=>evaluate(`performance.timeOrigin!==${timeOrigin}&&document.readyState==='complete'`));
+    await until(()=>evaluate("!document.querySelector('#status').textContent.startsWith('Loading')"));
+    checks.temporary_restore_error_keeps_session=await evaluate(`
+      JSON.parse(localStorage.getItem('commentscope-mvp-session'))?.session_id===${JSON.stringify(savedSession)}
+      &&document.querySelector('#begin button[type=submit]').disabled
+    `);
+    await command('Page.removeScriptToEvaluateOnNewDocument',{identifier:inject.identifier});
+    if(!checks.temporary_restore_error_keeps_session)throw Error('A temporary session read failure discarded saved access');
+    await reload();
+    await until(()=>evaluate("document.body.dataset.step==='converse'&&!document.querySelector('#debate-conclusion').hidden"));
+    checks.recovers_same_session_and_debate=await evaluate(`state.session.session_id===${JSON.stringify(savedSession)}`)
+      &&JSON.stringify(beforeRestore)===JSON.stringify(metrics());
+  }
+  await click('#close-room');
+  await until(()=>evaluate("document.querySelector('#room-state').textContent.includes('종료한 대화')"));
+  checks.close_uses_debate_and_keeps_conclusion=postCount(/\/debates\/[^/]+\/control$/)>0&&
+    await evaluate("!document.querySelector('#debate-conclusion').hidden");
+  report.metrics=metrics();
+}

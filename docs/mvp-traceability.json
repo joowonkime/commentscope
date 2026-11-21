@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "spec_version": "commentscope-mvp-20261120-v84",
+  "spec_version": "commentscope-mvp-20261120-v86",
   "baseline_commit": "61b78f83c14ac68cccc7ce3f544acb21d2639da4",
   "observed_date": "2026-11-20",
   "intent_document": "docs/MVP_SPEC.md",
@@ -23,7 +23,9 @@
   },
   "resume": {
     "next_task": "TASK-027",
-    "parallel_tasks": [],
+    "parallel_tasks": [
+      "TASK-032"
+    ],
     "paid_execution_hold": true,
     "hold_reason": "선정영상180/고정제품QA를898요청·3.383771486달러로완료. TASK028연결구현/양OS CI·실제브라우저확인완료, TASK027은2관심사/원문이유0·비교빈결과/문단보류후유용성미달을보존하며무료계약진단이next. 기존로컬서버의직접상호작용만원래2026-11-13T20:34:19Z기한/2400누적요청분모/150계정한도안에서가능하며자동추가실험없음. 과거48grant/금융owner/차감은초기화하지않음."
   },
@@ -1136,8 +1138,10 @@
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
-      ]
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
+      ],
+      "status": "partial"
     },
     {
       "id": "REQ-012",
@@ -1171,8 +1175,10 @@
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
-      ]
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
+      ],
+      "status": "partial"
     }
   ],
   "decisions": [
@@ -4201,7 +4207,7 @@
       "depends_on": [
         "TASK-031"
       ],
-      "status": "todo",
+      "status": "in_progress",
       "deliverables": [
         "고정schema·host ID/참조/상태 validator·합성 fixture",
         "제품DB v1→v2 migration과revision/idempotency·기록읽기회귀"
@@ -4213,12 +4219,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "DB v1→v2, 기존 세션·방 재열람, 소유권과 분석 revision, 적격 목록과 참가자 선택, 완전 실행 예약.",
+          "reference": "tests/test_automatic_debate.py",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4251,12 +4265,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "2인·3인 개시와 고정 문맥 응답, 14·20 호출 상한, 미충족 응답 보존, 일시정지 후 비용 중복 없이 재사용, 닫기 후 늦은 게시 방지.",
+          "reference": "tests/test_automatic_debate.py",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4289,12 +4311,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "고정 초안과 독립 수락, 후보 쌍 충돌 격리, 합의 없음·제안 없음·검증 보류를 구별.",
+          "reference": "tests/test_automatic_debate.py",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4328,12 +4358,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "원문 직접 지지 0의 파생 Agent와 원문 조회, 재열람, 후속 질문과 기존 Reflect 연결. 실제 HTTP는 합성 provider로 확인.",
+          "reference": "tests/test_automatic_debate.py",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4366,12 +4404,20 @@
       "required_evidence": [
         "offline"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "offline",
+          "scope": "Chromium에서 화면 조작으로 참가자 선택·자동 시작·중복 클릭·reload·결론·합의 Agent 원문·후속 질문·성찰 저장 및 재열람. 합의 없음과 검증 보류 분기, pause/resume 및 종료 결과 보존을 합성 transport로 검증. 실제 답변 품질은 별도.",
+          "reference": "experiments/mvp_browser_check.cjs",
+          "result": "pass"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
         "docs/design/DEBATE_SYNTHESIS_API.md",
-        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md"
+        "docs/design/DEBATE_SYNTHESIS_HANDOFF.md",
+        "docs/design/DEBATE_IMPLEMENTATION.md"
       ]
     },
     {
@@ -4410,7 +4456,32 @@
         "limited_live",
         "product_e2e"
       ],
-      "evidence": [],
+      "evidence": [
+        {
+          "kind": "limited_live",
+          "scope": "2026-11-21 two archived real videos with new Sol/Jev calls: four published CNBC turns and two grounded drafts, no verified acceptance or derived agent; same-evidence single-agent follow-up 6/6, paired derived answers 0/6; 31 charged requests with provider and ledger reconciliation.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Real Chromium user actions reached Explore, automatic opening/reply, held conclusion, original source and persisted reflection; live consensus and external-user availability remain unverified.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "product_e2e",
+          "scope": "Subsequent pinned CNBC live route, 96 archived comments: real Chromium selected two automatically generated agents, ran four turns and two independently verified shared claims, opened the persisted derived agent and source, asked a follow-up and restored reflection. Windows localhost HTTP 200. One focused video and no external user or submission URL.",
+          "result": "pass",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        },
+        {
+          "kind": "limited_live",
+          "scope": "Same sealed vote replay isolated ratification; later automatic live run and separate follow-ups yielded two complete answers and one partial. Thirty-five reconciled calls in follow-up exploration; independent effect and cross-video quality are unverified.",
+          "result": "partial",
+          "reference": "docs/MVP_REAL_VIDEO_VALIDATION.md"
+        }
+      ],
       "design_refs": [
         "docs/design/DEBATE_SYNTHESIS.md",
         "docs/design/DEBATE_SYNTHESIS_PROTOCOL.md",
@@ -4884,6 +4955,14 @@
     {
       "spec_version": "commentscope-mvp-20261120-v84",
       "reason": "사용자 요청에 따라 MVP 완주에 필요한 기능, 구현 책임과 선행 작업 및 일부만 전달할 수 있는 프론트·QA·용량 작업을 TASK039에서 연결한다. DEC030제품흐름과 DEC029기술상세, TASK027과 032~037의 진행 상태를 구별한다."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261120-v85",
+      "reason": "사용자가 맡은 자동 토론 백엔드의 역할과 내부 계약을 분리해 구현하고 무료 API·저장·오류 회귀로 검증. DEC-029 상세 수락, 실제 품질, I6·I7·Q1 통합을 구별하고 TASK-027·유료 HOLD를 유지."
+    },
+    {
+      "spec_version": "commentscope-mvp-20261120-v86",
+      "reason": "사용자가 요청한 자동 토론과 Agent 합성의 사용자 완주를 위해 I6 화면을 DS-v2 API에 연결했다. 실제 Chromium의 합성 과업 검증·지속 Agent 기록과 실제 선정 영상 모델 품질 및 Q1을 구별한다."
     }
   ],
   "design_version": "commentscope-detailed-design-20261119-v75",

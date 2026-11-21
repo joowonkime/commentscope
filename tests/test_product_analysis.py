@@ -22,6 +22,14 @@ class ProductAnalysisTests(unittest.TestCase):
         self.assertEqual(bundle, before)
         self.assertEqual(analysis.source(bundle['sources'][0]['id'])['text'], bundle['sources'][0]['text'])
 
+    def test_each_card_and_ground_exposes_its_own_verified_sources(self):
+        analysis = Analysis(fixture(), {'source': 'synthetic-fixture'})
+        card, = analysis.public()['perspectives']
+        ground, = card['grounds']
+        self.assertEqual(card['source_ids'], ['c1', 'c2', 'c3'])
+        self.assertEqual(ground['source_ids'], ['c1'])
+        self.assertIn(ground['text'], analysis.source(ground['source_ids'][0])['text'])
+
     def test_loader_binds_plan_snapshot_output_and_all_compiler_profiles(self):
         with tempfile.TemporaryDirectory() as folder:
             root = Path(folder); bundle = fixture()

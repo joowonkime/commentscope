@@ -15,6 +15,8 @@ def decode(row):
 
 class Store:
     def __init__(self, path):
+        from commentscope.product.debate_store import DDL, sync_room
+
         self.path = Path(path); self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.transaction() as db:
             statements = [
@@ -34,7 +36,12 @@ class Store:
                    revision INTEGER, data TEXT NOT NULL, PRIMARY KEY(id,revision))''']
             for statement in statements: db.execute(statement)
             db.execute('INSERT OR IGNORE INTO version VALUES(1,1)')
-            if db.execute('SELECT schema_version FROM version WHERE id=1').fetchone()[0] != 1:
+            version = db.execute('SELECT schema_version FROM version WHERE id=1').fetchone()[0]
+            if version == 1:
+                for statement in DDL:
+                    db.execute(statement)
+                db.execute('UPDATE version SET schema_version=2 WHERE id=1')
+            elif version != 2:
                 raise ValueError('Unsupported product database version')
             for row in db.execute("SELECT * FROM jobs WHERE state IN ('queued','running')").fetchall():
                 value = decode(row)
@@ -47,6 +54,7 @@ class Store:
                     if room:
                         item = decode(room); item['state'] = value['state']; item['revision'] += 1
                         db.execute('UPDATE rooms SET data=? WHERE id=?',(encode(item),rid))
+                        sync_room(db, item)
 
     @contextmanager
     def transaction(self):

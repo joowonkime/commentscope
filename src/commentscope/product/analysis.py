@@ -35,16 +35,25 @@ class Analysis:
         if not expired:
             for profile in self.compiled['profiles']:
                 cid = profile['candidate_id']; candidate=candidates[cid];core = claims[candidate['core_claim_id']]
+                citations = profile['citations']
+
+                def source_ids(claim_id):
+                    return list(dict.fromkeys(e['source_id'] for e in citations[claim_id]['comment_evidence']))
+
                 grounds=[]
                 for entry in profile['prompt_entries']:
-                    role=candidate.get('argument_roles',{}).get(entry['claim_id'],'reason')
-                    if entry['claim_id'] in candidate['reason_claim_ids'] and role in ('reason','essential_condition','concession'):
-                        grounds.append({'claim_id':entry['claim_id'],'text':entry['text'],'kind':entry['kind'],
-                                        'role':role,'source_count':entry['member_source_count']})
-                for evidence in profile['citations'][candidate['core_claim_id']]['comment_evidence']:
-                    memberships.setdefault(canonical[evidence['source_id']],set()).add(cid)
+                    claim_id = entry['claim_id']
+                    role=candidate.get('argument_roles',{}).get(claim_id,'reason')
+                    if claim_id in candidate['reason_claim_ids'] and role in ('reason','essential_condition','concession'):
+                        grounds.append({'claim_id':claim_id,'text':entry['text'],'kind':entry['kind'],
+                                        'role':role,'source_count':entry['member_source_count'],
+                                        'source_ids':source_ids(claim_id)})
+                core_sources = source_ids(core['id'])
+                for source_id in core_sources:
+                    memberships.setdefault(canonical[source_id],set()).add(cid)
                 perspectives.append({'id': cid, 'text': core['text'], 'kind': core['kind'],
-                                     'source_count': profile['model_core_support_count'],'grounds':grounds})
+                                     'source_count': profile['model_core_support_count'],
+                                     'source_ids':core_sources,'grounds':grounds})
         if seed_policy.seeded(self.bundle):
             for perspective in perspectives:
                 perspective['admission_policy']=seed_policy.VERSION
