@@ -44,8 +44,10 @@ let server,browser,socket;
     if(value.method==='Fetch.requestPaused'){
       const request=value.params.request,isVideo=request.url.startsWith('https://www.youtube-nocookie.com/');
       if(isVideo)report.media_referer=request.headers.Referer||request.headers.referer||'';
-      const body=isVideo?Buffer.from('<!doctype html><title>Intercepted media fixture</title>').toString('base64'):'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+a6N8AAAAASUVORK5CYII=';
-      command('Fetch.fulfillRequest',{requestId:value.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:isVideo?'text/html':'image/png'}],body}).catch(error=>report.page_errors.push(error.message));
+      const media = isVideo ? '<!doctype html><title>Intercepted media fixture</title>'
+        : '<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720"><rect width="1280" height="720" fill="navy"/></svg>';
+      const body=Buffer.from(media).toString('base64');
+      command('Fetch.fulfillRequest',{requestId:value.params.requestId,responseCode:200,responseHeaders:[{name:'Content-Type',value:isVideo?'text/html':'image/svg+xml'}],body}).catch(error=>report.page_errors.push(error.message));
     }
   });
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout'));},12000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
@@ -153,6 +155,15 @@ let server,browser,socket;
   await command('Fetch.enable',{patterns:[{urlPattern:'https://i.ytimg.com/vi/ABCDEFGHIJK/*'},{urlPattern:'https://www.youtube-nocookie.com/embed/ABCDEFGHIJK*'}]});
   await evaluate("state.analysis.video={video_id:'ABCDEFGHIJK',title:'Registered video fixture'};renderAnalysis();document.querySelector('#before').hidden=false;document.querySelector('#workspace').hidden=true;document.body.dataset.step='before'");
   report.checks.registered_video_metadata=await evaluate("document.querySelector('#video-title').textContent==='Registered video fixture'&&document.querySelector('#original-video').href==='https://www.youtube.com/watch?v=ABCDEFGHIJK'");
+  await until(()=>evaluate("document.querySelector('#video-frame img')?.naturalWidth===1280"));
+  report.checks.real_size_poster_fits_mobile = await evaluate(`(() => {
+    const frame = document.querySelector('#video-frame').getBoundingClientRect();
+    const play = document.querySelector('.video-play').getBoundingClientRect();
+    const icon = document.querySelector('.video-play span').getBoundingClientRect();
+    return document.documentElement.scrollWidth <= innerWidth && frame.right <= innerWidth
+      && Math.abs(play.width-frame.width) <= 1 && Math.abs(icon.x+icon.width/2-frame.x-frame.width/2) <= 1;
+  })()`);
+  report.checks.mobile_watch_link = await evaluate("!!document.querySelector('#before-video-link')?.checkVisibility() && document.querySelector('#before-video-link').href===document.querySelector('#original-video').href");
   await evaluate("document.querySelector('.video-play').click()");
   await until(()=>report.media_referer);
   report.checks.embedded_video_origin_referrer=report.media_referer===origin+'/';
@@ -227,7 +238,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.no_additional_turn_or_merge_clicks=!requests.some(item=>item.method==='POST'&&/\/syntheses\b|\/ratif/.test(item.path));
   checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
   checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
-  checks.selected_order=await evaluate("Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]).join(',')==='Perspective 2,Perspective 1,Perspective 2,Perspective 1'");
+  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
   checks.visible_reply_links=await evaluate("Array.from(document.querySelectorAll('.message.agent .source-button')).filter(x=>x.textContent.startsWith('응답 대상')).length===2");
   checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===8&&metrics().synthetic_typed_calls===7;
   await click('#show-debate-result');
@@ -250,12 +261,18 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
     await until(()=>evaluate("document.querySelector('.message.agent')?.innerText.includes('sets no mandatory threshold')"));
     checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI 추론')");
     await click('#agent-info');
-    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes('Perspective 2, Perspective 1')"));
+    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes([label('P2'),label('P1')].join(', '))"));
     checks.agent_parent_lineage_visible=true;
     await click('#close-perspective');
     await screenshot('synthesis-agent-followup.png');
   }else{
     checks.explanation_and_no_synthesis=await evaluate("!!document.querySelector('#debate-conclusion>p')&&!document.querySelector('.synthesis-card')&&!document.querySelector('#go-reflect').disabled");
+    const postsBeforePicker = requests.filter(row=>row.method==='POST').length;
+    await click('#discuss-with-participants');
+    checks.followup_picker_preserves_participants = await evaluate("document.querySelector('#new-chat-dialog').open && chatParticipants().sort().join() === [...state.room.participant_ids].sort().join() && document.querySelector('#chat-format').value==='conversation'");
+    await click('#close-chat-picker');
+    checks.opening_followup_picker_keeps_conclusion = requests.filter(row=>row.method==='POST').length===postsBeforePicker
+      && await evaluate("!document.querySelector('#debate-conclusion').hidden");
   }
 
   await click('#go-reflect');

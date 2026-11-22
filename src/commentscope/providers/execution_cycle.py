@@ -8,10 +8,13 @@ from commentscope.providers.openrouter_budget import units
 
 CYCLE_VERSION = 'commentscope-autonomous-cycle-20261105-v1'
 PRODUCT_CYCLE_VERSION = 'commentscope-product-cycle-20261109-v2'
+EVALUATION_CYCLE_VERSION = 'commentscope-product-evaluation-window-v1'
+MAX_EVALUATION_DURATION = timedelta(days=21)
+PRODUCT_CYCLES = (PRODUCT_CYCLE_VERSION, EVALUATION_CYCLE_VERSION)
 
 
 def cycle_guard(cycle, *, call_seconds=0, allow_expired=False, observed_at=None):
-    product=cycle.get('version')==PRODUCT_CYCLE_VERSION
+    product=cycle.get('version') in PRODUCT_CYCLES
     if product:
         tasks=cycle.get('tasks')
         valid=(isinstance(tasks,list) and bool(tasks) and all(t in ('TASK-011','TASK-012') for t in tasks)
@@ -24,9 +27,11 @@ def cycle_guard(cycle, *, call_seconds=0, allow_expired=False, observed_at=None)
     start = datetime.fromisoformat(cycle['started_at'])
     end = datetime.fromisoformat(cycle['deadline'])
     observed_at = observed_at or datetime.now(timezone.utc)
-    if (start.utcoffset() is None or end.utcoffset() is None
-            or not timedelta(0) < end-start <= timedelta(hours=7)):
-        raise ValueError('At most seven hours with explicit timezone required')
+    evaluation=cycle.get('version')==EVALUATION_CYCLE_VERSION
+    duration=MAX_EVALUATION_DURATION if evaluation else timedelta(hours=7)
+    if start.utcoffset() is None or end.utcoffset() is None or not timedelta(0)<end-start<=duration:
+        raise ValueError(f'At most {MAX_EVALUATION_DURATION.days} days with explicit timezone required' if evaluation
+                         else 'At most seven hours with explicit timezone required')
     if not allow_expired and not start <= observed_at < end-timedelta(seconds=call_seconds+3):
         raise TimeoutError('Cycle deadline cannot cover another bounded operation')
 
@@ -39,7 +44,7 @@ def bind_cycle(path, deployment, policy, maximum_usd):
 
 
 def _configuration(cycle,deployment,policy,maximum_usd):
-    if cycle.get('version')==PRODUCT_CYCLE_VERSION:raise ValueError('Product-only cycle cannot authorize Factory work')
+    if cycle.get('version') in PRODUCT_CYCLES:raise ValueError('Product-only cycle cannot authorize Factory work')
     if (deployment!=cycle['selected_deployment']
             or policy!=read_json(Path(cycle['shared_policy_file']))
             or units(maximum_usd)!=units(cycle['maximum_additional_usd'])):

@@ -1,0 +1,131 @@
+# 실제 영상으로 M4 팀 QA하기
+
+## 공개 평가 서버
+
+브라우저에서 **[Re.View 열기](https://35.212.169.73/mvp)**를 선택한다. 설치나 API 키 입력 없이 접속할 수 있다. 팀원과 평가자에게 같은 주소를 공유한다. AI 상호작용 기간은 **2026년 12월 14일 08:02 KST**까지이며 VM은 같은 날 08:05 KST 자동 중지 예정이다.
+
+1. 첫 화면에서 준비된 영상 세 편 중 하나를 고르거나 그 영상의 YouTube URL을 붙여 넣는다. 첫 의견을 적고 Explore에서 관점과 출처를 연다. 새 영상의 댓글 수집과 Agent 생성은 운영자가 별도로 진행한다.
+2. Converse에서 **New chat**을 열고 한 명에게 질문하거나 둘 이상을 선택해 자동 토론을 시작한다. 토론의 발언·결론을 읽고 비준된 합의가 있으면 합의 Agent에 질문한다.
+3. Reflect에서 생각을 저장한 뒤 같은 브라우저의 Library에서 다시 연다. 평가 서버의 개인 세션은 생성 후 24시간 동안 유지된다.
+
+운영자는 같은 고정 IP와 지속 디스크를 재사용한다. 재배포 시 기존 `runs/qa-server/`의 지출 기록과 세션을 보존한다. 서버 전체의 OpenRouter 추가 사용 한도는 21일 합산 $2다. Google Cloud의 프로젝트 예산 알림은 7,000원의 50%, 90%, 100%에 설정했다. 평가 기간이 끝난 뒤에도 주소를 예약하면 IPv4 비용이 계속 발생한다. [Google Cloud IP 요금](https://cloud.google.com/vpc/network-pricing)
+
+## 공개 QA 기록과 판정 기준
+
+| 사용자 과업 | 공개 서버에서 확인한 결과 |
+| --- | --- |
+| 영상 선택과 복구 | 등록 URL은 분석 1개를 반환했다. 미등록 URL은 결과 0개, 잘못된 입력은 400과 입력 안내를 반환했다. 세 영상의 댓글·관점은 SBS 750·11, Jubilee 180·2, CNBC 96·4다. |
+| 원문과 내 의견 비교 | CNBC의 한 관점에서 Agreement 두 곳이 양쪽 문장에 같은 색으로 표시됐다. 원댓글을 열고 새로고침 뒤 같은 결과를 다시 봤을 때 추가 생성 요청은 0회였다. |
+| 일반 대화 | 1:1 답변이 원댓글과 AI 추론을 구분했다. 일반 그룹에서는 두 Agent의 첫 발언 중 하나가 보류됐고, 후속 질문에 지정한 한 명만 원댓글을 인용해 답했다. |
+| 자동 토론과 합의 | CNBC에서 선택한 두 Agent가 53초 동안 2턴씩 발언했다. 세 공동 주장을 각각 2/2로 수락했고, 만들어진 합의 Agent가 후속 질문에 답했다. 공동 주장 세 개는 AI 추론으로 표시됐다. |
+| 성찰과 Library | 사용자가 AI 제안을 검토해 직접 편집한 문장이 저장 후 새로고침·Library 재열기에서도 일치했다. 복원이 끝나면 로딩 안내도 사라졌다. |
+| 화면·접근성 | 공개 fceb591에서 초행·키보드·레이아웃·명암·성찰 복원의 고유 179개 기준이 통과했다. 카드 11개의 안내문, 320px Reflect의 터치 영역, 세션 아이콘의 접근성 이름을 실제 요소로 점검했다. |
+
+11월 23일 공개 검증에서 주요 과업 27개와 비교·그룹 보충 과업 18개가 통과했다. 운영 모델 청구는 26건 합계 **$0.159432834**였고 미결 건은 0개였다. CNBC에서 실제 관점에 연결된 처리 댓글은 4/96개다. 대표성, 관점 분류 정확도, 토론으로 인한 성능 향상은 이 수치로 평가할 수 없다. 개인 대화와 인증 정보는 이 기록에 담지 않는다.
+
+## 같은 URL에 수정 반영하기
+
+모델·데이터·지출 장부를 묶은 평가 계획은 시작할 때 기준 HTML·CSS·JS까지 해시로 고정한다. 11월 23일 그 세 파일을 직접 덮어썼을 때 화면은 열렸지만 기존 세션의 원댓글 조회가 HTTP 410으로 실패했다. 원본을 복구하고 운영 웹 서버에 공개 UI 전용 디렉터리를 만들어 같은 세션에서 HTTP 200과 원문 일치를 재확인했다.
+
+1. UI 변경을 GitHub PR에 커밋하고 Node 회귀와 Linux Chrome 6개 화면 폭 검사를 실행한다. 기간 변경·서버 로직은 관련 Python 회귀와 양 OS CI로 확인한다.
+2. 운영 프로젝트의 nginx는 [공개 사이트 설정](../deploy/nginx/commentscope.conf.in)을 사용한다. `/mvp`의 HTML·CSS·JS는 `/srv/commentscope-ui/current`에서 읽고, API와 기존 이미지 경로는 원래 Python 서비스로 보낸다. 인증서와 비밀 설정은 서버에 보관한다.
+3. 운영자는 아래 명령으로 커밋의 세 파일과 SHA256 목록을 묶어 비공개 관리 경로로 전송한다. 호스트에서 같은 스크립트의 `activate`를 실행하면 세 파일을 검증한 뒤 공개 버전을 원자적으로 전환한다. 이전 버전도 같은 명령으로 다시 선택할 수 있다. 운영자의 로컬 명령과 VM 명령은 다음과 같다.
+
+```sh
+python3 deploy/assessment_ui.py package <commit> /tmp/commentscope-ui-release
+# VM에 패키지와 스크립트를 전송한 후 VM에서 실행
+sudo python3 assessment_ui.py activate /path/to/commentscope-ui-release
+```
+
+4. 외부에서 기존 QA 세션으로 아래 검사를 실행한다. 공개 세 파일의 해시, 등록 목록, 세션, 실제 원댓글 본문까지 읽는다. 이 검사에 모델 비용은 없다. `qa-browser-state.json`은 운영자 전용 QA 브라우저의 Playwright storageState다. 이 파일은 비공개 디렉터리에만 보관한다.
+5. 변경된 과업을 같은 URL에서 다시 조작하고, 유료 기능을 확인했다면 운영 장부에서 확정 청구와 미결 건을 대조한다. 실패가 남으면 직전 공개 UI를 다시 활성화해 같은 검사를 수행한다.
+
+```sh
+python3 deploy/assessment_ui.py verify https://35.212.169.73 /tmp/commentscope-ui-release /private/qa-browser-state.json
+```
+
+## 로컬에서 팀 QA하기
+
+팀 공유본 `CommentScope_Live_QA_v6.2.zip`에는 Python 앱과 실제 영상 분석 3개가 들어 있다. v6.2는 새 폴더에 풀고 이전 버전으로 저장한 개인 기록은 사용자 세션이 유효한 동안 기존 폴더와 주소에서 다시 연다. 로컬 기본 모드의 사용자 세션은 생성 후 1시간, 평가용 호스트에서 만든 세션은 24시간 동안 유효하다. Python 3.12 이상에서 ZIP을 풀고 `run_live_qa.py`가 있는 폴더에서 실행한다. Git에는 실행 코드와 문서를 배포하고 영상 입력과 대화 DB는 비공개로 관리한다.
+
+```powershell
+py -3 run_live_qa.py --check
+py -3 run_live_qa.py --max-usd 1
+```
+
+macOS와 Linux에서는 `py -3` 대신 `python3`을 사용한다. 첫 명령은 키 없이 영상과 실제 생성 프로필을 검증한다. 두 번째 명령에서 팀용 OpenRouter 키를 비공개로 입력하고 출력된 주소의 `/mvp`를 연다. 세 관점의 자동 토론을 검사하려면 최초 실행의 `--max-usd 1`을 `--max-usd 1.25`로 정한다. 세 관점 토론에는 시작 시 약 1.075달러의 예약 여유가 필요하다. 각각의 PC에 복사해 실행하면 1달러 상한도 PC별로 적용된다. 한 호스트를 공유하면 해당 서버의 한도를 함께 사용한다. 준비된 영상은 YouTube 키 없이 열린다. 같은 폴더에서 재시작하면 기존 대화, 지출, 종료시각을 사용한다. 8080을 사용 중이면 첫 실행에서 `--port 8081`처럼 비어 있는 포트를 지정하고, 같은 브라우저와 그 주소에서 My records를 다시 연다.
+
+| 팀 공유본의 영상 | 재현할 수 있는 범위 |
+| --- | --- |
+| 스브스뉴스, 4.5일제 | 기본 영상이자 로우파이의 원래 영상. 댓글·답글 751개를 수집해 고유 댓글 750개를 처리했다. 최종 입장에 연결된 댓글은 15개다. Agent 11개 중 3개는 원문에 이유가 있고 일부는 비슷한 입장을 담고 있다. [영상](https://www.youtube.com/watch?v=BAHKmi4F1L8) |
+| Jubilee, AI와 교육 | Library 또는 영상 URL로 연다. 처리 댓글 180개, 관점 2개. 도구를 사용하는 사람의 책임과 AI 감지기의 신뢰도를 다룬다. [영상](https://www.youtube.com/watch?v=7AGa5z69zqU) |
+| CNBC, 주 4일 근무 | Library 또는 영상 URL로 연다. 처리 댓글 96개, 관점 4개. 고유 댓글 4개가 입장에 연결되며 네 관점 모두 짧은 근무를 지지한다. [영상](https://www.youtube.com/watch?v=RrFaNO3rTaA) |
+
+새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. GitHub 브랜치에서는 확대 검색 계약의 3,000개 상한을 준비·재검사·제품 등록에 적용한다. 이번 SBS Factory 실행은 실제 955회 호출에 $3.466732292를 썼다. 저장 분석을 불러올 때 이 비용은 다시 들지 않는다. 3,000개 영상의 실제 비용과 관점 품질은 아직 측정하지 않았다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
+
+## 월요일에 바로 확인할 SBS 경로
+
+Figma의 원래 장면과 동일한 영상을 기본값으로 등록했다. Before Use의 재생 버튼 또는 **Watch on YouTube**로 본편을 연다. 영상의 썸네일과 Figma에 캡처된 장면은 재생 시점에 따라 다르다. 실제 기기의 화면 폭에 맞는지도 확인한다. [Figma 원본 화면](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=333-6991)
+
+| 과업 | 재현 예시와 확인한 결과 |
+| --- | --- |
+| Explore | 9시 출근·5시 퇴근에 찬성한다는 의견을 작성하고 **9시~5시 근무제 도입 제안**과 비교한다. 실제 비교에서 공통점 배지와 양쪽 문장의 같은 녹색 강조를 확인했다. 첫 화면은 11개 관점에 연결된 고유 댓글 15/750(2.0%)을 표시한다. 댓글 좋아요 총합 17,534개 중 이 댓글들이 받은 좋아요는 1,453개다. 서로 다른 관점에 중복으로 합산하지 않는다. |
+| Converse | **New chat**에서 **9시~5시 근무제 도입 제안**, **오후 4시 퇴근 제안**을 골라 **Group conversation**을 연다. 두 관점의 퇴근 시각을 물어 네 번의 발언을 확인했다. **Send question to**에서 9시~5시 관점을 골라 출근 시간을 바꾸려는 이유를 물었을 때 이 Agent만 답했고 원댓글을 열 수 있었다. |
+| Reflect | **Choose individual messages**를 펼쳐 발언을 고르고 현재 생각을 적어 **Analyze**를 누른다. 실제 제안에서 유지된 의견과 더 생각할 점을 확인했다. 문구를 직접 고쳐 저장한 뒤 새로고침해도 같은 저장본을 열 수 있었다. |
+| 자동 토론 | SBS에서 검증 보류로 마친 실제 시험과 CNBC에서 합의 Agent를 만든 실제 시험이 각각 있다. 합의 없이 끝난 경우 **Ask these perspectives in a new chat**으로 기존 참여자를 고른 일반 대화를 열 수 있다. |
+
+그룹 QA는 위의 기본 `$1` 실행 명령을 쓴다. 생성 전에 답변과 검증에 필요한 최대 비용을 함께 확인하므로 `$0.30` 시험에서는 두 사람의 첫 답변이 시작되기 전에 한도에 걸렸다. 실행 창의 상한과 실제 청구액은 별도로 확인한다.
+
+외부 AI가 일시적으로 실패해 과금 확인이 보류되면 운영자가 서버를 `Ctrl+C`로 정지하고 같은 폴더에서 `py -3 tools/review_product_http.py`를 실행한다. 확정된 일시 HTTP 오류와 완료 영수증을 대조할 수 있으면 원래 최대 예약액을 전액 보수적으로 계상한 뒤 같은 실행 명령으로 서버를 다시 시작한다. 참가자는 다른 질문을 제출할 수 있다. 다른 종류의 중단에는 이 명령이 사유를 출력하며 장부를 보존한다. 원댓글 보기와 직접 성찰 작성은 AI가 중단된 중에도 가능하다.
+
+## 조원이 직접 확인할 흐름
+
+1. 초기 의견을 적고 Explore로 들어간다. **Source comments**를 펼치고 입장과 개별 근거의 원댓글을 확인한다. 댓글 구성과 좋아요 구성의 분모는 각각 처리한 고유 댓글과 수집 당시의 좋아요 총합이다. 둘 이상의 관점에 연결된 댓글은 ‘Multiple perspectives’, 연결이 확인되지 않은 댓글은 ‘Other comments’에 한 번씩 들어간다. 예를 들어 SBS의 15/750은 입장에 연결된 비율이며, 나머지 댓글의 입장은 이 수치로 판별할 수 없다.
+2. **Compare with my view**를 열어 색과 글자로 표시된 관계를 양쪽 문장에서 찾는다. **Compare all with my view**로 카드별 결과를 비교한다. 새로고침해도 같은 초기 의견의 비교는 재사용한다.
+3. Converse의 **New chat**에서 참여자를 고른다. 한 명이면 1:1, 여러 명이면 그룹 대화 또는 자동 토론을 선택할 수 있다. 그룹 대화에서 한 명을 지정해 후속 질문을 보낸다.
+4. 검증 보류가 나오면 등록된 원댓글을 확인한다. 일반 대화가 오류로 멈추면 **Ask another question**으로 입력창을 다시 연다. 이전 발언과 지출이 유지된다.
+5. 자동 토론의 참여자별 발언과 결론을 읽는다. 실제로 검증·비준을 통과한 합의가 생기면 합의 Agent를 열고 질문한다. 근거가 부족하면 결론에서 어느 단계까지 진행됐는지 확인한다. Reflect에서 직접 작성하거나 제안을 검토해 저장하고 Library에서 다시 연다.
+
+## 개발과 운영의 역할
+
+| 계층 | 구현과 책임 |
+| --- | --- |
+| 수집과 Agent 생성 | YouTube 수집 → 스냅샷 → Factory 후보 발굴·근거 판정 → Agent 입력 컴파일. 게시 가능한 관점 결정은 이 계층이 담당한다. 새 영상 시험에는 `tools/prepared_video_trial.py prepare --max-new-usd`로 그 실행의 추가 지출 상한을 지정할 수 있다. |
+| 분석 표시 | `src/commentscope/product/analysis.py`가 등록 프로필을 카드로 변환한다. 원댓글 ID로 범위와 좋아요를 집계한다. 선택적인 `perspective-names.json`은 실제 등록 ID에 짧은 이름을 연결한다. |
+| 대화와 상태 | `product/app.py`는 세션·질문·비교·성찰을 저장한다. `product/debate_service.py`와 `agents/structured_debate_runtime.py`가 자동 발언과 결론을, `agents/synthesis_agent.py`가 비준된 합의의 컴파일을 담당한다. |
+| 화면 | `product/mvp.html`, `mvp.js`, `mvp.css`가 같은 호스트의 `/api/v1`을 사용한다. QA 기준은 기존 Figma 문서에 기록했다. [Figma 명세](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=823-3498) |
+| 모델과 운영 | 생성과 검증은 기존 OpenRouter 브로커와 장부를 통과한다. `tools/launch_mvp.py`는 서버를 시작하고 운영자가 지정한 종료 시각과 추가 지출 한도를 고정한다. |
+
+## 채점 기간에 접속할 URL 운영
+
+공개 호스트에 Python 3.12 이상과 지속 디스크를 준비한다. 팀 ZIP의 `runs/qa-inputs/`를 같은 버전의 서버 코드 아래에 둔다. 기본 영상은 `catalog.json`의 첫 항목이다. 같은 사용자로 같은 절대 경로에서 실행하고 재시작 시 `runs/qa-server/` 전체를 재사용한다. 여기에 세션 SQLite, 권한 바인딩, 이전 지출과 호출 영수증이 저장된다. 채점 중에는 고정한 코드와 자료 버전을 사용한다.
+
+1. 운영 서비스의 환경 변수에 팀용 `OPENROUTER_API_KEY`를 설정한다. 팀원이 브라우저를 열 때는 개인 키를 입력할 필요가 없다. 기존 분석만 제공하는 서버는 YouTube 키 없이 실행된다.
+2. 운영자의 실제 HTTPS 호스트와 종료시각을 넣어 아래 명령을 실행한다. 평가용 창은 최초 시작부터 최대 21일이고 등록 근거 만료 전에 끝나야 한다. 명시한 총액은 이 기간 전체에 적용되며 최대 2달러다. 예산이 소진되면 새 AI 호출이 멈춘다. 실행 중인 서버에서 기존 기록 읽기와 수동 성찰 저장은 각 세션 유효기간 안에 가능하다.
+
+```sh
+python3 tools/launch_mvp.py --check
+python3 tools/launch_mvp.py --port 8080 --public-origin "https://YOUR_HOST" \
+  --evaluation-until "YYYY-MM-DDT23:59:00+09:00" --max-usd 2
+```
+
+3. 서비스 관리자가 같은 명령을 재시작하도록 설정하고 HTTPS 프록시가 같은 VM의 `127.0.0.1:8080`으로 원래 Host를 전달하게 한다. 사이트의 `/mvp`, `/mvp/*`, `/api/v1/*`만 전달한다. 아래는 Caddy에서 사용할 구성이다.
+
+```caddyfile
+YOUR_HOST {
+    @product path /mvp /mvp/* /api/v1/*
+    handle @product {
+        reverse_proxy 127.0.0.1:8080
+    }
+    handle {
+        redir / /mvp
+        respond 404
+    }
+}
+```
+
+4. 다른 네트워크의 새 브라우저에서 가입이나 설치 없이 의견 저장, 원문, 실제 응답, 토론 결론, 성찰 저장을 확인한다. 서버 재시작 뒤 같은 브라우저에서 기록을 다시 연다. 이 검증을 끝낸 HTTPS 주소를 M4 PDF의 **Live evaluation URL**에 넣는다. 소스 저장소 링크는 별도 제출 항목이다.
+
+과목 OpenRouter 크레딧은 모델 호출에 쓰인다. Google Cloud에서 서버를 만드는 경우 프로젝트에 사용 가능한 Cloud Billing 계정을 연결한다. 결제 계정이 없다면 팀이 승인한 계정을 만들거나 학교가 제공하는 계정의 연결 권한을 받는다. [Google Cloud 결제 계정 만들기](https://docs.cloud.google.com/billing/docs/how-to/create-billing-account) · [프로젝트 연결](https://docs.cloud.google.com/billing/docs/how-to/modify-project)
+
+팀에 연결할 계정이 없고 전일제 대학생 자격이 있으면 **Azure for Students → Start free**에서 학교 이메일로 인증할 수 있다. Microsoft는 카드 없이 가입하는 학생 구독과 12개월 동안 사용할 수 있는 Azure 크레딧 $100을 안내한다. 이 경로를 쓰면 팀의 Python 서버와 지속 디스크를 Azure에 둔다. [Microsoft 학생 구독](https://azure.microsoft.com/en-us/free/students)
