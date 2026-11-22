@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map(), compositionFocus:null};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -79,12 +79,52 @@ function renderComposition(){
   $('composition-chart').append(node('p',linkedTotal+' of '+total+' analyzed comments are linked to a perspective.','composition-total'));
   if(linkedTotal){
     const bar=node('div',undefined,'composition-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label','Comments linked to each perspective');
-    for(const e of linked){const seg=node('span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);seg.style.flexGrow=String(e.count);seg.title=e.count+' comments';bar.append(seg);}
+    for(const e of linked){
+      const seg=node(e.perspective_id?'button':'span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
+      seg.style.flexGrow=String(e.count);seg.title=e.count+' comments';
+      if(e.perspective_id){seg.type='button';seg.dataset.perspective=e.perspective_id;seg.setAttribute('aria-label',label(e.perspective_id)+': '+e.count+' comments. Show details');
+        seg.onclick=()=>toggleCompositionDetail(e.perspective_id);seg.onmouseenter=()=>linkComposition(e.perspective_id,true);seg.onmouseleave=()=>linkComposition(e.perspective_id,false);}
+      bar.append(seg);
+    }
     $('composition-chart').append(bar);
   }
   for(const e of entries){if(!e.count)continue;const i=indexOf(e.perspective_id),cls=e.perspective_id?'accent-'+Math.max(0,i)%5:e.kind,percent=e.count/total*100;
-    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));$('composition-legend').append(line);
+    const line=node(e.perspective_id?'button':'span',undefined,cls+(e.perspective_id?' legend-button':''));line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));
+    if(e.perspective_id){line.type='button';line.dataset.perspective=e.perspective_id;line.onclick=()=>toggleCompositionDetail(e.perspective_id);}
+    $('composition-legend').append(line);
   }
+  if(state.compositionFocus)showCompositionDetail(state.compositionFocus);else $('composition-detail').hidden=true;
+}
+// Hovering a card or a bar segment highlights its counterpart.
+function linkComposition(pid,on){
+  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
+}
+function toggleCompositionDetail(pid){
+  if(state.compositionFocus===pid){state.compositionFocus=null;$('composition-detail').hidden=true;markCompositionFocus();return;}
+  showCompositionDetail(pid);
+}
+function markCompositionFocus(){
+  const focus=state.compositionFocus;
+  $('composition-chart').classList.toggle('has-focus',!!focus);
+  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective]')){
+    const on=el.dataset.perspective===focus;el.classList.toggle('focused',on);el.setAttribute('aria-pressed',String(on));
+  }
+}
+function showCompositionDetail(pid){
+  const p=perspective(pid);if(!p)return;
+  state.compositionFocus=pid;markCompositionFocus();
+  const entries=state.analysis.composition||[],total=entries.reduce((sum,e)=>sum+e.count,0),entry=entries.find(e=>e.perspective_id===pid),count=entry?.count||0;
+  const level=state.closeness.get(pid)||(hasInitialView()?'pending':'empty');
+  const panel=$('composition-detail');panel.className='composition-detail accent-'+indexOf(pid)%5;panel.hidden=false;
+  const head=node('header'),close=node('button','×','close-detail');close.type='button';close.setAttribute('aria-label','Close details');close.onclick=()=>toggleCompositionDetail(pid);
+  head.append(node('strong',label(pid)),node('span',closenessLabels[level],'closeness-text closeness-'+level),close);
+  const stats=node('p',count+' comment'+(count===1?'':'s')+' counted only for this perspective'+(total?' · '+(count/total*100).toFixed(1)+'% of '+total+' analyzed':'')+(p.source_count!==count?' · '+p.source_count+' source comments in total':''),'detail-stats');
+  const quote=node('blockquote','…','detail-quote'),first=(p.source_ids||[])[0];
+  if(first)sourceText(first).then(v=>{quote.textContent=v.text;}).catch(()=>{quote.textContent='This comment could not be loaded.';});
+  const more=node('button','See all comments in this perspective →','secondary');more.type='button';more.onclick=()=>compareWith(pid).catch(e=>status(e.message));
+  panel.replaceChildren(head,node('p',p.text,'detail-stance'),stats);
+  if(first)panel.append(node('p','A comment from this perspective','detail-label'),quote);
+  panel.append(more,node('p','Counts come from the analyzed comments, not from all viewers.','detail-caveat'));
 }
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
@@ -104,6 +144,7 @@ function perspectiveCard(p){
   // The whole card opens the comparison popup.
   card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
   card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
+  card.onmouseenter=()=>linkComposition(p.id,true);card.onmouseleave=()=>linkComposition(p.id,false);
   card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
   return card;
 }
@@ -117,6 +158,7 @@ const groupTitles={close:'Close to your view',mixed:'Partly close, partly differ
   differ:'Different from your view',none:'No clear link to your view',error:'Could not compare right now'};
 async function renderPerspectives(){
   const box=$('perspectives'),render=state.cardRender=(state.cardRender||0)+1,list=state.analysis.perspectives;
+  state.closeness.clear();
   box.replaceChildren();
   if(!list.length){box.append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));return;}
   const cards=new Map(list.map(p=>[p.id,perspectiveCard(p)]));
@@ -138,9 +180,10 @@ async function renderPerspectives(){
     const items=result.value.result.items||[],level=closeness(items);
     // Lead with the explanation that matches the group.
     const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
-    setCloseness(card,level);summary.textContent=keySentence(lead,level);groups.get(level).push(card);
+    setCloseness(card,level);summary.textContent=keySentence(lead,level);groups.get(level).push(card);state.closeness.set(p.id,level);
   });
   box.replaceChildren();
+  if(state.compositionFocus)showCompositionDetail(state.compositionFocus);
   for(const [level,members] of groups){
     if(!members.length)continue;
     const section=node('section',undefined,'closeness-group closeness-'+level);

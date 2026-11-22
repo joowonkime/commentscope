@@ -166,3 +166,20 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 #converse[data-no-room] .conversation-toolbar > div, #converse[data-no-room] #interject, #converse[data-no-room] #agent-info,
 #converse[data-no-room] #opening, #converse[data-no-room] #messages, #converse[data-no-room] #room-state { display: none; }
 .cards.single-row { grid-template-columns: repeat(var(--count), minmax(200px, 1fr)); overflow-x: auto; padding-bottom: 4px; }
+button.composition-bar-seg, .composition-bar button { border: 0; border-radius: 0; padding: 0; cursor: pointer; font: inherit; font-size: 10px; font-weight: 600; color: white; transition: opacity .15s, filter .15s; }
+.composition-bar button:hover, .composition-bar .linked { filter: brightness(1.1); box-shadow: inset 0 0 0 2px #ffffffaa; }
+#composition-chart.has-focus .composition-bar > *:not(.focused) { opacity: .35; }
+.composition-bar button:focus-visible { outline: 3px solid #b6aaff; outline-offset: -3px; }
+.legend-button { border: 0; background: none; padding: 2px 4px; border-radius: 6px; font: inherit; font-size: 11px; color: #655e77; cursor: pointer; display: flex; align-items: center; gap: 5px; }
+.legend-button:hover, .legend-button.focused { background: var(--agent-soft); color: #32283f; }
+.card.linked { border-color: var(--agent); box-shadow: 0 0 0 1px var(--agent); }
+.composition-detail { margin-top: 16px; border: 1px solid var(--line); border-left: 4px solid var(--agent); border-radius: 12px; padding: 16px 18px; background: #fff; }
+.composition-detail header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+.composition-detail header strong { font-size: 14px; }
+.close-detail { margin-left: auto; background: none; color: #9690a6; font-size: 18px; padding: 0 4px; }
+.detail-stance { font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.detail-stats { font-size: 12px; color: #6c667f; margin: 0 0 12px; }
+.detail-label { font-size: 10px; letter-spacing: .5px; text-transform: uppercase; color: var(--agent); font-weight: 700; margin: 0 0 4px; }
+.detail-quote { font-size: 13px; line-height: 1.6; color: #4e465d; background: var(--agent-soft); border-radius: 8px; padding: 10px 12px; margin: 0 0 12px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.composition-detail .secondary { font-size: 12px; }
+.detail-caveat { font-size: 10px; color: #b0aabd; margin: 10px 0 0; }
