@@ -13,7 +13,9 @@ sys.path[:0] = [str(ROOT / 'src'), str(ROOT)]
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.product.analysis import from_factory
 from commentscope.product.web import ProductServer
-from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION, PRODUCT_CYCLE_VERSION, cycle_guard
+from commentscope.providers.execution_cycle import (
+    EVALUATION_CYCLE_VERSION, MAX_EVALUATION_DURATION, PRODUCT_CYCLE_VERSION, cycle_guard,
+)
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.openrouter_budget import dollars, units
 from commentscope.storage import write_json_exclusive
@@ -79,9 +81,9 @@ def server_plan(state, catalog, folders, analyses, deployment, cap, until):
         start = datetime.now(timezone.utc)
         expires = min(datetime.fromisoformat(a.compiled['expires_at']) for a in analyses)
         deadline = until or min(start+timedelta(hours=7),expires)
-        duration = timedelta(days=14) if until else timedelta(hours=7)
+        duration = MAX_EVALUATION_DURATION if until else timedelta(hours=7)
         if not start < deadline <= min(expires,start+duration):
-            raise ValueError('Choose a future deadline within 14 days and the registered sources’ lifetime.')
+            raise ValueError(f'Choose a future deadline within {duration} and the registered sources’ lifetime.')
         scope = {'binding':identity, 'started_at':start.isoformat(), 'deadline':deadline.isoformat(),
                  'policy':{'account_id':'product-'+identity['key_sha256'][:16], 'ledger':str(state/'spend.sqlite'),
                            'maximum_usd':dollars(total), 'opening_charge_usd':dollars(opening)}}
@@ -107,7 +109,7 @@ def main(argv=None):
     parser.add_argument('--state',type=Path,default=Path('runs/qa-server'))
     parser.add_argument('--check',action='store_true',help='Validate the archived Factory analyses offline.')
     parser.add_argument('--max-usd',default='1')
-    parser.add_argument('--evaluation-until',help='Fixed ISO timestamp, up to 14 days from the first launch.')
+    parser.add_argument('--evaluation-until',help=f'Fixed ISO timestamp, up to {MAX_EVALUATION_DURATION.days} days from the first launch.')
     parser.add_argument('--port',type=int,default=8080)
     parser.add_argument('--public-origin',help='Exact HTTPS origin of the reverse proxy.')
     args=parser.parse_args(argv)

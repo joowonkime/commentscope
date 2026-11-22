@@ -9,6 +9,7 @@ from commentscope.providers.openrouter_budget import units
 CYCLE_VERSION = 'commentscope-autonomous-cycle-20261105-v1'
 PRODUCT_CYCLE_VERSION = 'commentscope-product-cycle-20261109-v2'
 EVALUATION_CYCLE_VERSION = 'commentscope-product-evaluation-window-v1'
+MAX_EVALUATION_DURATION = timedelta(days=21)
 PRODUCT_CYCLES = (PRODUCT_CYCLE_VERSION, EVALUATION_CYCLE_VERSION)
 
 
@@ -27,9 +28,9 @@ def cycle_guard(cycle, *, call_seconds=0, allow_expired=False, observed_at=None)
     end = datetime.fromisoformat(cycle['deadline'])
     observed_at = observed_at or datetime.now(timezone.utc)
     evaluation=cycle.get('version')==EVALUATION_CYCLE_VERSION
-    duration=timedelta(days=14) if evaluation else timedelta(hours=7)
+    duration=MAX_EVALUATION_DURATION if evaluation else timedelta(hours=7)
     if start.utcoffset() is None or end.utcoffset() is None or not timedelta(0)<end-start<=duration:
-        raise ValueError('At most 14 days with explicit timezone required' if evaluation
+        raise ValueError(f'At most {MAX_EVALUATION_DURATION.days} days with explicit timezone required' if evaluation
                          else 'At most seven hours with explicit timezone required')
     if not allow_expired and not start <= observed_at < end-timedelta(seconds=call_seconds+3):
         raise TimeoutError('Cycle deadline cannot cover another bounded operation')

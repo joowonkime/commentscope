@@ -44,7 +44,7 @@ class LaunchTests(unittest.TestCase):
         self.root=Path(root.name).resolve()
         self.state=self.root/'state'
         self.state.mkdir()
-        self.expiry=(datetime.now(timezone.utc)+timedelta(days=20)).isoformat()
+        self.expiry=(datetime.now(timezone.utc)+timedelta(days=25)).isoformat()
         self.args=(self.state,self.root/'catalog.json',[self.root/'video'],
                    [SimpleNamespace(id='A1',compiled={'expires_at':self.expiry})],self.root/'deployment.json')
         write(self.args[1],{'analyses':['video'],'deployment':'deployment.json'})
@@ -54,7 +54,7 @@ class LaunchTests(unittest.TestCase):
         self.addCleanup(self.key.stop)
 
     def test_restart_and_partial_setup_keep_one_binding_and_settled_opening_charge(self):
-        until=(datetime.now(timezone.utc)+timedelta(days=11)).isoformat()
+        until=(datetime.now(timezone.utc)+timedelta(days=21)).isoformat()
         prepared=[]
         def prepare(path,*args,**kwargs):
             prepared.append(path)
@@ -75,6 +75,10 @@ class LaunchTests(unittest.TestCase):
 
     def test_bad_deadline_does_not_freeze_authorization(self):
         with patch.object(launch.serve_mvp,'key_metadata',return_value={'limit':150,'limit_remaining':115,'usage':33}):
-            with self.assertRaises(ValueError):
-                launch.server_plan(*self.args,'1',(datetime.now(timezone.utc)+timedelta(days=16)).isoformat())
+            now = datetime.now(timezone.utc)
+            for source_days, requested_days in [(25, 22), (17, 20)]:
+                with self.subTest(source_days=source_days, requested_days=requested_days):
+                    self.args[3][0].compiled['expires_at'] = (now + timedelta(days=source_days)).isoformat()
+                    with self.assertRaisesRegex(ValueError, 'registered sources'):
+                        launch.server_plan(*self.args, '1', (now + timedelta(days=requested_days)).isoformat())
         self.assertFalse((self.state/'authorization.json').exists())

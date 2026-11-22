@@ -58,18 +58,18 @@ class ProductServerPlanTests(unittest.TestCase):
         for change in ({'maximum_additional_usd':'2.01'},{'user_request':' '},{'tasks':['TASK-005']},{'shared_policy_sha256':'f'*64}):
             with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
 
-    def test_two_week_evaluation_is_product_only_and_bound_to_source_lifetime(self):
+    def test_three_week_evaluation_is_product_only_and_bound_to_source_lifetime(self):
         from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION, bind_cycle, cycle_guard
         self.product_cycle()
         start=datetime.fromisoformat(self.cycle['started_at'])
-        end=(start+timedelta(days=14)).isoformat()
+        end=(start+timedelta(days=21)).isoformat()
         with self.assertRaises(ValueError):cycle_guard({**self.cycle,'deadline':end})
         self.cycle.update(version=EVALUATION_CYCLE_VERSION,deadline=end)
         self.cycle_file.write_text(json.dumps(self.cycle))
         cycle_guard(self.cycle)
         with self.assertRaisesRegex(ValueError,'Product-only'):
             bind_cycle(self.cycle_file,self.cycle['selected_deployment'],self.policy,'1')
-        for change in ({'deadline':(start+timedelta(days=15)).isoformat()},{'maximum_additional_usd':'2.01'}):
+        for change in ({'deadline':(start+timedelta(days=21,seconds=1)).isoformat()},{'maximum_additional_usd':'2.01'}):
             with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
         self.analysis.compiled['expires_at']=(start+timedelta(days=10)).isoformat()
         with self.assertRaisesRegex(ValueError,'through the deadline'):self.prepare()
