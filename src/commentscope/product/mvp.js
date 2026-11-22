@@ -523,7 +523,7 @@ function libraryRow(title,detail,action,onClick){
   return row;
 }
 
-function openLibraryDestination(destination){
+function openDestination(destination){
   sessionStorage.setItem(libraryDestinationKey,JSON.stringify(destination));
   if(history.state?.reviewLibrary){
     const {reviewLibrary,...rest}=history.state;
@@ -549,7 +549,7 @@ async function renderLibrary(){
         ? analysis.analyzed_comments+' analyzed comments · '+analysis.perspectives.length+' perspectives'
         : 'Source refresh required';
       videos.append(libraryRow(title,detail,availableAnalysis(analysis)?'Open video':'Expired',
-        availableAnalysis(analysis)?()=>openLibraryDestination({analysis_id:analysis.analysis_id}):null));
+        availableAnalysis(analysis)?()=>openDestination({analysis_id:analysis.analysis_id}):null));
     }
     if(!analyses.length)videos.append(node('p','No analyzed videos are available.','muted'));
   }).catch(()=>{
@@ -567,11 +567,11 @@ async function renderLibrary(){
       const title=session.analysis.video?.title||'Registered discussion';
       for(const [index,room] of session.rooms.entries()){
         records.append(libraryRow(roomName(room,index),title+' · '+(roomStates[room.state]||room.state),'Open',
-          ()=>openLibraryDestination({access,room_id:room.room_id})));
+          ()=>openDestination({access,room_id:room.room_id})));
       }
       for(const reflection of session.reflections){
         records.append(libraryRow('Reflection · Revision '+reflection.revision,title,'Open',
-          ()=>openLibraryDestination({access,reflection_id:reflection.reflection_id})));
+          ()=>openDestination({access,reflection_id:reflection.reflection_id})));
       }
     }
     if(!records.childElementCount){
@@ -639,11 +639,50 @@ async function enter(session,destination){
 }
 $('initial').oninput=()=>{$('initial-count').textContent='Characters: '+[...$('initial').value].length+' / 500';};
 $('clear-initial').onclick=()=>{$('initial').value='';$('initial').oninput();$('initial').focus();};
+$('video-url').oninput=()=>{$('video-lookup-status').textContent='';};
+$('video-lookup').onsubmit=async event=>{
+  event.preventDefault();
+  const button=$('open-video-url');
+  if(button.disabled)return;
+  const begin=$('begin').querySelector('button[type=submit]');
+  const beforeDisabled=begin.disabled;
+  const feedback=$('video-lookup-status');
+  const input=$('video-url');
+  button.disabled=true;
+  begin.disabled=true;
+  input.readOnly=true;
+  feedback.textContent='Looking for a saved analysis…';
+  try{
+    const query=new URLSearchParams({video:input.value});
+    const {analyses}=await api('/analyses?'+query,'GET',undefined,'');
+    const match=analyses.find(availableAnalysis);
+    if(!match){
+      feedback.textContent=analyses.length
+        ? 'The saved analysis for this video has expired. Choose another video in Library.'
+        : 'This video has no saved analysis yet. Choose an analyzed video in Library.';
+      return;
+    }
+    if(match.analysis_id===state.analysis?.analysis_id){
+      feedback.textContent='This video is already open.';
+      return;
+    }
+    openDestination({analysis_id:match.analysis_id});
+  }catch(error){
+    feedback.textContent=error.code==='invalid_video_url'
+      ? 'Enter a valid YouTube video URL.'
+      : 'Could not look up this video. Try again.';
+  }finally{
+    input.readOnly=false;
+    begin.disabled=beforeDisabled;
+    button.disabled=false;
+  }
+};
 $('begin').onsubmit=async event=>{
   event.preventDefault();
   const button=$('begin').querySelector('button[type=submit]');
   if(button.disabled)return;
   button.disabled=true;
+  $('open-video-url').disabled=true;
   const bytes=crypto.getRandomValues(new Uint8Array(32));
   state.token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   try{
@@ -652,7 +691,7 @@ $('begin').onsubmit=async event=>{
     rememberSession(session.session_id,state.token);
     await enter(session);
   }catch(error){status(error.message);}
-  finally{button.disabled=false;}
+  finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
 $('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
 $('open-room').onclick=async()=>{
@@ -818,4 +857,4 @@ async function start(){
     : '먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.'));
 }
 
-start().catch(error=>status(error.message));
+start().catch(error=>status(error.message)).finally(()=>{$('open-video-url').disabled=false;});

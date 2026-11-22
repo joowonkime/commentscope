@@ -49,7 +49,11 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 
 ## 선택 기능 Library
 
-REQ-009, TASK-036/038. 첫 시작은 Before Use → Explore → Converse → Reflect이다. 상단 Library를 열고 닫거나 뒤로 가면 현재 화면과 입력이 유지된다. 등록 영상을 선택하면 해당 분석의 Before Use로 들어간다. [Figma 설계](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=823-3498) · [Figma 화면](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=825-3504)
+REQ-009, TASK-036/038. Before Use의 YouTube video URL 입력은 영상 ID로 등록 분석을 찾는다. 유효한 분석을 만나면 해당 영상의 Before Use를 바로 열며, 같은 영상은 화면과 초안을 유지한다. 잘못된 URL, 미등록 영상, 만료된 분석은 입력 아래에 안내하고 현재 영상과 의견을 유지한다. Library에서도 기존 분석과 개인 기록을 계속 열 수 있다.
+
+등록 분석 목록의 선택적 `GET /api/v1/analyses?video=<YouTube URL 또는 ID>`는 기존 수집기의 URL 해석을 사용해 일치 항목만 반환한다. 단일 값이 비어 있거나 잘못된 경우에는 `400 invalid_video_url`, 미등록은 빈 `analyses`, 만료 분석은 기존 `expired` 상태를 반환한다. 이 경로에는 댓글 수집·모델 호출·등록 변경이 없다. 새 영상의 전체 분석은 현재 별도 운영자 실행 계획이 필요하다.
+
+첫 시작은 Before Use → Explore → Converse → Reflect이다. 상단 Library를 열고 닫거나 뒤로 가면 현재 화면과 입력이 유지된다. 등록 영상을 선택하면 해당 분석의 Before Use로 들어간다. [Figma 설계](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=823-3498) · [Figma 화면](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=825-3504)
 
 `GET /api/v1/analyses`는 재사용 가능한 등록 분석 목록을 제공한다. 운영자는 서버 prepare의 `--additional-factory-run`을 반복해 이미 검증된 분석을 등록할 수 있다. 기본 영상과 추가 자료의 원문과 산출물을 같은 서버 계획에 고정한다. 시험 장부에 결합된 단일 Factory 시연은 해당 분석만 쓴다.
 

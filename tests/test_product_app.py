@@ -1,6 +1,7 @@
 from copy import deepcopy
 import json
 from pathlib import Path
+from urllib.parse import urlencode
 import secrets
 import tempfile
 import threading
@@ -27,6 +28,41 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(value['analyzed_comments'],6);self.assertEqual(value['canonical_population'],999)
         self.assertEqual(value['count_scope'],'processed_comments')
         self.assertEqual(sum(x['count'] for x in value['composition']),6)
+
+    def test_video_lookup_reuses_catalog_and_normalizes_youtube_links(self):
+        video_id='RrFaNO3rTaA'
+        other_id='7AGa5z69zqU'
+        registered=Analysis(self.analysis.bundle,{'video':{'video_id':video_id}})
+        other=Analysis(self.analysis.bundle,{'video':{'id':other_id}})
+        self.app.analyses.update({registered.id:registered,other.id:other})
+        catalog='/api/v1/analyses'
+        for value,expected in [
+            (video_id,[registered.id]),
+            (' https://www.youtube.com/watch?v='+video_id+'&t=23 ',[registered.id]),
+            ('https://youtu.be/'+video_id+'?si=example',[registered.id]),
+            ('https://www.youtube.com/shorts/'+other_id,[other.id]),
+            ('https://www.youtube.com/watch?v=abcdefghijk',[]),
+        ]:
+            with self.subTest(value=value):
+                status, payload=self.call('GET',catalog+'?'+urlencode({'video':value}),token='')
+                self.assertEqual(status,200)
+                self.assertEqual([item['analysis_id'] for item in payload['analyses']],expected)
+        expired=deepcopy(self.analysis.bundle)
+        expired['expires_at']='2001-01-01T00:00:00Z'
+        registered.bundle=expired
+        status, payload=self.call('GET',catalog+'?video='+video_id,token='')
+        self.assertEqual(status,200)
+        self.assertEqual([item['status'] for item in payload['analyses']],['expired'])
+        self.assertEqual(len(self.call('GET',catalog+'?unused=1',token='')[1]['analyses']),3)
+        self.assertFalse(self.calls)
+
+    def test_video_lookup_reports_bad_input(self):
+        for query in ('video=', 'video=https://example.org/abcdefghijk',
+                      'video=abcdefghijk&video=abcdefghijk'):
+            with self.subTest(query=query), self.assertRaises(WebError) as err:
+                self.call('GET','/api/v1/analyses?'+query,token='')
+            self.assertEqual((err.exception.status,err.exception.code),(400,'invalid_video_url'))
+        self.assertFalse(self.calls)
 
     def setUp(self):
         temp = tempfile.TemporaryDirectory(); self.addCleanup(temp.cleanup)

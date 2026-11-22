@@ -13,7 +13,9 @@ from commentscope.agents import seed_policy
 from commentscope.agents.seeded_runtime import SeededSession
 from commentscope.agents.grounded_runtime import GroundedSession
 from commentscope.agents.web import WebError
+from commentscope.errors import PipelineError
 from commentscope.factory.automatic_contract import digest
+from commentscope.ingestion.youtube import video_id_from_input
 from commentscope.providers.budget import BudgetExhausted
 from commentscope.product import contracts as contract, debate_store
 from commentscope.product.debate_service import DebateService
@@ -232,7 +234,17 @@ class ProductApp:
         parsed=urlsplit(path);parts=parsed.path.strip('/').split('/');schedule=None
         if parts[:2]!=['api','v1']:raise WebError(404,'not_found')
         if method=='GET' and parts==['api','v1','analyses']:
-            return 200,{'analyses':[a.public() for a in self.analyses.values()],
+            analyses=self.analyses.values()
+            query=parse_qs(parsed.query,keep_blank_values=True)
+            if 'video' in query:
+                values=query['video']
+                if len(values)!=1 or len(values[0])>2048:raise WebError(400,'invalid_video_url')
+                try:video_id=video_id_from_input(values[0])
+                except PipelineError as error:raise WebError(400,'invalid_video_url') from error
+                analyses=(analysis for analysis in analyses
+                          if any(analysis.provenance.get('video',{}).get(key)==video_id
+                                 for key in ('video_id','id')))
+            return 200,{'analyses':[a.public() for a in analyses],
                         'generation_status':self.generation_status()}
         if method!='GET' and not isinstance(body,dict):raise WebError(400,'invalid_body')
         try:
