@@ -303,6 +303,7 @@ class ComparisonPremiseTests(unittest.TestCase):
             {'claim_id':'condition','text':'Only devices with high risk are in scope.',
              'kind':'value','role':'prerequisite','requires':[],'citations':{}}]}
         req=c.comparison_request(initial,allowed)
+        self.assertIn('exactly ONE relation',req['system'])
         row={'relation':'additional_condition','user_span_ids':['I000'],
              'perspective_claim_ids':['claim'],'explanation':'Both texts condition support on risk.',
              'consideration_question':None}

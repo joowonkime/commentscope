@@ -125,7 +125,9 @@ async function renderPerspectives(){
     box.append(node('p','Write your initial view to see which perspectives are close to yours.','group-hint'),cardGrid([...cards.values()]));return;
   }
   for(const card of cards.values()){setCloseness(card,'pending');card.querySelector('.relation-summary').textContent='Comparing with your view…';}
-  box.append(node('p','Comparing your view with '+list.length+' perspective'+(list.length===1?'':'s')+'…','group-hint'),cardGrid([...cards.values()]));
+  // While comparing, keep every card on one row; they are regrouped once all comparisons settle.
+  const row=cardGrid([...cards.values()]);row.classList.add('single-row');row.style.setProperty('--count',String(list.length));
+  box.append(node('p','Comparing your view with '+list.length+' perspective'+(list.length===1?'':'s')+'…','group-hint'),row);
   const revision=state.session.initial_opinion.revision;
   const results=await Promise.allSettled(list.map(p=>comparison(p.id)));
   if(render!==state.cardRender||revision!==state.session.initial_opinion.revision)return;
