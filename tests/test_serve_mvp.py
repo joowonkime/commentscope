@@ -22,6 +22,19 @@ from test_openrouter import deployment
 
 
 class ProductServerPlanTests(unittest.TestCase):
+    def test_terminal_provider_error_explains_the_hold_and_keeps_the_charge(self):
+        self.product_cycle()
+        directory, _ = self.prepare()
+        product, _, broker = server.build(directory)
+        self.base.call.side_effect = RuntimeError('synthetic transport failure')
+        try:
+            job = self.compare(product)
+            self.assertEqual(job['error']['code'], 'unconfirmed_provider_call')
+            self.assertEqual(broker.status(), 'reconcile_required')
+            self.assertEqual(broker.ledger.summary()['uncertain_calls'], 1)
+        finally:
+            product.close()
+
     def product_cycle(self):
         from commentscope.providers.execution_cycle import PRODUCT_CYCLE_VERSION
         self.cycle.update(version=PRODUCT_CYCLE_VERSION,tasks=['TASK-011','TASK-012'],

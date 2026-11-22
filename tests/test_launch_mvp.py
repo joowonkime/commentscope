@@ -7,9 +7,37 @@ from unittest.mock import patch
 
 from commentscope.storage import write_json_exclusive as write
 from tools import launch_mvp as launch
+from tools import review_product_http as http_review
+from commentscope.providers.openrouter_budget import SpendLedger
 
 
 class LaunchTests(unittest.TestCase):
+    def test_host_review_retains_full_reservation_and_requires_matching_terminal_evidence(self):
+        folder = self.state / 'server'
+        policy = {'ledger': str(self.state / 'spend.sqlite'), 'account_id': 'synthetic',
+                  'maximum_usd': '1', 'opening_charge_usd': '0'}
+        plan = {'spend_policy': policy, 'spend_scope_sha256': 'b'*64}
+        write(self.state / 'authorization.json', {'policy': policy})
+        req = 'c'*64
+        write(folder / 'calls/0001-product-comparison.request.json', {'request_sha256': req})
+        ledger = SpendLedger(policy['ledger'], 'synthetic', maximum_usd='1')
+        call = ledger.reserve('b'*64, req, '0.1', run_limit_usd='1', key_remaining_usd='1')
+        with patch.object(launch.serve_mvp, 'validate', return_value=plan), \
+                patch.object(http_review, 'terminal_evidence') as evidence:
+            with self.assertRaisesRegex(ValueError, 'active'):
+                http_review.review(self.state)
+            evidence.assert_not_called()
+            ledger.finish(call, None)
+            evidence.side_effect = ValueError('Unconfirmed interruption')
+            with self.assertRaisesRegex(ValueError, 'Unconfirmed'):
+                http_review.review(self.state)
+            self.assertEqual(ledger.summary()['uncertain_calls'], 1)
+            evidence.side_effect = None
+            evidence.return_value = {'ledger_call_id': call, 'retained_units': launch.units('0.1'), 'http_status': 502}
+            self.assertIn('Retained USD 0.1', http_review.review(self.state))
+            self.assertEqual(ledger.summary()['conservative_usd'], '0.1')
+            self.assertIn('No uncertain charge', http_review.review(self.state))
+
     def setUp(self):
         root=TemporaryDirectory(dir='runs')
         self.addCleanup(root.cleanup)

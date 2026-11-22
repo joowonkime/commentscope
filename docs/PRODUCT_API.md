@@ -60,6 +60,8 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 
 REQ-009, TASK-036/038. Before Use의 YouTube video URL 입력은 영상 ID로 등록 분석을 찾는다. 유효한 분석을 만나면 해당 영상의 Before Use를 바로 열며, 같은 영상은 화면과 초안을 유지한다. 잘못된 URL, 미등록 영상, 만료된 분석은 입력 아래에 안내하고 현재 영상과 의견을 유지한다. Library에서도 기존 분석과 개인 기록을 계속 열 수 있다.
 
+등록 영상의 제목·포스터·플레이어·YouTube 링크는 현재 선택한 영상 ID를 따른다. Before Use에서는 실제 크기의 포스터가 로드된 뒤에도 페이지 안에 사진과 재생 버튼이 들어와야 한다. 원본 링크는 플레이어를 열기 전후와 작은 화면에서 사용할 수 있다. 고해상도 포스터가 없으면 작은 썸네일로 전환하며, 썸네일이 없어도 영상은 열 수 있다. Explore 첫 화면은 고유 댓글 중 최종 입장에 연결된 수를 기존 중복 없는 집계와 같은 분모로 표시한다. 합의가 성립하지 않은 토론 결론에서는 참가자가 선택된 일반 대화 선택창을 열 수 있다. 선택창을 열거나 취소하는 동안 종료된 토론 기록과 비용은 유지되며 새 질문을 제출해야 응답이 생성된다.
+
 등록 분석 목록의 선택적 `GET /api/v1/analyses?video=<YouTube URL 또는 ID>`는 기존 수집기의 URL 해석을 사용해 일치 항목만 반환한다. 단일 값이 비어 있거나 잘못된 경우에는 `400 invalid_video_url`, 미등록은 빈 `analyses`, 만료 분석은 기존 `expired` 상태를 반환한다. 이 경로에는 댓글 수집·모델 호출·등록 변경이 없다. 새 영상의 전체 분석은 현재 별도 운영자 실행 계획이 필요하다.
 
 첫 시작은 Before Use → Explore → Converse → Reflect이다. 상단 Library를 열고 닫거나 뒤로 가면 현재 화면과 입력이 유지된다. 등록 영상을 선택하면 해당 분석의 Before Use로 들어간다. [Figma 설계](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=823-3498) · [Figma 화면](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=825-3504)
@@ -143,7 +145,7 @@ CI는 이를 실행하지 않는다. 승인된 cycle/잔여/종료시각을 확�
 `external_evidence`는 준비된 https문헌/정확한 구간이며 새 웹검색 구현을 뜻하지 않는다.
 허용되지 않은 문단은 숨기고 남은 답변은 partial/verification_hold로 기록한다.
 작성과 문단 판정의 비용은 같은 room·계정에 합산하며 첫 호출 전 둘의 예약 여유를 확인한다.
-외부 청구가 불명확하면 기존 needs_reconciliation 절차를 따르고 자동 재시도하지 않는다.
+외부 청구가 불명확하면 기존 needs_reconciliation 절차를 따르고 자동 재시도하지 않는다. 실서버가 생성 요청의 종료된 전송 오류와 미확정 과금을 함께 발견하면 `unconfirmed_provider_call`을 반환한다. 원댓글 읽기와 수동 성찰 저장은 계속된다. 호스트의 `tools/review_product_http.py`는 서버 중지 후 같은 장부·요청·종료 HTTP 오류·완료 체크포인트가 맞을 때 기존 예약 전액을 보수적으로 계상한다. 같은 요청의 실패 기록은 보존된다.
 
 새 runtime v2의 보류는 검증된 한계 설명을 포함할 수 있다. 이 경우에도
 `status=abstain`, `answerability=abstain`을 유지하며 answered 집계에 넣지 않는다.

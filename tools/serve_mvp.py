@@ -239,7 +239,11 @@ class Broker:
         return Decimal(self.ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])['charged_usd'])
 
     def _dispatch(self,callback,before):
-        try:return callback()
+        try:
+            result=callback()
+            if result.get('errors')==['bounded_call_failed'] and self.ledger.summary()['uncertain_calls']:
+                raise WebError(503,'unconfirmed_provider_call')
+            return result
         except Exception as exc:
             error=exc
             if isinstance(exc,BudgetExhausted):
