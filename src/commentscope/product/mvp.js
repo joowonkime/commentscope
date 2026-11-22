@@ -715,7 +715,7 @@ document.querySelector('a.brand').addEventListener('click',event=>{
   for(const id of ['comparison','source-dialog','perspective-dialog','account-drawer'])closeDialog(id);
   if(state.editingInitial)leaveInitialEdit();
   $('workspace').hidden=true;$('before').hidden=false;$('initial').value='';$('initial').oninput();
-  document.querySelectorAll('button[data-step]').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
+  clearStepNav();
   status('');window.scrollTo(0,0);$('video-url').focus();
 });
 $('account-button').onclick=()=>openDialog('account-drawer');
@@ -817,10 +817,12 @@ $('begin').onsubmit=async event=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
+// The step bar lights up only after the first page; it stays unlit while writing the initial view.
+function clearStepNav(){document.querySelectorAll('button[data-step]').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});}
 function beginLabel(text){$('begin-label').textContent=text;}
 function startInitialEdit(){
   for(const id of ['comparison','source-dialog','perspective-dialog'])closeDialog(id);
-  state.editingInitial=true;$('workspace').hidden=true;$('before').hidden=false;$('video-lookup').hidden=true;$('cancel-initial-edit').hidden=false;
+  state.editingInitial=true;clearStepNav();$('workspace').hidden=true;$('before').hidden=false;$('video-lookup').hidden=true;$('cancel-initial-edit').hidden=false;
   $('initial').value=state.session.initial_opinion.text;$('initial').oninput();beginLabel('Update my view & return');
   $('begin').querySelector('button[type=submit]').disabled=false;window.scrollTo(0,0);$('initial').focus();
   status('');
