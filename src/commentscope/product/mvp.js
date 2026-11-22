@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map(), compositionFocus:null};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map()};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -80,51 +80,22 @@ function renderComposition(){
   if(linkedTotal){
     const bar=node('div',undefined,'composition-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label','Comments linked to each perspective');
     for(const e of linked){
-      const seg=node(e.perspective_id?'button':'span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
+      const seg=node('span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
       seg.style.flexGrow=String(e.count);seg.title=e.count+' comments';
-      if(e.perspective_id){seg.type='button';seg.dataset.perspective=e.perspective_id;seg.setAttribute('aria-label',label(e.perspective_id)+': '+e.count+' comments. Show details');
-        seg.onclick=()=>toggleCompositionDetail(e.perspective_id);seg.onmouseenter=()=>linkComposition(e.perspective_id,true);seg.onmouseleave=()=>linkComposition(e.perspective_id,false);}
+      if(e.perspective_id){seg.dataset.perspective=e.perspective_id;seg.onmouseenter=()=>linkComposition(e.perspective_id,true);seg.onmouseleave=()=>linkComposition(e.perspective_id,false);}
       bar.append(seg);
     }
     $('composition-chart').append(bar);
   }
   for(const e of entries){if(!e.count)continue;const i=indexOf(e.perspective_id),cls=e.perspective_id?'accent-'+Math.max(0,i)%5:e.kind,percent=e.count/total*100;
-    const line=node(e.perspective_id?'button':'span',undefined,cls+(e.perspective_id?' legend-button':''));line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));
-    if(e.perspective_id){line.type='button';line.dataset.perspective=e.perspective_id;line.onclick=()=>toggleCompositionDetail(e.perspective_id);}
+    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));
+    if(e.perspective_id){line.dataset.perspective=e.perspective_id;line.onmouseenter=()=>linkComposition(e.perspective_id,true);line.onmouseleave=()=>linkComposition(e.perspective_id,false);}
     $('composition-legend').append(line);
   }
-  if(state.compositionFocus)showCompositionDetail(state.compositionFocus);else $('composition-detail').hidden=true;
 }
 // Hovering a card or a bar segment highlights its counterpart.
 function linkComposition(pid,on){
-  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
-}
-function toggleCompositionDetail(pid){
-  if(state.compositionFocus===pid){state.compositionFocus=null;$('composition-detail').hidden=true;markCompositionFocus();return;}
-  showCompositionDetail(pid);
-}
-function markCompositionFocus(){
-  const focus=state.compositionFocus;
-  $('composition-chart').classList.toggle('has-focus',!!focus);
-  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective]')){
-    const on=el.dataset.perspective===focus;el.classList.toggle('focused',on);el.setAttribute('aria-pressed',String(on));
-  }
-}
-function showCompositionDetail(pid){
-  const p=perspective(pid);if(!p)return;
-  state.compositionFocus=pid;markCompositionFocus();
-  const entries=state.analysis.composition||[],total=entries.reduce((sum,e)=>sum+e.count,0),entry=entries.find(e=>e.perspective_id===pid),count=entry?.count||0;
-  const level=state.closeness.get(pid)||(hasInitialView()?'pending':'empty');
-  const panel=$('composition-detail');panel.className='composition-detail accent-'+indexOf(pid)%5;panel.hidden=false;
-  const head=node('header'),close=node('button','×','close-detail');close.type='button';close.setAttribute('aria-label','Close details');close.onclick=()=>toggleCompositionDetail(pid);
-  head.append(node('strong',label(pid)),node('span',closenessLabels[level],'closeness-text closeness-'+level),close);
-  const stats=node('p',count+' comment'+(count===1?'':'s')+' counted only for this perspective'+(total?' · '+(count/total*100).toFixed(1)+'% of '+total+' analyzed':'')+(p.source_count!==count?' · '+p.source_count+' source comments in total':''),'detail-stats');
-  const quote=node('blockquote','…','detail-quote'),first=(p.source_ids||[])[0];
-  if(first)sourceText(first).then(v=>{quote.textContent=v.text;}).catch(()=>{quote.textContent='This comment could not be loaded.';});
-  const more=node('button','See all comments in this perspective →','secondary');more.type='button';more.onclick=()=>compareWith(pid).catch(e=>status(e.message));
-  panel.replaceChildren(head,node('p',p.text,'detail-stance'),stats);
-  if(first)panel.append(node('p','A comment from this perspective','detail-label'),quote);
-  panel.append(more,node('p','Counts come from the analyzed comments, not from all viewers.','detail-caveat'));
+  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
 }
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
@@ -183,7 +154,6 @@ async function renderPerspectives(){
     setCloseness(card,level);summary.textContent=keySentence(lead,level);groups.get(level).push(card);state.closeness.set(p.id,level);
   });
   box.replaceChildren();
-  if(state.compositionFocus)showCompositionDetail(state.compositionFocus);
   for(const [level,members] of groups){
     if(!members.length)continue;
     const section=node('section',undefined,'closeness-group closeness-'+level);
@@ -837,7 +807,7 @@ function startInitialEdit(){
   state.editingInitial=true;$('workspace').hidden=true;$('before').hidden=false;$('video-lookup').hidden=true;$('cancel-initial-edit').hidden=false;
   $('initial').value=state.session.initial_opinion.text;$('initial').oninput();beginLabel('Update my view & return');
   $('begin').querySelector('button[type=submit]').disabled=false;window.scrollTo(0,0);$('initial').focus();
-  status('초기 의견을 수정한 뒤 돌아가면 관점 비교가 새 의견으로 다시 계산됩니다.');
+  status('');
 }
 function leaveInitialEdit(){
   state.editingInitial=false;$('before').hidden=true;$('workspace').hidden=false;$('video-lookup').hidden=false;$('cancel-initial-edit').hidden=true;
@@ -850,7 +820,7 @@ async function saveInitialEdit(){
     state.comparisons.clear();clearInsights();await refreshSession();
   }
   leaveInitialEdit();showStep('explore');renderPerspectives();
-  status(changed?'초기 의견을 저장했습니다. 관점 비교를 새 의견으로 다시 보여줍니다.':'');
+  status('');
 }
 $('toggle-initial').onclick=()=>{const open=$('initial-peek').hidden;$('initial-peek').hidden=!open;$('toggle-initial').setAttribute('aria-expanded',String(open));};
 $('edit-initial-first').onclick=startInitialEdit;
@@ -1014,7 +984,7 @@ async function start(){
   $('begin').querySelector('button[type=submit]').disabled=false;
   status(resumeMessage||(preferred&&preferred!==state.analysis.analysis_id
     ? '선택한 분석은 지금 열 수 없습니다. 현재 선택된 영상을 확인하세요.'
-    : '먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.'));
+    : ''));
 }
 
 start().catch(error=>status(error.message)).finally(()=>{$('open-video-url').disabled=false;});
