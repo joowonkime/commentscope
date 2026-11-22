@@ -1005,4 +1005,184 @@ async function start(){
     : ''));
 }
 
+// ---- Interface language (English / 한국어) ----
+// Only interface text is translated. User opinions, source comments and AI output are left as written.
+// Each pair is [English, 한국어]; the DOM is translated in place, including text added later.
+const I18N_PAIRS=[
+['Re.View · Explore different perspectives','Re.View · 다양한 관점 살펴보기'],['Explore','탐색'],['Converse','대화'],['Reflect','성찰'],
+['Loading the registered discussion…','등록된 토론을 불러오는 중…'],['YouTube video URL','YouTube 영상 URL'],['Open video','영상 열기'],
+['A discussion, seen from more than one side.','하나의 토론을 여러 시각에서.'],['Start with your own point of view.','나의 관점에서 시작하세요.'],
+['BEFORE YOU DISCOVER','관점을 보기 전에'],['What do you think?','어떻게 생각하세요?'],
+['You’ll get to explore other perspectives after saving your initial thoughts.','처음 생각을 저장하면 다른 관점을 살펴볼 수 있습니다.'],
+['Your initial view','나의 처음 의견'],['× Clear','× 지우기'],['Save & explore perspectives','저장하고 관점 살펴보기'],['Cancel and go back','취소하고 돌아가기'],
+['Update my view & return','의견 수정하고 돌아가기'],['STEP 01 · EXPLORE DIVERSE PERSPECTIVES','1단계 · 다양한 관점 탐색'],
+['Here’s what the comments are saying','댓글에 나타난 관점들입니다'],['✍ My initial view ▾','✍ 나의 처음 의견 ▾'],['← Edit on the first page','← 첫 페이지에서 수정'],
+['How the analyzed comments are composed','분석한 댓글의 구성'],['Each comment is counted once.','댓글 하나는 한 번만 셉니다.'],['Go to Converse','대화로 이동'],
+['Conversations','대화 목록'],['SOURCE VIDEO','영상'],['This discussion','이 토론'],['RECENT','최근'],['All','전체'],['Group','그룹'],
+['Search conversations','대화 검색'],['⌕ Search conversations','⌕ 대화 검색'],['Previous conversation','이전 대화'],['Choose a conversation','대화 선택'],['＋ New chat','＋ 새 대화'],
+['Choose a perspective','관점을 선택하세요'],['Your conversation stays connected to its source comments.','대화는 원댓글과 계속 연결됩니다.'],
+['ⓘ Perspective info','ⓘ 관점 정보'],['Choose perspectives in Explore to start.','탐색에서 관점을 선택해 시작하세요.'],['Pause','멈추기'],['Resume','계속'],
+['Next round','다음 라운드'],['End chat','대화 종료'],['Show debate conclusion','토론 결론 보기'],['START A CONVERSATION','대화 시작하기'],
+['What would you like to ask?','무엇을 물어볼까요?'],['Opening question','첫 질문'],
+['What is this perspective’s central position, and what reasons support it?','이 관점의 핵심 입장은 무엇이고, 어떤 이유가 뒷받침하나요?'],
+['Start conversation','대화 시작'],['No conversations yet. Starting a conversation from Explore will be added next.','아직 대화가 없습니다. 탐색에서 대화를 시작하는 기능은 다음에 추가됩니다.'],
+['Your question or contribution','나의 질문이나 의견'],['⌁ Ask for evidence','⌁ 근거 묻기'],['Ask about conditions','조건 묻기'],['Reflect on your own view →','나의 의견 성찰하기 →'],
+['Ask why, request evidence, or explore another angle…','이유를 묻거나, 근거를 요청하거나, 다른 측면을 살펴보세요…'],['Send question','질문 보내기'],
+['STEP 03 · REFLECTION ON YOUR OWN VIEWPOINT','3단계 · 나의 관점 성찰'],['Reflect on your own viewpoint','나의 관점을 돌아보세요'],
+['You’ve explored different perspectives and talked with the agents. Now write down your thoughts freely.','다양한 관점을 살펴보고 에이전트와 대화했습니다. 이제 생각을 자유롭게 적어 보세요.'],
+['If your view changed, how did it change? If it stayed the same, why? What did you notice or learn?','의견이 바뀌었다면 어떻게 바뀌었나요? 그대로라면 왜인가요? 무엇을 알게 되었나요?'],
+['📌 YOUR INITIAL VIEW','📌 나의 처음 의견'],['◴ YOUR CONVERSATIONS','◴ 나의 대화'],['Choose conversations to refer to in your reflection.','성찰에 참고할 대화를 고르세요.'],
+['Choose individual messages','메시지 골라 선택'],['✍ YOUR CURRENT VIEW','✍ 나의 지금 의견'],['Edit my current view','지금 의견 수정'],['Analyze my reflection','성찰 분석하기'],
+['Or write and save without AI','또는 AI 없이 직접 작성해 저장'],['◴ How your thinking evolved','◴ 생각이 어떻게 달라졌나'],['Read each part ↓','항목별로 읽기 ↓'],
+['Write, edit & save your reflection','성찰 작성·수정·저장'],['Keep the suggestions that fit your thinking, or write your own. You can leave any category empty.','생각에 맞는 제안을 남기거나 직접 쓰세요. 비워 둔 항목이 있어도 됩니다.'],
+['What stayed the same','그대로인 점'],['What changed','바뀐 점'],['What you learned','새로 알게 된 점'],['Newly learned','새롭게 배운 점'],['Worth more thought','더 생각해볼 점'],
+['✓ Save my reflection','✓ 성찰 저장'],['Saved reflections','저장한 성찰 목록'],
+['What do you think now? Keeping the same view is just as valid as changing it.','지금은 어떻게 생각하세요? 의견을 유지하는 것도 바꾸는 것만큼 의미 있습니다.'],
+['Guest','게스트'],['Private session on this browser','이 브라우저의 개인 세션'],['Your activity','나의 활동'],['Library','라이브러리'],
+['Analyzed videos and your saved records','분석한 영상과 저장한 기록'],['Original video','원본 영상'],['Open on YouTube ↗','YouTube에서 열기 ↗'],['Account','계정'],
+['Coming soon','준비 중'],['Profile','프로필'],['Name and sign-in','이름과 로그인'],['Settings','설정'],['Language and display','언어와 화면'],['Help & feedback','도움말·의견 보내기'],
+['You are not signed in. Your records are kept with this browser session.','로그인하지 않은 상태입니다. 기록은 이 브라우저 세션에 보관됩니다.'],['Language','언어'],
+['Close','닫기'],['Analyzed videos','분석한 영상'],['My records','나의 기록'],['COMPARE WITH YOUR VIEW','나의 의견과 비교'],['Perspective','관점'],
+['✍ Your initial view','✍ 나의 처음 의견'],['━ Similar','━ 비슷함'],['━ Different','━ 다름'],['━ To consider','━ 생각해볼 점'],['Original comment','원댓글'],
+['Read the comment behind the response.','응답의 근거가 된 댓글을 읽어 보세요.'],['Choose an evidence link in the conversation.','대화의 근거 링크를 선택하세요.'],
+['About these perspectives','관점 소개'],['This experience needs JavaScript to save your view and connect conversations.','의견 저장과 대화 연결에 JavaScript가 필요합니다.'],
+['Re.View home','Re.View 홈'],['Your journey','진행 단계'],['Open your menu','메뉴 열기'],['Close menu','메뉴 닫기'],['Your menu','나의 메뉴'],
+['What stands out to you? What do you agree with, disagree with, or feel unsure about?','무엇이 눈에 띄나요? 동의하는 점, 동의하지 않는 점, 확신이 서지 않는 점을 적어 보세요.'],
+['Close comparison','비교 닫기'],['Close original comment','원댓글 닫기'],['Close perspective info','관점 정보 닫기'],['Debate conclusion','토론 결론'],
+['You started without an initial view.','처음 의견 없이 시작했습니다.'],['Play source video','원본 영상 재생'],['Comment composition is not available.','댓글 구성을 표시할 수 없습니다.'],
+['Comments linked to each perspective','관점별로 연결된 댓글'],['Multiple perspectives','여러 관점'],['Not linked to a perspective','관점에 연결되지 않음'],['Multiple','복수'],
+['Close to your view','나와 가까운 관점'],['Partly close, partly different','일부 가깝고 일부 다른 관점'],['Adds something to consider','생각해볼 점을 주는 관점'],
+['Different from your view','나와 다른 관점'],['No clear link to your view','나의 의견과 뚜렷한 관련이 없음'],['Could not compare right now','지금은 비교할 수 없음'],
+['Write your initial view to see which perspectives are close to yours.','처음 의견을 쓰면 어떤 관점이 나와 가까운지 볼 수 있습니다.'],
+['Comparing with your view…','나의 의견과 비교하는 중…'],['Add your initial view to compare','처음 의견을 쓰면 비교할 수 있습니다'],['Comparison is not available right now','지금은 비교할 수 없습니다'],
+['Comments close to your view','나와 비슷한 댓글'],['Comments partly close, partly different','일부 비슷하고 일부 다른 댓글'],['Comments different from your view','나와 다른 댓글'],
+['Comments that add something to consider','생각해볼 점을 주는 댓글'],['Other comments in this perspective','이 관점의 다른 댓글'],['Replying to another comment','다른 댓글에 단 답글'],
+['This comment could not be loaded.','이 댓글을 불러오지 못했습니다.'],['Condition:','조건:'],['Qualification:','단서:'],['Reason:','이유:'],
+['No source comments are linked to this perspective.','이 관점에 연결된 원댓글이 없습니다.'],['What commenters said','댓글 작성자들의 말'],
+['No conversations here yet.','아직 대화가 없습니다.'],['Your conversation','나의 대화'],['Different perspectives, in one conversation.','여러 관점을 한 대화에서.'],
+['A conversation with this perspective.','이 관점과의 대화.'],['BEFORE','이전'],['NOW','지금'],['No suggestions in this category.','이 항목에는 제안이 없습니다.'],['Use these suggestions','이 제안 사용'],
+['Loading analyzed videos…','분석한 영상을 불러오는 중…'],['Loading your records…','기록을 불러오는 중…'],['Registered discussion','등록된 토론'],['Source refresh required','원본 갱신 필요'],
+['No analyzed videos are available.','분석한 영상이 없습니다.'],['Could not load videos. Reopen Library to retry.','영상을 불러오지 못했습니다. 라이브러리를 다시 열어 주세요.'],
+['No accessible records. A session may have expired.','열 수 있는 기록이 없습니다. 세션이 만료되었을 수 있습니다.'],['No saved debates or reflections yet.','저장한 토론이나 성찰이 아직 없습니다.'],
+['Start a review','검토 시작'],['Looking for a saved analysis…','저장된 분석을 찾는 중…'],
+['The saved analysis for this video has expired. Choose another video in Library.','이 영상의 저장된 분석이 만료되었습니다. 라이브러리에서 다른 영상을 고르세요.'],
+['This video has no saved analysis yet. Choose an analyzed video in Library.','이 영상은 아직 분석되지 않았습니다. 라이브러리에서 분석된 영상을 고르세요.'],
+['This video is already open.','이미 열려 있는 영상입니다.'],['Enter a valid YouTube video URL.','올바른 YouTube 영상 URL을 입력하세요.'],['Could not look up this video. Try again.','영상을 찾지 못했습니다. 다시 시도해 주세요.'],
+['Group conversation','그룹 대화'],['1:1 conversation','1:1 대화'],
+// Korean-first interface messages
+['The content was updated. Check the latest screen and try again.','내용이 갱신됐습니다. 최신 화면을 확인한 뒤 다시 눌러 주세요.'],
+['Your view was updated. Please check it again.','의견이 갱신됐습니다. 다시 확인해 주세요.'],
+['Your view or the analysis version changed. Review the suggestions again or save directly.','의견 또는 분석 버전이 달라졌습니다. 제안을 다시 확인하거나 직접 저장해 주세요.'],
+['A debate is already running. You can follow it in the current record.','이미 토론이 진행 중입니다. 현재 기록에서 확인할 수 있습니다.'],
+['This debate cannot be restarted in its current state.','이 토론은 현재 상태에서 다시 시작할 수 없습니다.'],
+['Verification is on hold because the required evidence is too large. Posted turns are kept.','필수 근거의 분량이 커 검증이 보류됐습니다. 게시된 발언은 보존됩니다.'],
+['You can ask after the current response finishes or the conversation pauses.','현재 응답이 끝나거나 대화가 정지한 뒤 질문할 수 있습니다.'],
+['The AI usage limit has been reached. You can still read conversations and save directly.','현재 AI 사용 한도에 도달했습니다. 기존 대화 읽기와 직접 저장은 가능합니다.'],
+['This AI session window has ended. You can still read and save directly.','이번 AI 실행 시간이 끝났습니다. 읽기와 직접 저장은 가능합니다.'],
+['AI processing was interrupted and needs a check. Existing records are kept.','AI 처리가 중단돼 확인이 필요합니다. 기존 기록은 보존됩니다.'],
+['The source material has expired.','근거 자료의 사용 기한이 지났습니다.'],['The session has expired. Please start again.','세션 기한이 지났습니다. 새로 시작해 주세요.'],
+['Choose at least one perspective to talk with.','대화할 수 있는 관점을 하나 이상 선택해 주세요.'],['This conversation reached its turn limit.','이 대화의 발화 한도에 도달했습니다.'],
+['You can choose up to 24 related messages.','관련 대화는 최대 24개까지 선택할 수 있습니다.'],['Another task is in progress. Please try again shortly.','다른 작업을 처리하고 있습니다. 잠시 뒤 다시 눌러 주세요.'],
+['The AI response could not be completed. Your input and records are kept.','AI 응답을 완료하지 못했습니다. 입력과 기존 기록은 보존됐습니다.'],
+['The request could not be completed. Check your input and earlier records.','요청을 완료하지 못했습니다. 입력과 이전 기록을 확인해 주세요.'],
+['Consensus Agent','합의 Agent'],['The task is still running. Check it in the conversation status.','작업이 아직 진행 중입니다. 대화 상태에서 확인해 주세요.'],
+['No perspectives with checked evidence yet. You can still write your view in Reflect.','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.'],
+['External source','외부 자료'],['Source','원문'],['Not started','시작 전'],['Running','진행 중'],['Pausing','정지 중'],['Paused','일시 정지'],['Waiting for a question','질문 대기'],
+['Opening statements','입장 발언'],['Replying to other views','상대 입장에 응답 중'],['Reviewing consensus','합의 검토 중'],['Compiling the conclusion','결론 정리 중'],['Completed','완료'],
+['No consensus','합의 없음'],['No shared claim proposed','공통 주장 제안 없음'],['Verification on hold','검증 보류'],['Incomplete response','응답 불완전'],['Run failed','실행 실패'],
+['Cancelled','중단'],['Ended','종료'],['Ending','종료 중'],['Some responses failed','일부 응답 실패'],['Limit reached','한도 도달'],['Needs a check','확인 필요'],
+['Consensus Agent chat','합의 Agent 대화'],['Automatic debate','자동 토론'],['Reply to another view','상대 입장 응답'],['Responding to','응답 대상'],['Debate conclusion','토론 결론'],
+['Accepted by','수락한 관점'],['Condition','조건'],['Saved','저장했습니다.'],['Comment evidence','댓글 근거'],['AI inference · not the original author’s words','AI 추론 · 원작성자의 발언이 아닙니다'],
+['Claim based on external sources','외부 자료 기반 주장'],['Premises and conditions to check together','함께 확인할 전제·조건'],
+['No evidence in the material answers this question.','이 질문에 답할 근거를 자료에서 찾지 못했습니다.'],
+['The requested answer could not be confirmed, so the limits of the material are explained.','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'],
+['Further explanation could not be confirmed, so only what can be confirmed is shown.','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'],
+['A shared claim accepted by every participating perspective.','모든 참가 관점이 수락한 공통 주장입니다.'],
+['No shared claim was accepted by everyone. You can review the disagreements and turns below.','전원이 수락한 공동 주장이 없습니다. 아래 이견과 발언을 확인할 수 있습니다.'],
+['No shared claim candidate was proposed for this question. Compare the perspectives through their turns.','이번 질문에서 공동 주장 후보를 제시하지 못했습니다. 발언을 보며 각 관점을 비교해 보세요.'],
+['The evidence or acceptance of the shared claim could not be confirmed. Verified turns remain above.','공통 주장의 근거나 수락을 확인하지 못했습니다. 검증된 발언은 위에 남아 있습니다.'],
+['Some responses did not fully address the question or the other turns.','일부 응답이 질문이나 상대 발언을 충분히 다루지 못했습니다.'],
+['The debate could not be completed. Posted turns are kept.','토론을 완료하지 못했습니다. 게시된 발언은 보존됩니다.'],
+['The AI run limit was reached. Posted turns are kept.','AI 실행 한도에 도달했습니다. 게시된 발언은 보존됩니다.'],
+['The run status needs a check. Posted turns are kept.','실행 상태를 확인해야 합니다. 게시된 발언은 보존됩니다.'],
+['You can review the posted turns of this debate.','이 토론의 게시된 발언을 확인할 수 있습니다.'],['Disagreements and conditional replies','이견과 조건부 응답'],
+['Not accepted','수락하지 않음'],['Asked to add a condition','조건 보완 요청'],['Opposed','반대'],['Conditional reply','조건부 응답'],['Disagreement','이견'],
+['Not yet answered','아직 답하지 못한 내용'],['Insufficient answer to the question','질문에 대한 응답 부족'],
+['Answers using the claims and conditions accepted by the participating perspectives.','참가 관점이 수락한 주장과 조건을 바탕으로 질문에 답합니다.'],
+['Lineage source','계보 원문'],['Ask the Consensus Agent','합의 Agent에 질문하기'],['Read each perspective’s position and replies, then check the conclusion.','관점별 입장과 응답을 읽고 마지막 결론을 확인하세요.'],
+['You can ask about the shared claim and its conditions.','공통 주장과 조건에 대해 질문할 수 있습니다.'],['You can start with a question.','질문으로 시작할 수 있습니다.'],
+['A perspective is responding.','관점이 응답하고 있습니다.'],['Each perspective is explaining its position.','각 관점이 입장을 설명하고 있습니다.'],
+['Replying to another perspective’s turn.','다른 관점의 발언에 답하고 있습니다.'],['Reviewing shared claims and disagreements.','공통 주장과 이견을 검토하고 있습니다.'],
+['Compiling the debate conclusion.','토론 결론을 정리하고 있습니다.'],['Stops after the current response.','현재 응답 뒤에 멈춥니다.'],
+['Paused. You can continue the debate.','잠시 멈췄습니다. 토론을 이어갈 수 있습니다.'],['Paused. You can ask or continue.','잠시 멈췄습니다. 질문하거나 이어갈 수 있습니다.'],
+['The conversation ended. You can keep asking your own questions.','대화가 끝났습니다. 나의 질문을 이어갈 수 있습니다.'],['This conversation has ended.','종료한 대화입니다.'],
+['Ends after the current step.','현재 처리를 마친 뒤 종료합니다.'],['Some responses could not be completed. Earlier turns are kept.','일부 응답을 완료하지 못했습니다. 이전 발언은 보존됩니다.'],
+['The conversation limit has been reached.','대화 한도에 도달했습니다.'],['The processing status needs a check.','처리 상태 확인이 필요합니다.'],
+['Which issue should they debate?','어떤 쟁점을 토론할까요?'],['Start automatic debate','자동 토론 시작'],['You cannot send a new question to the Consensus Agent right now.','지금은 합의 Agent에 새 질문을 보낼 수 없습니다.'],
+['No evidence','근거 없음'],['Related conversations','관련 대화'],['Reflection saved with an earlier view','이전 의견으로 저장한 성찰'],['Saved reflection','저장한 성찰'],
+['You can edit this saved version. Earlier versions are kept.','이 저장본을 수정할 수 있습니다. 이전 저장본은 보존됩니다.'],['View reflection · version','성찰 보기 · 저장본'],
+['Could not load the recent conversation. Reopen it from the Converse list.','최근 대화를 불러오지 못했습니다. Converse의 대화 목록에서 다시 열어 주세요.'],
+['Enter a question to start.','시작할 질문을 입력해 주세요.'],['Keep the question within 1,000 characters.','질문은 1,000자 이내로 입력해 주세요.'],
+['Summarizing your view and the selected conversations.','나의 의견과 선택한 대화를 정리하고 있습니다.'],['Your view changed. Analyze again with the current view.','의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.'],
+['Choose what you need from the suggestions, or edit them yourself, then save.','제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.'],
+['Could not load earlier records. Refresh in a moment and try again.','기존 기록을 불러오지 못했습니다. 잠시 뒤 새로고침해 다시 시도해 주세요.'],
+['The previous session has expired. Please start again.','이전 세션 기한이 지났습니다. 새로 시작해 주세요.'],
+['The earlier record cannot be opened. Choose an analysis or another record in Library.','이전 기록을 열 수 없습니다. Library에서 분석이나 다른 기록을 선택하세요.'],
+['No analysis is available yet.','아직 사용할 수 있는 분석이 없습니다.'],['The selected analysis cannot be opened now. Check the currently selected video.','선택한 분석은 지금 열 수 없습니다. 현재 선택된 영상을 확인하세요.'],
+['Choose a perspective to talk with first.','대화할 관점을 먼저 선택해 주세요.'],['You can choose up to three perspectives in one conversation.','한 대화에서 최대 세 관점을 선택할 수 있습니다.'],
+['Parent comment · context only','부모 댓글 · 문맥 참고'],['Display and notifications','화면과 알림'],
+];
+// Text built from numbers or names: [English pattern, English→Korean, Korean pattern, Korean→English].
+const I18N_PATTERNS=[
+[/^Perspective (\d+)$/,m=>'관점 '+m[1],/^관점 (\d+)$/,m=>'Perspective '+m[1]],
+[/^(\d+) perspectives? from (\d+) (registered source|processed) comments(.*)$/,m=>'댓글 '+m[2]+'개에서 찾은 관점 '+m[1]+'개'+m[4].replace(/ · Original population: (\d+) comments\./,' · 원래 댓글 수: $1개').replace(/^\.$/,''),
+ /^댓글 (\d+)개에서 찾은 관점 (\d+)개(.*)$/,m=>m[2]+' perspectives from '+m[1]+' processed comments'+(m[3]?m[3].replace(/ · 원래 댓글 수: (\d+)개/,' · Original population: $1 comments.'):'.')],
+[/^(\d+) (verified )?source comments?$/,m=>(m[2]?'검증된 ':'')+'원댓글 '+m[1]+'개',/^(검증된 )?원댓글 (\d+)개$/,m=>m[2]+(m[1]?' verified':'')+' source comments'],
+[/^Comparing your view with (\d+) perspectives?…$/,m=>'관점 '+m[1]+'개와 나의 의견을 비교하는 중…',/^관점 (\d+)개와 나의 의견을 비교하는 중…$/,m=>'Comparing your view with '+m[1]+' perspectives…'],
+[/^(\d+) of (\d+) analyzed comments are linked to a perspective\.$/,m=>'분석한 댓글 '+m[2]+'개 중 '+m[1]+'개가 관점에 연결되어 있습니다.',/^분석한 댓글 (\d+)개 중 (\d+)개가 관점에 연결되어 있습니다\.$/,m=>m[2]+' of '+m[1]+' analyzed comments are linked to a perspective.'],
+[/^Characters: (\d+) \/ (\d+)$/,m=>'글자 수: '+m[1]+' / '+m[2],/^글자 수: (\d+) \/ (\d+)$/,m=>'Characters: '+m[1]+' / '+m[2]],
+[/^(\d+) comments$/,m=>'댓글 '+m[1]+'개',/^댓글 (\d+)개$/,m=>m[1]+' comments'],
+[/^(\d+) \(([\d.]+%)\)$/,m=>m[1]+'개 ('+m[2]+')',/^(\d+)개 \(([\d.]+%)\)$/,m=>m[1]+' ('+m[2]+')'],
+[/^Compare (.+) with your view$/,m=>translate(m[1])+'을(를) 나의 의견과 비교',/^(.+)을\(를\) 나의 의견과 비교$/,m=>'Compare '+translate(m[1])+' with your view'],
+[/^(.+)의 앞선 발언에 대한 응답$/,null,/^(.+)의 앞선 발언에 대한 응답$/,m=>'Reply to an earlier turn by '+translate(m[1])],
+[/^(.+)의 근거 발언$/,null,/^(.+)의 근거 발언$/,m=>'Evidence turn from '+translate(m[1])],
+[/^저장했습니다\. (\d+)번째 저장본$/,null,/^저장했습니다\. (\d+)번째 저장본$/,m=>'Saved. Version '+m[1]],
+[/^(.+?) (\d+)$/,m=>{const head=translate(m[1]);return head!==m[1]?head+' '+m[2]:null;},/^(.+?) (\d+)$/,m=>{const head=translate(m[1]);return head!==m[1]?head+' '+m[2]:null;}],
+];
+const i18nMaps={ko:new Map(),en:new Map()};
+for(const [en,ko] of I18N_PAIRS){if(!i18nMaps.ko.has(en))i18nMaps.ko.set(en,ko);if(!i18nMaps.en.has(ko))i18nMaps.en.set(ko,en);}
+const langKey='commentscope-lang';
+let currentLang=(()=>{try{return localStorage.getItem(langKey)==='ko'?'ko':'en';}catch(_){return 'en';}})();
+function translate(text){
+  const map=i18nMaps[currentLang];if(map.has(text))return map.get(text);
+  for(const [enRe,toKo,koRe,toEn] of I18N_PATTERNS){
+    const re=currentLang==='ko'?enRe:koRe,fn=currentLang==='ko'?toKo:toEn;if(!fn)continue;
+    const m=text.match(re);if(m){const value=fn(m);if(value!=null)return value;}
+  }
+  // "A · B" labels translate part by part.
+  if(text.includes(' · ')){const parts=text.split(' · '),out=parts.map(translateOnce);if(out.some((p,i)=>p!==parts[i]))return out.join(' · ');}
+  return text;
+}
+function translateOnce(text){const t=text.trim();if(!t)return text;const v=translate(t);return v===t?text:text.replace(t,v);}
+const i18nSkip='textarea,script,style,[data-no-i18n],.comment-text,.card-stance,.relation-summary,.detail-quote,#initial-peek-text,#comparison-initial,#comparison-stance,.bubble,#source,.opinion-copy';
+function translateTree(root){
+  if(root.nodeType===Node.TEXT_NODE){const el=root.parentElement;if(el&&!el.closest(i18nSkip)){const v=translateOnce(root.nodeValue);if(v!==root.nodeValue)root.nodeValue=v;}return;}
+  if(root.nodeType!==Node.ELEMENT_NODE||root.closest(i18nSkip))return;
+  for(const el of [root,...root.querySelectorAll('[placeholder],[aria-label],[title]')]){
+    if(el.closest(i18nSkip))continue;
+    for(const attr of ['placeholder','aria-label','title'])if(el.hasAttribute(attr)){const v=translateOnce(el.getAttribute(attr));if(v!==el.getAttribute(attr))el.setAttribute(attr,v);}
+  }
+  const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const texts=[];while(walker.nextNode())texts.push(walker.currentNode);
+  for(const node of texts)translateTree(node);
+}
+function applyLanguage(lang){
+  currentLang=lang==='ko'?'ko':'en';try{localStorage.setItem(langKey,currentLang);}catch(_){}
+  document.documentElement.lang=currentLang;document.title=translate(document.title);translateTree(document.body);
+  for(const b of document.querySelectorAll('[data-lang]')){const on=b.dataset.lang===currentLang;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));}
+}
+new MutationObserver(records=>{for(const r of records){if(r.type==='characterData')translateTree(r.target);else for(const n of r.addedNodes)translateTree(n);}})
+  .observe(document.body,{subtree:true,childList:true,characterData:true});
+for(const b of document.querySelectorAll('[data-lang]'))b.onclick=()=>applyLanguage(b.dataset.lang);
+applyLanguage(currentLang);
+
 start().catch(error=>status(error.message)).finally(()=>{$('open-video-url').disabled=false;});

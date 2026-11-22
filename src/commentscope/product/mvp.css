@@ -204,3 +204,8 @@ button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3
 .account-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #f2efff; color: var(--brand); font-size: 13px; }
 .account-item:disabled .account-icon { background: #f5f4f8; color: #c4bfd0; }
 .account-footnote { margin-top: auto; font-size: 11px; color: #9690a6; padding: 0 8px; }
+.lang-switch { display: inline-flex; gap: 2px; padding: 3px; border: 1px solid #e4dffc; border-radius: 20px; background: white; }
+.lang-switch button { background: none; color: #8a8399; font-size: 12px; font-weight: 500; padding: 5px 12px; border-radius: 16px; }
+.lang-switch button.active { background: var(--brand); color: white; }
+.initial-panel > .lang-switch { align-self: flex-end; margin-bottom: 18px; }
+.account-lang { padding: 0 8px 6px; }
