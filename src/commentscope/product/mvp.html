@@ -8,7 +8,7 @@
 <body data-step="before">
   <header class="app-header">
     <a class="brand" href="/mvp" aria-label="Re.View home"><span class="brand-symbol"><img src="/mvp/assets/c7912.svg" alt=""></span><span>Re.View</span></a>
-    <nav class="step-nav" aria-label="Your journey"><button type="button" data-step="explore" class="active" aria-current="step">Explore</button><button type="button" data-step="converse">Converse</button><button type="button" data-step="reflect">Reflect</button></nav>
+    <nav class="step-nav" aria-label="Your journey"><button type="button" data-step="explore" disabled>Explore</button><button type="button" data-step="converse" disabled>Converse</button><button type="button" data-step="reflect" disabled>Reflect</button></nav>
     <div class="header-actions"><button id="open-library" class="quiet library-trigger" type="button" aria-haspopup="dialog">Library</button><a id="original-video" class="video-link" target="_blank" rel="noopener noreferrer" hidden>↗ Original video</a><span class="user-avatar" aria-label="Your private session">U</span></div>
   </header>
   <p id="status" class="status-toast" role="status" aria-live="polite">Loading the registered discussion…</p>
@@ -29,7 +29,7 @@
     </section>
     <div id="workspace" hidden>
       <section id="explore" class="stage-page" data-node-id="121:11">
-        <div class="section-title"><div><p class="eyebrow">STEP 01 · EXPLORE DIVERSE PERSPECTIVES</p><h1 id="explore-title">Here’s what the comments are saying</h1></div><button id="new-session" class="quiet" type="button">Start over</button></div><p id="analysis-summary" class="stage-description"></p>
+        <div class="section-title"><div><p class="eyebrow">STEP 01 · EXPLORE DIVERSE PERSPECTIVES</p><h1 id="explore-title" tabindex="-1">Here’s what the comments are saying</h1></div><button id="new-session" class="quiet" type="button">Start over</button></div><p id="analysis-summary" class="stage-description"></p>
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>
         <div class="comparison-actions"><button id="compare-all" class="secondary" type="button">Compare all with my view</button><span id="compare-progress" class="muted" role="status"></span></div><div id="perspectives" class="cards"></div><section class="composition-panel"><h2>How the analyzed comments are composed</h2><p class="muted">Each analyzed comment counts once. “Multiple perspectives” groups comments that support two or more cards. “Other comments” groups comments with no verified link to a card.</p><div id="composition-chart"></div><div id="composition-legend" class="composition-legend"></div>
           <h3>Share of likes on these comments</h3><p class="muted">Each segment adds up the likes recorded on its comments when the video was collected.</p><div id="likes-chart"></div><div id="likes-legend" class="composition-legend"></div></section>

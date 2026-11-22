@@ -5,6 +5,7 @@ const state = {analysis:null, session:null, token:'', room:null, roomTimer:null,
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
+const tabSessionKey = 'commentscope-mvp-active-tab';
 const librarySessionsKey = 'commentscope-mvp-library-sessions';
 const libraryDestinationKey = 'commentscope-mvp-library-destination';
 const selectedAnalysisKey = 'commentscope-mvp-selected-analysis';
@@ -22,6 +23,43 @@ async function api(path, method='GET', body, token=state.token) {
   return value;
 }
 function base(){return '/sessions/'+state.session.session_id;}
+
+async function retryableWrite(slot, path, method, fields, prepareRevision) {
+  const key = 'commentscope-mvp-pending-' + slot;
+  const bytes = new TextEncoder().encode(JSON.stringify([method, path, fields]));
+  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const fingerprint = Array.from(new Uint8Array(digest), byte => byte.toString(16).padStart(2, '0')).join('');
+  const creatingSession = path === '/sessions';
+  let attempt = readStored(sessionStorage, key);
+  if (attempt?.fingerprint !== fingerprint || !attempt.requestId || (creatingSession && !attempt.token)
+      || (prepareRevision && !Number.isInteger(attempt.expectedRevision))) {
+    attempt = {fingerprint, requestId: requestId()};
+    if (prepareRevision) {
+      const revision = await prepareRevision();
+      if (revision === null) return;
+      attempt.expectedRevision = revision;
+    }
+    if (creatingSession) {
+      const random = crypto.getRandomValues(new Uint8Array(32));
+      attempt.token = btoa(String.fromCharCode(...random)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+    }
+    sessionStorage.setItem(key, JSON.stringify(attempt));
+  }
+  const payload = {...fields, request_id: attempt.requestId};
+  if (prepareRevision) payload.expected_revision = attempt.expectedRevision;
+  let value;
+  try {
+    value = await api(path, method, payload, creatingSession ? attempt.token : state.token);
+  } catch (error) {
+    if (prepareRevision && ['revision_conflict','room_not_ready'].includes(error.code)
+        && readStored(sessionStorage, key)?.requestId === attempt.requestId) sessionStorage.removeItem(key);
+    if (error instanceof TypeError) throw new Error('응답을 확인하지 못했습니다. 입력을 그대로 다시 보내면 같은 요청을 확인합니다.');
+    throw error;
+  }
+  if (creatingSession) state.token = attempt.token;
+  if (readStored(sessionStorage, key)?.requestId === attempt.requestId) sessionStorage.removeItem(key);
+  return value;
+}
 function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
 function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
 function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return '합의 Agent';const p=perspective(id);return p?.display_name||p?.text||'Perspective';}
@@ -549,8 +587,8 @@ async function openSynthesisChat(debate,button){
     const resource='/synthesis-agents/'+encodeURIComponent(selected.agent_id);
     const agent=await api(resource);
     if(!agent.can_ask)throw new Error('지금은 합의 Agent에 새 질문을 보낼 수 없습니다.');
-    const room=await api(resource+'/rooms','POST',{
-      agent_revision:agent.revision,initial_revision:state.session.initial_opinion.revision,request_id:requestId()});
+    const room=await retryableWrite('chat',resource+'/rooms','POST',{
+      agent_revision:agent.revision,initial_revision:state.session.initial_opinion.revision});
     await refreshSession();
     if(state.room?.room_id!==debate.room_id)return;
     setRoom(room);
@@ -572,7 +610,16 @@ async function refreshReflection(){
   if(state.reflectionResult)highlightReflection(state.reflectionResult);
 }
 function clearInsights(){state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;}
-async function saveCurrent(){const value=$('current').value;if(!state.session.current_opinion.revision||value!==state.session.current_opinion.text){await api(base()+'/opinions/current','PUT',{text:value,expected_revision:state.session.current_opinion.revision,request_id:requestId()});clearInsights();await refreshSession();}return state.session.current_opinion.revision;}
+async function saveCurrent() {
+  const value = $('current').value;
+  const current = state.session.current_opinion;
+  if (!current.revision || value !== current.text) {
+    await retryableWrite('current', base()+'/opinions/current', 'PUT', {text:value, expected_revision:current.revision});
+    clearInsights();
+    await refreshSession();
+  }
+  return state.session.current_opinion.revision;
+}
 async function jumpTo(mid,refs){const ref=refs?.find(m=>m.message_id===mid);if(ref){await chooseRoom(ref.room_id);$('message-'+mid)?.scrollIntoView({block:'center'});}}
 function highlightReflection(result){
   for(const kind of ['initial','current']){const opinion=state.session[kind+'_opinion'],spans=[];for(const [key,items] of Object.entries(result.categories))for(const item of items)for(const id of item[kind+'_span_ids']){const span=opinion.segments.find(s=>s.id===id);if(span)spans.push({...span,category:key});}highlighted($(kind+'-copy'),opinion.text,spans);}
@@ -644,6 +691,22 @@ function rememberSession(sessionId,token){
   const records=browserRecords().filter(item=>item.session_id!==sessionId);
   localStorage.setItem(librarySessionsKey,JSON.stringify([record,...records]));
   localStorage.setItem(savedSessionKey,JSON.stringify(record));
+  sessionStorage.setItem(tabSessionKey,sessionId);
+}
+
+function activeAccess() {
+  const id = sessionStorage.getItem(tabSessionKey);
+  if (id === null) return readStored(localStorage, savedSessionKey);
+  return id ? browserRecords().find(record => record.session_id === id) : null;
+}
+
+function leaveSession() {
+  const active = activeAccess();
+  if (active && readStored(localStorage, savedSessionKey)?.session_id === active.session_id) {
+    localStorage.removeItem(savedSessionKey);
+  }
+  sessionStorage.setItem(tabSessionKey, '');
+  sessionStorage.removeItem(lastRoomKey);
 }
 
 function availableAnalysis(analysis){
@@ -656,6 +719,7 @@ function libraryRow(title,detail,action,onClick){
   information.append(node('strong',title),node('small',detail,'muted'));
   const button=node('button',action,'secondary');
   button.type='button';
+  button.setAttribute('aria-label', action + ' · ' + title);
   button.disabled=!onClick;
   if(onClick)button.onclick=onClick;
   row.append(information,button);
@@ -663,6 +727,10 @@ function libraryRow(title,detail,action,onClick){
 }
 
 function openDestination(destination){
+  if (!state.session && destination.analysis_id && destination.analysis_id === state.analysis?.analysis_id) {
+    closeLibrary();
+    return;
+  }
   sessionStorage.setItem(libraryDestinationKey,JSON.stringify(destination));
   if(history.state?.reviewLibrary){
     const {reviewLibrary,...rest}=history.state;
@@ -749,9 +817,11 @@ window.addEventListener('popstate',()=>{
 async function enter(session,destination){
   setSession(session);
   state.analysis=session.analysis;
+  sessionStorage.setItem(selectedAnalysisKey,session.analysis_id);
   renderAnalysis();
   $('before').hidden=true;
   $('workspace').hidden=false;
+  document.querySelectorAll('button[data-step]').forEach(button => { button.disabled = false; });
   renderPerspectives();
   if(destination?.reflection_id&&session.reflections.some(item=>item.reflection_id===destination.reflection_id)){
     showStep('reflect');
@@ -774,6 +844,7 @@ async function enter(session,destination){
     return;
   }
   showStep('explore');
+  $('explore-title').focus({preventScroll:true});
   status('관점을 선택하고 나의 의견과 비교해 보세요.');
 }
 $('initial').oninput=()=>{$('initial-count').textContent='Characters: '+[...$('initial').value].length+' / 500';};
@@ -822,17 +893,15 @@ $('begin').onsubmit=async event=>{
   if(button.disabled)return;
   button.disabled=true;
   $('open-video-url').disabled=true;
-  const bytes=crypto.getRandomValues(new Uint8Array(32));
-  state.token=btoa(String.fromCharCode(...bytes)).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   try{
-    const session=await api('/sessions','POST',{analysis_id:state.analysis.analysis_id,
-      bundle_revision:state.analysis.bundle_revision,initial_opinion:$('initial').value,request_id:requestId()});
+    const session=await retryableWrite('begin','/sessions','POST',{analysis_id:state.analysis.analysis_id,
+      bundle_revision:state.analysis.bundle_revision,initial_opinion:$('initial').value});
     rememberSession(session.session_id,state.token);
     await enter(session);
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
-$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
+$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await retryableWrite('initial',base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
 let creatingChat=false;
 async function openConversation(ids,automatic,button){
   if(creatingChat||state.openingPending||!ids.length)return;
@@ -843,8 +912,8 @@ async function openConversation(ids,automatic,button){
                participant_ids:ids,messages:[],create_request_id:requestId(),start_request_id:requestId()});
       $('opening-question').value='';
     }else{
-      const room=await api(base()+'/rooms','POST',{mode:ids.length===1?'one_to_one':'group',
-        participant_ids:ids,initial_revision:state.session.initial_opinion.revision,request_id:requestId()});
+      const room=await retryableWrite('chat',base()+'/rooms','POST',{mode:ids.length===1?'one_to_one':'group',
+        participant_ids:ids,initial_revision:state.session.initial_opinion.revision});
       setRoom(room);$('opening-question').value=defaultOpeningQuestion;await refreshSession();
     }
     await refreshRoom();showStep('converse');status('');$('opening-question').focus();
@@ -933,6 +1002,16 @@ $('recover-room').onclick=async()=>{
   try{await control('acknowledge_error');if(state.room?.room_id===roomId&&state.room.can_ask)$('question').focus();}
   catch(error){status(error.message);}finally{button.disabled=false;}
 };
+async function revisionForQuestion(roomId) {
+  await refreshRoom();
+  if (state.room?.room_id !== roomId) return null;
+  if (state.room.state === 'running') await control('pause');
+  while (state.room?.room_id === roomId && state.room.state === 'pausing') {
+    await wait(600);
+    await refreshRoom();
+  }
+  return state.room?.room_id === roomId ? state.room.revision : null;
+}
 $('interject').onsubmit=async event=>{
   event.preventDefault();
   const button=$('interject').querySelector('button[type=submit]'),roomId=state.room?.room_id;
@@ -940,11 +1019,9 @@ $('interject').onsubmit=async event=>{
   if(button.disabled||!roomId||!question.trim())return;
   button.disabled=true;
   try{
-    await refreshRoom();if(state.room?.room_id!==roomId)return;
-    if(state.room.state==='running')await control('pause');
-    while(state.room?.room_id===roomId&&state.room.state==='pausing'){await wait(600);await refreshRoom();}
-    if(state.room?.room_id!==roomId)return;
-    await api('/rooms/'+roomId+'/messages','POST',{text:question,reply_to_message_id:null,expected_revision:state.room.revision,request_id:requestId(),...(recipient?{target_agent_id:recipient}:{})});
+    await retryableWrite('message-'+roomId,'/rooms/'+roomId+'/messages','POST',{
+      text:question,reply_to_message_id:null,...(recipient?{target_agent_id:recipient}:{})
+    },()=>revisionForQuestion(roomId));
     if(state.room?.room_id===roomId){if($('question').value===question)$('question').value='';await refreshRoom();}
   }catch(error){status(error.message);}finally{button.disabled=false;}
 };
@@ -976,8 +1053,42 @@ $('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('butto
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};
-$('save-reflection').onsubmit=async event=>{event.preventDefault();try{await saveCurrent();const user_items={};for(const key of Object.keys(categories)){const values=$(key).value.split('\n').filter(s=>s.trim());user_items[key]=values.map(value=>{const savedMatches=state.saved&&['initial','current'].every(kind=>state.saved[kind+'_revision']===state.session[kind+'_opinion'].revision);const original=state.reflectionResult?.categories[key].find(i=>i.explanation===value)||(savedMatches?state.saved.user_items[key].find(i=>i.text===value):null);return {text:value,initial_span_ids:original?.initial_span_ids||[],current_span_ids:original?.current_span_ids||[],related_message_ids:original?.related_message_ids||[]};});}const path=base()+'/reflections'+(state.saved?'/'+state.saved.reflection_id:'');const value=await api(path,state.saved?'PUT':'POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,analysis_job_id:state.reflectionJob,user_items,expected_revision:state.saved?.revision||0,request_id:requestId()});state.saved=value;$('save-state').textContent='저장했습니다. '+value.revision+'번째 저장본';await refreshSession();}catch(e){status(e.message);}};
-$('new-session').onclick=()=>{clearTimeout(state.roomTimer);localStorage.removeItem(savedSessionKey);sessionStorage.removeItem(lastRoomKey);location.reload();};
+$('save-reflection').onsubmit = async event => {
+  event.preventDefault();
+  const button = $('save-reflection').querySelector('button[type=submit]');
+  if (button.disabled) return;
+  button.disabled = true;
+  try {
+    await saveCurrent();
+    const saved = state.saved;
+    const sameOpinions = saved && ['initial','current'].every(kind => saved[kind+'_revision'] === state.session[kind+'_opinion'].revision);
+    const userItems = {};
+    for (const key of Object.keys(categories)) {
+      const lines = $(key).value.split('\n').filter(line => line.trim());
+      userItems[key] = lines.map(text => {
+        const original = state.reflectionResult?.categories[key].find(item => item.explanation === text)
+          || (sameOpinions && saved.user_items[key].find(item => item.text === text));
+        return {text, initial_span_ids:original?.initial_span_ids || [], current_span_ids:original?.current_span_ids || [],
+          related_message_ids:original?.related_message_ids || []};
+      });
+    }
+    const path = base()+'/reflections'+(saved ? '/'+saved.reflection_id : '');
+    const value = await retryableWrite('reflection', path, saved ? 'PUT' : 'POST', {
+      initial_revision:state.session.initial_opinion.revision, current_revision:state.session.current_opinion.revision,
+      analysis_job_id:state.reflectionJob ?? (sameOpinions ? saved.analysis_job_id : null),
+      user_items:userItems, expected_revision:saved?.revision || 0
+    });
+    state.saved = value;
+    $('save-state').textContent = '저장했습니다. '+value.revision+'번째 저장본';
+    status('');
+    await refreshSession();
+  } catch (error) {
+    status(error.message);
+  } finally {
+    button.disabled = false;
+  }
+};
+$('new-session').onclick=()=>{clearTimeout(state.roomTimer);leaveSession();location.reload();};
 
 async function start(){
   const destination=readStored(sessionStorage,libraryDestinationKey);
@@ -989,10 +1100,9 @@ async function start(){
   let resumeMessage='';
   if(destination?.analysis_id){
     sessionStorage.setItem(selectedAnalysisKey,destination.analysis_id);
-    localStorage.removeItem(savedSessionKey);
-    sessionStorage.removeItem(lastRoomKey);
+    leaveSession();
   }
-  const saved=destination?.access||readStored(localStorage,savedSessionKey);
+  const saved=destination?.access||activeAccess();
   if(saved){
     state.token=saved.token;
     let session;
@@ -1005,13 +1115,13 @@ async function start(){
       }
       if(readStored(localStorage,savedSessionKey)?.session_id===saved.session_id){
         localStorage.removeItem(savedSessionKey);
-        sessionStorage.removeItem(lastRoomKey);
       }
+      if (sessionStorage.getItem(tabSessionKey) === saved.session_id) leaveSession();
       state.token='';
       resumeMessage=error.code==='session_expired'
         ? '이전 세션 기한이 지났습니다. 새로 시작해 주세요.'
         : '이전 기록을 열 수 없습니다. Library에서 분석이나 다른 기록을 선택하세요.';
-      if(destination?.access&&readStored(localStorage,savedSessionKey)){
+      if(destination?.access&&activeAccess()){
         await start();
         status(resumeMessage);
         return;
