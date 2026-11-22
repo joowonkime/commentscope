@@ -15,7 +15,7 @@ macOS와 Linux에서는 `py -3` 대신 `python3`을 사용한다. 첫 명령은 
 | CNBC, 주 4일 근무 | Library 또는 영상 URL로 열 수 있다. 처리 댓글 96개, 관점 4개. 고유 댓글 4개가 입장에 연결되며 네 관점 모두 짧은 근무를 지지한다. [영상](https://www.youtube.com/watch?v=RrFaNO3rTaA) |
 | 스브스뉴스, 4.5일제 | 로우파이의 원래 영상. 비공개 수집본 751개에 댓글·답글과 좋아요가 저장됐다. 완주한 Factory 결과를 등록하기 전까지 입력 자료로 제공한다. [영상](https://www.youtube.com/watch?v=BAHKmi4F1L8) |
 
-새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
+새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. GitHub 브랜치에서는 확대 검색 계약의 3,000개 상한을 준비·재검사·제품 등록에 적용한다. v3 ZIP은 표에 명시한 두 실제 분석을 검증한 배포본이다. 실제 3,000개 영상의 비용과 관점 품질은 별도 측정 항목이다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
 
 ## 조원이 직접 확인할 흐름
 

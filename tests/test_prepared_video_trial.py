@@ -59,6 +59,29 @@ class PreparedVideoTests(unittest.TestCase):
         self.assertEqual(plan['admission_policy'],t.seed_policy.POLICY)
         self.assertFalse(plan['quality_gate_passed'])
 
+    def test_three_thousand_comments_reach_plan_guard_and_product_registration(self):
+        from commentscope.product.analysis import from_factory
+        from experiments.grounding_contract_demo import fixture
+        snapshot=self.snapshot.to_dict()
+        bundle=fixture()
+        sources={s['id']:s['text'] for s in bundle['sources']}
+        sources.update({f'extra-{i}':f'A separate observation about proposal {i}.' for i in range(3000-len(sources))})
+        template=snapshot['comments'][0]
+        snapshot['comments']=[{**template,'comment_id':cid,'text_original':message,'likes':1} for cid,message in sources.items()]
+        # The same text in a root and in a reply denotes two distinct canonical sources.
+        next(c for c in snapshot['comments'] if c['comment_id']=='c3').update(parent_id='c1',parent_status='present')
+        snapshot['sampling']['target_count']=3000
+        self.snapshot_file.write_text(json.dumps(snapshot))
+        root,plan=self.prepare()
+        self.assertEqual(plan['canonical_population'],3000)
+        self.assertFalse(t.guard(plan)['new_money_owner'])
+        generated={'bundle':bundle}
+        t.write(root/'artifacts/agent-inputs.json',generated)
+        t.write(root/'artifacts/output.json',{'agent_inputs':generated,'membership_search_policy':t.SEARCH})
+        public=from_factory(root).public()
+        self.assertEqual((public['analyzed_comments'],public['engagement']['total_likes']),(3000,3000))
+        self.assertEqual(sum(row['count'] for row in public['composition']),3000)
+
     def test_optional_new_video_budget_preserves_balance_and_frozen_limit(self):
         root=self.root/'limited'
         t.prepare(root,self.snapshot_file,self.refs,self.owner_file,self.policy_file,

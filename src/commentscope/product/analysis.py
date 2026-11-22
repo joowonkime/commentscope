@@ -4,6 +4,7 @@ from pathlib import Path
 
 from commentscope.agents import seed_policy
 from commentscope.agents.grounded_inputs import compile_inputs, prompt_input
+from commentscope.factory import perspective_mining
 from commentscope.factory.automatic_contract import digest
 from commentscope.factory.claim_clusters import read_json, sha
 from commentscope.factory.framed_corpus import sources as source_registry
@@ -122,7 +123,11 @@ def from_factory(directory):
     if sha(snapshot_path) != plan['snapshot_sha256']:
         raise ValueError('Factory snapshot changed')
     snapshot = load_snapshot(snapshot_path).snapshot
-    registry = source_registry(snapshot, include_video_context=True)
+    search = output.get('membership_search_policy', plan.get('membership_search_policy'))
+    if plan.get('membership_search_policy', search) != search:
+        raise ValueError('Registered mining policy differs from Factory output')
+    maximum = perspective_mining.policy(search)['maximum_snapshot_comments'] if search is not None else 1000
+    registry = source_registry(snapshot, include_video_context=True, maximum_comments=maximum)
     bundle = generated['bundle']
     for source in bundle['sources']:
         original = registry.get(source['id'])

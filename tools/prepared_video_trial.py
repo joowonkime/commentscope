@@ -53,6 +53,10 @@ def window(auth,*,call_seconds=0,allow_expired=False,now=None):
         raise TimeoutError('Prepared-video execution window expired')
 
 
+def registered_sources(snapshot):
+    return sources(snapshot,include_video_context=True,maximum_comments=SEARCH['maximum_snapshot_comments'])
+
+
 def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user_request,maximum_new_usd=None):
     directory=Path(directory).resolve()
     paths=[Path(p).resolve() for p in (snapshot_file,reference_file,owner_file,policy_file)]
@@ -60,7 +64,7 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
     snapshot_file,reference_file,owner_file,policy_file=paths
     if directory.exists() or not isinstance(user_request,str) or not user_request.strip():
         raise ValueError('Fresh explicit registered-video request required')
-    snapshot=load_snapshot(snapshot_file).snapshot;registry=sources(snapshot,include_video_context=True)
+    snapshot=load_snapshot(snapshot_file).snapshot;registry=registered_sources(snapshot)
     if not 1<=len(snapshot.comments)<=3000:raise ValueError('Fixed registered comment pool required')
     owner=read_json(owner_file);policy=read_json(policy_file);refs=read_json(reference_file)
     if (policy['maximum_usd']!='150' or owner['maximum_usd']!='150'
@@ -152,7 +156,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False,require_settled=True):
             or plan['formal_admission_eligible'] is not False or plan['quality_gate_passed'] is not False
             or plan['cross_run_response_reuse'] is not False):
         raise ValueError('Prepared-video inherited finance or role contract changed')
-    snapshot=load_snapshot(Path(plan['snapshot'])).snapshot;registry=sources(snapshot,include_video_context=True)
+    snapshot=load_snapshot(Path(plan['snapshot'])).snapshot;registry=registered_sources(snapshot)
     refs=read_json(plan['reference_file'])
     if (plan['documents']!=refs['documents'] or plan['selections']!=refs['selections']
             or plan['classifier']!=e.model_identity()
@@ -183,7 +187,7 @@ class Session(shared.Session):
             raise ValueError('Use the original prepared-video directory')
         guard(plan,allow_expired=True)
         super().__init__(directory,plan,dispatch,authorization_guard=guard)
-        self.registry=sources(load_snapshot(Path(plan['snapshot'])).snapshot,include_video_context=True)
+        self.registry=registered_sources(load_snapshot(Path(plan['snapshot'])).snapshot)
         self.allowed=set(plan['scope_ids']);self.seen=set();self.counts=Counter();self.runtime_lock=threading.Lock()
         for p in self.directory.joinpath('calls').glob('*.request.json'):
             self.seen.add(read_json(p)['request_sha256'])
