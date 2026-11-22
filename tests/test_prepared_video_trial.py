@@ -59,6 +59,18 @@ class PreparedVideoTests(unittest.TestCase):
         self.assertEqual(plan['admission_policy'],t.seed_policy.POLICY)
         self.assertFalse(plan['quality_gate_passed'])
 
+    def test_optional_new_video_budget_preserves_balance_and_frozen_limit(self):
+        root=self.root/'limited'
+        t.prepare(root,self.snapshot_file,self.refs,self.owner_file,self.policy_file,
+                  user_request='Bound this video',maximum_new_usd='1.5')
+        plan=t.read_json(root/'plan.json')
+        self.assertEqual((plan['subcap_usd'],plan['opening_scope_charge_usd']),('1.5','0.3'))
+        self.assertEqual(t.guard(plan)['maximum_new_usd'],'1.5')
+        plan['subcap_usd']='150'
+        (root/'plan.json').write_text(json.dumps(plan))
+        (root/'frozen.json').write_text(json.dumps({'plan_sha256':t.sha(root/'plan.json')}))
+        with self.assertRaises(ValueError):t.guard(plan)
+
     def test_second_plan_keeps_same_cumulative_owner_and_old_charges(self):
         _,first=self.prepare('first');_,second=self.prepare('second')
         self.assertEqual(first['spend_scope_sha256'],second['spend_scope_sha256'])

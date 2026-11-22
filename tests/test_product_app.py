@@ -23,6 +23,25 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(next(x['count'] for x in value['composition'] if x.get('kind')=='multiple'),3)
         self.assertTrue(all(g['claim_id']!='eliminated' for p in value['perspectives'] for g in p['grounds']))
 
+    def test_likes_follow_exclusive_source_buckets_and_missing_counts_remain_unknown(self):
+        presentation={'names':{'P1':'Policy advocate'},'likes_by_source':{'c1':8,'c2':0,'c3':2,'other':15}}
+        provenance={'processing_count':4,'canonical_population':999}
+        analysis=Analysis(self.analysis.bundle,provenance,presentation)
+        self.assertEqual(analysis.id,Analysis(self.analysis.bundle,provenance).id)
+        result=analysis.public()
+        self.assertEqual(result['perspectives'][0]['display_name'],'Policy advocate')
+        self.assertEqual(result['engagement'],{'available':True,'total_likes':25,'comments_with_likes':4})
+        self.assertEqual([(r.get('kind'),r['likes']) for r in result['composition']],
+                         [(None,0),(None,0),('multiple',10),('other',15)])
+        presentation['likes_by_source']['other']=None
+        result=Analysis(self.analysis.bundle,provenance,presentation).public()
+        self.assertFalse(result['engagement']['available'])
+        self.assertTrue(all('likes' not in row for row in result['composition']))
+        presentation['likes_by_source']=dict.fromkeys(presentation['likes_by_source'],0)
+        result=Analysis(self.analysis.bundle,provenance,presentation).public()
+        self.assertTrue(result['engagement']['available'])
+        self.assertEqual(result['engagement']['total_likes'],0)
+
     def test_processed_scope_and_population_have_different_public_counts(self):
         value=Analysis(self.analysis.bundle,{'processing_count':6,'canonical_population':999}).public()
         self.assertEqual(value['analyzed_comments'],6);self.assertEqual(value['canonical_population'],999)
@@ -159,6 +178,47 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(len(self.calls),4)
         self.assertTrue(any('PEER_CONTEXT_ONLY' in c['data'] for c in self.calls))
         self.assertNotIn('I support this policy.',json.dumps(self.calls))
+
+    def test_in_flight_compare_reuses_one_job_and_session_summary_tracks_initial_revision(self):
+        entered=threading.Event();release=threading.Event();original=self.app.model
+        def delayed(stage,request):
+            entered.set();release.wait(5);return original(stage,request)
+        self.app.model=delayed
+        body={'perspective_id':'P1','initial_revision':1,'request_id':'first'}
+        job=self.call('POST',self.base+'/comparisons',body)[1]
+        try:
+            self.assertTrue(entered.wait(3))
+            status, duplicate=self.call('POST',self.base+'/comparisons',{**body,'request_id':'second'})
+            self.assertEqual((status,duplicate['job_id']),(200,job['job_id']))
+        finally:release.set()
+        self.assertEqual(self.job(job)['state'],'succeeded')
+        summary=self.call('GET',self.base)[1]['comparisons']['P1']
+        self.assertEqual(summary,{'job_id':job['job_id'],'available':True,'relations':['agreement']})
+        self.call('PUT',self.base+'/opinions/initial',{'text':'Updated','expected_revision':1,'request_id':'edit'})
+        self.assertEqual(self.call('GET',self.base)[1]['comparisons'],{})
+        self.assertEqual(len(self.calls),1)
+
+    def test_group_followup_targets_one_current_participant_after_recoverable_failure(self):
+        room=self.room();path='/api/v1/rooms/'+room['room_id']
+        self.app.model=lambda *args:{'output':None,'errors':['invalid'],'new_cost_usd':'0'}
+        job=self.call('POST',path+'/start',{'opening_question':'Opening?',
+            'expected_revision':room['revision'],'request_id':'open'})[1]
+        self.assertEqual(self.job(job)['state'],'failed')
+        failed=self.call('GET',path)[1]
+        self.assertEqual(failed['error_code'],'model_or_validation_failed')
+        _,ready=self.call('POST',path+'/control',{'action':'acknowledge_error','expected_revision':failed['revision'],'request_id':'recover'})
+        self.assertTrue(ready['can_ask']);self.assertFalse(ready['can_resume'])
+        self.app.model=self.model
+        ask={'text':'What is your reason?','reply_to_message_id':None,'expected_revision':ready['revision']}
+        with self.assertRaises(WebError) as failure:
+            self.call('POST',path+'/messages',{**ask,'target_agent_id':'foreign','request_id':'foreign'})
+        self.assertEqual(failure.exception.code,'invalid_participants')
+        job=self.call('POST',path+'/messages',{**ask,'target_agent_id':'P2','request_id':'to-p2'})[1]
+        self.assertEqual(self.job(job)['state'],'succeeded')
+        messages=self.call('GET',path)[1]['messages']
+        self.assertEqual([m['agent_id'] for m in messages if m['author_kind']=='agent'],['P2'])
+        self.assertEqual([m['body'] for m in messages if m['author_kind']=='user'],['Opening?',ask['text']])
+        self.assertEqual(len(self.calls),1)
 
     def test_group_pause_settles_current_turn_and_resume_does_not_repeat(self):
         entered=threading.Event();release=threading.Event();original=self.app.model

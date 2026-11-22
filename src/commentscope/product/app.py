@@ -142,6 +142,7 @@ class ProductApp:
                 'completed':value['cursor']>=len(value['schedule']) and not value.get('round_failed'),
                 'committed_turns':value['turn_count']-value.get('round_start_turn',0)})
         public['can_ask']=value['state'] in ('paused','awaiting_user') and value['turn_count']<18
+        public['can_resume']=value['state']=='paused' and value['cursor']<len(value['schedule']) and value['turn_count']<18
         if value.get('kind'):
             public['kind']=value['kind']
             if value['kind']=='structured_debate':
@@ -149,6 +150,9 @@ class ProductApp:
                 public['can_ask']=False
                 public['turn_limit']=len(value['participant_ids'])*2
                 return public
+        if value['state'] in ('error','exhausted','needs_reconciliation') and value.get('job_id'):
+            row=db.execute('SELECT data FROM jobs WHERE id=?',(value['job_id'],)).fetchone()
+            if row:public['error_code']=(decode(row).get('error') or {}).get('code')
         public['turn_limit']=18
         return public
 
@@ -167,9 +171,9 @@ class ProductApp:
 
     def _job(self,db,session,operation,args,room=None):
         if operation in ('comparison','reflection'):
-            for previous in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation=? AND state='succeeded'",(session['session_id'],operation)):
+            for previous in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation=? AND state IN ('queued','running','succeeded')",(session['session_id'],operation)):
                 candidate=decode(previous)
-                if candidate['args']==args:return 200,{'job_id':candidate['job_id'],'state':'succeeded','room_id':None}
+                if candidate['args']==args:return 200,{'job_id':candidate['job_id'],'state':candidate['state'],'room_id':None}
         status=self.generation_status()
         if status not in ('ready','busy'):raise WebError(503,status)
         if db.execute("SELECT 1 FROM jobs WHERE state='needs_reconciliation' LIMIT 1").fetchone():
@@ -220,8 +224,17 @@ class ProductApp:
 
     def _session_public(self,db,session):
         analysis=self._analysis(session,live=False);sid=session['session_id']
-        return {**deepcopy(session),'analysis':analysis.public(),
-                'initial_opinion':self._opinion(db,sid,'initial'),
+        initial=self._opinion(db,sid,'initial')
+        public=analysis.public()
+        comparisons={}
+        for row in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation='comparison' AND state='succeeded'",(sid,)):
+            job=decode(row)
+            if public['status']!='expired' and job['args']['initial_revision']==initial['revision']:
+                comparisons[job['args']['perspective_id']]={'job_id':job['job_id'],
+                    'available':job['result']['available'],
+                    'relations':list(dict.fromkeys(item['relation'] for item in job['result']['items']))}
+        return {**deepcopy(session),'analysis':public,'comparisons':comparisons,
+                'initial_opinion':initial,
                 'current_opinion':self._opinion(db,sid,'current'),
                 'rooms':[{key:r[key] for key in ('room_id','mode','state','revision','kind','debate_id') if key in r}
                          for r in [decode(x) for x in db.execute('SELECT data FROM rooms WHERE session_id=?',(sid,))]],
@@ -403,7 +416,9 @@ class ProductApp:
         action=tail[0]
         if action=='control':self._fields(body,'action expected_revision request_id')
         elif action=='start':self._fields(body,'opening_question expected_revision request_id')
-        elif action=='messages':self._fields(body,'text reply_to_message_id expected_revision request_id')
+        elif action=='messages':
+            fields='text reply_to_message_id expected_revision request_id'
+            self._fields(body,fields+(' target_agent_id' if 'target_agent_id' in body else ''))
         else:raise WebError(404,'not_found')
         def mutate():
             integer(body['expected_revision'])
@@ -425,9 +440,13 @@ class ProductApp:
             if room.get('kind')=='synthesis_chat':
                 self.debates._agent(db,room['participant_ids'][0],session)
                 if control=='next_round':raise WebError(400,'invalid_control')
-                if control=='resume' and room['cursor']>=len(room['schedule']):
-                    raise WebError(409,'room_not_ready')
             if room['turn_count']>=18:raise WebError(409,'turn_limit')
+            participants=room['participant_ids']
+            if action=='messages' and 'target_agent_id' in body:
+                target=body['target_agent_id']
+                if room['mode']!='group' or not isinstance(target,str) or target not in participants:
+                    raise WebError(422,'invalid_participants')
+                participants=[target]
             if action=='start':
                 if room['state']!='idle':raise WebError(409,'room_not_ready')
                 question=text(body['opening_question'],1000,empty=False)
@@ -439,7 +458,7 @@ class ProductApp:
                 if mid is not None and not any(m['message_id']==mid for m in self._messages(db,rid)):
                     raise WebError(404,'resource_missing')
             elif control=='resume':
-                if room['state']!='paused':raise WebError(409,'room_not_ready')
+                if room['state']!='paused' or room['cursor']>=len(room['schedule']):raise WebError(409,'room_not_ready')
                 room['state']='running';room['revision']+=1
                 return self._job(db,session,'room',{'epoch':room['epoch']},room)
             elif control=='next_round':
@@ -453,7 +472,7 @@ class ProductApp:
             room.update(epoch=room['epoch']+1,round_id=room['round_id']+1,cursor=0,state='running',question=question,
                         round_failed=False,round_start_turn=room['turn_count'])
             room.pop('_stages',None)
-            room['schedule']=[{'agent_id':cid,'phase':phase} for phase in phases for cid in room['participant_ids']]
+            room['schedule']=[{'agent_id':cid,'phase':phase} for phase in phases for cid in participants]
             if action in ('start','messages'):
                 message=self._append_message(db,room,'user',body=question,reply_to=body.get('reply_to_message_id'))
                 room['user_message_id']=message['message_id']

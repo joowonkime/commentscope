@@ -16,7 +16,7 @@ function render(points,extra={}){
   const js=fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
   const container=new Element('div');
   const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points,...extra}]}},
-    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{}});
+    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({text:'Registered stance',source_ids:['c1']})});
   vm.runInContext(js.slice(js.indexOf('function sourceButtons('),js.indexOf('// API span offsets')),context);
   vm.runInContext(js.slice(js.indexOf('function renderMessages('),js.indexOf('async function refreshRoom(')),context);
   vm.runInContext('renderMessages()',context);return container;
@@ -39,6 +39,16 @@ test('unsafe schemes and credential URLs never become external links',()=>{
   const result=render([{origin:'external_evidence',text:'Visible text',citations:{external_evidence:[
     {url:'javascript:alert(1)'},{url:'https://user:secret@example.invalid/'},{url:'not a URL'}]}}]);
   assert.equal(flatten(result).filter(n=>n.tagName==='a').length,0);
+});
+
+test('a held live response links its registered stance separately and an expired response does not',()=>{
+  const held=render([],{evidence_scope:'seeded_provenance',status:'abstain',limitation:'verification_hold'});
+  const detail=flatten(held).find(n=>n.tagName==='details');
+  assert.match(text(held),/답변을 검증하지 못/);
+  assert.match(text(detail),/기존 입장.*Registered stance/);
+  assert.equal(flatten(detail).filter(n=>n.tagName==='button').length,1);
+  const expired=render([],{evidence_scope:'expired',status:'abstain'});
+  assert.ok(!flatten(expired).some(n=>n.tagName==='details'));
 });
 
 test('explanatory abstention is visible even when checked paragraphs are present',()=>{

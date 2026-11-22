@@ -1,6 +1,8 @@
 # CommentScope — 지금까지 만든 것
 
 **자동 토론 MVP를 써 보려면 [설치부터 화면 조작까지 안내](docs/MVP_PREVIEW_GUIDE.md)를 먼저 봅니다.**
+
+실제 영상으로 팀 QA를 하거나 제출 서버를 준비할 때는 [팀 QA와 평가 서버 실행](docs/M4_TEAM_QA_HOSTING.md)을 사용합니다.
 한 번 시작하면 결론까지 토론이 자동 진행되며, 검증된 합의가 있으면 별도 Agent에 질문하고 성찰을 저장할 수 있습니다.
 합의·합의 없음·검증 보류 화면을 API 키 없이 확인하는 팀 검토용 실행입니다. 검증 브랜치는 [PR #119](https://github.com/joowonkime/commentscope/pull/119)에서 확인할 수 있습니다.
 

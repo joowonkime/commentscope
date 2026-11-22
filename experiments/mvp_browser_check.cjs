@@ -181,6 +181,8 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await fill('#initial','Safety checks matter, but their cost depends on the risk.');
   await click('#begin button[type=submit]');
   await until(()=>evaluate("document.querySelectorAll('.card').length===2"));
+  checks.stance_sources_initially_collapsed=await evaluate("!document.querySelector('.card .source-disclosure').open");
+  await click('.card .source-disclosure summary');
   await click('.card .card-sources .source-button');
   await until(()=>evaluate("document.querySelector('#source-dialog').open"));
   checks.explore_stance_original_visible=await evaluate("document.querySelector('#source').textContent.includes('Safety reviews should be required.')");
@@ -226,7 +228,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.no_additional_turn_or_merge_clicks=!requests.some(item=>item.method==='POST'&&/\/syntheses\b|\/ratif/.test(item.path));
   checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
   checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
-  checks.selected_order=await evaluate("Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]).join(',')==='Perspective 2,Perspective 1,Perspective 2,Perspective 1'");
+  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
   checks.visible_reply_links=await evaluate("Array.from(document.querySelectorAll('.message.agent .source-button')).filter(x=>x.textContent.startsWith('응답 대상')).length===2");
   checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===8&&metrics().synthetic_typed_calls===7;
   await click('#show-debate-result');
@@ -249,7 +251,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
     await until(()=>evaluate("document.querySelector('.message.agent')?.innerText.includes('sets no mandatory threshold')"));
     checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI 추론')");
     await click('#agent-info');
-    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes('Perspective 2, Perspective 1')"));
+    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes([label('P2'),label('P1')].join(', '))"));
     checks.agent_parent_lineage_visible=true;
     await click('#close-perspective');
     await screenshot('synthesis-agent-followup.png');

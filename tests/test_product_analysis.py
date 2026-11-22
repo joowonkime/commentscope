@@ -40,7 +40,7 @@ class ProductAnalysisTests(unittest.TestCase):
             write(root/'artifacts/agent-inputs.json', generated)
             write(root/'artifacts/output.json', {'agent_inputs': generated})
             registry = {s['id']: s for s in bundle['sources']}
-            with patch('commentscope.product.analysis.load_snapshot', return_value=Mock(snapshot=object())), \
+            with patch('commentscope.product.analysis.load_snapshot', return_value=Mock(snapshot=Mock(comments=[]))), \
                  patch('commentscope.product.analysis.source_registry', return_value=registry):
                 analysis = from_factory(root)
                 self.assertEqual(len(analysis.compiled['profiles']), 1)

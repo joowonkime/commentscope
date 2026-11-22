@@ -1,6 +1,7 @@
 """Run the three product workflows on a generated development analysis."""
 import argparse
 from copy import deepcopy
+from datetime import datetime
 from decimal import Decimal
 import json
 import os
@@ -25,6 +26,7 @@ from commentscope.providers import openrouter
 from commentscope.providers import openrouter_decisions as decisions
 from commentscope.providers.budget import InferenceBudget,BudgetExhausted
 from commentscope.providers.checkpoint_calls import CheckpointRunner,PendingCallError,run_origin
+from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.openrouter_budget import SpendLedger,units
 from commentscope.providers.remote_verification import WireBudget,WIRE_BUDGET
@@ -43,7 +45,8 @@ ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 def analysis_record(analysis):
     return {'bundle':deepcopy(analysis.bundle),'provenance':deepcopy(analysis.provenance),
-            'analysis_id':analysis.id,'bundle_revision':analysis.revision}
+            'analysis_id':analysis.id,'bundle_revision':analysis.revision,
+            **({'presentation':deepcopy(analysis.presentation)} if analysis.presentation else {})}
 
 
 def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,
@@ -72,6 +75,12 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         files.extend([path/'plan.json',path/'artifacts/agent-inputs.json',path/'artifacts/output.json',
                       Path(read_json(path/'plan.json')['snapshot'])])
         catalog.append(registered)
+    files.extend(path/'perspective-names.json' for path in (factory_run,*additional_factory_runs)
+                 if (path/'perspective-names.json').is_file())
+    if cycle['version']==EVALUATION_CYCLE_VERSION:
+        end=datetime.fromisoformat(cycle['deadline'])
+        if factory_trial is not None or any(end>datetime.fromisoformat(a.compiled['expires_at']) for a in catalog):
+            raise ValueError('Evaluation requires registered product sources valid through the deadline')
     if len(catalog)!=len({registered.id for registered in catalog}):
         raise ValueError('Duplicate registered analysis')
     seeded=any(seed_policy.seeded(registered.bundle) for registered in catalog)
@@ -271,7 +280,7 @@ def build(directory):
     if 'seeded_verifier_deployment' in plan:decisions.preflight(plan['seeded_verifier_deployment'])
     catalog=[]
     for record in [plan['analysis'],*plan.get('additional_analyses',[])]:
-        registered=Analysis(record['bundle'],record['provenance'])
+        registered=Analysis(record['bundle'],record['provenance'],record.get('presentation'))
         if registered.id!=record['analysis_id'] or registered.revision!=record['bundle_revision']:
             raise ValueError('Registered product analysis changed')
         catalog.append(registered)

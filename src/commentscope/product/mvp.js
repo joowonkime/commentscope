@@ -24,14 +24,15 @@ async function api(path, method='GET', body, token=state.token) {
 function base(){return '/sessions/'+state.session.session_id;}
 function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
 function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
-function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids.includes(id))return '합의 Agent';const i=indexOf(id); return i<0?'Perspective':'Perspective '+(i+1);}
+function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return '합의 Agent';const p=perspective(id);return p?.display_name||p?.text||'Perspective';}
 function avatar(id,small=false){const i=Math.max(0,indexOf(id)); return asset(small?'0385b':['4ea9b','5e642','baf01','d51bb','e77a2'][i%5]);}
 function closeDialog(id){const dialog=$(id); if(dialog.open)dialog.close(); if(id==='comparison')dialog.hidden=true;}
 function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open)dialog.showModal();}
 function showStep(step){
   if(!state.session)return;
-  if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}step='explore';status('대화할 관점을 먼저 선택해 주세요.');}
-  for(const id of ['comparison','source-dialog','perspective-dialog'])closeDialog(id);
+  if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}}
+  if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
+  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
   rememberConversation();
@@ -57,7 +58,10 @@ function renderAnalysis(){
   $('analysis-summary').textContent=a.perspectives.length+' perspectives from '+(Number.isInteger(n)?n+' '+unit:'the registered comments')+(a.canonical_population?' · Original population: '+a.canonical_population+' comments.':'.');
   $('sidebar-video-meta').textContent=Number.isInteger(n)?n+' '+unit:'';
   $('analysis-state').textContent=a.quality_gate_passed?'':'Development analysis · quality review pending';
-  if(video.description)$('video-description').textContent=video.description;
+  $('video-description').textContent=video.description||'Watch the source video, then write what you think.';
+  $('sidebar-thumbnail').replaceChildren();
+  $('video-frame').replaceChildren(node('p','No source video is linked to this analysis.','video-placeholder'));
+  for(const id of ['original-video','sidebar-video']){$(id).removeAttribute('href');$(id).hidden=true;}
   if(typeof vid==='string'&&/^[A-Za-z0-9_-]{11}$/.test(vid)){
     const url='https://www.youtube.com/watch?v='+vid;
     for(const id of ['original-video','sidebar-video']){$(id).href=url; $(id).hidden=false;}
@@ -70,16 +74,35 @@ function renderAnalysis(){
   renderComposition();
 }
 function renderComposition(){
-  const entries=state.analysis.composition||[], total=entries.reduce((sum,e)=>sum+e.count,0);
-  $('composition-chart').replaceChildren();$('composition-legend').replaceChildren();
-  if(!total){$('composition-chart').append(node('p','Comment composition is not available.','muted'));return;}
-  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');svg.setAttribute('viewBox','0 0 1000 26');svg.setAttribute('role','img');svg.setAttribute('aria-label','Exclusive comment composition');
+  const entries=state.analysis.composition||[];
+  renderDistribution('composition',entries,'count','comments','Comment counts are unavailable.');
+  const engagement=state.analysis.engagement;
+  renderDistribution('likes',engagement?.available?entries:[],'likes','likes',
+    engagement?.available?'No likes were recorded on the analyzed comments.':'Like counts are unavailable for the full set of analyzed comments.');
+}
+function renderDistribution(prefix,entries,field,unit,emptyText){
+  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend');
+  chart.replaceChildren();legend.replaceChildren();
+  const total=entries.reduce((sum,e)=>sum+e[field],0);
+  if(!total){chart.append(node('p',emptyText,'muted'));return;}
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  svg.setAttribute('viewBox','0 0 1000 26');svg.setAttribute('role','img');svg.setAttribute('aria-label','Distribution of '+total+' '+unit);
   let x=0;
-  for(const e of entries){if(!e.count)continue;const i=indexOf(e.perspective_id),cls=e.perspective_id?'accent-'+Math.max(0,i)%5:e.kind,percent=e.count/total*100;
-    const rect=document.createElementNS(ns,'rect');rect.setAttribute('x',String(x));rect.setAttribute('y','0');rect.setAttribute('width',String(percent*10));rect.setAttribute('height','26');rect.setAttribute('class','chart-'+(e.perspective_id?Math.max(0,i)%5:e.kind));const title=document.createElementNS(ns,'title');title.textContent=e.count+' comments';rect.append(title);svg.append(rect);x+=percent*10;
-    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Other comments')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));$('composition-legend').append(line);
+  for(const entry of entries){
+    const count=entry[field],id=entry.perspective_id;
+    const group=id?String(indexOf(id)%5):entry.kind;
+    const name=id?label(id):group==='multiple'?'Multiple perspectives':'Other comments';
+    const percent=count/total*100;
+    const caption=name+' · '+count+' '+unit+' ('+percent.toFixed(1)+'%)';
+    if(count){
+      const rect=document.createElementNS(ns,'rect');
+      for(const [attr,val] of Object.entries({x,width:percent*10,height:26,class:'chart-'+group}))rect.setAttribute(attr,String(val));
+      const title=document.createElementNS(ns,'title');title.textContent=caption;rect.append(title);svg.append(rect);x+=percent*10;
+    }
+    const line=node('span',undefined,id?'accent-'+group:group);
+    line.append(node('i',undefined,'legend-dot'),node('span',caption));legend.append(line);
   }
-  $('composition-chart').append(svg);
+  chart.append(svg);
 }
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
@@ -101,9 +124,6 @@ function renderPerspectives(){
     const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
     if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
     card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
-    const stanceSources=node('div',undefined,'card-sources');
-    commentSourceButtons(stanceSources,p.source_ids||[],'입장 원문');
-    if(stanceSources.childElementCount)card.append(stanceSources);
     const grounds=p.grounds||[];
     if(grounds.length){
       card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));
@@ -111,16 +131,38 @@ function renderPerspectives(){
         const row=node('p',undefined,'card-ground');
         row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
           node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
-        const sources=node('span',undefined,'card-ground-sources');
-        commentSourceButtons(sources,g.source_ids||[],'근거 원문');
-        if(sources.childElementCount)row.append(sources);
         card.append(row);
       }
     }
     const compare=node('button','Compare with my view','secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
-    card.append(compare);$('perspectives').append(card);
+    card.dataset.perspective=p.id;
+    const relations=node('div',undefined,'card-relations');relations.setAttribute('aria-live','polite');renderRelations(relations,p.id);
+    card.append(relations,compare,sourceDisclosure(p));$('perspectives').append(card);
   }
   updateSelection();
+  $('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length||comparingAll;
+}
+const relationNames={agreement:'Agreement',difference:'Difference',additional_condition:'Additional condition',unclear:'Unclear'};
+let comparingAll=false,latestComparison=0;
+function renderRelations(container,id){
+  container.replaceChildren();
+  const result=state.session.comparisons?.[id];
+  if(!result?.relations.length){
+    const message=result?'No clear relationship found':state.session.initial_opinion.text.trim()?'Not compared yet':'Add your view to compare';
+    container.append(node('small',message,'muted'));return;
+  }
+  for(const relation of result.relations)container.append(node('span',relationNames[relation],'relation-chip mark-'+relation));
+}
+function sourceDisclosure(p){
+  const details=node('details',undefined,'source-disclosure');
+  details.append(node('summary','Source comments'));
+  const stance=node('div',undefined,'card-sources');stance.append(node('p',p.text));
+  commentSourceButtons(stance,p.source_ids||[],'입장 원문');details.append(stance);
+  for(const ground of p.grounds||[]){
+    const row=node('div',undefined,'card-ground-sources');row.append(node('p',ground.text));
+    commentSourceButtons(row,ground.source_ids||[],'근거 원문');details.append(row);
+  }
+  return details;
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
 function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
@@ -139,23 +181,62 @@ function highlighted(container,text,spans){
   valid.forEach(s=>{bounds.add(s.start);bounds.add(s.end);});const cuts=[...bounds].sort((a,b)=>a-b);container.replaceChildren();
   for(let i=1;i<cuts.length;i++){const start=cuts[i-1],end=cuts[i],keys=[...new Set(valid.filter(s=>s.start<=start&&s.end>=end).map(s=>s.category))],part=chars.slice(start,end).join('');container.append(keys.length?node('mark',part,'mark-'+(keys.length===1?keys[0]:'mixed')):document.createTextNode(part));}
 }
-async function compareWith(pid){
-  status('나의 의견과 관점을 비교하고 있습니다.');const key=state.session.initial_opinion.revision+':'+pid;
-  let value=state.comparisons.get(key);if(!value){value=await api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.set(key,value);}
-  const job=await pollJob(value);if(job.stale){status('초기 의견이 바뀌어 이전 비교가 됐습니다. 현재 의견으로 다시 비교해 주세요.');return;}
-  $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);$('comparison-stance').textContent=perspective(pid).text;
-  $('comparison-items').replaceChildren();highlighted($('comparison-initial'),state.session.initial_opinion.text,(job.result.items||[]).flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
+async function compareWith(pid,show=true){
+  const view=show?++latestComparison:0;
+  const session=state.session,revision=session.initial_opinion.revision;
+  const key=session.session_id+'/'+revision+'/'+pid;
+  if(show)status('나의 의견과 관점을 비교하고 있습니다.');
+  let pending=state.comparisons.get(key);
+  if(!pending){
+    const previous=session.comparisons?.[pid];
+    pending=(previous?Promise.resolve(previous):api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:revision,request_id:requestId()})).then(pollJob);
+    state.comparisons.set(key,pending);
+  }
+  let job;
+  try{job=await pending;}catch(error){state.comparisons.delete(key);throw error;}
+  if(job.stale||state.session.session_id!==session.session_id||state.session.initial_opinion.revision!==revision)return;
+  const items=job.result.items||[];
+  state.session.comparisons??={};
+  state.session.comparisons[pid]={job_id:job.job_id,available:job.result.available,relations:[...new Set(items.map(i=>i.relation))]};
+  const card=[...$('perspectives').children].find(c=>c.dataset.perspective===pid);
+  if(card)renderRelations(card.querySelector('.card-relations'),pid);
+  if(!show||view!==latestComparison||document.body.dataset.step!=='explore')return;
+  const p=perspective(pid);
+  $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);
+  const coreSpans=items.filter(i=>i.perspective_claims.some(c=>c.claim_id===p.core_claim_id)).map(i=>({start:0,end:[...p.text].length,category:i.relation}));
+  highlighted($('comparison-stance'),p.text,coreSpans);
+  $('comparison-items').replaceChildren();$('comparison-sources').replaceChildren(sourceDisclosure(p));
+  highlighted($('comparison-initial'),session.initial_opinion.text,items.flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
   if(!job.result.available)$('comparison-items').append(node('p','초기 의견을 적으면 이 관점과 비교할 수 있습니다.'));
   else{
-    const names={agreement:'Where your views align',difference:'Where your views differ',additional_condition:'A condition to consider',unclear:'Something to clarify'};
-    for(const item of job.result.items){const row=node('article',undefined,'comparison-item '+item.relation);row.append(node('h3',names[item.relation]),node('p',item.explanation),node('blockquote','Your view: '+item.user_spans.map(s=>s.text).join(' ')));
-      for(const claim of [...item.perspective_claims,...item.required_premises]){row.append(node('blockquote',claim.text));sourceButtons(row,claim);}
-      if(item.consideration_question)row.append(node('p',item.consideration_question,'comparison-question'));$('comparison-items').append(row);
+    for(const item of items){
+      const row=node('article',undefined,'comparison-item '+item.relation);
+      row.append(node('h3',relationNames[item.relation]),node('p',item.explanation),node('blockquote','Your view · '+item.user_spans.map(s=>s.text).join(' ')));
+      for(const claim of item.perspective_claims){
+        const quote=node('blockquote');quote.append(node('mark',claim.text,'mark-'+item.relation));row.append(quote);sourceButtons(row,claim);
+      }
+      for(const premise of item.required_premises){row.append(node('p',premise.text,'required-premise'));sourceButtons(row,premise);}
+      if(item.consideration_question)row.append(node('p',item.consideration_question,'comparison-question'));
+      $('comparison-items').append(row);
     }
-    if(!job.result.items.length)$('comparison-items').append(node('p','두 입력에서 분명한 공통점이나 차이를 확인하지 못했습니다.'));
+    if(!items.length)$('comparison-items').append(node('p','두 입력에서 분명한 공통점이나 차이를 확인하지 못했습니다.'));
   }
-  openDialog('comparison');status('비교 제안을 확인했습니다. 관점의 원문도 함께 살펴보세요.');
+  openDialog('comparison');status('');
 }
+$('compare-all').onclick=async()=>{
+  if(comparingAll)return;
+  comparingAll=true;$('compare-all').disabled=true;
+  const sid=state.session.session_id,revision=state.session.initial_opinion.revision;
+  const ids=state.analysis.perspectives.map(p=>p.id);
+  try{
+    for(const [index,id] of ids.entries()){
+      if(state.session.session_id!==sid||state.session.initial_opinion.revision!==revision)break;
+      $('compare-progress').textContent=(index+1)+' / '+ids.length;
+      if(!state.session.comparisons?.[id])await compareWith(id,false);
+    }
+  }catch(error){status(error.message);}
+  finally{comparingAll=false;$('compare-progress').textContent='';$('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length;}
+};
 const roomStates={
   idle:'시작 전',running:'진행 중',pausing:'정지 중',paused:'일시 정지',awaiting_user:'질문 대기',
   opening:'입장 발언',replying:'상대 입장에 응답 중',synthesizing:'합의 검토 중',compiling:'결론 정리 중',
@@ -176,12 +257,15 @@ function roomPath(room){
   return room.debate_id?'/debates/'+encodeURIComponent(room.debate_id):'/rooms/'+encodeURIComponent(room.room_id);
 }
 function setRoom(room){
+  if(room?.room_id!==state.room?.room_id||room?.kind==='debate_draft'){
+    $('question').value='';$('question-target').replaceChildren();
+  }
   clearTimeout(state.roomTimer);
   state.room=room;
 }
 function rememberConversation(){
   const room=state.room;
-  if(document.body.dataset.step==='converse'&&room?.room_id&&room.kind){
+  if(document.body.dataset.step==='converse'&&room?.room_id){
     sessionStorage.setItem(lastRoomKey,JSON.stringify({session_id:state.session.session_id,room_id:room.room_id}));
   }else sessionStorage.removeItem(lastRoomKey);
 }
@@ -213,7 +297,18 @@ function renderMessages(){
     bubble.append(node('small',phase?speaker+' · '+phase:speaker));
     if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')bubble.append(node('small',label(reply.agent_id)+'의 앞선 발언에 대한 응답'));}
     if(m.body)bubble.append(node('p',m.body));
-    if(m.author_kind==='agent'&&!m.points?.length)bubble.append(node('p',m.evidence_scope==='expired'?'근거 자료의 기한이 지났습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
+    if(m.author_kind==='agent'&&!m.points?.length){
+      const expired=m.evidence_scope==='expired';
+      bubble.append(node('p',expired?'근거 자료의 기한이 지났습니다.':m.limitation==='verification_hold'?'이 질문에 대한 답변을 검증하지 못했습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
+      if(!expired&&m.evidence_scope==='seeded_provenance'){
+        const original=perspective(m.agent_id);
+        if(original?.source_ids?.length){
+          const details=node('details',undefined,'source-disclosure');
+          details.append(node('summary','이 관점의 기존 입장과 원문 보기'),node('p',original.text));
+          commentSourceButtons(details,original.source_ids,'입장 원문');bubble.append(details);
+        }
+      }
+    }
     for(const point of m.points||[]){
       const origin=pointOrigin(point.origin);
       if(origin)bubble.append(node('small',origin));
@@ -226,7 +321,7 @@ function renderMessages(){
       }
     }
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
-    if(m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
+    if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
     box.append(bubble);$('messages').append(box);
   }
@@ -329,6 +424,7 @@ function renderConclusion(room){
 }
 function renderRoom(){
   const room=state.room;
+  $('empty-conversation').hidden=true;$('chat-workspace').hidden=false;
   renderMessages();
   renderRooms();
   renderConclusion(room);
@@ -352,6 +448,15 @@ function renderRoom(){
     exhausted:'대화 한도에 도달했습니다.',needs_reconciliation:'처리 상태 확인이 필요합니다.'
   };
   $('room-state').textContent=(names[room.state]||roomStates[room.state]||room.state)+' · '+room.turn_count+'/'+room.turn_limit;
+  if(room.error_code)$('room-state').textContent+=' · '+errorText(room.error_code);
+  $('recover-room').hidden=automatic||room.state!=='error';
+  const target=$('question-target'),lastTarget=target.value;
+  $('address-agent').hidden=automatic||room.mode!=='group';
+  if(!$('address-agent').hidden){
+    const all=node('option','Everyone');all.value='';target.replaceChildren(all);
+    for(const id of ids){const option=node('option',label(id));option.value=id;target.append(option);}
+    if(ids.includes(lastTarget))target.value=lastTarget;
+  }
   const openingQuestion=$('opening-question');
   openingQuestion.readOnly=Boolean(room.plan)&&room.state==='idle';
   if(openingQuestion.readOnly)openingQuestion.value=room.plan.question;
@@ -360,7 +465,7 @@ function renderRoom(){
   $('opening').querySelector('h2').textContent=automatic?'어떤 쟁점을 토론할까요?':'What would you like to ask?';
   $('opening-submit-label').textContent=automatic?'자동 토론 시작':'Start conversation';
   $('pause').disabled=automatic?!room.can_pause:!['running','awaiting_user'].includes(room.state);
-  $('resume').disabled=automatic?!room.can_resume:room.state!=='paused';
+  $('resume').disabled=!room.can_resume;
   $('next-round').hidden=automatic||room.kind==='synthesis_chat';
   $('next-round').disabled=!room.can_ask;
   $('close-room').disabled=automatic?!room.can_close:room.state==='closed'||room.state==='closing';
@@ -693,34 +798,51 @@ $('begin').onsubmit=async event=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
-$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
-$('open-room').onclick=async()=>{
-  const button=$('open-room');
-  if(button.disabled||state.openingPending)return;
-  button.disabled=true;
+$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
+let creatingChat=false;
+async function openConversation(ids,automatic,button){
+  if(creatingChat||state.openingPending||!ids.length)return;
+  creatingChat=true;button.disabled=true;
   try{
-    const ids=[...state.selected];
-    if(supportsDebate(ids.length)){
+    if(automatic&&supportsDebate(ids.length)){
       setRoom({kind:'debate_draft',mode:'group',state:'idle',turn_count:0,turn_limit:2*ids.length,
                participant_ids:ids,messages:[],create_request_id:requestId(),start_request_id:requestId()});
       $('opening-question').value='';
     }else{
-      $('opening-question').value=defaultOpeningQuestion;
-      setRoom(await api(base()+'/rooms','POST',{mode:ids.length===1?'one_to_one':'group',
-        participant_ids:ids,initial_revision:state.session.initial_opinion.revision,request_id:requestId()}));
-      await refreshSession();
+      const room=await api(base()+'/rooms','POST',{mode:ids.length===1?'one_to_one':'group',
+        participant_ids:ids,initial_revision:state.session.initial_opinion.revision,request_id:requestId()});
+      setRoom(room);$('opening-question').value=defaultOpeningQuestion;await refreshSession();
     }
-    await refreshRoom();
-    showStep('converse');
-    status('');
-    $('opening-question').focus();
-  }catch(error){status(error.message);}
-  finally{updateSelection();}
+    await refreshRoom();showStep('converse');status('');$('opening-question').focus();
+  }catch(error){status(error.message);$('chat-picker-hint').textContent=error.message;}
+  finally{creatingChat=false;button.disabled=false;updateSelection();}
+}
+$('open-room').onclick=()=>openConversation([...state.selected],supportsDebate(state.selected.size),$('open-room'));
+function chatParticipants(){return [...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value);}
+function updateChatPicker(){
+  const ids=chatParticipants(),limit=ids.length>=3;
+  for(const input of $('chat-options').querySelectorAll('input'))input.disabled=limit&&!input.checked;
+  $('chat-format-label').hidden=!supportsDebate(ids.length);
+  $('chat-picker-hint').textContent=state.analysis.perspectives.length?ids.length+' / 3 selected':'This video has no available perspectives.';
+  $('chat-picker').querySelector('button[type=submit]').disabled=!ids.length||creatingChat;
+}
+function showChatPicker(){
+  $('chat-options').replaceChildren();$('chat-format').value='conversation';
+  for(const p of state.analysis.perspectives){
+    const option=node('label'),check=node('input');check.type='checkbox';check.value=p.id;
+    check.onchange=updateChatPicker;option.append(check,node('span',label(p.id)));$('chat-options').append(option);
+  }
+  updateChatPicker();openDialog('new-chat-dialog');
+}
+$('chat-picker').onsubmit=event=>{
+  event.preventDefault();openConversation(chatParticipants(),$('chat-format').value==='debate',$('chat-picker').querySelector('button[type=submit]'));
 };
+$('close-chat-picker').onclick=()=>closeDialog('new-chat-dialog');
 $('rooms').onchange=()=>{if($('rooms').value)chooseRoom($('rooms').value).catch(e=>status(e.message));};
 $('room-search').oninput=renderRooms;
 document.querySelectorAll('[data-room-filter]').forEach(button=>button.onclick=()=>{state.roomFilter=button.dataset.roomFilter;document.querySelectorAll('[data-room-filter]').forEach(b=>b.classList.toggle('active',b===button));renderRooms();});
-$('new-chat').onclick=()=>showStep('explore');
+$('new-chat').onclick=showChatPicker;
+$('empty-new-chat').onclick=showChatPicker;
 $('show-debate-result').onclick=()=>{
   const panel=$('debate-conclusion');
   panel.scrollIntoView({behavior:'smooth',block:'start'});
@@ -769,7 +891,28 @@ $('opening').onsubmit=async event=>{
   }
 };
 for(const [id,action] of [['pause','pause'],['resume','resume'],['next-round','next_round'],['close-room','close']])$(id).onclick=()=>control(action).catch(e=>status(e.message));
-$('interject').onsubmit=async event=>{event.preventDefault();try{await refreshRoom();if(state.room.state==='running')await control('pause');while(state.room.state==='pausing'){await wait(600);await refreshRoom();}await api('/rooms/'+state.room.room_id+'/messages','POST',{text:$('question').value,reply_to_message_id:null,expected_revision:state.room.revision,request_id:requestId()});$('question').value='';await refreshRoom();}catch(e){status(e.message);}};
+$('recover-room').onclick=async()=>{
+  const roomId=state.room?.room_id,button=$('recover-room');
+  if(button.disabled)return;
+  button.disabled=true;
+  try{await control('acknowledge_error');if(state.room?.room_id===roomId&&state.room.can_ask)$('question').focus();}
+  catch(error){status(error.message);}finally{button.disabled=false;}
+};
+$('interject').onsubmit=async event=>{
+  event.preventDefault();
+  const button=$('interject').querySelector('button[type=submit]'),roomId=state.room?.room_id;
+  const question=$('question').value,recipient=$('address-agent').hidden?'':$('question-target').value;
+  if(button.disabled||!roomId||!question.trim())return;
+  button.disabled=true;
+  try{
+    await refreshRoom();if(state.room?.room_id!==roomId)return;
+    if(state.room.state==='running')await control('pause');
+    while(state.room?.room_id===roomId&&state.room.state==='pausing'){await wait(600);await refreshRoom();}
+    if(state.room?.room_id!==roomId)return;
+    await api('/rooms/'+roomId+'/messages','POST',{text:question,reply_to_message_id:null,expected_revision:state.room.revision,request_id:requestId(),...(recipient?{target_agent_id:recipient}:{})});
+    if(state.room?.room_id===roomId){if($('question').value===question)$('question').value='';await refreshRoom();}
+  }catch(error){status(error.message);}finally{button.disabled=false;}
+};
 document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('question').value=button.dataset.prompt;$('question').focus();});
 $('agent-info').onclick=async()=>{
   const container=$('perspective-info');

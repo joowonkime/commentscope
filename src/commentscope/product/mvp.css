@@ -99,3 +99,21 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
   .library-trigger { font-size: 11px; padding: 5px; }
   .library-header, .library-body { padding: 16px; }
 }
+
+.comparison-actions,.card-relations{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:1rem}
+.card-relations{margin-top:auto}.card-relations small{font-size:.78rem}
+.relation-chip{padding:.2rem .55rem;border-radius:.4rem;font-size:.8rem;font-weight:600}
+.mark-agreement{color:#125231;background:#d9f3e3;text-decoration:underline solid}
+.mark-difference{color:#812e1f;background:#ffe4dc;text-decoration:underline double}
+.mark-additional_condition{color:#694e08;background:#fff0bd;text-decoration:underline dotted}
+.mark-unclear,.mark-mixed{color:#443764;background:#eee7f9;text-decoration:underline dashed}
+.source-disclosure{margin-top:1rem;font-size:.84rem}.source-disclosure summary{cursor:pointer;font-weight:600}
+.source-disclosure p,.required-premise{margin:.65rem 0 .2rem}
+.composition-panel h3{margin:1.8rem 0 .2rem;font-size:1.1rem}
+.empty-conversation{padding:clamp(1.5rem,5vw,5rem)}.empty-conversation p{margin:1rem 0}
+#chat-picker fieldset{border:0;padding:0;margin:1rem 0}
+#chat-options label{display:flex;align-items:baseline;gap:.65rem;padding:.55rem 0}
+#chat-options input{flex:none;width:1rem;height:1rem}
+#chat-picker-hint{margin:.7rem 0}#address-agent,#chat-format-label{font-size:.85rem}
+#question-target,#chat-format{max-width:100%;padding:.3rem;margin-bottom:.5rem}
+.card-title strong,.chat-heading h1,.source-disclosure p,.composition-legend span{overflow-wrap:anywhere}

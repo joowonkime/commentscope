@@ -12,10 +12,11 @@ from commentscope.ingestion import load_snapshot
 
 
 class Analysis:
-    def __init__(self, bundle, provenance):
+    def __init__(self, bundle, provenance, presentation=None):
         self.bundle = deepcopy(bundle)
         self.compiled = compile_inputs(self.bundle)
         self.provenance = deepcopy(provenance)
+        self.presentation = deepcopy(presentation or {})
         self.revision = digest(self.bundle)
         self.id = 'AN'+digest([self.revision, self.provenance])[:24]
 
@@ -51,7 +52,9 @@ class Analysis:
                 core_sources = source_ids(core['id'])
                 for source_id in core_sources:
                     memberships.setdefault(canonical[source_id],set()).add(cid)
-                perspectives.append({'id': cid, 'text': core['text'], 'kind': core['kind'],
+                perspectives.append({'id': cid, 'core_claim_id': core['id'],
+                                     'display_name': self.presentation.get('names', {}).get(cid) or core['text'],
+                                     'text': core['text'], 'kind': core['kind'],
                                      'source_count': profile['model_core_support_count'],
                                      'source_ids':core_sources,'grounds':grounds})
         if seed_policy.seeded(self.bundle):
@@ -63,13 +66,27 @@ class Analysis:
         composition=[{'perspective_id':p['id'],'count':sum(ids=={p['id']} for ids in memberships.values())} for p in perspectives]
         composition.extend([{'perspective_id':None,'kind':'multiple','count':sum(len(ids)>1 for ids in memberships.values())},
                             {'perspective_id':None,'kind':'other','count':max(0,analyzed-len(memberships))}])
+        likes = {} if expired else self.presentation.get('likes_by_source', {})
+        known_likes = {cid: n for cid, n in likes.items() if type(n) is int and n >= 0}
+        complete = bool(analyzed) and len(known_likes) == analyzed and memberships.keys() <= known_likes.keys()
+        if complete:
+            totals = {p['id']: 0 for p in perspectives}
+            totals.update(multiple=0, other=0)
+            for cid, likes_count in known_likes.items():
+                owners = memberships.get(cid, set())
+                group = next(iter(owners)) if len(owners) == 1 else 'multiple' if owners else 'other'
+                totals[group] += likes_count
+            for item in composition:
+                item['likes'] = totals[item['perspective_id'] or item['kind']]
+        engagement = {'available': complete, 'comments_with_likes': len(known_likes),
+                      'total_likes': sum(known_likes.values()) if complete else None}
         return {'analysis_id': self.id, 'bundle_revision': self.revision,
                 'status': 'expired' if expired else 'experimental',
                 'semantic_reliability': 'not_assessed', 'quality_gate_passed': False,
                 'expires_at': self.bundle['expires_at'], 'perspectives': perspectives,
                 'analyzed_comments':analyzed,'canonical_population':self.provenance.get('canonical_population'),
                 'count_scope':'processed_comments' if known is not None else 'registered_sources',
-                'composition':composition,
+                'composition':composition,'engagement':engagement,
                 'video': deepcopy(self.provenance.get('video', {}))}
 
     def allowed(self, candidate_id):
@@ -122,4 +139,15 @@ def from_factory(directory):
                   'current_quality_qualified': False, 'video': video,
                   'processing_count':len(plan.get('scope_ids',[])) if 'scope_ids' in plan else None,
                   'canonical_population':plan.get('canonical_population')}
-    return Analysis(bundle, provenance)
+    scope = set(plan['scope_ids']) if 'scope_ids' in plan else {s['id'] for s in bundle['sources']}
+    presentation = {'likes_by_source': {c.comment_id: c.likes for c in snapshot.comments
+                                        if c.comment_id in scope and c.comment_id in registry}}
+    names_path = directory/'perspective-names.json'
+    if names_path.is_file():
+        names = read_json(names_path)
+        profiles = {p['candidate_id'] for p in compile_inputs(bundle)['profiles']}
+        if not isinstance(names, dict) or not names.keys() <= profiles or any(
+                not isinstance(n, str) or not n.strip() or len(n) > 80 for n in names.values()):
+            raise ValueError('Expected display names for registered perspectives')
+        presentation['names'] = {cid: name.strip() for cid, name in names.items()}
+    return Analysis(bundle, provenance, presentation)
