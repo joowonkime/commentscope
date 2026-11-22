@@ -94,36 +94,53 @@ function updateSelection(){
   $('selection-hint').textContent=count?count+' selected · '+mode:'Choose one perspective for a 1:1 conversation, or up to three for a group.';
   $('open-room').disabled=!count;
 }
-function renderPerspectives(){
-  $('perspectives').replaceChildren();
-  if(!state.analysis.perspectives.length){
-    $('perspectives').append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));
-  }
-  for(const p of state.analysis.perspectives){
-    const card=node('article',undefined,'card accent-'+indexOf(p.id)%5);card.dataset.perspective=p.id;
-    const top=node('header');top.append(avatar(p.id));
-    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
-    card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
-    const grounds=p.grounds||[];
-    if(grounds.length){
-      card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));
-      for(const g of grounds)card.append(groundRow(g));
-    }
-    const relation=node('div',undefined,'card-relation');card.append(relation);
-    // The whole card opens the comparison popup.
-    card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
-    card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
-    card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
-    $('perspectives').append(card);
-  }
-  $('closeness-legend').hidden=!hasInitialView()||!state.analysis.perspectives.length;
-  for(const p of state.analysis.perspectives)renderRelation(p.id);
+function perspectiveCard(p){
+  const card=node('article',undefined,'card compact accent-'+indexOf(p.id)%5);card.dataset.perspective=p.id;
+  const top=node('header'),title=node('div',undefined,'card-title');
+  title.append(node('strong',label(p.id)),node('small',p.source_count+(p.admission_policy?' verified source comments':' source comments')));
+  top.append(avatar(p.id),title);
+  const relation=node('p','','relation-summary');
+  card.append(top,node('p',p.text,'card-stance'),relation);
+  // The whole card opens the comparison popup.
+  card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
+  card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
+  card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
+  return card;
 }
-function groundRow(g){
-  const row=node('p',undefined,'card-ground');
-  row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
-    node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
-  return row;
+function cardGrid(cards){const grid=node('div',undefined,'cards');grid.append(...cards);return grid;}
+// Groups run from closest to most different, so reading top to bottom conveys distance without a score.
+const closenessOrder=['close','mixed','consider','differ','none','error'];
+const groupTitles={close:'Close to your view',mixed:'Partly close, partly different',consider:'Adds something to consider',
+  differ:'Different from your view',none:'No clear link to your view',error:'Could not compare right now'};
+async function renderPerspectives(){
+  const box=$('perspectives'),render=state.cardRender=(state.cardRender||0)+1,list=state.analysis.perspectives;
+  box.replaceChildren();
+  if(!list.length){box.append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));return;}
+  const cards=new Map(list.map(p=>[p.id,perspectiveCard(p)]));
+  if(!hasInitialView()){
+    for(const card of cards.values())setCloseness(card,'empty');
+    box.append(node('p','Write your initial view to see which perspectives are close to yours.','group-hint'),cardGrid([...cards.values()]));return;
+  }
+  for(const card of cards.values()){setCloseness(card,'pending');card.querySelector('.relation-summary').textContent='Comparing with your view…';}
+  box.append(node('p','Comparing your view with '+list.length+' perspective'+(list.length===1?'':'s')+'…','group-hint'),cardGrid([...cards.values()]));
+  const revision=state.session.initial_opinion.revision;
+  const results=await Promise.allSettled(list.map(p=>comparison(p.id)));
+  if(render!==state.cardRender||revision!==state.session.initial_opinion.revision)return;
+  const groups=new Map(closenessOrder.map(level=>[level,[]]));
+  results.forEach((result,i)=>{
+    const p=list[i],card=cards.get(p.id),summary=card.querySelector('.relation-summary');
+    if(result.status!=='fulfilled'||result.value.stale||!result.value.result.available){setCloseness(card,'error');summary.textContent='';groups.get('error').push(card);return;}
+    const items=result.value.result.items||[],level=closeness(items);
+    // Lead with the explanation that matches the group.
+    const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
+    setCloseness(card,level);summary.textContent=lead?.explanation||'';groups.get(level).push(card);
+  });
+  box.replaceChildren();
+  for(const [level,members] of groups){
+    if(!members.length)continue;
+    const section=node('section',undefined,'closeness-group closeness-'+level);
+    section.append(node('h2',groupTitles[level]+' · '+members.length,'closeness-group-title'),cardGrid(members));box.append(section);
+  }
 }
 function hasInitialView(){return !!state.session.initial_opinion.text.trim();}
 // One comparison job per (initial revision, perspective). Revisiting reuses the finished job.
@@ -148,25 +165,10 @@ function closeness(items){
   if(kinds.has('difference'))return 'differ';
   return kinds.size?'consider':'none';
 }
-function closenessTag(level){return node('span',closenessLabels[level],'closeness-tag closeness-'+level);}
+function closenessTag(level){return node('span',closenessLabels[level],'closeness-text closeness-'+level);}
 function setCloseness(card,level){
   for(const name of [...card.classList])if(name.startsWith('closeness-'))card.classList.remove(name);
   card.classList.add('closeness-'+level);
-}
-async function renderRelation(pid){
-  const card=[...document.querySelectorAll('#perspectives .card')].find(c=>c.dataset.perspective===pid);if(!card)return;
-  const box=card.querySelector('.card-relation');
-  const show=(level,summary)=>{setCloseness(card,level);box.replaceChildren(node('p','YOU & THIS VIEW','card-section-label'),closenessTag(level));if(summary)box.append(node('p',summary,'relation-summary'));};
-  if(!hasInitialView()){show('empty');return;}
-  show('pending');
-  const revision=state.session.initial_opinion.revision;let job;
-  try{job=await comparison(pid);}catch(e){if(card.isConnected)show('error');return;}
-  if(!card.isConnected||revision!==state.session.initial_opinion.revision)return;
-  if(job.stale||!job.result.available){show('empty');return;}
-  const items=job.result.items||[],level=closeness(items);
-  // Lead with the explanation that matches the card's overall closeness.
-  const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
-  show(level,lead?.explanation);
 }
 async function sourceText(id){
   const key=base()+'/sources/'+encodeURIComponent(id);
