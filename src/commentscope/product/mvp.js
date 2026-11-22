@@ -31,6 +31,7 @@ function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open
 function showStep(step){
   if(!state.session)return;
   if(state.editingInitial)leaveInitialEdit();
+  $('before').hidden=true;$('workspace').hidden=false;
   if(step==='converse'&&!state.room&&state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}
   $('converse').toggleAttribute('data-no-room',step==='converse'&&!state.room);
   for(const id of ['comparison','source-dialog','perspective-dialog'])closeDialog(id);
@@ -706,7 +707,22 @@ function closeLibrary(){
   else closeDialog('library-dialog');
 }
 
-$('open-library').onclick=()=>openLibrary();
+$('open-library').onclick=()=>{closeDialog('account-drawer');openLibrary();};
+// The brand returns to the first page (video URL and initial view). The current session stays
+// reachable through the step buttons until a new one is started.
+document.querySelector('a.brand').addEventListener('click',event=>{
+  event.preventDefault();
+  for(const id of ['comparison','source-dialog','perspective-dialog','account-drawer'])closeDialog(id);
+  if(state.editingInitial)leaveInitialEdit();
+  $('workspace').hidden=true;$('before').hidden=false;$('initial').value='';$('initial').oninput();
+  document.querySelectorAll('button[data-step]').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});
+  status('');window.scrollTo(0,0);$('video-url').focus();
+});
+$('account-button').onclick=()=>openDialog('account-drawer');
+$('close-account').onclick=()=>closeDialog('account-drawer');
+$('original-video').addEventListener('click',()=>closeDialog('account-drawer'));
+// Clicking the dimmed area outside the drawer closes it.
+$('account-drawer').addEventListener('click',event=>{if(event.target===$('account-drawer'))closeDialog('account-drawer');});
 $('close-library').onclick=closeLibrary;
 $('library-dialog').addEventListener('cancel',event=>{event.preventDefault();closeLibrary();});
 window.addEventListener('popstate',()=>{

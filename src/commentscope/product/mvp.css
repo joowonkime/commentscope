@@ -176,3 +176,31 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .video-frame .video-play span { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 64px; height: 64px; border-radius: 50%; background: #000a; color: white; font-size: 22px; display: grid; place-items: center; padding-left: 4px; }
 .video-frame .video-play:hover span { background: #6554e8; }
 .video-frame iframe { position: absolute; inset: 0; }
+#video-description:empty { display: none; }
+/* Cards in a row share row tracks, so the explanation starts at the same height regardless of stance length. */
+@supports (grid-template-rows: subgrid) {
+  .cards:has(> .card.compact) { grid-auto-rows: auto; row-gap: 0; }
+  .card.compact { display: grid; grid-row: span 3; grid-template-rows: subgrid; row-gap: 0; margin-bottom: 18px; }
+}
+.card.compact .relation-summary { align-self: start; }
+button.user-avatar { border: 0; padding: 0; cursor: pointer; font-weight: 600; }
+button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3px #d9d2ff; }
+.account-drawer { position: fixed; inset: 0 0 0 auto; margin: 0; width: 340px; max-width: 100%; height: 100dvh; max-height: 100dvh; border-radius: 0; padding: 22px 18px; display: flex; flex-direction: column; }
+.account-drawer:not([open]) { display: none; }
+.account-drawer::backdrop { background: #14122626; }
+.account-header { display: flex; align-items: center; gap: 12px; padding: 0 4px 18px; border-bottom: 1px solid var(--line); }
+.account-header div { flex: 1; min-width: 0; }
+.account-header strong { display: block; font-size: 15px; }
+.account-header small { display: block; font-size: 11px; color: #9690a6; }
+.account-header .close-button { width: 32px; height: 32px; }
+.account-menu { display: flex; flex-direction: column; gap: 2px; padding: 14px 0; }
+.account-section { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: #9690a6; font-weight: 700; margin: 12px 8px 6px; display: flex; align-items: center; gap: 8px; }
+.soon { font-size: 9px; letter-spacing: 0; text-transform: none; background: #f0edf6; color: #8a8399; border-radius: 10px; padding: 2px 7px; font-weight: 500; }
+.account-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: left; background: none; color: #32283f; font-size: 13px; font-weight: 500; padding: 10px 8px; border-radius: 10px; text-decoration: none; }
+.account-item[hidden] { display: none; }
+.account-item:hover:not(:disabled) { background: #f4f1ff; }
+.account-item:disabled { color: #b0aabd; cursor: default; }
+.account-item small { display: block; font-size: 11px; font-weight: 400; color: #9690a6; margin-top: 1px; }
+.account-icon { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 8px; background: #f2efff; color: var(--brand); font-size: 13px; }
+.account-item:disabled .account-icon { background: #f5f4f8; color: #c4bfd0; }
+.account-footnote { margin-top: auto; font-size: 11px; color: #9690a6; padding: 0 8px; }
