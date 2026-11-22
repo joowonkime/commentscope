@@ -41,9 +41,18 @@ ASSETS=[ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','m
 ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 
-def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,factory_trial=None,automatic_debate=False):
+def analysis_record(analysis):
+    return {'bundle':deepcopy(analysis.bundle),'provenance':deepcopy(analysis.provenance),
+            'analysis_id':analysis.id,'bundle_revision':analysis.revision}
+
+
+def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,
+            factory_trial=None,automatic_debate=False,additional_factory_runs=()):
     directory=Path(directory);factory_run=Path(factory_run);cycle_file=Path(cycle_file)
-    for path in (directory,factory_run,cycle_file):private(path)
+    additional_factory_runs=tuple(map(Path,additional_factory_runs))
+    for path in (directory,factory_run,cycle_file,*additional_factory_runs):private(path)
+    if factory_trial is not None and additional_factory_runs:
+        raise ValueError('A linked Factory trial registers only its bounded analysis')
     cycle=read_json(cycle_file);cycle_guard(cycle)
     deployment=openrouter.validate(cycle['selected_deployment'])
     allocation=openrouter.generation_allocation(deployment,require_explicit=True)
@@ -56,6 +65,16 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
     files=[factory_run/'plan.json',factory_run/'artifacts/agent-inputs.json',
            factory_run/'artifacts/output.json',Path(factory_plan['snapshot']),cycle_file,
            Path(cycle['shared_policy_file'])]
+    catalog=[analysis]
+    for path in additional_factory_runs:
+        registered=from_factory(path)
+        registered.live()
+        files.extend([path/'plan.json',path/'artifacts/agent-inputs.json',path/'artifacts/output.json',
+                      Path(read_json(path/'plan.json')['snapshot'])])
+        catalog.append(registered)
+    if len(catalog)!=len({registered.id for registered in catalog}):
+        raise ValueError('Duplicate registered analysis')
+    seeded=any(seed_policy.seeded(registered.bundle) for registered in catalog)
     link=None
     if factory_trial is not None:
         private(Path(factory_trial))
@@ -65,7 +84,7 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         files.extend([Path(link['file']),factory_run/'completed.json',factory_run/'artifacts/runtime.json',
                       Path(factory_trial),ROOT/'tools/product_trial_budget.py'])
         files.extend(ROOT/p for p in trial_budget.shared.TOOL_FILES)
-    if automatic_debate and not seed_policy.seeded(analysis.bundle):
+    if automatic_debate and not seeded:
         raise ValueError('Automatic debate requires registered comment-seeded perspectives')
     provider=provider_preflight(deployment)
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),
@@ -75,19 +94,19 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
           'generation_allocation':allocation,'inputs':{str(p.resolve()):sha(p) for p in files},
           'code_sha256':source_code_hashes(),'entrypoint_sha256':sha(Path(__file__)),
           'assets_sha256':{str(p.relative_to(ROOT)):sha(p) for p in ASSETS},
-          'analysis':{'bundle':deepcopy(analysis.bundle),'provenance':deepcopy(analysis.provenance),
-                      'analysis_id':analysis.id,'bundle_revision':analysis.revision},
+          'analysis':analysis_record(analysis),
           'session_ttl_seconds':session_ttl_seconds,'room_maximum_usd':str(room_maximum_usd),
           'limits':{'analysis_seconds':None,'call_seconds':deployment['call_seconds']},
           'quality_gate_passed':False,'semantic_reliability':'not_assessed',
           'cross_run_response_reuse':False,'development_product_scope':True}
+    if additional_factory_runs:plan['additional_analyses']=[analysis_record(item) for item in catalog[1:]]
     plan['billing_policy']=WIRE_BUDGET
     if automatic_debate:
         plan['debate_protocol']=DEBATE_PROTOCOL
     if link is not None:
         plan.update(factory_trial=link,spend_scope_sha256=factory_plan['spend_scope_sha256'],
                     money_owner_limit_usd=factory_plan['maximum_cost_usd'])
-    if seed_policy.seeded(analysis.bundle):
+    if seeded:
         plan['seeded_verifier_deployment']=deepcopy(decisions.DEPLOYMENT)
         plan['seeded_verifier_at_prepare']=decisions.preflight(plan['seeded_verifier_deployment'])
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
@@ -118,7 +137,10 @@ def validate(directory):
     elif plan['spend_scope_sha256']!=sha(plan['cycle_file']):raise ValueError('Product cycle money changed')
     if plan['generation_allocation']!=openrouter.generation_allocation(plan['deployment'],require_explicit=True):
         raise ValueError('Product generation allocation changed')
-    expected=decisions.DEPLOYMENT if seed_policy.seeded(plan['analysis']['bundle']) else None
+    catalog=[plan['analysis'],*plan.get('additional_analyses',[])]
+    if 'factory_trial' in plan and len(catalog)>1:
+        raise ValueError('A linked Factory trial registers only its bounded analysis')
+    expected=decisions.DEPLOYMENT if any(seed_policy.seeded(item['bundle']) for item in catalog) else None
     if plan.get('seeded_verifier_deployment')!=expected:
         raise ValueError('Seeded product verifier deployment changed or missing')
     if 'debate_protocol' in plan and (plan['debate_protocol']!=DEBATE_PROTOCOL or expected is None):
@@ -247,11 +269,17 @@ def build(directory):
     if not os.environ.get('OPENROUTER_API_KEY','').strip():raise ValueError('OPENROUTER_API_KEY required')
     provider_preflight(plan['deployment'])
     if 'seeded_verifier_deployment' in plan:decisions.preflight(plan['seeded_verifier_deployment'])
-    analysis=Analysis(plan['analysis']['bundle'],plan['analysis']['provenance'])
-    if analysis.id!=plan['analysis']['analysis_id'] or analysis.revision!=plan['analysis']['bundle_revision']:
-        raise ValueError('Registered product analysis changed')
+    catalog=[]
+    for record in [plan['analysis'],*plan.get('additional_analyses',[])]:
+        registered=Analysis(record['bundle'],record['provenance'])
+        if registered.id!=record['analysis_id'] or registered.revision!=record['bundle_revision']:
+            raise ValueError('Registered product analysis changed')
+        catalog.append(registered)
+    if len(catalog)!=len({registered.id for registered in catalog}):
+        raise ValueError('Duplicate registered analysis')
+    analysis=catalog[0]
     broker=Broker(directory,plan)
-    product=ProductApp(directory/'app.sqlite',[analysis],broker.model,
+    product=ProductApp(directory/'app.sqlite',catalog,broker.model,
         session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
         reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
         decision=broker.verify if broker.typed_client is not None else None,
@@ -274,6 +302,7 @@ def main(argv=None):
     p.add_argument('--factory-run',type=Path,required=True);p.add_argument('--cycle-file',type=Path,required=True)
     p.add_argument('--session-ttl-seconds',type=int,required=True);p.add_argument('--room-maximum-usd',required=True)
     p.add_argument('--factory-trial',type=Path)
+    p.add_argument('--additional-factory-run',action='append',type=Path,default=[])
     p.add_argument('--automatic-debate',action='store_true',help='Enable the experimental DS-v2 backend in a new product plan')
     p=actions.add_parser('serve');p.add_argument('directory',type=Path)
     p.add_argument('--key-file',type=Path);p.add_argument('--port',type=int,default=8767)
@@ -284,7 +313,8 @@ def main(argv=None):
     if args.action=='prepare':
         plan=prepare(args.directory,args.factory_run,args.cycle_file,
                      session_ttl_seconds=args.session_ttl_seconds,room_maximum_usd=args.room_maximum_usd,
-                     factory_trial=args.factory_trial,automatic_debate=args.automatic_debate)
+                     factory_trial=args.factory_trial,automatic_debate=args.automatic_debate,
+                     additional_factory_runs=args.additional_factory_run)
         print(json.dumps({'prepared':str(args.directory),'analysis_id':plan['analysis']['analysis_id'],
                           'quality_gate_passed':False,'inference_calls':0}));return
     if args.key_file is not None:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()

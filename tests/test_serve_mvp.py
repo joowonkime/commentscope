@@ -102,6 +102,35 @@ class ProductServerPlanTests(unittest.TestCase):
         self.assertFalse(plan['quality_gate_passed'])
         self.assertNotIn('synthetic-test-key',(directory/'plan.json').read_text(encoding='utf-8'))
 
+    def test_registered_video_library_reads_both_frozen_analyses_without_inference(self):
+        other_path=self.root/'second-factory'
+        write(other_path/'snapshot.json',{'synthetic':True})
+        write(other_path/'plan.json',{'snapshot':str(other_path/'snapshot.json')})
+        write(other_path/'artifacts/agent-inputs.json',{})
+        write(other_path/'artifacts/output.json',{})
+        other=Analysis(fixture(),{'video':{'title':'Second registered video'}})
+        directory=self.root/'catalog'
+        with patch.object(server,'from_factory',side_effect=[self.analysis,other]):
+            plan=server.prepare(directory,self.factory,self.cycle_file,session_ttl_seconds=3600,
+                                room_maximum_usd='1',additional_factory_runs=(other_path,))
+        self.assertEqual(plan['spend_scope_sha256'],sha(self.cycle_file))
+        self.assertIn(str((other_path/'snapshot.json').resolve()),plan['inputs'])
+        app,_,_=server.build(directory)
+        try:
+            _,inventory=app.handle('GET','/api/v1/analyses','')
+            self.assertEqual([item['analysis_id'] for item in inventory['analyses']],[self.analysis.id,other.id])
+        finally:app.close()
+        (other_path/'snapshot.json').write_text('{}',encoding='utf-8')
+        with self.assertRaisesRegex(ValueError,'Frozen product server'):
+            server.build(directory)
+        self.base.call.assert_not_called()
+
+    def test_duplicate_registered_analysis_refuses_before_inference(self):
+        with self.assertRaisesRegex(ValueError,'Duplicate registered analysis'):
+            server.prepare(self.root/'duplicate',self.factory,self.cycle_file,session_ttl_seconds=3600,
+                           room_maximum_usd='1',additional_factory_runs=(self.factory,))
+        self.base.call.assert_not_called()
+
     def test_two_server_plans_share_one_existing_cycle_charge(self):
         for name in ('first','second'):
             directory,_=self.prepare(name)

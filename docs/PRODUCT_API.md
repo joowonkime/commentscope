@@ -47,6 +47,14 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 명시한다. host/origin이 일치하는 요청만 허용한다. 기본 실행은 loopback이며 호스팅 계정이나
 지속 배포 URL을 자동으로 생성하지 않는다. 공개 준비 시에도 비공개 실행 자료·키·장부를 서버의 정적 경로에 넣지 않는다.
 
+## 선택 기능 Library
+
+REQ-009, TASK-036/038. 첫 시작은 Before Use → Explore → Converse → Reflect이다. 상단 Library를 열고 닫거나 뒤로 가면 현재 화면과 입력이 유지된다. 등록 영상을 선택하면 해당 분석의 Before Use로 들어간다. [Figma 설계](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=823-3498) · [Figma 화면](https://www.figma.com/design/Q5oqIs2ekQIagiboAFX7Qc/MAS?node-id=825-3504)
+
+`GET /api/v1/analyses`는 재사용 가능한 등록 분석 목록을 제공한다. 운영자는 서버 prepare의 `--additional-factory-run`을 반복해 이미 검증된 분석을 등록할 수 있다. 기본 영상과 추가 자료의 원문과 산출물을 같은 서버 계획에 고정한다. 시험 장부에 결합된 단일 Factory 시연은 해당 분석만 쓴다.
+
+My records는 이 브라우저에 있는 세션 접근 정보로 기존 읽기 API를 호출한다. 각 세션의 기존 접근 권한, 만료, 출처 상태를 따른다. 다른 브라우저에서는 해당 기록에 접근할 수 없다. 저장 토론·성찰을 여는 경로는 모델을 호출하지 않으며, 합의 Agent의 기존 후속 질문 버튼은 Converse에서 이용한다.
+
 ## 공통 계약
 
 클라이언트가 생성한 URL-safe 32-byte token(패딩 없는 43자)을 `X-Session-Token`에 전달한다.

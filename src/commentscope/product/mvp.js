@@ -5,12 +5,16 @@ const state = {analysis:null, session:null, token:'', room:null, roomTimer:null,
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
+const librarySessionsKey = 'commentscope-mvp-library-sessions';
+const libraryDestinationKey = 'commentscope-mvp-library-destination';
+const selectedAnalysisKey = 'commentscope-mvp-selected-analysis';
+let libraryLoad = 0;
 function node(tag, text, cls) { const n=document.createElement(tag); if(text!==undefined)n.textContent=text; if(cls)n.className=cls; return n; }
 function asset(name) { const img=node('img'); img.src='/mvp/assets/'+name+'.svg'; img.alt=''; return img; }
 function status(text) { $('status').textContent=text; }
 function errorText(code) { return ({revision_conflict:'내용이 갱신됐습니다. 최신 화면을 확인한 뒤 다시 눌러 주세요.',opinion_revision_conflict:'의견이 갱신됐습니다. 다시 확인해 주세요.',analysis_revision_conflict:'의견 또는 분석 버전이 달라졌습니다. 제안을 다시 확인하거나 직접 저장해 주세요.',resource_busy:'이미 토론이 진행 중입니다. 현재 기록에서 확인할 수 있습니다.',debate_not_ready:'이 토론은 현재 상태에서 다시 시작할 수 없습니다.',capacity_hold:'필수 근거의 분량이 커 검증이 보류됐습니다. 게시된 발언은 보존됩니다.',room_not_ready:'현재 응답이 끝나거나 대화가 정지한 뒤 질문할 수 있습니다.',budget_exhausted:'현재 AI 사용 한도에 도달했습니다. 기존 대화 읽기와 직접 저장은 가능합니다.',cycle_deadline:'이번 AI 실행 시간이 끝났습니다. 읽기와 직접 저장은 가능합니다.',reconcile_required:'AI 처리가 중단돼 확인이 필요합니다. 기존 기록은 보존됩니다.',source_expired:'근거 자료의 사용 기한이 지났습니다.',session_expired:'세션 기한이 지났습니다. 새로 시작해 주세요.',invalid_participants:'대화할 수 있는 관점을 하나 이상 선택해 주세요.',turn_limit:'이 대화의 발화 한도에 도달했습니다.',context_capacity:'관련 대화는 최대 24개까지 선택할 수 있습니다.',queue_capacity:'다른 작업을 처리하고 있습니다. 잠시 뒤 다시 눌러 주세요.',model_or_validation_failed:'AI 응답을 완료하지 못했습니다. 입력과 기존 기록은 보존됐습니다.'})[code] || '요청을 완료하지 못했습니다. 입력과 이전 기록을 확인해 주세요.'; }
-async function api(path, method='GET', body) {
-  const headers={}; if(state.token)headers['X-Session-Token']=state.token;
+async function api(path, method='GET', body, token=state.token) {
+  const headers={}; if(token)headers['X-Session-Token']=token;
   if(body!==undefined)headers['Content-Type']='application/json';
   const response=await fetch('/api/v1'+path,{method,headers,...(body===undefined?{}:{body:JSON.stringify(body)})});
   const value=await response.json();
@@ -450,19 +454,172 @@ function renderSuggestions(result){
   }
   highlightReflection(result);
 }
-function renderSaved(){
-  const list=$('saved-reflections');list.replaceChildren();
-  for(const item of state.session.reflections){const button=node('button','성찰 보기 · 저장본 '+item.revision,'secondary');button.type='button';button.onclick=async()=>{try{const value=await api(base()+'/reflections/'+item.reflection_id);state.saved=value;clearInsights();const view=$('saved-view');view.replaceChildren(node('h3',value.stale?'이전 의견으로 저장한 성찰':'저장한 성찰'));
-      for(const [key,title] of Object.entries(categories)){view.append(node('h3',title));$(key).value=value.user_items[key].map(i=>i.text).join('\n');for(const entry of value.user_items[key]){view.append(node('p',entry.text));for(const mid of entry.related_message_ids){const link=node('button','관련 대화','source-button');link.type='button';link.onclick=()=>jumpTo(mid,value.context_message_refs).catch(e=>status(e.message));view.append(link);}}}$('reflection-save-panel').open=true;$('save-state').textContent='이 저장본을 수정할 수 있습니다. 이전 저장본은 보존됩니다.';}catch(e){status(e.message);}};list.append(button);}
+async function openSavedReflection(id){
+  const value=await api(base()+'/reflections/'+encodeURIComponent(id));
+  state.saved=value;
+  clearInsights();
+  const view=$('saved-view');
+  view.replaceChildren(node('h3',value.stale?'이전 의견으로 저장한 성찰':'저장한 성찰'));
+  for(const [key,title] of Object.entries(categories)){
+    view.append(node('h3',title));
+    $(key).value=value.user_items[key].map(item=>item.text).join('\n');
+    for(const entry of value.user_items[key]){
+      view.append(node('p',entry.text));
+      for(const mid of entry.related_message_ids){
+        const link=node('button','관련 대화','source-button');
+        link.type='button';
+        link.onclick=()=>jumpTo(mid,value.context_message_refs).catch(error=>status(error.message));
+        view.append(link);
+      }
+    }
+  }
+  $('reflection-save-panel').open=true;
+  $('save-state').textContent='이 저장본을 수정할 수 있습니다. 이전 저장본은 보존됩니다.';
 }
-async function enter(session){
+
+function renderSaved(){
+  const list=$('saved-reflections');
+  list.replaceChildren();
+  for(const item of state.session.reflections){
+    const button=node('button','성찰 보기 · 저장본 '+item.revision,'secondary');
+    button.type='button';
+    button.onclick=()=>openSavedReflection(item.reflection_id).catch(error=>status(error.message));
+    list.append(button);
+  }
+}
+
+function readStored(storage,key){
+  try{return JSON.parse(storage.getItem(key)||'null');}catch{return null;}
+}
+
+function browserRecords(){
+  const active=readStored(localStorage,savedSessionKey);
+  const saved=readStored(localStorage,librarySessionsKey);
+  const records=[active,...(Array.isArray(saved)?saved:[])];
+  return [...new Map(records.reverse().filter(item=>typeof item?.session_id==='string'&&typeof item.token==='string')
+    .map(item=>[item.session_id,item])).values()].reverse();
+}
+
+function rememberSession(sessionId,token){
+  const record={session_id:sessionId,token};
+  const records=browserRecords().filter(item=>item.session_id!==sessionId);
+  localStorage.setItem(librarySessionsKey,JSON.stringify([record,...records]));
+  localStorage.setItem(savedSessionKey,JSON.stringify(record));
+}
+
+function availableAnalysis(analysis){
+  return ['experimental','available'].includes(analysis.status);
+}
+
+function libraryRow(title,detail,action,onClick){
+  const row=node('div',undefined,'library-item');
+  const information=node('div');
+  information.append(node('strong',title),node('small',detail,'muted'));
+  const button=node('button',action,'secondary');
+  button.type='button';
+  button.disabled=!onClick;
+  if(onClick)button.onclick=onClick;
+  row.append(information,button);
+  return row;
+}
+
+function openLibraryDestination(destination){
+  sessionStorage.setItem(libraryDestinationKey,JSON.stringify(destination));
+  if(history.state?.reviewLibrary){
+    const {reviewLibrary,...rest}=history.state;
+    history.replaceState(rest,'');
+  }
+  location.reload();
+}
+
+async function renderLibrary(){
+  const load=++libraryLoad;
+  const videos=$('library-videos');
+  const records=$('library-records');
+  videos.replaceChildren(node('p','Loading analyzed videos…','muted'));
+  records.replaceChildren(node('p','Loading your records…','muted'));
+  const current=()=>load===libraryLoad&&$('library-dialog').open;
+  const browser=browserRecords();
+  const catalog=api('/analyses','GET',undefined,'').then(({analyses})=>{
+    if(!current())return;
+    videos.replaceChildren();
+    for(const analysis of analyses){
+      const title=analysis.video?.title||'Registered discussion';
+      const detail=availableAnalysis(analysis)
+        ? analysis.analyzed_comments+' analyzed comments · '+analysis.perspectives.length+' perspectives'
+        : 'Source refresh required';
+      videos.append(libraryRow(title,detail,availableAnalysis(analysis)?'Open video':'Expired',
+        availableAnalysis(analysis)?()=>openLibraryDestination({analysis_id:analysis.analysis_id}):null));
+    }
+    if(!analyses.length)videos.append(node('p','No analyzed videos are available.','muted'));
+  }).catch(()=>{
+    if(current())videos.replaceChildren(node('p','Could not load videos. Reopen Library to retry.','muted'));
+  });
+  const recordsLoad=Promise.allSettled(browser.map(async access=>{
+    const session=await api('/sessions/'+encodeURIComponent(access.session_id),'GET',undefined,access.token);
+    return {access,session};
+  })).then(results=>{
+    if(!current())return;
+    records.replaceChildren();
+    for(const {status:resultStatus,value} of results){
+      if(resultStatus!=='fulfilled')continue;
+      const {access,session}=value;
+      const title=session.analysis.video?.title||'Registered discussion';
+      for(const [index,room] of session.rooms.entries()){
+        records.append(libraryRow(roomName(room,index),title+' · '+(roomStates[room.state]||room.state),'Open',
+          ()=>openLibraryDestination({access,room_id:room.room_id})));
+      }
+      for(const reflection of session.reflections){
+        records.append(libraryRow('Reflection · Revision '+reflection.revision,title,'Open',
+          ()=>openLibraryDestination({access,reflection_id:reflection.reflection_id})));
+      }
+    }
+    if(!records.childElementCount){
+      records.append(node('p',results.some(result=>result.status==='rejected')
+        ? 'No accessible records. A session may have expired.' : 'No saved debates or reflections yet.','muted'));
+      const start=node('button','Start a review','secondary');
+      start.type='button';
+      start.onclick=closeLibrary;
+      records.append(start);
+    }
+  });
+  await Promise.all([catalog,recordsLoad]);
+}
+
+function openLibrary(push=true){
+  const dialog=$('library-dialog');
+  if(dialog.open)return;
+  if(push&&!history.state?.reviewLibrary)history.pushState({...history.state,reviewLibrary:true},'');
+  openDialog('library-dialog');
+  void renderLibrary();
+}
+
+function closeLibrary(){
+  if(history.state?.reviewLibrary)history.back();
+  else closeDialog('library-dialog');
+}
+
+$('open-library').onclick=()=>openLibrary();
+$('close-library').onclick=closeLibrary;
+$('library-dialog').addEventListener('cancel',event=>{event.preventDefault();closeLibrary();});
+window.addEventListener('popstate',()=>{
+  if(history.state?.reviewLibrary)openLibrary(false);
+  else closeDialog('library-dialog');
+});
+
+async function enter(session,destination){
   setSession(session);
   state.analysis=session.analysis;
   renderAnalysis();
   $('before').hidden=true;
   $('workspace').hidden=false;
   renderPerspectives();
-  const last=JSON.parse(sessionStorage.getItem(lastRoomKey)||'null');
+  if(destination?.reflection_id&&session.reflections.some(item=>item.reflection_id===destination.reflection_id)){
+    showStep('reflect');
+    await openSavedReflection(destination.reflection_id);
+    return;
+  }
+  const last=destination?.room_id?{session_id:session.session_id,room_id:destination.room_id}:readStored(sessionStorage,lastRoomKey);
   if(last?.session_id===session.session_id&&session.rooms.some(room=>room.room_id===last.room_id)){
     const stepBeforeRestore=document.body.dataset.step;
     try{
@@ -492,7 +649,7 @@ $('begin').onsubmit=async event=>{
   try{
     const session=await api('/sessions','POST',{analysis_id:state.analysis.analysis_id,
       bundle_revision:state.analysis.bundle_revision,initial_opinion:$('initial').value,request_id:requestId()});
-    localStorage.setItem(savedSessionKey,JSON.stringify({token:state.token,session_id:session.session_id}));
+    rememberSession(session.session_id,state.token);
     await enter(session);
   }catch(error){status(error.message);}
   finally{button.disabled=false;}
@@ -606,34 +763,59 @@ $('save-reflection').onsubmit=async event=>{event.preventDefault();try{await sav
 $('new-session').onclick=()=>{clearTimeout(state.roomTimer);localStorage.removeItem(savedSessionKey);sessionStorage.removeItem(lastRoomKey);location.reload();};
 
 async function start(){
-  const previous=localStorage.getItem(savedSessionKey);
+  const destination=readStored(sessionStorage,libraryDestinationKey);
+  sessionStorage.removeItem(libraryDestinationKey);
+  if(history.state?.reviewLibrary){
+    const {reviewLibrary,...rest}=history.state;
+    history.replaceState(rest,'');
+  }
   let resumeMessage='';
-  if(previous){
-    const saved=JSON.parse(previous);
+  if(destination?.analysis_id){
+    sessionStorage.setItem(selectedAnalysisKey,destination.analysis_id);
+    localStorage.removeItem(savedSessionKey);
+    sessionStorage.removeItem(lastRoomKey);
+  }
+  const saved=destination?.access||readStored(localStorage,savedSessionKey);
+  if(saved){
     state.token=saved.token;
     let session;
     try{
       session=await api('/sessions/'+encodeURIComponent(saved.session_id));
     }catch(error){
-      if(!['session_expired','session_token_required','resource_missing'].includes(error.code)){
+      if(!['session_expired','session_token_required','resource_missing','analysis_revision_conflict'].includes(error.code)){
         status('기존 기록을 불러오지 못했습니다. 잠시 뒤 새로고침해 다시 시도해 주세요.');
         return;
       }
-      localStorage.removeItem(savedSessionKey);
-      sessionStorage.removeItem(lastRoomKey);
+      if(readStored(localStorage,savedSessionKey)?.session_id===saved.session_id){
+        localStorage.removeItem(savedSessionKey);
+        sessionStorage.removeItem(lastRoomKey);
+      }
       state.token='';
       resumeMessage=error.code==='session_expired'
         ? '이전 세션 기한이 지났습니다. 새로 시작해 주세요.'
-        : '이전 세션을 찾을 수 없습니다. 새로 시작해 주세요.';
+        : '이전 기록을 열 수 없습니다. Library에서 분석이나 다른 기록을 선택하세요.';
+      if(destination?.access&&readStored(localStorage,savedSessionKey)){
+        await start();
+        status(resumeMessage);
+        return;
+      }
     }
-    if(session){await enter(session);return;}
+    if(session){
+      rememberSession(session.session_id,state.token);
+      await enter(session,destination);
+      return;
+    }
   }
   const available=await api('/analyses');
-  state.analysis=available.analyses.find(a=>a.status==='experimental'||a.status==='available');
+  const preferred=sessionStorage.getItem(selectedAnalysisKey);
+  state.analysis=available.analyses.find(item=>item.analysis_id===preferred&&availableAnalysis(item))
+    || available.analyses.find(availableAnalysis);
   if(!state.analysis){status('아직 사용할 수 있는 분석이 없습니다.');return;}
   renderAnalysis();
   $('begin').querySelector('button[type=submit]').disabled=false;
-  status(resumeMessage||'먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.');
+  status(resumeMessage||(preferred&&preferred!==state.analysis.analysis_id
+    ? '선택한 분석은 지금 열 수 없습니다. 현재 선택된 영상을 확인하세요.'
+    : '먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.'));
 }
 
 start().catch(error=>status(error.message));
