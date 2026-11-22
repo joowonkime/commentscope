@@ -200,3 +200,30 @@ test('independent tabs restore their own reviews and the shared Library retains 
   assert.equal(browserTab(shared).activeAccess().session_id, 'second');
   assert.deepEqual(Array.from(first.browserRecords(), record => record.session_id).sort(), ['first', 'second']);
 });
+
+test('restoring a saved reflection clears the startup message and preserves newer feedback', async () => {
+  const session = {analysis: {}, analysis_id: 'analysis', reflections: [{reflection_id: 'reflection'}]};
+  const elements = new Map();
+  const document = {body: {dataset: {step: 'before'}}, querySelectorAll: () => []};
+  const context = vm.createContext({
+    state: {}, selectedAnalysisKey: 'analysis', sessionStorage: memoryStorage(), document,
+    $: id => {
+      if (!elements.has(id)) elements.set(id, {});
+      return elements.get(id);
+    },
+    setSession() {}, renderAnalysis() {}, renderPerspectives() {},
+    showStep: step => { document.body.dataset.step = step; },
+  });
+  vm.runInContext(appSource.slice(appSource.indexOf('function status('), appSource.indexOf('function errorText(')), context);
+  vm.runInContext(appSource.slice(appSource.indexOf('async function enter('), appSource.indexOf("$('initial').oninput")), context);
+  context.status('Loading the registered discussion…');
+  let complete;
+  context.openSavedReflection = () => new Promise(resolve => { complete = resolve; });
+  const restore = context.enter(session, {reflection_id: 'reflection'});
+  assert.equal(document.body.dataset.step, 'reflect');
+  assert.equal(context.$('status').textContent, '');
+  context.status('A newer action is in progress');
+  complete();
+  await restore;
+  assert.equal(context.$('status').textContent, 'A newer action is in progress');
+});

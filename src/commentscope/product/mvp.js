@@ -823,6 +823,7 @@ async function enter(session,destination){
   $('workspace').hidden=false;
   document.querySelectorAll('button[data-step]').forEach(button => { button.disabled = false; });
   renderPerspectives();
+  status('');
   if(destination?.reflection_id&&session.reflections.some(item=>item.reflection_id===destination.reflection_id)){
     showStep('reflect');
     await openSavedReflection(destination.reflection_id);
@@ -833,7 +834,6 @@ async function enter(session,destination){
     const stepBeforeRestore=document.body.dataset.step;
     try{
       await chooseRoom(last.room_id);
-      if(document.body.dataset.step==='converse')status('');
     }catch(error){
       if(state.room?.room_id===last.room_id)setRoom(null);
       if(document.body.dataset.step===stepBeforeRestore){

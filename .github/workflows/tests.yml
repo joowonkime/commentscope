@@ -25,6 +25,12 @@ jobs:
       - run: python -c "from pathlib import Path; Path('runs').mkdir(exist_ok=True)"
       - run: python tools/check_mvp_spec.py
       - run: python docs/examples/check_debate_contracts.py
+      - name: Check product layout in Chrome at six viewport widths
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          npm install --prefix "$RUNNER_TEMP/commentscope-browser" --ignore-scripts --no-audit --no-fund playwright-core@1.58.2
+          NODE_PATH="$RUNNER_TEMP/commentscope-browser/node_modules" CHROME_BIN="$(command -v google-chrome)" node --test tests/product_layout_smoke.cjs
       - run: python -m unittest discover -s tests -v
       - run: node --check src/commentscope/agents/comparison.js
       - run: node --check src/commentscope/agents/grounded.js
