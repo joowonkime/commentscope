@@ -1,6 +1,6 @@
 # 실제 영상으로 M4 팀 QA하기
 
-팀 공유본 `CommentScope_Live_QA_v3.zip`에는 이 브랜치의 Python 앱과 팀 전용 영상 분석이 들어 있다. Python 3.12 이상에서 ZIP을 풀고 `run_live_qa.py`가 있는 폴더에서 실행한다. Git에는 실행 코드와 문서를 배포하고 영상 입력과 대화 DB는 비공개로 관리한다.
+팀 공유본 `CommentScope_Live_QA_v4.zip`에는 이 브랜치의 Python 앱과 실제 영상 분석 3개가 들어 있다. 기존 v3를 쓰던 팀원은 v4를 새 폴더에 풀면 두 버전의 대화 기록을 각각 다시 열 수 있다. Python 3.12 이상에서 ZIP을 풀고 `run_live_qa.py`가 있는 폴더에서 실행한다. Git에는 실행 코드와 문서를 배포하고 영상 입력과 대화 DB는 비공개로 관리한다.
 
 ```powershell
 py -3 run_live_qa.py --check
@@ -11,15 +11,15 @@ macOS와 Linux에서는 `py -3` 대신 `python3`을 사용한다. 첫 명령은 
 
 | 팀 공유본의 영상 | 재현할 수 있는 범위 |
 | --- | --- |
-| Jubilee, AI와 교육 | 기본 영상. 처리한 댓글 180개, 관점 2개. 두 입장은 도구 사용자의 책임과 AI 감지기 신뢰도를 다룬다. [영상](https://www.youtube.com/watch?v=7AGa5z69zqU) |
-| CNBC, 주 4일 근무 | Library 또는 영상 URL로 열 수 있다. 처리 댓글 96개, 관점 4개. 고유 댓글 4개가 입장에 연결되며 네 관점 모두 짧은 근무를 지지한다. [영상](https://www.youtube.com/watch?v=RrFaNO3rTaA) |
-| 스브스뉴스, 4.5일제 | 로우파이의 원래 영상. 비공개 수집본 751개에 댓글·답글과 좋아요가 저장됐다. 완주한 Factory 결과를 등록하기 전까지 입력 자료로 제공한다. [영상](https://www.youtube.com/watch?v=BAHKmi4F1L8) |
+| 스브스뉴스, 4.5일제 | 기본 영상이자 로우파이의 원래 영상. 댓글·답글 751개를 수집해 고유 댓글 750개를 처리했다. 최종 입장에 연결된 댓글은 15개다. Agent 11개 중 3개는 원문에 이유가 있고 일부는 비슷한 입장을 담고 있다. [영상](https://www.youtube.com/watch?v=BAHKmi4F1L8) |
+| Jubilee, AI와 교육 | Library 또는 영상 URL로 연다. 처리 댓글 180개, 관점 2개. 도구를 사용하는 사람의 책임과 AI 감지기의 신뢰도를 다룬다. [영상](https://www.youtube.com/watch?v=7AGa5z69zqU) |
+| CNBC, 주 4일 근무 | Library 또는 영상 URL로 연다. 처리 댓글 96개, 관점 4개. 고유 댓글 4개가 입장에 연결되며 네 관점 모두 짧은 근무를 지지한다. [영상](https://www.youtube.com/watch?v=RrFaNO3rTaA) |
 
-새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. GitHub 브랜치에서는 확대 검색 계약의 3,000개 상한을 준비·재검사·제품 등록에 적용한다. v3 ZIP은 표에 명시한 두 실제 분석을 검증한 배포본이다. 실제 3,000개 영상의 비용과 관점 품질은 별도 측정 항목이다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
+새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. GitHub 브랜치에서는 확대 검색 계약의 3,000개 상한을 준비·재검사·제품 등록에 적용한다. 이번 SBS Factory 실행은 실제 955회 호출에 $3.466732292를 썼다. 저장 분석을 불러올 때 이 비용은 다시 들지 않는다. 3,000개 영상의 실제 비용과 관점 품질은 아직 측정하지 않았다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
 
 ## 조원이 직접 확인할 흐름
 
-1. 초기 의견을 적고 Explore로 들어간다. **Source comments**를 펼치고 입장과 개별 근거의 원댓글을 확인한다. 댓글 구성과 좋아요 구성에는 복수 연결과 기타 댓글이 각각 한 번만 집계된다.
+1. 초기 의견을 적고 Explore로 들어간다. **Source comments**를 펼치고 입장과 개별 근거의 원댓글을 확인한다. 댓글 구성과 좋아요 구성의 분모는 각각 처리한 고유 댓글과 수집 당시의 좋아요 총합이다. 둘 이상의 관점에 연결된 댓글은 ‘Multiple perspectives’, 연결이 확인되지 않은 댓글은 ‘Other comments’에 한 번씩 들어간다. 예를 들어 SBS의 15/750은 입장에 연결된 비율이며, 나머지 댓글의 입장은 이 수치로 판별할 수 없다.
 2. **Compare with my view**를 열어 색과 글자로 표시된 관계를 양쪽 문장에서 찾는다. **Compare all with my view**로 카드별 결과를 비교한다. 새로고침해도 같은 초기 의견의 비교는 재사용한다.
 3. Converse의 **New chat**에서 참여자를 고른다. 한 명이면 1:1, 여러 명이면 그룹 대화 또는 자동 토론을 선택할 수 있다. 그룹 대화에서 한 명을 지정해 후속 질문을 보낸다.
 4. 검증 보류가 나오면 등록된 원댓글을 확인한다. 일반 대화가 오류로 멈추면 **Ask another question**으로 입력창을 다시 연다. 이전 발언과 지출이 유지된다.
@@ -66,3 +66,5 @@ YOUR_HOST {
 4. 다른 네트워크의 새 브라우저에서 가입이나 설치 없이 의견 저장, 원문, 실제 응답, 토론 결론, 성찰 저장을 확인한다. 서버 재시작 뒤 같은 브라우저에서 기록을 다시 연다. 이 검증을 끝낸 HTTPS 주소를 M4 PDF의 **Live evaluation URL**에 넣는다. 소스 저장소 링크는 별도 제출 항목이다.
 
 과목 OpenRouter 크레딧은 모델 호출에 쓰인다. Google Cloud에서 서버를 만드는 경우 프로젝트에 사용 가능한 Cloud Billing 계정을 연결한다. 결제 계정이 없다면 팀이 승인한 계정을 만들거나 학교가 제공하는 계정의 연결 권한을 받는다. [Google Cloud 결제 계정 만들기](https://docs.cloud.google.com/billing/docs/how-to/create-billing-account) · [프로젝트 연결](https://docs.cloud.google.com/billing/docs/how-to/modify-project)
+
+팀에 연결할 계정이 없고 전일제 대학생 자격이 있으면 **Azure for Students → Start free**에서 학교 이메일로 인증할 수 있다. Microsoft는 카드 없이 가입하는 학생 구독과 12개월 동안 사용할 수 있는 Azure 크레딧 $100을 안내한다. 이 경로를 쓰면 팀의 Python 서버와 지속 디스크를 Azure에 둔다. [Microsoft 학생 구독](https://azure.microsoft.com/en-us/free/students)
