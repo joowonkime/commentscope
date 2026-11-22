@@ -57,12 +57,14 @@ class Store:
                         sync_room(db, item)
 
     @contextmanager
-    def transaction(self):
+    def transaction(self, *, write=True):
         db = sqlite3.connect(self.path, timeout=10, isolation_level=None)
         db.row_factory = sqlite3.Row
         try:
             db.execute('PRAGMA foreign_keys=ON')
-            db.execute('BEGIN IMMEDIATE')
+            if not write:
+                db.execute('PRAGMA query_only=ON')
+            db.execute('BEGIN IMMEDIATE' if write else 'BEGIN')
             yield db
             db.execute('COMMIT')
         except BaseException:

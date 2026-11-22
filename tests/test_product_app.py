@@ -132,6 +132,19 @@ class ProductAppTests(unittest.TestCase):
         return self.call('POST',self.base+'/rooms',{'mode':'group','participant_ids':['P1','P2'],
             'initial_revision':1,'request_id':'room1'})[1]
 
+    def test_job_poll_can_read_the_last_commit_while_a_writer_has_the_database(self):
+        _, created = self.call('POST', self.base+'/comparisons', {
+            'perspective_id': 'P1', 'initial_revision': 1, 'request_id': 'compare-read'})
+        completed = self.job(created)
+        self.assertEqual(completed['state'], 'succeeded')
+        path = '/api/v1/jobs/'+created['job_id']
+        with self.app.store.transaction() as writer:
+            writer.execute('DELETE FROM jobs WHERE id=?', (created['job_id'],))
+            self.assertEqual(self.call('GET', path), (200, completed))
+        with self.assertRaises(WebError) as error:
+            self.call('GET', path)
+        self.assertEqual(error.exception.code, 'resource_missing')
+
     def test_session_opinions_persist_with_exact_text_and_request_conflicts(self):
         self.assertEqual(self.status,201)
         body={'text':'  An updated view.\n','expected_revision':1,'request_id':'op1'}

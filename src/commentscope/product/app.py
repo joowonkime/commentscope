@@ -261,7 +261,7 @@ class ProductApp:
                         'generation_status':self.generation_status()}
         if method!='GET' and not isinstance(body,dict):raise WebError(400,'invalid_body')
         try:
-            with self.store.transaction() as db:
+            with self.store.transaction(write=method != 'GET') as db:
                 if method=='POST' and parts==['api','v1','sessions']:
                     self._fields(body,'analysis_id bundle_revision initial_opinion request_id')
                     hashed=token_hash(token);analysis=self.analyses.get(body['analysis_id'])
