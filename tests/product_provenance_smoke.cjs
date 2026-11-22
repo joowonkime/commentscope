@@ -16,7 +16,7 @@ function render(points,extra={}){
   const js=fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
   const container=new Element('div');
   const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points,...extra}]}},
-    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({text:'Registered stance',source_ids:['c1']})});
+    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({core_claim_id:'claim',text:'Registered stance',source_ids:['c1']})});
   vm.runInContext(js.slice(js.indexOf('function sourceButtons('),js.indexOf('// API span offsets')),context);
   vm.runInContext(js.slice(js.indexOf('function renderMessages('),js.indexOf('async function refreshRoom(')),context);
   vm.runInContext('renderMessages()',context);return container;
@@ -226,4 +226,16 @@ test('restoring a saved reflection clears the startup message and preserves newe
   complete();
   await restore;
   assert.equal(context.$('status').textContent, 'A newer action is in progress');
+});
+
+test('generated evidence aliases explain the registered claim without renumbering original comments', () => {
+  const citations = {anchor_claim_ids: ['claim'], comment_evidence: [{source_id: 'comment'}]};
+  const point = {origin: 'ai_reasoning', text: 'E1 supports the pilot.', citations};
+  const message = render([point], {evidence_scope: 'seeded_provenance'});
+  assert.match(text(message), /E1 · 참조한 주장/);
+  assert.match(text(flatten(message).find(n => n.tagName === 'details')), /Registered stance/);
+  assert.match(text(message), /E1 supports the pilot\./);
+  assert.equal(flatten(message).filter(n => n.tagName === 'button').length, 1);
+  assert.doesNotMatch(text(render([{...point, origin: 'original_comment'}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
+  assert.doesNotMatch(text(render([{...point, citations: {}}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
 });

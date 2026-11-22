@@ -381,6 +381,22 @@ function renderMessages(){
       const text=node('p',point.text);
       if(point.point_id)text.id='point-'+point.point_id;
       bubble.append(text);
+      if (m.evidence_scope === 'seeded_provenance' && point.origin === 'ai_reasoning' &&
+          point.citations?.anchor_claim_ids?.length) {
+        const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
+        if (aliases.length) {
+          const view = perspective(m.agent_id);
+          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, ground.text]));
+          if (view) claims.set(view.core_claim_id, view.text);
+          const details = node('details', undefined, 'source-disclosure');
+          details.append(node('summary', aliases.join(', ') + ' · 참조한 주장'),
+            node('p', 'E로 시작하는 번호는 Agent가 설명을 작성할 때 참고한 주장 항목을 가리킵니다.'));
+          for (const id of new Set(point.citations.anchor_claim_ids)) {
+            if (claims.has(id)) details.append(node('blockquote', claims.get(id)));
+          }
+          bubble.append(details);
+        }
+      }
       sourceButtons(bubble,point);
       for(const target of point.target_edges||[]){
         appendPointLinks(bubble,[target.point_id],state.room,'응답 대상 · '+label(target.agent_id));

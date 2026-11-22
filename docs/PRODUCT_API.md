@@ -56,6 +56,8 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 명시한다. host/origin이 일치하는 요청만 허용한다. 기본 실행은 loopback이며 호스팅 계정이나
 지속 배포 URL을 자동으로 생성하지 않는다. 공개 준비 시에도 비공개 실행 자료·키·장부를 서버의 정적 경로에 넣지 않는다.
 
+공개 평가 서버는 동일 origin의 UI 파일 세 개를 검증된 Git 버전별로 게시한다. 원자료·모델 실행·누적 예산을 고정한 백엔드는 기준 UI 파일도 계속 검증한다. 재배포 검사는 기존 세션으로 인용한 원댓글까지 조회한다. [공개 QA와 배포 절차](M4_TEAM_QA_HOSTING.md)
+
 ## 선택 기능 Library
 
 REQ-009, TASK-036/038. Before Use의 YouTube video URL 입력은 영상 ID로 등록 분석을 찾는다. 유효한 분석을 만나면 해당 영상의 Before Use를 바로 열며, 같은 영상은 화면과 초안을 유지한다. 잘못된 URL, 미등록 영상, 만료된 분석은 입력 아래에 안내하고 현재 영상과 의견을 유지한다. Library에서도 기존 분석과 개인 기록을 계속 열 수 있다.
