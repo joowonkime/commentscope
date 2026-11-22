@@ -31,7 +31,8 @@ function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open
 function showStep(step){
   if(!state.session)return;
   if(state.editingInitial)leaveInitialEdit();
-  if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}step='explore';status('대화할 관점을 먼저 선택해 주세요.');}
+  if(step==='converse'&&!state.room&&state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}
+  $('converse').toggleAttribute('data-no-room',step==='converse'&&!state.room);
   for(const id of ['comparison','source-dialog','perspective-dialog'])closeDialog(id);
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
@@ -57,7 +58,6 @@ function renderAnalysis(){
   const n=a.analyzed_comments, unit=a.count_scope==='registered_sources'?'registered source comments':'processed comments';
   $('analysis-summary').textContent=a.perspectives.length+' perspectives from '+(Number.isInteger(n)?n+' '+unit:'the registered comments')+(a.canonical_population?' · Original population: '+a.canonical_population+' comments.':'.');
   $('sidebar-video-meta').textContent=Number.isInteger(n)?n+' '+unit:'';
-  $('analysis-state').textContent=a.quality_gate_passed?'':'Development analysis · quality review pending';
   if(video.description)$('video-description').textContent=video.description;
   if(typeof vid==='string'&&/^[A-Za-z0-9_-]{11}$/.test(vid)){
     const url='https://www.youtube.com/watch?v='+vid;
@@ -107,6 +107,9 @@ function perspectiveCard(p){
   card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
   return card;
 }
+// One sentence from what the popup shows: the consideration question for "consider", otherwise the lead explanation.
+function firstSentence(text){const t=(text||'').trim(),m=t.match(/^.*?[.!?。](?=\s|$)/s);return m?m[0]:t;}
+function keySentence(item,level){if(!item)return '';return firstSentence(level==='consider'&&item.consideration_question?item.consideration_question:item.explanation);}
 function cardGrid(cards){const grid=node('div',undefined,'cards');grid.append(...cards);return grid;}
 // Groups run from closest to most different, so reading top to bottom conveys distance without a score.
 const closenessOrder=['close','mixed','consider','differ','none','error'];
@@ -133,7 +136,7 @@ async function renderPerspectives(){
     const items=result.value.result.items||[],level=closeness(items);
     // Lead with the explanation that matches the group.
     const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
-    setCloseness(card,level);summary.textContent=lead?.explanation||'';groups.get(level).push(card);
+    setCloseness(card,level);summary.textContent=keySentence(lead,level);groups.get(level).push(card);
   });
   box.replaceChildren();
   for(const [level,members] of groups){
@@ -907,7 +910,7 @@ $('agent-info').onclick=async()=>{
 };
 for(const [button,id] of [['close-comparison','comparison'],['close-source','source-dialog'],['close-perspective','perspective-dialog']])$(button).onclick=()=>closeDialog(id);
 $('comparison').addEventListener('close',()=>{$('comparison').hidden=true;state.openComparison=null;});
-$('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
+$('go-reflect').onclick=()=>showStep('reflect');$('go-converse').onclick=()=>showStep('converse');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};

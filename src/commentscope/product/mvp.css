@@ -157,3 +157,11 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .closeness-text { display: inline-flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--agent); }
 .closeness-text:before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--agent); }
 .closeness-text.closeness-mixed:before { background: linear-gradient(90deg, #1e9e6a 50%, #e0533d 50%); }
+.view-chip { background: white; color: var(--brand); border: 1px solid #c9bfff; box-shadow: 0 1px 3px #3526690f; }
+.view-chip:hover, .view-chip[aria-expanded=true] { background: #f2efff; border-color: var(--brand); }
+.card.compact .relation-summary { -webkit-line-clamp: unset; display: block; }
+.explore-next { display: flex; justify-content: flex-end; margin: 24px 0 0; }
+.no-room-message { display: none; }
+#converse[data-no-room] .no-room-message { display: block; color: #9690a6; text-align: center; font-size: 13px; padding: 80px 20px; }
+#converse[data-no-room] .conversation-toolbar > div, #converse[data-no-room] #interject, #converse[data-no-room] #agent-info,
+#converse[data-no-room] #opening, #converse[data-no-room] #messages, #converse[data-no-room] #room-state { display: none; }
