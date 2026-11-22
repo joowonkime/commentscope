@@ -99,3 +99,16 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
   .library-trigger { font-size: 11px; padding: 5px; }
   .library-header, .library-body { padding: 16px; }
 }
+.card.clickable { cursor: pointer; }
+.card.clickable:focus-visible { outline: 3px solid #b6aaff; outline-offset: 2px; }
+.card-relation { margin-top: auto; padding-top: 12px; border-top: 1px solid #eeeaf6; }
+.relation-bar { display: flex; gap: 2px; height: 8px; border-radius: 4px; overflow: hidden; margin: 2px 0 6px; }
+.relation-bar span { min-width: 6px; }
+.relation-agreement { background: #1e9e6a; }
+.relation-difference { background: #e0533d; }
+.relation-consider { background: #c98a00; }
+.relation-note { font-size: 11px; color: #8a8399; margin: 0; }
+.cards-note { font-size: 11px; color: #b0aabd; margin: 10px 2px 0; }
+.comparison-sources { border: 1px solid var(--line); border-radius: 14px; padding: 16px 20px; margin-bottom: 14px; }
+.comparison-sources h3 { font-size: 12px; letter-spacing: .6px; color: var(--agent); margin-bottom: 8px; }
+.comparison-source-stance { font-size: 13px; font-weight: 600; margin: 0 0 4px; }

@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -99,28 +99,63 @@ function renderPerspectives(){
     check.onchange=()=>{if(check.checked){if(state.selected.size>=3){check.checked=false;status('한 대화에서 최대 세 관점을 선택할 수 있습니다.');return;}state.selected.add(p.id);}else state.selected.delete(p.id);card.classList.toggle('selected',check.checked);updateSelection();};
     choice.append(check,node('span','✓'));top.append(avatar(p.id),choice);
     const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
-    if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
     card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
-    const stanceSources=node('div',undefined,'card-sources');
-    commentSourceButtons(stanceSources,p.source_ids||[],'입장 원문');
-    if(stanceSources.childElementCount)card.append(stanceSources);
     const grounds=p.grounds||[];
     if(grounds.length){
       card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));
-      for(const g of grounds){
-        const row=node('p',undefined,'card-ground');
-        row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
-          node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
-        const sources=node('span',undefined,'card-ground-sources');
-        commentSourceButtons(sources,g.source_ids||[],'근거 원문');
-        if(sources.childElementCount)row.append(sources);
-        card.append(row);
-      }
+      for(const g of grounds)card.append(groundRow(g));
     }
-    const compare=node('button','Compare with my view','secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
-    card.append(compare);$('perspectives').append(card);
+    const relation=node('div',undefined,'card-relation');relation.dataset.perspective=p.id;card.append(relation);
+    // The whole card opens the comparison popup; the checkbox keeps its own selection role.
+    card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
+    choice.onclick=event=>event.stopPropagation();choice.onkeydown=event=>event.stopPropagation();
+    card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
+    card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
+    $('perspectives').append(card);
   }
+  $('perspective-note').hidden=!state.analysis.perspectives.some(p=>p.admission_policy);
   updateSelection();
+  for(const p of state.analysis.perspectives)renderRelation(p.id);
+}
+function groundRow(g,withSources=false){
+  const row=node('p',undefined,'card-ground');
+  row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
+    node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
+  if(withSources){const sources=node('span',undefined,'card-ground-sources');commentSourceButtons(sources,g.source_ids||[],'근거 원문');if(sources.childElementCount)row.append(sources);}
+  return row;
+}
+const relationNames={agreement:'similar',difference:'different',consider:'to consider'};
+function hasInitialView(){return !!state.session.initial_opinion.text.trim();}
+// One comparison job per (initial revision, perspective). Revisiting reuses the finished job.
+function comparison(pid){
+  const key=state.session.initial_opinion.revision+':'+pid;
+  if(!state.comparisons.has(key)){
+    const pending=api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:state.session.initial_opinion.revision,request_id:requestId()}).then(pollJob);
+    pending.catch(()=>state.comparisons.delete(key));state.comparisons.set(key,pending);
+  }
+  return state.comparisons.get(key);
+}
+function relationCounts(items){
+  const counts={agreement:0,difference:0,consider:0};
+  for(const item of items)counts[item.relation==='agreement'||item.relation==='difference'?item.relation:'consider']++;
+  return counts;
+}
+async function renderRelation(pid){
+  const box=document.querySelector('.card-relation[data-perspective="'+CSS.escape(pid)+'"]');if(!box)return;
+  box.replaceChildren(node('p','YOU & THIS VIEW','card-section-label'));
+  if(!hasInitialView()){box.append(node('p','Add your initial view to see how it compares.','relation-note'));return;}
+  const note=node('p','Comparing with your view…','relation-note');box.append(note);
+  const revision=state.session.initial_opinion.revision;let job;
+  try{job=await comparison(pid);}catch(e){note.textContent='Comparison is not available right now.';return;}
+  if(!box.isConnected||revision!==state.session.initial_opinion.revision)return;
+  if(job.stale||!job.result.available){note.textContent='Add your initial view to see how it compares.';return;}
+  const counts=relationCounts(job.result.items||[]),total=counts.agreement+counts.difference+counts.consider;
+  if(!total){note.textContent='No clear overlap or difference found.';return;}
+  const bar=node('div',undefined,'relation-bar');bar.setAttribute('role','img');
+  const parts=Object.entries(counts).filter(([,n])=>n).map(([kind,n])=>n+' '+relationNames[kind]);
+  bar.setAttribute('aria-label',parts.join(', '));
+  for(const [kind,n] of Object.entries(counts))if(n){const seg=node('span',undefined,'relation-'+kind);seg.style.flexGrow=String(n);bar.append(seg);}
+  note.replaceWith(bar,node('p',parts.join(' · '),'relation-note'));
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
 function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
@@ -139,11 +174,27 @@ function highlighted(container,text,spans){
   valid.forEach(s=>{bounds.add(s.start);bounds.add(s.end);});const cuts=[...bounds].sort((a,b)=>a-b);container.replaceChildren();
   for(let i=1;i<cuts.length;i++){const start=cuts[i-1],end=cuts[i],keys=[...new Set(valid.filter(s=>s.start<=start&&s.end>=end).map(s=>s.category))],part=chars.slice(start,end).join('');container.append(keys.length?node('mark',part,'mark-'+(keys.length===1?keys[0]:'mixed')):document.createTextNode(part));}
 }
+function renderComparisonSources(p){
+  const box=$('comparison-sources');box.replaceChildren(node('h3','SOURCE COMMENTS'));
+  const stance=node('div',undefined,'card-sources');commentSourceButtons(stance,p.source_ids||[],'입장 원문');
+  box.append(node('p',p.text,'comparison-source-stance'));if(stance.childElementCount)box.append(stance);
+  for(const g of p.grounds||[])box.append(groundRow(g,true));
+  if(!stance.childElementCount&&!(p.grounds||[]).some(g=>(g.source_ids||[]).length))box.append(node('p','No source comment links are available for this perspective.','muted'));
+}
 async function compareWith(pid){
-  status('나의 의견과 관점을 비교하고 있습니다.');const key=state.session.initial_opinion.revision+':'+pid;
-  let value=state.comparisons.get(key);if(!value){value=await api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.set(key,value);}
-  const job=await pollJob(value);if(job.stale){status('초기 의견이 바뀌어 이전 비교가 됐습니다. 현재 의견으로 다시 비교해 주세요.');return;}
-  $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);$('comparison-stance').textContent=perspective(pid).text;
+  // Open immediately: the perspective's source comments are available even without an initial view.
+  const p=perspective(pid),revision=state.session.initial_opinion.revision;
+  $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);$('comparison-stance').textContent=p.text;
+  renderComparisonSources(p);
+  if(hasInitialView())$('comparison-initial').textContent=state.session.initial_opinion.text;
+  else $('comparison-initial').replaceChildren(node('span','You have not written an initial view yet. You can add it under “Your initial view”.','muted'));
+  $('comparison-items').replaceChildren();openDialog('comparison');
+  if(!hasInitialView()){$('comparison-items').append(node('p','초기 의견을 적으면 이 관점과 비교할 수 있습니다.'));status('관점의 원문을 살펴보세요.');return;}
+  $('comparison-items').append(node('p','나의 의견과 관점을 비교하고 있습니다…','muted'));
+  state.openComparison=pid;let job;
+  try{job=await comparison(pid);}catch(e){if(state.openComparison===pid)$('comparison-items').replaceChildren(node('p',e.message));throw e;}
+  if(revision!==state.session.initial_opinion.revision||state.openComparison!==pid||!$('comparison').open)return;
+  if(job.stale){$('comparison-items').replaceChildren(node('p','초기 의견이 바뀌어 이전 비교가 됐습니다. 현재 의견으로 다시 비교해 주세요.'));return;}
   $('comparison-items').replaceChildren();highlighted($('comparison-initial'),state.session.initial_opinion.text,(job.result.items||[]).flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
   if(!job.result.available)$('comparison-items').append(node('p','초기 의견을 적으면 이 관점과 비교할 수 있습니다.'));
   else{
@@ -154,7 +205,7 @@ async function compareWith(pid){
     }
     if(!job.result.items.length)$('comparison-items').append(node('p','두 입력에서 분명한 공통점이나 차이를 확인하지 못했습니다.'));
   }
-  openDialog('comparison');status('비교 제안을 확인했습니다. 관점의 원문도 함께 살펴보세요.');
+  status('비교 제안을 확인했습니다. 관점의 원문도 함께 살펴보세요.');
 }
 const roomStates={
   idle:'시작 전',running:'진행 중',pausing:'정지 중',paused:'일시 정지',awaiting_user:'질문 대기',
@@ -693,7 +744,7 @@ $('begin').onsubmit=async event=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
-$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
+$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await api(base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision,request_id:requestId()});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
 $('open-room').onclick=async()=>{
   const button=$('open-room');
   if(button.disabled||state.openingPending)return;
@@ -793,13 +844,12 @@ $('agent-info').onclick=async()=>{
   }catch(error){status(error.message);}
 };
 for(const [button,id] of [['close-comparison','comparison'],['close-source','source-dialog'],['close-perspective','perspective-dialog']])$(button).onclick=()=>closeDialog(id);
-$('comparison').addEventListener('close',()=>{$('comparison').hidden=true;});
+$('comparison').addEventListener('close',()=>{$('comparison').hidden=true;state.openComparison=null;});
 $('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};
 $('save-reflection').onsubmit=async event=>{event.preventDefault();try{await saveCurrent();const user_items={};for(const key of Object.keys(categories)){const values=$(key).value.split('\n').filter(s=>s.trim());user_items[key]=values.map(value=>{const savedMatches=state.saved&&['initial','current'].every(kind=>state.saved[kind+'_revision']===state.session[kind+'_opinion'].revision);const original=state.reflectionResult?.categories[key].find(i=>i.explanation===value)||(savedMatches?state.saved.user_items[key].find(i=>i.text===value):null);return {text:value,initial_span_ids:original?.initial_span_ids||[],current_span_ids:original?.current_span_ids||[],related_message_ids:original?.related_message_ids||[]};});}const path=base()+'/reflections'+(state.saved?'/'+state.saved.reflection_id:'');const value=await api(path,state.saved?'PUT':'POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,analysis_job_id:state.reflectionJob,user_items,expected_revision:state.saved?.revision||0,request_id:requestId()});state.saved=value;$('save-state').textContent='저장했습니다. '+value.revision+'번째 저장본';await refreshSession();}catch(e){status(e.message);}};
-$('new-session').onclick=()=>{clearTimeout(state.roomTimer);localStorage.removeItem(savedSessionKey);sessionStorage.removeItem(lastRoomKey);location.reload();};
 
 async function start(){
   const destination=readStored(sessionStorage,libraryDestinationKey);

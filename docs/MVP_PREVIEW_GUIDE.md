@@ -44,7 +44,7 @@ python3 -m venv .venv
 ## 3. 화면에서 전체 흐름 확인하기
 
 1. **처음 열기.** 초기 의견에 `Safety checks matter, but their cost depends on the risk.`를 적고 **Save & explore perspectives**를 누릅니다. 빈 의견으로도 시작할 수 있습니다.
-2. **Explore.** **Compare with my view**에서 한 관점과 초기 의견을 비교합니다. 비교 창을 닫고 두 관점 카드의 체크박스를 선택한 뒤 **Converse with selected perspectives**를 누릅니다. 관점 한 개를 선택하면 1:1 질문이 열립니다.
+2. **Explore.** 각 카드 아래 막대에서 초기 의견과 같은 점·다른 점·고려할 조건의 개수를 봅니다. 카드를 누르면 비교 창에서 자세한 비교와 입장·근거 원문을 열 수 있습니다. 비교 창을 닫고 두 관점 카드의 체크박스를 선택한 뒤 **Converse with selected perspectives**를 누릅니다. 관점 한 개를 선택하면 1:1 질문이 열립니다.
 3. **자동 토론.** `어떤 위험에서는 안전 검토가 필요하며 어떤 예외를 둘 수 있나요?`를 입력하고 **자동 토론 시작**을 한 번 누릅니다. 두 관점의 입장 발언 2개와 상호 응답 2개가 자동으로 게시됩니다. **원문**과 **응답 대상**을 눌러 근거와 답한 발언을 확인할 수 있습니다.
 4. **최종 결론.** 상단 **토론 결론 보기** 또는 기록 끝에서 공통 주장, 수락한 관점, 조건, 남은 이견을 확인합니다. 예시에서는 두 관점이 수락한 공통 주장 1개로 별도 합의 Agent 1개가 만들어집니다. [토론 결론과 합의 Agent 화면](images/mvp-preview/debate-result.png)
 5. **합의 Agent에 질문.** **계보 원문**으로 근거 댓글을 열고, **합의 Agent에 질문하기**를 누릅니다. 새 방에 `What exactly was agreed and what remains uncertain?`을 입력한 뒤 **Start conversation**을 누릅니다. [합의 Agent 후속 답변 화면](images/mvp-preview/synthesis-agent-followup.png)
