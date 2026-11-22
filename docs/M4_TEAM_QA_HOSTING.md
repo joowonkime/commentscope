@@ -3,11 +3,11 @@
 팀 공유본 `CommentScope_Live_QA_v3.zip`에는 이 브랜치의 Python 앱과 팀 전용 영상 분석이 들어 있다. Python 3.12 이상에서 ZIP을 풀고 `run_live_qa.py`가 있는 폴더에서 실행한다. Git에는 실행 코드와 문서를 배포하고 영상 입력과 대화 DB는 비공개로 관리한다.
 
 ```powershell
-py -3.12 run_live_qa.py --check
-py -3.12 run_live_qa.py --max-usd 1
+py -3 run_live_qa.py --check
+py -3 run_live_qa.py --max-usd 1
 ```
 
-macOS와 Linux에서는 `py -3.12` 대신 `python3`을 사용한다. 첫 명령은 키 없이 영상과 실제 생성 프로필을 검증한다. 두 번째 명령에서 팀용 OpenRouter 키를 비공개로 입력하고 출력된 주소의 `/mvp`를 연다. 준비된 영상은 YouTube 키 없이 열린다. 같은 폴더에서 재시작하면 기존 대화, 지출, 종료시각을 사용한다. 포트 충돌 시 `--port 0`을 붙여 빈 포트를 선택한다.
+macOS와 Linux에서는 `py -3` 대신 `python3`을 사용한다. 첫 명령은 키 없이 영상과 실제 생성 프로필을 검증한다. 두 번째 명령에서 팀용 OpenRouter 키를 비공개로 입력하고 출력된 주소의 `/mvp`를 연다. 각각의 PC에 복사해 실행하면 1달러 상한도 PC별로 적용된다. 한 호스트를 공유하면 해당 서버의 한도를 함께 사용한다. 준비된 영상은 YouTube 키 없이 열린다. 같은 폴더에서 재시작하면 기존 대화, 지출, 종료시각을 사용한다. 포트 충돌 시 `--port 0`을 붙여 빈 포트를 선택한다.
 
 | 팀 공유본의 영상 | 재현할 수 있는 범위 |
 | --- | --- |
@@ -15,7 +15,7 @@ macOS와 Linux에서는 `py -3.12` 대신 `python3`을 사용한다. 첫 명령�
 | CNBC, 주 4일 근무 | Library 또는 영상 URL로 열 수 있다. 처리 댓글 96개, 관점 4개. 고유 댓글 4개가 입장에 연결되며 네 관점 모두 짧은 근무를 지지한다. [영상](https://www.youtube.com/watch?v=RrFaNO3rTaA) |
 | 스브스뉴스, 4.5일제 | 로우파이의 원래 영상. 비공개 수집본 751개에 댓글·답글과 좋아요가 저장됐다. 완주한 Factory 결과를 등록하기 전까지 입력 자료로 제공한다. [영상](https://www.youtube.com/watch?v=BAHKmi4F1L8) |
 
-새 URL은 `py -3.12 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
+새 URL은 `py -3 run_live_qa.py --collect "YOUTUBE_URL" --max-comments 180`로 수집한다. 이때 서버 운영자에게 YouTube Data API 키가 필요하다. 수집 후 운영자가 Factory에서 원문 대조를 통과한 Agent를 등록하면 모든 사용자가 Library와 URL로 열 수 있다. 미등록 URL을 입력하면 화면에 안내가 뜨고 작성 중인 의견과 기존 영상이 유지된다.
 
 ## 조원이 직접 확인할 흐름
 

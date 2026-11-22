@@ -116,8 +116,8 @@ def main(argv=None):
     folders,analyses,deployment=load_catalog(catalog)
     for analysis in analyses:
         public=analysis.public()
-        print(f"{public['video']['video_id']} · {public['analyzed_comments']} comments · "
-              f"{len(public['perspectives'])} perspectives · expires {public['expires_at']}",flush=True)
+        print(f"{public['video']['video_id']} | {public['analyzed_comments']} comments | "
+              f"{len(public['perspectives'])} perspectives | expires {public['expires_at']}",flush=True)
     if args.check:return 0
     if args.public_origin:
         origin=urlsplit(args.public_origin)
@@ -133,7 +133,7 @@ def main(argv=None):
         try:
             with ProductServer(product,legacy,args.port,public_origin=args.public_origin) as server:
                 address=args.public_origin or f'http://127.0.0.1:{server.server_port}'
-                print(address.rstrip('/')+'/mvp · '+broker.status(),flush=True)
+                print(address.rstrip('/')+'/mvp | '+broker.status(),flush=True)
                 server.serve_forever()
         except KeyboardInterrupt:pass
         finally:product.close()
