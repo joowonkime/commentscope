@@ -46,3 +46,32 @@ test('explanatory abstention is visible even when checked paragraphs are present
   assert.match(text(result),/요청한 답을 확인할 수 없어/);
   assert.match(text(result),/A limited study/);
 });
+
+async function restoreRoom(navigateWhileLoading) {
+  const js = fs.readFileSync(path.join(__dirname, '../src/commentscope/product/mvp.js'), 'utf8');
+  const document = {body: {dataset: {step: 'before'}}};
+  const state = {session: {rooms: [{room_id: 'room-1'}]}};
+  let finish;
+  const loading = new Promise(resolve => { finish = resolve; });
+  const context = vm.createContext({
+    document, state,
+    setRoom: room => { state.room = room; },
+    refreshRoom: () => loading,
+    showStep: step => { document.body.dataset.step = step; },
+  });
+  vm.runInContext(js.slice(js.indexOf('async function chooseRoom('), js.indexOf('function renderRooms(')), context);
+  const restore = vm.runInContext('chooseRoom("room-1")', context);
+  if (navigateWhileLoading) document.body.dataset.step = 'reflect';
+  finish();
+  await restore;
+  assert.equal(state.room.room_id, 'room-1');
+  return document.body.dataset.step;
+}
+
+test('a restored discussion does not override a later navigation to Reflect', async () => {
+  assert.equal(await restoreRoom(true), 'reflect');
+});
+
+test('a discussion still opens when the user stays on the loading step', async () => {
+  assert.equal(await restoreRoom(false), 'converse');
+});

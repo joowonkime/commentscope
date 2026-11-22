@@ -184,9 +184,10 @@ function rememberConversation(){
 async function chooseRoom(id){
   const room=state.session.rooms.find(item=>item.room_id===id);
   if(!room)return;
+  const stepBeforeLoad=document.body.dataset.step;
   setRoom(room);
   await refreshRoom();
-  if(state.room?.room_id===id)showStep('converse');
+  if(state.room?.room_id===id&&document.body.dataset.step===stepBeforeLoad)showStep('converse');
 }
 function renderRooms(){
   const select=$('rooms'),list=$('room-list');select.replaceChildren(node('option','Choose a conversation'));select.firstChild.value='';list.replaceChildren();
@@ -463,13 +464,16 @@ async function enter(session){
   renderPerspectives();
   const last=JSON.parse(sessionStorage.getItem(lastRoomKey)||'null');
   if(last?.session_id===session.session_id&&session.rooms.some(room=>room.room_id===last.room_id)){
+    const stepBeforeRestore=document.body.dataset.step;
     try{
       await chooseRoom(last.room_id);
-      status('');
+      if(document.body.dataset.step==='converse')status('');
     }catch(error){
-      setRoom(null);
-      showStep('explore');
-      status('최근 대화를 불러오지 못했습니다. Converse의 대화 목록에서 다시 열어 주세요.');
+      if(state.room?.room_id===last.room_id)setRoom(null);
+      if(document.body.dataset.step===stepBeforeRestore){
+        showStep('explore');
+        status('최근 대화를 불러오지 못했습니다. Converse의 대화 목록에서 다시 열어 주세요.');
+      }
     }
     return;
   }
