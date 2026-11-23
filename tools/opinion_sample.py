@@ -53,6 +53,7 @@ def summarize(drawn, reviewed, reviewer):
     supports = dict.fromkeys(drawn['perspectives'], 0)
     status = Counter()
     unmatched = 0
+    multiple = 0
     for row in submitted:
         if any(row.get(k) != expected[row['id']][k] for k in ('text','parent_context')):
             raise ValueError('Review the original comment in its original context')
@@ -66,12 +67,14 @@ def summarize(drawn, reviewed, reviewer):
         status[classification] += 1
         if classification == 'position' and not views:
             unmatched += 1
+        if len(views) > 1:
+            multiple += 1
         for view in views:
             supports[view] += 1
     return {'analysis_id':drawn['analysis_id'], 'issue':drawn['issue'], 'reviewer':reviewer,
             'population':drawn['population'], 'sample_size':len(submitted), 'positions':status['position'],
             'no_position':status['no_position'], 'unclear':status['unclear'],
-            'unmatched':unmatched, 'supports':supports}
+            'unmatched':unmatched, 'multiple':multiple, 'supports':supports}
 
 
 def main():

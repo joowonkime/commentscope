@@ -27,10 +27,12 @@ class OpinionSampleTests(unittest.TestCase):
                 ('no_position',[]), ('unclear',[]), ('no_position',[])], strict=True):
             row.update(classification=status, supports=views)
 
-    def test_unmatched_positions_remain_in_denominator_and_overlap_in_each_bar(self):
+    def test_shared_comment_counts_once_in_overview_and_once_for_each_view(self):
         result = summarize(self.sheet, self.review, 'ai')
         self.assertEqual(result['positions'], 3)
         self.assertEqual(result['supports'], {'a':1, 'b':2})
+        self.assertEqual(result['multiple'], 1)
+        self.assertEqual(result['positions'] - result['unmatched'] - result['multiple'], 1)
         self.assertEqual((result['sample_size'], result['unmatched'], result['no_position'], result['unclear']),
                          (6, 1, 2, 1))
         self.assertNotIn('Private text', str(result))

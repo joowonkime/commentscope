@@ -30,15 +30,32 @@
     <div id="workspace" hidden>
       <section id="explore" class="stage-page" data-node-id="121:11">
         <div class="section-title"><div><p class="eyebrow">STEP 01 · EXPLORE DIVERSE PERSPECTIVES</p><h1 id="explore-title" tabindex="-1">Here’s what the comments are saying</h1></div><button id="new-session" class="quiet" type="button">Start over</button></div><p id="analysis-summary" class="stage-description"></p>
-        <details id="opinion-sample" class="composition-panel sample-panel">
-          <summary><strong>Opinion shares in a comment sample</strong><span id="sample-preview"></span></summary>
-          <p id="sample-issue"></p><p id="sample-method" class="muted"></p>
-          <div id="sample-bars" class="sample-bars"></div>
-        </details>
+        <section class="breakdown" aria-labelledby="breakdown-title">
+          <div class="breakdown-heading">
+            <div><h2 id="breakdown-title">Perspective breakdown</h2><p id="share-issue" dir="auto" hidden></p></div>
+            <select id="share-view" aria-label="Perspective shown in both charts"><option value="">All perspectives</option></select>
+          </div>
+          <figure id="opinion-share" class="share-figure">
+            <figcaption><strong>Opinion share</strong> <span class="share-scope"></span></figcaption>
+            <div class="share-plot"></div>
+          </figure>
+          <figure id="like-share" class="share-figure">
+            <figcaption><strong>Like share</strong> <span class="share-scope"></span></figcaption>
+            <div class="share-plot"></div>
+          </figure>
+          <details id="share-details">
+            <summary id="share-details-label">Compare perspectives</summary>
+            <p id="share-method"></p>
+            <p>Opinion counts include comments that support several views. Each view’s like count includes only comments linked directly to that view alone. Shared likes appear under “Several views” in the overview.</p>
+            <table id="share-table">
+              <caption class="sr-only">All perspectives, ranked by support in the sample. Counts and shares use the denominators shown above.</caption>
+              <thead><tr><th scope="col">Perspective</th><th scope="col">Opinions</th><th scope="col">Likes</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </details>
+        </section>
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>
-        <div class="comparison-actions"><button id="compare-all" class="secondary" type="button">Compare all with my view</button><span id="compare-progress" class="muted" role="status"></span></div><div id="perspectives" class="cards"></div><details class="composition-panel likes-panel"><summary>Likes on the processed comments</summary>
-          <p class="muted">Share of all recorded likes, grouped by how the comments link to the cards. Comments linked to multiple cards have their own segment.</p>
-          <div id="likes-chart"></div><div id="likes-legend" class="composition-legend"></div></details>
+        <div class="comparison-actions"><button id="compare-all" class="secondary" type="button">Compare all with my view</button><span id="compare-progress" class="muted" role="status"></span></div><div id="perspectives" class="cards"></div>
         <div class="action-bar"><p id="selection-hint">Choose one perspective for a 1:1 conversation, or up to three for a group.</p><button id="open-room" class="primary" type="button">Converse with selected perspectives <img src="/mvp/assets/0a7d3.svg" alt=""></button></div>
       </section>
       <section id="converse" hidden data-node-id="314:2807"><div class="conversation-shell">

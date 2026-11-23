@@ -8,6 +8,7 @@
     "no_position": 10,
     "unclear": 3,
     "unmatched": 11,
+    "multiple": 19,
     "supports": {
       "MC092f0d5ac8eb2106e118d54a9fa0160c85e861208d31e5d5ab7abd2e60c92a92": 23,
       "MC349adb7f2b614d251ea9ed6413cb17f2dc1c95450ad514ac60be6074752472c2": 17,
@@ -24,6 +25,7 @@
     "no_position": 21,
     "unclear": 3,
     "unmatched": 25,
+    "multiple": 0,
     "supports": {
       "MC221806eb7aec867557fb60ac330700c91961ea5e553d902dbf3ff3c343eeaeb6": 0,
       "MC6bb0235af59e0d0726c62a01cd427ac80bbe8546c49b31247953cac98546ed55": 1
@@ -38,6 +40,7 @@
     "no_position": 11,
     "unclear": 5,
     "unmatched": 22,
+    "multiple": 7,
     "supports": {
       "MC064d0983242f252130ad73720fb07cad1abef7a01c730f6fe0765ec152108bbf": 1,
       "MC218735dca1443fe1d4d162acf900e4a5b75dd19ce7a0ed0972f1dc9e15dc9d17": 1,

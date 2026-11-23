@@ -139,78 +139,152 @@ function renderAnalysis(){
   }
   renderComposition();
 }
-function renderComposition(){
-  const entries=state.analysis.composition||[];
-  loadOpinionSample(state.analysis);
-  const engagement=state.analysis.engagement;
-  renderDistribution('likes',engagement?.available?entries:[],'likes','likes',
-    engagement?.available?'No likes were recorded on the analyzed comments.':'Like counts are unavailable for the full set of analyzed comments.');
-}
 let opinionCatalog;
+let activeOpinionSample;
+const shareNumber = new Intl.NumberFormat('en-US');
+const countIsValid = n => Number.isSafeInteger(n) && n >= 0;
+
+function renderComposition(){
+  const analysis = state.analysis, select = $('share-view');
+  const previous = select.dataset.analysis === analysis.analysis_id ? select.value : '';
+  select.dataset.analysis = analysis.analysis_id || '';
+  select.replaceChildren(new Option('All perspectives', ''));
+  for(const p of analysis.perspectives)select.add(new Option(p.display_name || p.text, p.id));
+  select.value = previous;
+  if(select.selectedIndex < 0)select.selectedIndex = 0;
+  select.disabled = !analysis.perspectives.length;
+  const count = analysis.perspectives.length;
+  $('share-details-label').textContent = count > 1 ? 'Compare all ' + count + ' perspectives' : 'How shares are counted';
+  activeOpinionSample = null;
+  renderShares();
+  if(analysis.status !== 'expired' && analysis.count_scope === 'processed_comments' && analysis.analysis_id){
+    void loadOpinionSample(analysis);
+  }
+}
 async function loadOpinionSample(analysis){
-  renderOpinionSample(analysis, null);
-  if(analysis.status==='expired' || analysis.count_scope!=='processed_comments' || !analysis.analysis_id)return;
   if(!opinionCatalog){
-    opinionCatalog=fetch('/mvp/opinion-samples.json').then(response=>{
+    opinionCatalog = fetch('/mvp/opinion-samples.json').then(response => {
       if(!response.ok)throw new Error('Sample catalog unavailable');
       return response.json();
-    }).catch(()=>{opinionCatalog=null; return {};});
+    }).catch(() => { opinionCatalog = null; return {}; });
   }
-  const catalog=await opinionCatalog;
-  if(state.analysis===analysis)renderOpinionSample(analysis, catalog?.[analysis.analysis_id]);
+  const catalog = await opinionCatalog;
+  if(state.analysis !== analysis)return;
+  activeOpinionSample = checkedOpinionSample(analysis, catalog?.[analysis.analysis_id]);
+  renderShares();
 }
-function renderOpinionSample(analysis, sample){
-  const preview=$('sample-preview'), issue=$('sample-issue'), method=$('sample-method'), bars=$('sample-bars');
-  preview.textContent='No reviewed sample available';
-  issue.textContent=''; method.textContent=''; bars.replaceChildren();
-  if(!sample || sample.population!==analysis.analyzed_comments || !sample.supports || typeof sample.issue!=='string' || !sample.issue.trim())return;
-  const {sample_size:size, positions, no_position:noPosition, unclear, unmatched}=sample;
-  const counts=analysis.perspectives.map(p=>sample.supports[p.id]);
-  if(![size,positions,noPosition,unclear,unmatched,...counts].every(n=>Number.isInteger(n)&&n>=0) ||
-      size===0 || size>sample.population || positions+noPosition+unclear!==size || unmatched>positions ||
-      Object.keys(sample.supports).length!==counts.length || counts.some(n=>n>positions-unmatched) ||
-      counts.reduce((sum,n)=>sum+n,0)<positions-unmatched || !['ai','human'].includes(sample.reviewer))return;
-  preview.textContent=positions+' of '+size+' sampled comments stated a position';
-  issue.textContent=sample.issue;
-  method.textContent=(sample.reviewer==='ai'?'AI':'Human')+' review of '+size+' comments drawn from '+sample.population+
-    ' processed comments. No position on this issue: '+noPosition+' · Unclear: '+unclear+'.';
-  if(!positions)return;
-  method.append(' Each bar counts comments out of the '+positions+' that stated a position. One comment can support several perspectives.');
-  const rows=analysis.perspectives.map((p,i)=>({name:p.display_name||p.text, count:counts[i], color:'accent-'+i%5}));
-  rows.sort((a,b)=>b.count-a.count);
-  rows.push({name:'Position outside these cards',count:unmatched,color:'sample-unmatched'});
-  for(const {name,count,color} of rows){
-    const row=node('div',undefined,'sample-row '+color);
-    const meter=node('meter');
-    meter.min=0; meter.max=positions; meter.value=count; meter.setAttribute('aria-hidden','true');
-    row.append(node('span',name), node('span',count+' / '+positions+' ('+Math.round(100*count/positions)+'%)','sample-value'),meter);
-    bars.append(row);
+function checkedOpinionSample(analysis, sample){
+  if(!sample || sample.population !== analysis.analyzed_comments || !sample.supports ||
+      typeof sample.issue !== 'string' || !sample.issue.trim() || !['ai','human'].includes(sample.reviewer))return null;
+  const {sample_size:size, positions, no_position:noPosition, unclear, unmatched, multiple} = sample;
+  const counts = analysis.perspectives.map(p => sample.supports[p.id]);
+  const matched = positions - unmatched;
+  const extraLinks = counts.reduce((sum,n) => sum + n, 0) - matched;
+  if(![size, positions, noPosition, unclear, unmatched, ...counts].every(countIsValid) ||
+      !size || size > sample.population || positions + noPosition + unclear !== size || matched < 0 ||
+      Object.keys(sample.supports).length !== counts.length || counts.some(n => n > matched) || extraLinks < 0)return null;
+  if(multiple !== undefined && (!countIsValid(multiple) || multiple > matched || multiple > extraLinks ||
+      extraLinks > multiple * Math.max(0, counts.length - 1)))return null;
+  return sample;
+}
+function likeDistribution(analysis){
+  if(analysis.status === 'expired' || !analysis.engagement?.available)return null;
+  const entries = analysis.composition || [];
+  const byGroup = new Map(entries.map(e => [e.perspective_id || e.kind, e.likes]));
+  const keys = [...analysis.perspectives.map(p => p.id), 'multiple', 'other'];
+  if(entries.length !== keys.length || !keys.every(key => countIsValid(byGroup.get(key))))return null;
+  const total = entries.reduce((sum, e) => sum + e.likes, 0);
+  return total === analysis.engagement.total_likes ? {byGroup, total} : null;
+}
+function sharePercent(n, total){
+  const percent = n * 100 / total;
+  if(percent > 0 && percent < 0.1)return '<0.1%';
+  if(percent < 100 && percent > 99.9)return '>99.9%';
+  return shareNumber.format(Math.round(percent * 10) / 10) + '%';
+}
+function shareParts(total, outside, multiple, outsideLabel){
+  const linked = total - outside;
+  const parts = multiple === undefined ? [['Any listed view', linked, 'listed']] :
+    [['One view', linked - multiple, 'listed'], ['Several views', multiple, 'shared']];
+  return [...parts, [outsideLabel, outside, 'other']];
+}
+function renderShareFigure(id, scope, total, parts, emptyMessage){
+  const figure = $(id), plot = figure.querySelector('.share-plot');
+  figure.querySelector('.share-scope').textContent = scope;
+  plot.replaceChildren();
+  if(!total){
+    plot.append(node('p', emptyMessage, 'share-empty'));
+    return;
   }
+  const ns = 'http://www.w3.org/2000/svg', strip = document.createElementNS(ns, 'svg');
+  strip.setAttribute('viewBox', '0 0 ' + total + ' 1');
+  strip.setAttribute('preserveAspectRatio', 'none');
+  strip.setAttribute('aria-hidden', 'true');
+  const legend = node('ul', undefined, 'share-legend');
+  let start = 0;
+  for(const [name, count, key] of parts){
+    const item = node('li'), label = node('span', undefined, 'share-key');
+    label.append(node('i', undefined, 'share-dot tone-' + key), document.createTextNode(name));
+    item.append(label, node('span', shareNumber.format(count) + ' · ' + sharePercent(count, total), 'share-value'));
+    legend.append(item);
+    if(!count)continue;
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', String(start));
+    rect.setAttribute('width', String(count));
+    rect.setAttribute('height', '1');
+    rect.setAttribute('class', 'tone-' + key);
+    strip.append(rect);
+    start += count;
+  }
+  plot.append(strip, legend);
 }
-function renderDistribution(prefix,entries,field,unit,emptyText){
-  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend');
-  chart.replaceChildren();legend.replaceChildren();
-  const total=entries.reduce((sum,e)=>sum+e[field],0);
-  if(!total){chart.append(node('p',emptyText,'muted'));return;}
-  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
-  svg.setAttribute('viewBox','0 0 1000 26');svg.setAttribute('role','img');svg.setAttribute('aria-label','Distribution of '+total+' '+unit);
-  let x=0;
-  for(const entry of entries){
-    const count=entry[field],id=entry.perspective_id;
-    const group=id?String(indexOf(id)%5):entry.kind;
-    const name=id?label(id):group==='multiple'?'Multiple perspectives':'Other comments';
-    const percent=count/total*100;
-    const caption=name+' · '+count+' '+unit+' ('+percent.toFixed(1)+'%)';
-    if(count){
-      const rect=document.createElementNS(ns,'rect');
-      for(const [attr,val] of Object.entries({x,width:percent*10,height:26,class:'chart-'+group}))rect.setAttribute(attr,String(val));
-      const title=document.createElementNS(ns,'title');title.textContent=caption;rect.append(title);svg.append(rect);x+=percent*10;
+function renderShares(){
+  const analysis = state.analysis, sample = activeOpinionSample, likes = likeDistribution(analysis);
+  const view = $('share-view').value;
+  const issue = $('share-issue');
+  issue.hidden = !sample;
+  issue.textContent = sample?.issue || '';
+  $('share-method').textContent = sample
+    ? (sample.reviewer === 'ai' ? 'AI' : 'Human') + ' review of ' + sample.sample_size + ' of the ' +
+      shareNumber.format(sample.population) + ' processed comments. ' + sample.no_position +
+      ' stated no position on this issue and ' + sample.unclear + ' were unclear.'
+    : 'No reviewed opinion sample is available for this analysis.';
+  const opinions = sample?.positions, support = sample?.supports[view];
+  const opinionScope = !sample ? '' : view && opinions ? support + ' / ' + opinions + ' comments support this view' :
+    opinions + ' of ' + sample.sample_size + ' sampled comments stated a position';
+  const opinionParts = !sample ? [] : view ?
+    [['Supports this view', support, 'listed'], ['Other positions', opinions - support, 'other']] :
+    shareParts(opinions, sample.unmatched, sample.multiple, 'Outside these views');
+  renderShareFigure('opinion-share', opinionScope, opinions, opinionParts, sample ?
+    'No sampled comment stated a position on this issue.' : 'No reviewed opinion sample is available for this analysis.');
+
+  const total = likes?.total, likeCount = likes?.byGroup.get(view);
+  const likeScope = !likes ? '' : view && total ? shareNumber.format(likeCount) + ' / ' + shareNumber.format(total) + ' likes linked only to this view' :
+    shareNumber.format(total) + (total === 1 ? ' like on ' : ' likes on ') + shareNumber.format(analysis.analyzed_comments) + ' processed comments';
+  const likeParts = !likes ? [] : view ?
+    [['Only this view', likeCount, 'listed'], ['All other likes', total - likeCount, 'other']] :
+    shareParts(total, likes.byGroup.get('other'), likes.byGroup.get('multiple'), 'Unlinked comments');
+  renderShareFigure('like-share', likeScope, total, likeParts, likes ?
+    'No likes were recorded on the processed comments.' : 'Like counts are unavailable for the full set of processed comments.');
+
+  const table = $('share-table'), rows = table.tBodies[0];
+  rows.replaceChildren();
+  table.hidden = !analysis.perspectives.length;
+  const ranked = [...analysis.perspectives];
+  ranked.sort((a,b) => (sample ? sample.supports[b.id] - sample.supports[a.id] : 0) ||
+    (likes ? likes.byGroup.get(b.id) - likes.byGroup.get(a.id) : 0));
+  for(const p of ranked){
+    const row = rows.insertRow(), name = node('th', p.display_name || p.text);
+    name.scope = 'row';
+    row.append(name);
+    for(const [count, denominator] of [[sample?.supports[p.id], opinions], [likes?.byGroup.get(p.id), total]]){
+      const cell = row.insertCell();
+      cell.textContent = count === undefined ? '—' : shareNumber.format(count);
+      if(denominator)cell.append(node('small', sharePercent(count, denominator)));
     }
-    const line=node('span',undefined,id?'accent-'+group:group);
-    line.append(node('i',undefined,'legend-dot'),node('span',caption));legend.append(line);
   }
-  chart.append(svg);
 }
+$('share-view').addEventListener('change', renderShares);
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
   const count=state.selected.size;
