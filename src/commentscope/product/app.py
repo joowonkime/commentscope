@@ -62,9 +62,12 @@ entries cannot address the point, select not_in_evidence.'''
 class ProductApp:
     def __init__(self,path,analyses,model,*,session_ttl_seconds,room_maximum_usd,reservation,
                  revalidate=None,generation_status=None,decision=None,decision_reservation=None,
-                 debate_execution_binding=None,debate_balance=None):
+                 debate_execution_binding=None,debate_balance=None,active_session_limit=8):
         if type(session_ttl_seconds) is not int or not 0<session_ttl_seconds<=86400:
             raise ValueError('Explicit session lifetime required')
+        if type(active_session_limit) is not int or active_session_limit < 1:
+            raise ValueError('Positive active session limit required')
+        self.active_session_limit = active_session_limit
         self.analyses={a.id:a for a in analyses}
         if not self.analyses:raise ValueError('Registered analyses required')
         self.ttl=session_ttl_seconds;self.room_limit=Decimal(room_maximum_usd)
@@ -273,7 +276,7 @@ class ProductApp:
                     if row:session=self._session(db,token)
                     else:
                         active=sum(datetime.fromisoformat(decode(x)['expires_at'])>now() for x in db.execute('SELECT data FROM app_sessions'))
-                        if active>=8:raise WebError(429,'session_capacity')
+                        if active>=self.active_session_limit:raise WebError(429,'session_capacity')
                         session={'session_id':uid('S'),'analysis_id':analysis.id,'bundle_revision':analysis.revision,
                                  'expires_at':(now()+timedelta(seconds=self.ttl)).isoformat()}
                         db.execute('INSERT INTO app_sessions VALUES(?,?,?)',(session['session_id'],hashed,encode(session)))

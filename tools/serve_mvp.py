@@ -105,6 +105,7 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
           'assets_sha256':{str(p.relative_to(ROOT)):sha(p) for p in ASSETS},
           'analysis':analysis_record(analysis),
           'session_ttl_seconds':session_ttl_seconds,'room_maximum_usd':str(room_maximum_usd),
+          'active_session_limit':64 if cycle['version']==EVALUATION_CYCLE_VERSION else 8,
           'limits':{'analysis_seconds':None,'call_seconds':deployment['call_seconds']},
           'quality_gate_passed':False,'semantic_reliability':'not_assessed',
           'cross_run_response_reuse':False,'development_product_scope':True}
@@ -294,6 +295,7 @@ def build(directory):
     broker=Broker(directory,plan)
     product=ProductApp(directory/'app.sqlite',catalog,broker.model,
         session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
+        active_session_limit=plan.get('active_session_limit',8),
         reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
         decision=broker.verify if broker.typed_client is not None else None,
         decision_reservation=broker.decision_reservation if broker.typed_client is not None else None,

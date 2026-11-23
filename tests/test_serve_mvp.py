@@ -73,6 +73,8 @@ class ProductServerPlanTests(unittest.TestCase):
             with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
         self.analysis.compiled['expires_at']=(start+timedelta(days=10)).isoformat()
         with self.assertRaisesRegex(ValueError,'through the deadline'):self.prepare()
+        self.analysis.compiled['expires_at']=(start+timedelta(days=22)).isoformat()
+        self.assertEqual(self.prepare()[1]['active_session_limit'],64)
 
     def setUp(self):
         temp=tempfile.TemporaryDirectory(dir='runs',prefix='mvp-plan-test-');self.addCleanup(temp.cleanup)
@@ -128,6 +130,7 @@ class ProductServerPlanTests(unittest.TestCase):
         directory,plan=self.prepare()
         self.base.call.assert_not_called()
         self.assertEqual(plan['spend_scope_sha256'],sha(self.cycle_file))
+        self.assertEqual(plan['active_session_limit'],8)
         self.assertFalse(plan['quality_gate_passed'])
         self.assertNotIn('synthetic-test-key',(directory/'plan.json').read_text(encoding='utf-8'))
 

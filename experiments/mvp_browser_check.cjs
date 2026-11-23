@@ -194,6 +194,8 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await fill('#initial','Safety checks matter, but their cost depends on the risk.');
   await click('#begin button[type=submit]');
   await until(()=>evaluate("document.querySelectorAll('.card').length===2"));
+  await until(()=>evaluate("state.analysis.perspectives.every(p=>state.session.comparisons?.[p.id] || comparisonRun?.entries.get(p.id)?.phase==='done')"));
+  const afterComparisons=metrics();
   checks.stance_sources_initially_collapsed=await evaluate("!document.querySelector('.card .source-disclosure').open");
   await click('.card .source-disclosure summary');
   await click('.card .card-sources .source-button');
@@ -204,8 +206,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await until(()=>evaluate("document.querySelector('#source-dialog').open"));
   checks.explore_ground_uses_own_original=await evaluate("document.querySelector('#source').textContent.includes('12 of 100 devices failed.')");
   await click('#close-source');
-  checks.explore_source_access_does_not_generate=!fs.existsSync(path.join(output,'fixture/metrics.json')) ||
-    (metrics().synthetic_provider_calls===0 && metrics().synthetic_typed_calls===0);
+  checks.explore_source_access_does_not_generate=JSON.stringify(metrics())===JSON.stringify(afterComparisons);
   await click('.card button.compare-button');
   await until(()=>evaluate("document.querySelector('#comparison')?.open"));
   checks.compare_selected_perspective=true;
@@ -241,9 +242,10 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.no_additional_turn_or_merge_clicks=!requests.some(item=>item.method==='POST'&&/\/syntheses\b|\/ratif/.test(item.path));
   checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
   checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
-  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
+  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify(['P2','P1','P2','P1'].map(id=>formatText(label(id))))");
   checks.visible_reply_links=await evaluate("Array.from(document.querySelectorAll('.message.agent .source-button')).filter(x=>x.textContent.startsWith('응답 대상')).length===2");
-  checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===8&&metrics().synthetic_typed_calls===7;
+  checks.bounded_debate_calls=metrics().synthetic_provider_calls-afterComparisons.synthetic_provider_calls===7
+    &&metrics().synthetic_typed_calls-afterComparisons.synthetic_typed_calls===7;
   await click('#show-debate-result');
   checks.conclusion_reachable=await evaluate("document.activeElement?.id==='debate-conclusion'");
   await screenshot('debate-result.png');

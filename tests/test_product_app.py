@@ -132,6 +132,25 @@ class ProductAppTests(unittest.TestCase):
         return self.call('POST',self.base+'/rooms',{'mode':'group','participant_ids':['P1','P2'],
             'initial_revision':1,'request_id':'room1'})[1]
 
+    def test_session_admission_counts_live_sessions_separately_from_generation(self):
+        self.app.close()
+        self.app = ProductApp(self.path, [self.analysis], self.model, session_ttl_seconds=3600,
+                              room_maximum_usd='1', reservation=lambda req: '0.001', active_session_limit=10)
+        self.addCleanup(self.app.close)
+        body = {'analysis_id': self.analysis.id, 'bundle_revision': self.analysis.revision,
+                'initial_opinion': '', 'request_id': 'anonymous-start'}
+        for _ in range(9):
+            token = secrets.token_urlsafe(32)
+            last = self.call('POST', '/api/v1/sessions', body, token)
+            self.assertEqual(last[0], 201)
+        status, retried = self.call('POST', '/api/v1/sessions', body, token)
+        self.assertEqual((status, retried['session_id']), (200, last[1]['session_id']))
+        with self.assertRaises(WebError) as error:
+            self.call('POST', '/api/v1/sessions', body, secrets.token_urlsafe(32))
+        self.assertEqual((error.exception.status, error.exception.code), (429, 'session_capacity'))
+        self.assertEqual(self.call('GET', self.base)[0], 200)
+        self.assertEqual(self.calls, [])
+
     def test_job_poll_can_read_the_last_commit_while_a_writer_has_the_database(self):
         _, created = self.call('POST', self.base+'/comparisons', {
             'perspective_id': 'P1', 'initial_revision': 1, 'request_id': 'compare-read'})
