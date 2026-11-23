@@ -99,8 +99,8 @@ let server,browser,socket;
     await evaluate("(document.querySelector('#empty-conversation').hidden?document.querySelector('#new-chat'):document.querySelector('#empty-new-chat')).click()");
     await until(()=>evaluate("document.querySelector('#new-chat-dialog').open&&!document.querySelector('#chat-step-mode').hidden"));
     await evaluate(`document.querySelector('[data-chat-mode=${mode}]').click()`);
-    await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-card input').length>0"));
-    await evaluate(`[...document.querySelectorAll('#chat-options .picker-card input')].slice(0,${count}).forEach(input=>input.click());document.querySelector('#chat-picker button[type=submit]').click()`);
+    await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-row input').length>0"));
+    await evaluate(`[...document.querySelectorAll('#chat-options .picker-row input')].slice(0,${count}).forEach(input=>input.click());document.querySelector('#chat-picker button[type=submit]').click()`);
     // Converse is already visible here, so wait until the new room itself has rendered.
     await until(()=>evaluate(`state.room?.room_id&&state.room.state==='idle'&&!document.querySelector('#new-chat-dialog').open&&!document.querySelector('#opening').hidden&&document.querySelectorAll('#room-summary .member-chip').length===${count}`));
   };
@@ -123,12 +123,13 @@ let server,browser,socket;
     await evaluate("document.querySelector('#close-evidence').click()");
     report.checks.seeded_typed_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_typed_calls===4;
   }
-  report.checks.peer_reply_links=await evaluate("document.querySelector('#messages').textContent.split('앞선 발언에 대한 응답').length===3");
+  // Reply context moved from the speaker row into the Evidence panel.
+  report.checks.peer_reply_links=await evaluate("state.room.messages.filter(m=>m.author_kind==='agent'&&replyContext(m)).length===2");
   await evaluate("document.querySelector('.message.agent .evidence-button').click()");
   await until(()=>evaluate("document.querySelector('#evidence-list').textContent.includes('Safety reviews')"));
-  report.checks.source_lookup=await evaluate("document.querySelector('#evidence-drawer').open");await screenshot('source.png');
+  report.checks.source_lookup=await evaluate("!document.querySelector('#evidence-panel').hidden");await screenshot('source.png');
   await evaluate("document.querySelector('#close-evidence').click()");
-  report.checks.source_drawer_dismissal=await evaluate("!document.querySelector('#evidence-drawer').open");await screenshot('conversation.png');
+  report.checks.source_drawer_dismissal=await evaluate("document.querySelector('#evidence-panel').hidden");await screenshot('conversation.png');
   await evaluate("document.querySelector('#go-reflect').click()");
   await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
   await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelectorAll('#context-messages input')[1].click();document.querySelector('#analyze').click()");
@@ -228,10 +229,11 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await click('#empty-new-chat');
   await until(()=>evaluate("document.querySelector('#new-chat-dialog').open&&!document.querySelector('#chat-step-mode').hidden"));
   await click('[data-chat-mode=group]');
-  await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-card').length===2"));
-  checks.picker_groups_follow_explore=await evaluate("document.querySelectorAll('#chat-options .closeness-group').length>0");
+  await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-row').length===2"));
+  await screenshot('new-chat.png');
+  checks.picker_groups_follow_explore=await evaluate("document.querySelectorAll('#chat-options .picker-group .closeness-group-title').length>0");
   // Pick P2 first, then P1: the speaking order must follow the picking order.
-  await evaluate("[...document.querySelectorAll('#chat-options .picker-card input')].sort((a,b)=>a.value<b.value?1:-1).forEach(input=>input.click())");
+  await evaluate("[...document.querySelectorAll('#chat-options .picker-row input')].sort((a,b)=>a.value<b.value?1:-1).forEach(input=>input.click())");
   await until(()=>evaluate("!document.querySelector('#chat-format-label').hidden"));
   await click('#chat-picker input[name=chat-format][value=debate]');
   await click('#chat-picker button[type=submit]');
@@ -268,7 +270,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.visible_reply_links=await evaluate("state.room.messages.filter(m=>m.author_kind==='agent'&&evidenceItems(m).targets.length).length===2");
   checks.agent_bubbles_have_evidence_buttons=await evaluate("document.querySelectorAll('.message.agent .evidence-button').length>0&&!document.querySelector('.message.agent .bubble .source-button')");
   await evaluate("document.querySelector('.message.agent .evidence-button').click()");
-  await until(()=>evaluate("document.querySelector('#evidence-drawer').open&&document.querySelectorAll('#evidence-list .evidence-item').length>0"));
+  await until(()=>evaluate("!document.querySelector('#evidence-panel').hidden&&document.querySelectorAll('#evidence-list .evidence-card').length>0"));
   checks.evidence_panel_lists_comments=true;
   await click('#close-evidence');
   // Explore compares every perspective automatically (two here), one more call than a single manual comparison.

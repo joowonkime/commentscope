@@ -72,7 +72,8 @@ function showStep(step){
   $('before').hidden=true;$('workspace').hidden=false;
   if(step==='converse'&&!state.room&&state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}
   if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
-  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog','evidence-drawer'])closeDialog(id);
+  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
+  closeEvidence();
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
   rememberConversation();
@@ -395,6 +396,7 @@ function roomPath(room){
 }
 function setRoom(room){
   if(room?.room_id!==state.room?.room_id||room?.kind==='debate_draft'){
+    if(typeof closeEvidence==='function'&&$('evidence-panel'))closeEvidence();
     $('question').value='';$('question-target').replaceChildren();
   }
   clearTimeout(state.roomTimer);
@@ -439,10 +441,8 @@ function renderMessages(){
     const phase=({opening:'입장 발언',reply:'상대 입장 응답'})[m.phase];
     if(m.author_kind==='agent'){
       const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id));box.append(icon);
-      const speaker=node('div',undefined,'speaker-row');speaker.append(node('strong',label(m.agent_id),'speaker-name'));
-      if(phase)speaker.append(node('span',phase,'speaker-phase'));
-      if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')speaker.append(node('span',label(reply.agent_id)+'의 앞선 발언에 대한 응답','reply-reference'));}
-      speaker.append(node('span',messageTime(m),'message-time'));content.append(speaker);
+      // Figma: the speaker row is just name · time; turn type and reply context live in Evidence.
+      const speaker=node('div',undefined,'speaker-row');speaker.append(node('strong',label(m.agent_id),'speaker-name'),node('span',messageTime(m),'message-time'));content.append(speaker);
     }else box.append(node('span',messageTime(m),'message-time'));
     if(m.body)bubble.append(node('p',m.body));
     if(m.author_kind==='agent'&&!m.points?.length){
@@ -458,9 +458,8 @@ function renderMessages(){
     }
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
-    if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises)bubble.append(node('p',point.text));}
     content.append(bubble);
-    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','📎 Evidence · '+count),node('span','›','evidence-chevron'));button.onclick=()=>openEvidence(m);content.append(button);}}
+    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','📎 Evidence · '+count),node('span','›','evidence-chevron'));button.dataset.message=m.message_id;button.onclick=()=>openEvidence(m);content.append(button);}}
     box.append(content);$('messages').append(box);
   }
 }
@@ -478,22 +477,45 @@ function evidenceItems(m){
   return {comments:[...comments.values()],external,anchors:[...anchors.values()],targets};
 }
 function evidenceCount(m){const e=evidenceItems(m);return e.comments.length+e.external.length;}
+function replyContext(m){const reply=m.reply_to_message_id&&state.room.messages.find(x=>x.message_id===m.reply_to_message_id);return reply?.author_kind==='agent'?reply:null;}
+function evidenceCard({category,title,origin,excerpt,jump,link}){
+  const card=node('article',undefined,'evidence-card');
+  if(title)card.append(node('h3',title,'evidence-card-title'));
+  if(origin)card.append(node('p',origin,'evidence-origin'));
+  if(link){const a=node('a',link.text+' ↗','evidence-link');a.href=link.url;a.target='_blank';a.rel='noopener noreferrer';card.append(a);}
+  const quote=node('blockquote',excerpt||'','evidence-text');if(excerpt!==undefined)card.append(quote);
+  const foot=node('div',undefined,'evidence-foot');foot.append(node('span',category,'evidence-category'));
+  if(jump){const go=node('button','Jump to reply ›','evidence-jump');go.type='button';go.onclick=jump;foot.append(go);}
+  card.append(foot);return {card,quote};
+}
+function jumpTo(messageId){const el=$('message-'+messageId);if(!el)return;el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('focused');setTimeout(()=>el.classList.remove('focused'),1600);}
 function openEvidence(m){
   const e=evidenceItems(m),list=$('evidence-list');list.replaceChildren();
-  $('evidence-title').textContent='Evidence · '+label(m.agent_id);
-  $('evidence-context').textContent=e.comments.length+' comment'+(e.comments.length===1?'':'s')+(e.external.length?' · '+e.external.length+' external source'+(e.external.length===1?'':'s'):'')+' behind this message.';
+  $('evidence-title').textContent='Evidence of Reply';
+  $('evidence-context').textContent=label(m.agent_id)+(messageTime(m)?' · '+messageTime(m):'')+' — '+e.comments.length+' comment'+(e.comments.length===1?'':'s')+(e.external.length?', '+e.external.length+' external source'+(e.external.length===1?'':'s'):'')+'.';
+  const jump=()=>jumpTo(m.message_id);
   for(const c of e.comments){
-    const item=node('article',undefined,'evidence-item'),quote=node('blockquote',c.quote||'…','evidence-text');item.append(quote);
-    sourceText(c.id).then(v=>{quote.textContent=v.text;if(v.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',v.PARENT_CONTEXT_ONLY.text));item.insertBefore(parent,quote);}}).catch(()=>{if(!c.quote)quote.textContent='This evidence could not be loaded.';});
-    if(c.supports.length){const sup=node('div',undefined,'evidence-supports');sup.append(node('span','Supports','evidence-label'));for(const t of c.supports)sup.append(node('p',t));item.append(sup);}
-    list.append(item);
+    const {card,quote}=evidenceCard({category:'COMMENT EVIDENCE',title:c.supports[0]||label(m.agent_id),origin:'Comment from the video'+(c.supports.length>1?' · supports '+c.supports.length+' points':''),excerpt:c.quote||'…',jump});
+    sourceText(c.id).then(v=>{quote.textContent=v.text;if(v.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',v.PARENT_CONTEXT_ONLY.text));card.insertBefore(parent,quote);}}).catch(()=>{if(!c.quote)quote.textContent='This evidence could not be loaded.';});
+    list.append(card);
   }
-  if(e.external.length){list.append(node('h3','External sources','evidence-heading'));for(const x of e.external){const item=node('article',undefined,'evidence-item'),a=node('a',x.title+' ↗','evidence-link');a.href=x.url;a.target='_blank';a.rel='noopener noreferrer';item.append(a);if(x.text)item.append(node('p',x.text,'evidence-text'));list.append(item);}}
-  if(e.anchors.length){list.append(node('h3','Claims the agent referred to','evidence-heading'));for(const t of e.anchors)list.append(node('blockquote',t,'evidence-claim'));}
-  if(e.targets.length){list.append(node('h3','Responds to','evidence-heading'));const row=node('div');for(const t of e.targets)appendPointLinks(row,[t.point_id],state.room,label(t.agent_id));row.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>closeDialog('evidence-drawer')));list.append(row);}
-  if(!list.childElementCount)list.append(node('p','No evidence is attached to this message.','muted'));
-  openDialog('evidence-drawer');
+  for(const x of e.external)list.append(evidenceCard({category:'EXTERNAL SOURCE',title:x.supports,link:{url:x.url,text:x.title},excerpt:x.text||undefined,jump}).card);
+  for(const t of e.anchors)list.append(evidenceCard({category:'AGENT EXPLANATION',title:'A claim the agent referred to',excerpt:t,jump}).card);
+  for(const premise of m.required_premises||[])list.append(evidenceCard({category:'CONDITION TO CHECK',title:'Premise or condition to check together',excerpt:premise.text,jump}).card);
+  const reply=replyContext(m);
+  if(reply||e.targets.length){
+    const {card}=evidenceCard({category:'REPLY CONTEXT',title:reply?'Replying to '+label(reply.agent_id):'Responds to'});
+    const row=node('div',undefined,'evidence-targets');
+    if(reply){const go=node('button',label(reply.agent_id)+(messageTime(reply)?' · '+messageTime(reply):''),'source-button');go.type='button';go.onclick=()=>jumpTo(reply.message_id);row.append(go);}
+    for(const t of e.targets)appendPointLinks(row,[t.point_id],state.room,label(t.agent_id));
+    card.insertBefore(row,card.lastChild);list.append(card);
+  }
+  if(!list.childElementCount)list.append(node('p','No evidence is attached to this message.','evidence-intro'));
+  document.querySelectorAll('.evidence-button.active').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.evidence-button[data-message="'+CSS.escape(m.message_id)+'"]')?.classList.add('active');
+  $('evidence-panel').hidden=false;$('converse').classList.add('with-evidence');$('evidence-panel').scrollTop=0;
 }
+function closeEvidence(){$('evidence-panel').hidden=true;$('converse').classList.remove('with-evidence');document.querySelectorAll('.evidence-button.active').forEach(b=>b.classList.remove('active'));}
 function pointOrigin(origin){
   return ({ai_reasoning:'AI reasoning · not the commenters’ words',external_evidence:'Based on external sources'})[origin];
 }
@@ -631,6 +653,14 @@ function renderRoom(){
     const all=node('option','Everyone');all.value='';target.replaceChildren(all);
     for(const id of ids){const option=node('option',label(id));option.value=id;target.append(option);}
     if(ids.includes(lastTarget))target.value=lastTarget;
+    // Pill buttons choose the recipient; the hidden select keeps the value the form sends.
+    const chips=$('recipient-chips');chips.replaceChildren();
+    for(const id of ['',...ids]){
+      const chip=node('button',undefined,'recipient-chip'+(id?' accent-'+Math.max(0,indexOf(id))%5:''));chip.type='button';chip.setAttribute('role','radio');
+      if(id)chip.append(avatar(id,true));chip.append(node('span',id?label(id):'Everyone'));
+      const sync=()=>{for(const c of chips.children){const on=c===chip;c.classList.toggle('active',on);c.setAttribute('aria-checked',String(on));}};
+      chip.onclick=()=>{target.value=id;sync();};if(target.value===id)setTimeout(sync);chips.append(chip);
+    }
   }
   const openingQuestion=$('opening-question');
   openingQuestion.readOnly=Boolean(room.plan)&&room.state==='idle';
@@ -1072,41 +1102,37 @@ function chatFormat(){return $('chat-picker').querySelector('input[name=chat-for
 function updateChatPicker(){
   const ids=chatParticipants(),group=chatMode==='group',limit=group?3:1;
   for(const input of $('chat-options').querySelectorAll('input'))input.disabled=group&&ids.length>=limit&&!input.checked;
-  for(const card of $('chat-options').querySelectorAll('.picker-card'))card.classList.toggle('selected',card.querySelector('input').checked);
+  for(const row of $('chat-options').querySelectorAll('.picker-row'))row.classList.toggle('selected',row.querySelector('input').checked);
   $('chat-format-label').hidden=!(group&&supportsDebate(ids.length));
   $('chat-picker-hint').textContent=!state.analysis.perspectives.length?'This video has no available perspectives.':
     group?ids.length+' / 3 selected · choose two or three':ids.length?'1 selected':'Choose one perspective';
   $('chat-picker').querySelector('button[type=submit]').disabled=creatingChat||(group?ids.length<2:ids.length!==1);
 }
+// New chat rows follow the Figma conversation-list item: avatar, name, one line; groups stack vertically.
 function pickerCard(p){
   const level=state.closeness.get(p.id)||(hasInitialView()?'pending':'empty');
-  const card=node('label',undefined,'picker-card accent-'+indexOf(p.id)%5+' closeness-'+level),input=node('input');
+  const row=node('label',undefined,'picker-row accent-'+indexOf(p.id)%5+' closeness-'+level),input=node('input');
   input.type=chatMode==='group'?'checkbox':'radio';input.name='chat-participant';input.value=p.id;
   input.onchange=()=>{if(input.checked&&!chatOrder.includes(p.id))chatOrder.push(p.id);updateChatPicker();};
-  const top=node('header'),title=node('div',undefined,'card-title');title.append(node('strong',label(p.id)),perspectiveStats(p));top.append(avatar(p.id),title,node('span','✓','picker-check'));
-  const stance=node('p',p.text,'card-stance');stance.title=p.text;
-  card.append(input,top,stance);
-  const summary=state.closenessSummary.get(p.id);if(summary){const line=node('p',summary,'relation-summary');line.title=summary;card.append(line);}
-  return card;
+  const face=node('span',undefined,'picker-face');face.append(avatar(p.id));
+  const text=node('span',undefined,'picker-text'),line=state.closenessSummary.get(p.id)||p.text;
+  text.append(node('strong',label(p.id)),node('small',line));text.title=line;
+  const meta=node('span',undefined,'picker-meta');meta.append(perspectiveStats(p));
+  row.append(input,face,text,meta,node('span','✓','picker-check'));
+  return row;
 }
 function renderChatOptions(preselected){
   const box=$('chat-options');box.replaceChildren();chatOrder=[...preselected];
-  const cards=new Map(state.analysis.perspectives.map(p=>[p.id,pickerCard(p)]));
-  for(const id of preselected){const input=cards.get(id)?.querySelector('input');if(input)input.checked=true;}
-  // Same closeness groups as Explore when comparisons are available.
-  if(state.closeness.size){
-    for(const levels of [['close','mixed','differ','consider'],['none','error']]){
-      const row=node('div',undefined,'closeness-row'+(levels[0]==='close'?'':' closeness-row-wide'));
-      for(const level of levels){
-        const members=state.analysis.perspectives.filter(p=>state.closeness.get(p.id)===level);if(!members.length)continue;
-        const section=node('section',undefined,'closeness-group closeness-'+level),stack=node('div',undefined,'group-cards');
-        stack.append(...members.map(p=>cards.get(p.id)));section.append(node('h3',groupTitles[level]+' · '+members.length,'closeness-group-title'),stack);row.append(section);
-      }
-      if(row.childElementCount)box.append(row);
-    }
-    const rest=state.analysis.perspectives.filter(p=>!state.closeness.has(p.id));
-    if(rest.length){const grid=node('div',undefined,'picker-grid');grid.append(...rest.map(p=>cards.get(p.id)));box.append(grid);}
-  }else{const grid=node('div',undefined,'picker-grid');grid.append(...cards.values());box.append(grid);}
+  const rows=new Map(state.analysis.perspectives.map(p=>[p.id,pickerCard(p)]));
+  for(const id of preselected){const input=rows.get(id)?.querySelector('input');if(input)input.checked=true;}
+  const order=state.closeness.size?['close','mixed','differ','consider','none','error']:[];
+  for(const level of order){
+    const members=state.analysis.perspectives.filter(p=>state.closeness.get(p.id)===level);if(!members.length)continue;
+    const section=node('section',undefined,'picker-group closeness-'+level);
+    section.append(node('h3',groupTitles[level]+' · '+members.length,'closeness-group-title'),...members.map(p=>rows.get(p.id)));box.append(section);
+  }
+  const rest=state.analysis.perspectives.filter(p=>!state.closeness.has(p.id));
+  if(rest.length){const section=node('section',undefined,'picker-group');if(order.length)section.append(node('h3','Other perspectives','closeness-group-title'));section.append(...rest.map(p=>rows.get(p.id)));box.append(section);}
   updateChatPicker();
 }
 function chooseChatMode(mode,preselected=[]){
@@ -1128,8 +1154,7 @@ $('chat-picker').onsubmit=event=>{
   event.preventDefault();openConversation(chatParticipants(),chatMode==='group'&&chatFormat()==='debate',$('chat-picker').querySelector('button[type=submit]'));
 };
 $('close-chat-picker').onclick=()=>closeDialog('new-chat-dialog');
-$('close-evidence').onclick=()=>closeDialog('evidence-drawer');
-$('evidence-drawer').addEventListener('click',event=>{if(event.target===$('evidence-drawer'))closeDialog('evidence-drawer');});
+$('close-evidence').onclick=closeEvidence;
 $('rooms').onchange=()=>{if($('rooms').value)chooseRoom($('rooms').value).catch(e=>status(e.message));};
 $('room-search').oninput=renderRooms;
 document.querySelectorAll('[data-room-filter]').forEach(button=>button.onclick=()=>{state.roomFilter=button.dataset.roomFilter;document.querySelectorAll('[data-room-filter]').forEach(b=>b.classList.toggle('active',b===button));renderRooms();});
