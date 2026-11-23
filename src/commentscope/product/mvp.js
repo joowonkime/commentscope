@@ -204,7 +204,7 @@ function updateSelection(){
 function perspectiveCard(p){
   const card=node('article',undefined,'card compact accent-'+indexOf(p.id)%5);card.dataset.perspective=p.id;
   const top=node('header'),title=node('div',undefined,'card-title');
-  title.append(node('strong',label(p.id)),node('small',p.source_count+(p.admission_policy?' verified source comments':' source comments')));
+  title.append(node('strong',label(p.id)),perspectiveStats(p));
   top.append(avatar(p.id),title);
   const relation=node('p','','relation-summary'),stance=node('p',p.text,'card-stance');stance.title=p.text;
   card.append(top,stance,relation);
@@ -218,6 +218,16 @@ function perspectiveCard(p){
 // One sentence from what the popup shows: the consideration question for "consider", otherwise the lead explanation.
 function firstSentence(text){const t=(text||'').trim(),m=t.match(/^.*?[.!?。](?=\s|$)/s);return m?m[0]:t;}
 function keySentence(item,level){if(!item)return '';return firstSentence(level==='consider'&&item.consideration_question?item.consideration_question:item.explanation);}
+// Comment and like totals use the same counting as the composition charts: comments that support only
+// this perspective. Comments shared with other perspectives are counted under "Multiple perspectives".
+function perspectiveStats(p){
+  const entry=(state.analysis.composition||[]).find(e=>e.perspective_id===p.id),stats=node('small',undefined,'card-stats');
+  const fmt=n=>Number(n).toLocaleString('en-US'),count=entry?.count??0;
+  stats.append(node('span',count?fmt(count)+' comment'+(count===1?'':'s'):'Comments shared with other perspectives'));
+  if(count&&state.analysis.engagement?.available&&typeof entry?.likes==='number')stats.append(node('span','👍 '+fmt(entry.likes)+' like'+(entry.likes===1?'':'s'),'card-likes'));
+  stats.title='Comments that support only this perspective'+(state.analysis.engagement?.available?', and the likes they received when the video was collected.':'.')+' Comments shared with other perspectives are counted under “Multiple perspectives”.';
+  return stats;
+}
 function cardGrid(cards){const grid=node('div',undefined,'cards');grid.append(...cards);return grid;}
 // Groups run from closest to most different, so reading top to bottom conveys distance without a score.
 const closenessOrder=['close','mixed','consider','differ','none','error'];
