@@ -5,7 +5,7 @@ Can a viewer trace a claim back to a YouTube comment, question a different persp
 
 **Live prototype** [Open Re.View](https://35.212.169.73/mvp) · [Course milestone requirements](https://docs.google.com/document/d/1abUH5BCJjXQnEWujXDdby2AUpD-n28xEPGv8QfeT0zM/edit)
 
-[Download the editable slides](presentation/ReView_Studio4_EN.pptx) · [Open the slide PDF](presentation/ReView_Studio4_EN.pdf)
+[Print the speaker script and feature reference](presentation/M4_Presenter_Guide_EN.pdf) · [Download the editable slides](presentation/ReView_Studio4_EN.pptx) · [Open the slide PDF](presentation/ReView_Studio4_EN.pdf)
 
 ## A seven-minute studio slot
 
