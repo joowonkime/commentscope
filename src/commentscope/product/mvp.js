@@ -432,6 +432,8 @@ function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return 
 // Figma 314:2807: agent messages show avatar, a speaker row (name · time) above a grey bubble and an
 // Evidence chip below it; user messages are lavender bubbles on the right with the time beside them.
 function renderMessages(){
+  const scroller=$('chat-scroll'),atBottom=scroller.scrollHeight-scroller.scrollTop-scroller.clientHeight<80,count=$('messages').childElementCount;
+  requestAnimationFrame(()=>{if(atBottom&&$('messages').childElementCount!==count)scroller.scrollTop=scroller.scrollHeight;});
   $('messages').replaceChildren();
   // Comment statements an agent already showed in this conversation are not repeated in later bubbles;
   // they stay available under Evidence.

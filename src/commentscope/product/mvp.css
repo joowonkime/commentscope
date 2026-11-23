@@ -467,3 +467,19 @@ button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3
 .prompt-button { background: #f0edff; color: #6657e8; font-size: 12px; font-weight: 600; border-radius: 999px; padding: 6px 12px; }
 .prompt-button:hover { background: #e4defd; }
 .restated-note { color: #7f8192; font-style: italic; }
+/* Converse fits the window on desktop: only the conversation scrolls. */
+@media (min-width: 761px) {
+  body[data-step=converse] { height: 100dvh; overflow: hidden; }
+  body[data-step=converse] .conversation-shell { height: calc(100dvh - 56px); min-height: 0; overflow: hidden; }
+  body[data-step=converse] .conversations-sidebar { height: 100%; min-height: 0; overflow: hidden; }
+  body[data-step=converse] .room-list { flex: 1 1 auto; min-height: 0; overflow-y: auto; margin-bottom: 16px; }
+  body[data-step=converse] .chat-workspace, body[data-step=converse] .empty-conversation { height: 100%; min-height: 0; overflow: hidden; }
+  body[data-step=converse] .chat-workspace > * { flex-shrink: 0; }
+  body[data-step=converse] .chat-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; scroll-behavior: smooth; }
+  body[data-step=converse] .messages, body[data-step=converse] .messages.structured-transcript { max-height: none; min-height: 0; overflow: visible; }
+  body[data-step=converse] .debate-conclusion { margin: 0 28px 24px; }
+  body[data-step=converse] .opening-card { margin: 24px auto; }
+  body[data-step=converse] .evidence-panel { height: 100%; min-height: 0; max-height: none; position: static; }
+  body[data-step=converse] .reflect-link { margin: 0 23px 8px; }
+  body[data-step=converse] .composer { margin-top: 12px; margin-bottom: 8px; }
+}
