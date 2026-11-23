@@ -119,7 +119,7 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .library-item strong { display: block; overflow-wrap: anywhere; }
 .library-item small { display: block; margin-top: 4px; font-size: 12px; overflow-wrap: anywhere; }
 .library-item button { flex: 0 0 auto; }
-@media(max-width: 900px) {
+@media(max-width: 1100px) {
   .app-header { gap: 8px; }
   .app-header .step-nav { position: static; transform: none; flex: 1 1 auto; max-width: 340px; min-width: 0; }
 }
@@ -238,6 +238,17 @@ td:last-child .share-bar { --fill: #267d7a; }
 .share-bar::-webkit-progress-value { background: var(--fill); }
 .share-bar::-moz-progress-bar { background: var(--fill); }
 #share-coverage { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+#share-table tfoot { background: #f7f6fb; border-top: 1px solid var(--line); }
+.interface-language { flex: none; width: auto; min-height: 32px; max-width: 6rem; padding: 3px 6px; border: 1px solid #bdb6d4; border-radius: 7px; background: white; color: var(--ink); font: inherit; font-size: 13px; }
+.interface-language:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+dialog header > .interface-language { margin-inline-start: auto; }
+@media (max-width: 640px) {
+  .app-header { height: auto; display: grid; grid-template-columns: 1fr auto; padding: 7px 12px; gap: 6px; }
+  .app-header .header-actions { grid-area: 1 / 2; justify-self: end; }
+  .app-header .step-nav { grid-area: 2 / 1 / 3 / 3; width: 100%; max-width: none; }
+  .app-header .brand > span:last-child { display: inline; font-size: 15px; }
+  dialog header > .interface-language { max-width: 5rem; font-size: 12px; }
+}
 @media (max-width: 650px) {
   .breakdown-heading { gap: 9px; }
   #share-view { max-width: 100%; }

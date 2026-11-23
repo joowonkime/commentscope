@@ -12,11 +12,23 @@ class Element {
 }
 const flatten=n=>[n,...n.children.flatMap(flatten)];
 const text=n=>n.textContent+n.children.map(text).join('');
+const appSource = fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
+const html = fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.html'),'utf8');
+const koreanCopy = JSON.parse(html.match(/<script type="application\/json" id="interface-copy">([\s\S]*?)<\/script>/)[1]);
+function installUiStrings(context, language) {
+  context.koreanInterface = koreanCopy;
+  context.interfaceLanguage = language;
+  vm.runInContext(appSource.slice(appSource.indexOf('function msg('),appSource.indexOf('function uiTextNode(')),context);
+  vm.runInContext(appSource.slice(appSource.indexOf('function interfaceNotice('),appSource.indexOf('function asset(')),context);
+  context.setText = (element,value) => { element.textContent = context.formatText(value); };
+}
 function render(points,extra={}){
   const js=fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
   const container=new Element('div');
   const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points,...extra}]}},
-    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({core_claim_id:'claim',text:'Registered stance',source_ids:['c1']})});
+    $:()=>container,avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({core_claim_id:'claim',text:'Registered stance',source_ids:['c1']})});
+  installUiStrings(context, 'ko');
+  context.node = (tag,value) => new Element(tag,context.formatText(value));
   vm.runInContext(js.slice(js.indexOf('function sourceButtons('),js.indexOf('// API span offsets')),context);
   vm.runInContext(js.slice(js.indexOf('function renderMessages('),js.indexOf('async function refreshRoom(')),context);
   vm.runInContext('renderMessages()',context);return container;
@@ -94,8 +106,6 @@ function memoryStorage() {
     removeItem: key => entries.delete(key),
   };
 }
-
-const appSource = fs.readFileSync(path.join(__dirname, '../src/commentscope/product/mvp.js'), 'utf8');
 
 function browserTab(sharedStorage = memoryStorage(), api = undefined) {
   const context = vm.createContext({crypto: require('node:crypto').webcrypto, api, btoa, TextEncoder,
@@ -214,6 +224,7 @@ test('restoring a saved reflection clears the startup message and preserves newe
     setSession() {}, renderAnalysis() {}, renderPerspectives() {},
     showStep: step => { document.body.dataset.step = step; },
   });
+  installUiStrings(context, 'en');
   vm.runInContext(appSource.slice(appSource.indexOf('function status('), appSource.indexOf('function errorText(')), context);
   vm.runInContext(appSource.slice(appSource.indexOf('async function enter('), appSource.indexOf("$('initial').oninput")), context);
   context.status('Loading the registered discussion…');

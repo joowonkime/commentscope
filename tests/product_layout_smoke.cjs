@@ -27,6 +27,7 @@ test('source notices remain readable and Reflect remains clickable at six viewpo
       return route.fulfill({status: 404, body: ''});
     });
     await page.goto(origin + '/mvp');
+    await page.getByText('No analyses are available yet.', {exact:true}).waitFor();
     await page.evaluate(() => {
       state.analysis = {perspectives: Array.from({length: 8}, (_, index) => ({
         id: 'view-' + index, display_name: '시간과 근무 조건에 대한 관점 ' + index,
@@ -97,6 +98,7 @@ test('Explore limits the comparison queue, publishes individual results, and res
       return route.fulfill({status:404,body:''});
     });
     await page.goto(origin+'/mvp');
+    await page.getByText('No analyses are available yet.', {exact:true}).waitFor();
     await page.evaluate(ids=>{
       state.analysis={perspectives:ids.map(id=>({id,display_name:id,text:'Test stance',source_count:1,grounds:[],source_ids:[]}))};
       state.session={session_id:'qa',rooms:[],comparisons:{},capabilities:{},initial_opinion:{text:'',revision:1}};
@@ -202,6 +204,7 @@ test('Explore compares both shares without double counting, changing chat select
       return route.fulfill({status:404,body:''});
     });
     await page.goto(origin+'/mvp');
+    await page.getByText('No analyses are available yet.', {exact:true}).waitFor();
     const selectAnalysis = analysis => page.evaluate(a => enter({
       session_id:'chart-session', analysis_id:a.analysis_id, analysis:a,
       initial_opinion:{text:''}, capabilities:{}, rooms:[], reflections:[],
@@ -234,14 +237,16 @@ test('Explore compares both shares without double counting, changing chat select
     assert.deepEqual(await likes.locator('.share-value').allTextContents(),['1 · <0.1%','2 · 0.1%','1,997 · 99.9%']);
     assert.equal(await table.isVisible(),true);
     assert.equal(await page.locator('#opinion-base').innerText(),'of 3 sampled positions');
-    assert.equal(await page.locator('#like-base').innerText(),'of 2,000 recorded likes');
+    assert.equal(await page.locator('#like-base').innerText(),'of 3 linked likes');
     assert.equal(await page.locator('#share-scale').innerText(),'Bar scale 0–75%');
-    assert.match(await page.locator('#share-coverage').innerText(),/1 of 3 sampled positions.*1,997 of 2,000 likes/);
+    assert.match(await page.locator('#share-coverage').innerText(),/1 of 3 sampled positions.*3 of 2,000 recorded likes \(0.2%\).*1,997 are on unlinked comments/);
     assert.match(await page.locator('#share-method').innerText(),/AI review of 5 of the 100 processed comments/);
     assert.equal(await page.locator('#share-table tbody tr').count(),2);
-    assert.deepEqual(await table.locator('tbody tr:first-child strong').allTextContents(),['66.7%','<0.1%']);
+    assert.deepEqual(await table.locator('tbody tr:first-child strong').allTextContents(),['66.7%','33.3%']);
+    assert.equal(await table.locator('tfoot strong').innerText(),'66.7%');
+    assert.equal(await table.locator('tfoot small').innerText(),'2 likes');
     assert.deepEqual(await table.locator('tbody tr:first-child small').allTextContents(),['2 comments','1 like']);
-    assert.deepEqual(await table.locator('tbody tr:first-child progress').evaluateAll(bars=>bars.map(b=>[b.value,b.max])),[[200/3,75],[0.05,75]]);
+    assert.deepEqual(await table.locator('tbody tr:first-child progress').evaluateAll(bars=>bars.map(b=>[b.value,b.max])),[[200/3,75],[100/3,75]]);
 
     await page.getByRole('checkbox',{name:'Select Shorter days'}).check();
     await view.selectOption('b');
@@ -297,11 +302,17 @@ test('Explore compares both shares without double counting, changing chat select
     assert.match(await likes.innerText(),/No likes were recorded/);
     assert.equal(await page.locator('#rank-opinions').isDisabled(),true);
     assert.equal(await page.locator('#rank-likes').isDisabled(),true);
-    assert.equal(await page.locator('#like-base').innerText(),'of 0 recorded likes');
+    assert.equal(await page.locator('#like-base').innerText(),'No recorded likes');
     assert.deepEqual(await table.locator('tbody tr:first-child small').allTextContents(),['0 comments','0 likes']);
     assert.deepEqual(await table.locator('tbody tr:first-child strong').allTextContents(),['—','—']);
     assert.equal(await table.locator('progress').count(),0);
     assert.equal(await page.locator('.share-plot svg').count(),0);
+    await selectAnalysis({...base,composition:base.composition.map(e=>({...e,likes:e.kind==='other'?2000:0}))});
+    assert.equal(await page.locator('#like-base').innerText(),'No linked likes');
+    assert.equal(await page.locator('#rank-likes').isDisabled(),true);
+    assert.equal(await table.locator('tfoot').isVisible(),false);
+    assert.equal(await table.locator('tbody tr:first-child td:last-child strong').innerText(),'—');
+    assert.match(await page.locator('#share-coverage').innerText(),/0 of 2,000 recorded likes \(0%\)/);
     for (const change of [{analysis_id:'unknown'},{analysis_id:'bad'},{analyzed_comments:99},
       {status:'expired'},{count_scope:'registered_sources'}]) {
       await selectAnalysis({...base,...change,engagement:{available:false,total_likes:null}});
@@ -315,4 +326,88 @@ test('Explore compares both shares without double counting, changing chat select
   } finally {
     await browser.close();
   }
+});
+
+test('the interface language survives reloads and switches in place without translating evidence or drafts', async () => {
+  const browser = await chromium.launch({executablePath:process.env.CHROME_BIN});
+  try {
+    const context = await browser.newContext({locale:'ko-KR',viewport:{width:390,height:844}});
+    const page = await context.newPage();
+    const writes = [], errors = [];
+    page.on('pageerror',e=>errors.push(e.message));
+    const example = {analysis_id:'languages',status:'available',count_scope:'processed_comments',analyzed_comments:2,
+      video:{video_id:'BAHKmi4F1L8',title:'Library',description:'Perspective breakdown'},perspectives:[
+        {id:'raw',text:'Explore',display_name:'Library',source_count:1,source_ids:['source'],grounds:[]},
+      ],composition:[{perspective_id:'raw',count:1,likes:3},{kind:'multiple',count:0,likes:0},{kind:'other',count:1,likes:97}],
+      engagement:{available:true,total_likes:100}};
+    await page.route('**/*',route=>{
+      const req=route.request(),u=new URL(req.url());
+      if(u.origin!==origin)return route.abort();
+      if(req.method()!=='GET'){writes.push(u.pathname);return route.abort();}
+      const asset=files.get(u.pathname);
+      if(asset)return route.fulfill({path:path.join(product,asset[0]),contentType:asset[1]});
+      if(u.pathname==='/api/v1/analyses')return route.fulfill({json:{analyses:[example]}});
+      if(u.pathname==='/mvp/opinion-samples.json')return route.fulfill({json:{languages:{issue:'Explore',reviewer:'ai',population:2,sample_size:2,
+        positions:2,no_position:0,unclear:0,unmatched:1,multiple:0,supports:{raw:1}}}});
+      if(u.pathname.endsWith('/sources/source'))return route.fulfill({json:{text:'Library',PARENT_CONTEXT_ONLY:{text:'Explore'}}});
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/mvp');
+    const selector=page.locator('#interface-language');
+    assert.equal(await selector.inputValue(),'ko');
+    await page.locator('#initial').fill('What changed');
+    await selector.selectOption('en');
+    assert.equal(await page.locator('#initial').inputValue(),'What changed');
+    assert.equal(await page.locator('html').getAttribute('lang'),'en');
+    await page.reload();
+    assert.equal(await selector.inputValue(),'en');
+    await page.locator('#open-library').click();
+    await page.locator('#library-dialog .interface-language').selectOption('ko');
+    assert.equal(await page.locator('#library-title').innerText(),'보관함');
+    assert.equal(await page.locator('#library-videos .library-item strong').innerText(),'Library');
+    await page.locator('#close-library').click();
+    await page.evaluate(a=>enter({analysis:a,analysis_id:a.analysis_id,session_id:'languages',initial_opinion:{text:'',revision:1},
+      capabilities:{},rooms:[],reflections:[]}),example);
+    await page.waitForFunction(()=>$('opinion-base').textContent.includes('2개'));
+    await page.getByRole('checkbox',{name:'Library 선택'}).check();
+    await page.locator('#share-details summary').click();
+    await page.locator('#share-view').selectOption('raw');
+    await page.locator('.initial-summary summary').click();
+    await page.locator('#initial-edit').fill('Explore');
+    const card=page.locator('[data-perspective=raw]');
+    await card.locator('.source-disclosure summary').click();
+    await card.locator('.card-sources button').click();
+    await page.locator('#source-dialog[open]').waitFor();
+    assert.equal(await page.locator('#source').innerText(),'Library\n\n부모 댓글 · 문맥 참고\nExplore');
+    await page.locator('#source-dialog .interface-language').selectOption('en');
+    assert.equal(await page.locator('#source').innerText(),'Library\n\nParent comment for context\nExplore');
+    await page.locator('#close-source').click();
+    assert.equal(await page.locator('#share-view').inputValue(),'raw');
+    assert.equal(await page.getByRole('checkbox',{name:'Select Library'}).isChecked(),true);
+    assert.equal(await page.locator('#initial-edit').inputValue(),'Explore');
+    assert.equal(await page.locator('#like-base').innerText(),'of 3 linked likes');
+    assert.deepEqual(await page.locator('#share-table tbody strong').allTextContents(),['50%','100%']);
+    for(const language of ['ko','en']){
+      await selector.selectOption(language);
+      for(const width of [320,390,768,901,1024,1280]){
+        await page.setViewportSize({width,height:844});
+        const layout=await page.locator('.app-header').evaluate(header=>{
+          const rect=el=>el.getBoundingClientRect();
+          const lang=rect(header.querySelector('select')),lib=rect(header.querySelector('#open-library')),nav=rect(header.querySelector('.step-nav'));
+          return {fits:header.scrollWidth<=innerWidth && lang.right<=innerWidth && lang.left>=lib.right-1,
+            clear:nav.bottom<=lang.top+1 || nav.top>=lang.bottom-1 || nav.right<=lib.left+1};
+        });
+        assert.ok(layout.fits&&layout.clear,language+' '+width+'px header');
+      }
+    }
+    await page.evaluate(()=>{showStep('converse');$('opening-question').value='Library';$('opening-question').dispatchEvent(new Event('input'));});
+    await selector.selectOption('ko');
+    assert.equal(await page.locator('#opening-question').inputValue(),'Library');
+    assert.equal(await page.locator('#empty-conversation h1').innerText(),'대화 시작');
+    await page.evaluate(()=>{document.body.dataset.step='reflect';$('reflect').hidden=false;$('converse').hidden=true;});
+    await page.locator('#current').fill('What stayed the same');
+    await selector.selectOption('en');
+    assert.equal(await page.locator('#current').inputValue(),'What stayed the same');
+    assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
+  } finally { await browser.close(); }
 });
