@@ -151,10 +151,16 @@ test('Explore compares both shares without double counting, changing chat select
       const geometry=await page.locator('.breakdown').evaluate(panel => ({
         fits:panel.scrollWidth<=panel.clientWidth && panel.getBoundingClientRect().right<=innerWidth,
         tracks:[...panel.querySelectorAll('svg')].map(el=>el.getBoundingClientRect().width),
+        valuesFit:[...panel.querySelectorAll('.share-legend li')].every(item=>{
+          const edge=(item.nextElementSibling || item.parentElement).getBoundingClientRect();
+          const bound=item.nextElementSibling ? edge.left : edge.right;
+          return item.querySelector('.share-value').getBoundingClientRect().right<=bound+1;
+        }),
       }));
       assert.ok(geometry.fits,width+'px');
       assert.equal(geometry.tracks.length,2);
       assert.equal(geometry.tracks[0],geometry.tracks[1]);
+      if(width<=390)assert.ok(geometry.valuesFit,'Legend text at '+width+'px');
     }
     await view.selectOption('a');
     await selectAnalysis({...base,analysis_id:'legacy'});
