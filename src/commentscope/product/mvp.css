@@ -168,6 +168,13 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .breakdown-heading { align-items: center; }
 .breakdown h2 { margin: 0; font-size: 19px; line-height: 1.3; }
 #share-issue { margin: 3px 0 0; color: var(--muted); font-size: 14px; overflow-wrap: anywhere; }
+#share-ranking { display: flex; align-items: center; gap: 3px; }
+#share-ranking > span { margin-inline-end: 6px; color: var(--muted); font-size: 13px; }
+#share-ranking button { padding: 6px 12px; background: white; color: #4d4860; border: 1px solid var(--line); border-radius: 7px; font-size: 13px; }
+#share-ranking button[aria-pressed="true"] { background: #eeebff; color: #44369b; border-color: #a79ad9; font-weight: 650; }
+#share-ranking button:disabled { color: var(--muted); }
+#share-ranking button:focus-visible { outline: 3px solid var(--brand); outline-offset: 2px; }
+.share-view-label { display: flex; align-items: center; gap: 4px 10px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; }
 #share-view {
   max-width: min(100%, 25rem);
   min-height: 40px;
@@ -212,21 +219,39 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 #share-details { margin-top: 14px; border-top: 1px solid var(--line); }
 #share-details summary { padding: 9px 0 0; color: #4e3ca8; font-size: 13px; font-weight: 600; }
 #share-details p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
-#share-table { width: 100%; margin-top: 10px; border-collapse: collapse; font-size: 13px; line-height: 1.4; }
-#share-table th, #share-table td { padding: 6px 4px; border-top: 1px solid var(--line); text-align: end; }
-#share-table th:first-child { text-align: start; overflow-wrap: anywhere; }
-#share-table tbody th { font-weight: 500; }
-#share-table td { font-variant-numeric: tabular-nums; }
-#share-table td small { margin-inline-start: .55em; color: var(--muted); font-size: 12px; }
+#share-table { width: 100%; margin-top: 16px; table-layout: fixed; border-collapse: collapse; font-size: 14px; line-height: 1.35; }
+.share-name-col { width: 32%; }
+#share-table th, #share-table td { padding: 7px 12px; text-align: start; overflow-wrap: anywhere; }
+#share-table thead { background: #f7f6fb; }
+#share-table thead th { vertical-align: top; }
+#share-table thead small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; font-weight: 400; }
+#share-table tbody tr { border-bottom: 1px solid var(--line); }
+#share-scale span { white-space: nowrap; }
+#share-table tbody th { font-weight: 550; word-break: keep-all; }
+.share-measure { display: grid; grid-template-columns: minmax(0,1fr) 6.5rem; gap: 8px; align-items: center; }
+.share-amount { grid-column: 2; text-align: end; font-variant-numeric: tabular-nums; }
+.share-amount strong, .share-amount small { display: block; }
+.share-amount small { color: var(--muted); font-size: 12px; }
+.share-bar { --fill: #6554d8; display: block; width: 100%; height: 7px; appearance: none; border: 0; border-radius: 3px; overflow: hidden; background: #eceaf1; color: var(--fill); }
+td:last-child .share-bar { --fill: #267d7a; }
+.share-bar::-webkit-progress-bar { background: #eceaf1; }
+.share-bar::-webkit-progress-value { background: var(--fill); }
+.share-bar::-moz-progress-bar { background: var(--fill); }
+#share-coverage { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
 @media (max-width: 650px) {
   .breakdown-heading { gap: 9px; }
-  #share-view { width: 100%; max-width: none; }
+  #share-view { max-width: 100%; }
   .share-figure figcaption { display: grid; gap: 1px; }
   .share-legend { gap: 6px; }
   .share-legend li { flex: 1 1 0; min-width: min-content; flex-direction: column; align-items: flex-start; justify-content: space-between; gap: 1px; }
   .share-value { display: block; }
-  #share-table td small { display: block; margin: 0; }
+  #share-table { font-size: 13px; }
+  #share-table th, #share-table td { padding: 7px 4px; }
+  .share-measure { display: flex; flex-direction: column-reverse; align-items: stretch; gap: 4px; }
+  .share-amount { text-align: start; }
 }
 @media (forced-colors: active) {
   .share-dot, .share-plot rect { forced-color-adjust: none; }
+  .share-bar { appearance: auto; }
+  #share-ranking button[aria-pressed="true"] { outline: 2px solid ButtonText; }
 }

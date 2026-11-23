@@ -33,25 +33,32 @@
         <section class="breakdown" aria-labelledby="breakdown-title">
           <div class="breakdown-heading">
             <div><h2 id="breakdown-title">Perspective breakdown</h2><p id="share-issue" dir="auto" hidden></p></div>
-            <select id="share-view" aria-label="Perspective shown in both charts"><option value="">All perspectives</option></select>
+            <div id="share-ranking" role="group" aria-label="Rank perspectives by"><span>Rank by</span><button id="rank-opinions" type="button" aria-pressed="true">Opinions</button><button id="rank-likes" type="button" aria-pressed="false">Likes</button></div>
           </div>
-          <figure id="opinion-share" class="share-figure">
-            <figcaption><strong>Opinion share</strong> <span class="share-scope"></span></figcaption>
-            <div class="share-plot"></div>
-          </figure>
-          <figure id="like-share" class="share-figure">
-            <figcaption><strong>Like share</strong> <span class="share-scope"></span></figcaption>
-            <div class="share-plot"></div>
-          </figure>
+          <table id="share-table" hidden>
+            <caption class="sr-only">Opinion and like shares by perspective, highest first</caption>
+            <colgroup><col class="share-name-col"><col span="2"></colgroup>
+            <thead><tr>
+              <th scope="col">Perspective<small id="share-scale"></small></th>
+              <th scope="col" id="opinion-column">Opinion share<small id="opinion-base"></small></th>
+              <th scope="col" id="like-column">Like share<small id="like-base"></small></th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+          <p id="share-coverage" hidden></p>
           <details id="share-details">
-            <summary id="share-details-label">Compare perspectives</summary>
+            <summary>Coverage and counting method</summary>
             <p id="share-method"></p>
-            <p>Opinion counts include comments that support several views. Each view’s like count includes only comments linked directly to that view alone. Shared likes appear under “Several views” in the overview.</p>
-            <table id="share-table">
-              <caption class="sr-only">All perspectives, ranked by support in the sample. Counts and shares use the denominators shown above.</caption>
-              <thead><tr><th scope="col">Perspective</th><th scope="col">Opinions</th><th scope="col">Likes</th></tr></thead>
-              <tbody></tbody>
-            </table>
+            <p>A sampled comment can support several perspectives. Each perspective’s like count includes only comments linked to that view alone. The overview counts shared and unlinked comments separately.</p>
+            <label class="share-view-label" for="share-view">Show coverage for <select id="share-view"><option value="">All perspectives</option></select></label>
+            <figure id="opinion-share" class="share-figure">
+              <figcaption><strong>Opinion share</strong> <span class="share-scope"></span></figcaption>
+              <div class="share-plot"></div>
+            </figure>
+            <figure id="like-share" class="share-figure">
+              <figcaption><strong>Like share</strong> <span class="share-scope"></span></figcaption>
+              <div class="share-plot"></div>
+            </figure>
           </details>
         </section>
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>

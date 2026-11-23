@@ -195,6 +195,7 @@ test('Explore compares both shares without double counting, changing chat select
         reads.push(url.pathname);
         await waitForCatalog;
         return route.fulfill({json:{reviewed:report, legacy, bad:{...report,multiple:0},
+          ranked:{...report,multiple:1,supports:{a:2,b:1}},
           empty:{...report,positions:0,no_position:4,unmatched:0,multiple:0,supports:{a:0,b:0}}}});
       }
       if (url.pathname === '/api/v1/analyses') return route.fulfill({json:{analyses:[]}});
@@ -212,12 +213,17 @@ test('Explore compares both shares without double counting, changing chat select
     }, analysis);
     const stripWidths = figure => figure.locator('rect').evaluateAll(nodes => nodes.map(r => Number(r.getAttribute('width'))));
     const opinion = page.locator('#opinion-share'), likes = page.locator('#like-share');
-    const view = page.getByRole('combobox',{name:'Perspective shown in both charts'});
+    const view = page.getByLabel('Show coverage for');
+    const table = page.locator('#share-table');
 
     await selectAnalysis(base);
     await selectAnalysis({...base,analysis_id:'unreviewed'});
     releaseCatalog();
     await page.evaluate(()=>opinionCatalog);
+    assert.equal(await table.isVisible(),true);
+    assert.equal(await view.isVisible(),false);
+    assert.equal(await page.locator('#opinion-base').innerText(),'No reviewed sample');
+    await page.locator('#share-details summary').click();
     assert.match(await opinion.innerText(),/No reviewed opinion sample/);
     assert.deepEqual(await stripWidths(opinion),[]);
     assert.deepEqual(await stripWidths(likes),[1,2,1997]);
@@ -230,11 +236,16 @@ test('Explore compares both shares without double counting, changing chat select
     assert.deepEqual(await stripWidths(opinion),[2,1]);
     assert.deepEqual(await opinion.locator('.share-value').allTextContents(),['0 · 0%','2 · 66.7%','1 · 33.3%']);
     assert.deepEqual(await likes.locator('.share-value').allTextContents(),['1 · <0.1%','2 · 0.1%','1,997 · 99.9%']);
-    assert.equal(await page.locator('#share-table').isVisible(),false);
-    await page.locator('#share-details summary').click();
+    assert.equal(await table.isVisible(),true);
+    assert.equal(await page.locator('#opinion-base').innerText(),'of 3 sampled positions');
+    assert.equal(await page.locator('#like-base').innerText(),'of 2,000 recorded likes');
+    assert.equal(await page.locator('#share-scale').innerText(),'Bar scale 0–75%');
+    assert.match(await page.locator('#share-coverage').innerText(),/1 of 3 sampled positions.*1,997 of 2,000 likes/);
     assert.match(await page.locator('#share-method').innerText(),/AI review of 5 of the 100 processed comments/);
     assert.equal(await page.locator('#share-table tbody tr').count(),2);
-    assert.deepEqual(await page.locator('#share-table tbody tr:first-child small').allTextContents(),['66.7%','<0.1%']);
+    assert.deepEqual(await table.locator('tbody tr:first-child strong').allTextContents(),['66.7%','<0.1%']);
+    assert.deepEqual(await table.locator('tbody tr:first-child small').allTextContents(),['2 comments','1 like']);
+    assert.deepEqual(await table.locator('tbody tr:first-child progress').evaluateAll(bars=>bars.map(b=>[b.value,b.max])),[[200/3,75],[0.05,75]]);
 
     await page.getByRole('checkbox',{name:'Select Shorter days'}).check();
     await view.selectOption('b');
@@ -256,12 +267,29 @@ test('Explore compares both shares without double counting, changing chat select
           const bound=item.nextElementSibling ? edge.left : edge.right;
           return item.querySelector('.share-value').getBoundingClientRect().right<=bound+1;
         }),
+        bars:[...panel.querySelectorAll('tbody progress')].map(el=>el.getBoundingClientRect().width),
+        cellsFit:[...panel.querySelectorAll('tbody td')].every(el=>el.scrollWidth<=el.clientWidth+1),
       }));
       assert.ok(geometry.fits,width+'px');
       assert.equal(geometry.tracks.length,2);
       assert.equal(geometry.tracks[0],geometry.tracks[1]);
+      assert.ok(geometry.bars[0]>15 && geometry.bars.every(w=>Math.abs(w-geometry.bars[0])<1));
+      assert.ok(geometry.cellsFit,width+'px wide chart cells');
       if(width<=390)assert.ok(geometry.valuesFit,'Legend text at '+width+'px');
     }
+    await selectAnalysis({...base,analysis_id:'ranked',composition:base.composition.map(e=>
+      e.perspective_id ? {...e,likes:e.perspective_id==='b'?1:0} : e)});
+    await page.locator('#opinion-column[aria-sort=descending]').waitFor();
+    await page.getByRole('checkbox',{name:'Select Shorter days'}).check();
+    await view.selectOption('a');
+    assert.deepEqual(await table.locator('tbody th').allTextContents(),['Shorter days','Earlier finish']);
+    await page.locator('#rank-likes').focus();
+    await page.keyboard.press('Space');
+    assert.deepEqual(await table.locator('tbody th').allTextContents(),['Earlier finish','Shorter days']);
+    assert.equal(await page.locator('#like-column').getAttribute('aria-sort'),'descending');
+    assert.equal(await page.locator('#share-scale').innerText(),'Bar scale 0–75%');
+    assert.equal(await view.inputValue(),'a');
+    assert.deepEqual(await page.evaluate(()=>[...state.selected]),['a']);
     await view.selectOption('a');
     await selectAnalysis({...base,analysis_id:'legacy'});
     assert.equal(await view.inputValue(),'');
@@ -271,12 +299,20 @@ test('Explore compares both shares without double counting, changing chat select
       composition:base.composition.map(e=>({...e,likes:0}))});
     assert.match(await opinion.innerText(),/0 of 5 sampled comments/);
     assert.match(await likes.innerText(),/No likes were recorded/);
+    assert.equal(await page.locator('#rank-opinions').isDisabled(),true);
+    assert.equal(await page.locator('#rank-likes').isDisabled(),true);
+    assert.equal(await page.locator('#like-base').innerText(),'of 0 recorded likes');
+    assert.deepEqual(await table.locator('tbody tr:first-child small').allTextContents(),['0 comments','0 likes']);
+    assert.deepEqual(await table.locator('tbody tr:first-child strong').allTextContents(),['—','—']);
+    assert.equal(await table.locator('progress').count(),0);
     assert.equal(await page.locator('.share-plot svg').count(),0);
     for (const change of [{analysis_id:'unknown'},{analysis_id:'bad'},{analyzed_comments:99},
       {status:'expired'},{count_scope:'registered_sources'}]) {
       await selectAnalysis({...base,...change,engagement:{available:false,total_likes:null}});
       assert.match(await opinion.innerText(),/No reviewed opinion sample/);
       assert.match(await likes.innerText(),/Like counts are unavailable/);
+      assert.equal(await page.locator('#like-base').innerText(),'Counts unavailable');
+      assert.equal(await table.locator('tbody small').count(),0);
       assert.equal(await page.locator('.share-plot svg').count(),0);
     }
     assert.deepEqual(reads,['/mvp/opinion-samples.json']);

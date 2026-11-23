@@ -150,20 +150,21 @@ function renderAnalysis(){
 }
 let opinionCatalog;
 let activeOpinionSample;
+let shareRank = 'opinions';
 const shareNumber = new Intl.NumberFormat('en-US');
 const countIsValid = n => Number.isSafeInteger(n) && n >= 0;
 
 function renderComposition(){
   const analysis = state.analysis, select = $('share-view');
-  const previous = select.dataset.analysis === analysis.analysis_id ? select.value : '';
+  const sameAnalysis = select.dataset.analysis === analysis.analysis_id;
+  const previous = sameAnalysis ? select.value : '';
+  if(!sameAnalysis)shareRank = 'opinions';
   select.dataset.analysis = analysis.analysis_id || '';
   select.replaceChildren(new Option('All perspectives', ''));
   for(const p of analysis.perspectives)select.add(new Option(p.display_name || p.text, p.id));
   select.value = previous;
   if(select.selectedIndex < 0)select.selectedIndex = 0;
   select.disabled = !analysis.perspectives.length;
-  const count = analysis.perspectives.length;
-  $('share-details-label').textContent = count > 1 ? 'Compare all ' + count + ' perspectives' : 'How shares are counted';
   activeOpinionSample = null;
   renderShares();
   if(analysis.status !== 'expired' && analysis.count_scope === 'processed_comments' && analysis.analysis_id){
@@ -249,6 +250,10 @@ function renderShareFigure(id, scope, total, parts, emptyMessage){
 }
 function renderShares(){
   const analysis = state.analysis, sample = activeOpinionSample, likes = likeDistribution(analysis);
+  renderShareRanking(analysis, sample, likes);
+  renderCoverage(analysis, sample, likes);
+}
+function renderCoverage(analysis, sample, likes){
   const view = $('share-view').value;
   const issue = $('share-issue');
   issue.hidden = !sample;
@@ -276,24 +281,72 @@ function renderShares(){
   renderShareFigure('like-share', likeScope, total, likeParts, likes ?
     'No likes were recorded on the processed comments.' : 'Like counts are unavailable for the full set of processed comments.');
 
-  const table = $('share-table'), rows = table.tBodies[0];
-  rows.replaceChildren();
+  const coverage = [];
+  if(opinions)coverage.push(shareNumber.format(sample.unmatched) + ' of ' + shareNumber.format(opinions) +
+    ' sampled positions support none of these perspectives.');
+  if(total)coverage.push(shareNumber.format(likes.byGroup.get('other')) + ' of ' + shareNumber.format(total) +
+    ' likes are on unlinked comments.');
+  $('share-coverage').textContent = coverage.join(' ');
+  $('share-coverage').hidden = !coverage.length;
+}
+function renderShareRanking(analysis, sample, likes){
+  const table = $('share-table'), body = table.tBodies[0];
+  body.replaceChildren();
   table.hidden = !analysis.perspectives.length;
-  const ranked = [...analysis.perspectives];
-  ranked.sort((a,b) => (sample ? sample.supports[b.id] - sample.supports[a.id] : 0) ||
-    (likes ? likes.byGroup.get(b.id) - likes.byGroup.get(a.id) : 0));
-  for(const p of ranked){
-    const row = rows.insertRow(), name = node('th', p.display_name || p.text);
+  $('share-ranking').hidden = analysis.perspectives.length < 2;
+  const opinions = sample?.positions, totalLikes = likes?.total;
+  const sortBy = totalLikes && (shareRank === 'likes' || !opinions) ? 'likes' : 'opinions';
+  for(const [metric, column, total] of [['opinions','opinion-column',opinions],['likes','like-column',totalLikes]]){
+    const active = Boolean(total && metric === sortBy);
+    const button = $('rank-' + metric);
+    button.disabled = !total;
+    button.setAttribute('aria-pressed', String(active));
+    $(column).setAttribute('aria-sort', active ? 'descending' : 'none');
+  }
+  $('opinion-base').textContent = sample ? 'of ' + shareNumber.format(opinions) + ' sampled positions' : 'No reviewed sample';
+  $('like-base').textContent = likes ? 'of ' + shareNumber.format(totalLikes) + ' recorded likes' : 'Counts unavailable';
+  const ranked = analysis.perspectives.map(p => ({name:p.display_name || p.text, opinions:sample?.supports[p.id], likes:likes?.byGroup.get(p.id)}));
+  const secondary = sortBy === 'likes' ? 'opinions' : 'likes';
+  ranked.sort((a,b) => (b[sortBy] ?? 0) - (a[sortBy] ?? 0) || (b[secondary] ?? 0) - (a[secondary] ?? 0));
+  let peak = 0;
+  for(const row of ranked){
+    peak = Math.max(peak, opinions ? 100 * row.opinions / opinions : 0, totalLikes ? 100 * row.likes / totalLikes : 0);
+  }
+  const scale = peak ? [1, 2, 5, 10, 20, 25, 50, 75, 100].find(limit => limit >= peak) : 100;
+  const scaleLabel = $('share-scale');
+  scaleLabel.replaceChildren();
+  if(opinions || totalLikes)scaleLabel.append('Bar scale ', node('span', '0–' + scale + '%'));
+  for(const entry of ranked){
+    const row = body.insertRow(), name = node('th', entry.name);
     name.scope = 'row';
+    name.dir = 'auto';
     row.append(name);
-    for(const [count, denominator] of [[sample?.supports[p.id], opinions], [likes?.byGroup.get(p.id), total]]){
-      const cell = row.insertCell();
-      cell.textContent = count === undefined ? '—' : shareNumber.format(count);
-      if(denominator)cell.append(node('small', sharePercent(count, denominator)));
-    }
+    renderShareCell(row.insertCell(), entry.opinions, opinions, scale, 'comment');
+    renderShareCell(row.insertCell(), entry.likes, totalLikes, scale, 'like');
   }
 }
-$('share-view').addEventListener('change', renderShares);
+function renderShareCell(cell, count, denominator, scale, unit){
+  const measure = node('div', undefined, 'share-measure');
+  if(denominator){
+    const bar = node('progress', undefined, 'share-bar');
+    bar.max = scale;
+    bar.value = 100 * count / denominator;
+    bar.setAttribute('aria-hidden', 'true');
+    measure.append(bar);
+  }
+  const value = node('span', undefined, 'share-amount');
+  value.append(node('strong', denominator ? sharePercent(count, denominator) : '—'));
+  if(count !== undefined)value.append(node('small', shareNumber.format(count) + ' ' + unit + (count === 1 ? '' : 's')));
+  measure.append(value);
+  cell.append(measure);
+}
+for(const metric of ['opinions', 'likes']){
+  $('rank-' + metric).addEventListener('click', () => {
+    shareRank = metric;
+    renderShareRanking(state.analysis, activeOpinionSample, likeDistribution(state.analysis));
+  });
+}
+$('share-view').addEventListener('change', () => renderCoverage(state.analysis, activeOpinionSample, likeDistribution(state.analysis)));
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
   const count=state.selected.size;
