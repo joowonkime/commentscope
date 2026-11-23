@@ -830,7 +830,8 @@ async function refreshReflection(){
   if(state.room&&![...state.context].some(id=>state.room.messages.some(m=>m.message_id===id)))state.context=new Set(state.room.messages.slice(-24).map(m=>m.message_id));
   if(state.reflectionResult)highlightReflection(state.reflectionResult);
 }
-function clearInsights(){state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;}
+function clearInsights(){state.reflectionFocus=null;if($('reflection-legend'))$('reflection-legend').hidden=true;if($('reflection-intro')){$('reflection-intro').hidden=false;$('reflection-review-intro').hidden=true;$('reflection-title').textContent='Reflect on your own viewpoint';}
+  state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;}
 async function saveCurrent() {
   const value = $('current').value;
   const current = state.session.current_opinion;
@@ -842,23 +843,97 @@ async function saveCurrent() {
   return state.session.current_opinion.revision;
 }
 async function jumpTo(mid,refs){const ref=refs?.find(m=>m.message_id===mid);if(ref){await chooseRoom(ref.room_id);$('message-'+mid)?.scrollIntoView({block:'center'});}}
+// ---- Reflect review, matched to Figma 242:404 "How your thinking evolved" ----
+const categoryOrder=['stayed','changed','newly_learned','worth_more_thought'];
+const categoryChip={stayed:'Stayed',changed:'Changed',newly_learned:'Newly learned',worth_more_thought:'Worth more thought'};
+const categoryTitle={stayed:'What stayed the same',changed:'What changed',newly_learned:'What you newly learned or thought more about',worth_more_thought:'Points worth more thought'};
+const categoryNote={stayed:'Ideas that appear in both of your views and held up in the conversations.',changed:'Where your view shifted between your initial and current opinion.',
+  newly_learned:'Points that weren’t in your first opinion at all.',worth_more_thought:'Points where you can have more deliberation'};
+// Each sentence takes the colour of the first category that cites it (no mixed colour).
+function spanCategories(result,kind){
+  const owner=new Map(),items=new Map();
+  for(const key of categoryOrder)(result.categories[key]||[]).forEach((item,i)=>{for(const id of item[kind+'_span_ids']||[]){if(!owner.has(id))owner.set(id,key);if(!items.has(id))items.set(id,[]);items.get(id).push(key+':'+i);}});
+  return {owner,items};
+}
+function renderOpinionMarks(result,kind,el){
+  const opinion=state.session[kind+'_opinion'],chars=[...opinion.text],{owner,items}=spanCategories(result,kind);
+  el.replaceChildren();let at=0;
+  for(const seg of [...opinion.segments].sort((x,y)=>x.start-y.start)){
+    if(seg.start>at)el.append(document.createTextNode(chars.slice(at,seg.start).join('')));
+    const text=chars.slice(seg.start,seg.end).join(''),key=owner.get(seg.id);
+    if(key){const mark=node('mark',text,'reflect-mark cat-'+key);mark.dataset.cat=key;mark.dataset.items=(items.get(seg.id)||[]).join(' ');el.append(mark);}
+    else el.append(document.createTextNode(text));
+    at=Math.max(at,seg.end);
+  }
+  if(at<chars.length)el.append(document.createTextNode(chars.slice(at).join('')));
+}
 function highlightReflection(result){
-  for(const kind of ['initial','current']){const opinion=state.session[kind+'_opinion'],spans=[];for(const [key,items] of Object.entries(result.categories))for(const item of items)for(const id of item[kind+'_span_ids']){const span=opinion.segments.find(s=>s.id===id);if(span)spans.push({...span,category:key});}highlighted($(kind+'-copy'),opinion.text,spans);}
+  renderOpinionMarks(result,'initial',$('initial-copy'));renderOpinionMarks(result,'current',$('current-copy'));applyReflectionFocus();
+}
+// Colour-coded focus: a category chip keeps only that category (chips, marks and sections);
+// hovering a point lights up its sentences in both views.
+function applyReflectionFocus(){
+  const focus=state.reflectionFocus||null;
+  for(const chip of $('reflection-tabs').children)chip.classList.toggle('faded',!!focus&&chip.dataset.cat!==(focus||'all')&&!(chip.dataset.cat==='all'&&!focus));
+  for(const chip of $('reflection-tabs').children)chip.setAttribute('aria-pressed',String(chip.dataset.cat===(focus||'all')));
+  for(const mark of document.querySelectorAll('#reflection-layout .reflect-mark'))mark.classList.toggle('quiet',!!focus&&mark.dataset.cat!==focus);
+  for(const section of $('suggestions').children)section.hidden=!!focus&&section.dataset.cat!==focus;
+}
+function spotlightPoint(ref,on){for(const mark of document.querySelectorAll('#reflection-layout .reflect-mark'))mark.classList.toggle('lit',on&&mark.dataset.items.split(' ').includes(ref));}
+function splitExplanation(text){const t=(text||'').trim(),m=t.match(/^.*?[.!?。](?=\s|$)/s);return m&&m[0].length<t.length?[m[0],t.slice(m[0].length).trim()]:[t,''];}
+async function relatedCards(item,result,box){
+  const refs=(item.related_message_ids||[]).map(id=>(result.context_message_refs||[]).find(r=>r.message_id===id)).filter(Boolean);
+  if(!refs.length)return;
+  const byRoom=new Map();for(const r of refs){if(!byRoom.has(r.room_id))byRoom.set(r.room_id,[]);byRoom.get(r.room_id).push(r);}
+  box.append(node('p','RELATED CONVERSATIONS · '+byRoom.size,'related-label'));
+  for(const [roomId,list] of byRoom){
+    const summary=state.session.rooms.find(r=>r.room_id===roomId),card=node('button',undefined,'related-card');card.type='button';box.append(card);
+    if(!summary){card.append(node('span','A conversation','related-title'));continue;}
+    state.roomCache??=new Map();
+    if(!state.roomCache.has(roomId))state.roomCache.set(roomId,api(roomPath(summary)).catch(()=>null));
+    const room=await state.roomCache.get(roomId);const ids=summary.participant_ids||room?.participant_ids||[];
+    const faces=node('span',undefined,'related-faces'+(ids.length>1?' group':''));for(const id of ids.slice(0,3))faces.append(avatar(id,true));
+    const text=node('span',undefined,'related-text');
+    const kind=summary.kind==='synthesis_chat'?'Consensus Agent':ids.length>1?'Group chat · '+ids.length+' agents':'1:1 · '+label(ids[0]);
+    text.append(node('strong',kind+(room?' · '+room.messages.length+' messages':''),'related-title'));
+    const message=room?.messages.find(m=>m.message_id===list[0].message_id);
+    if(message){
+      const said=message.author_kind==='agent'?((message.points||[]).filter(p=>p.origin!=='original_comment').map(p=>p.text).join(' ')||message.body||''):message.body||'';
+      if(said)text.append(node('em','“'+said.slice(0,160)+(said.length>160?'…':'')+'”','related-quote'));
+      const index=room.messages.indexOf(message),you=[...room.messages.slice(0,index+1)].reverse().find(m=>m.author_kind==='user');
+      if(you?.body)text.append(node('small','You: “'+you.body.slice(0,120)+(you.body.length>120?'…':'')+'”','related-you'));
+    }
+    card.append(faces,text);card.onclick=()=>jumpTo(list[0].message_id,result.context_message_refs).catch(e=>status(e.message));
+  }
 }
 function renderSuggestions(result){
-  $('suggestions').replaceChildren();$('reflection-tabs').replaceChildren();$('insight-panel').hidden=false;$('reflection-layout').classList.add('review');$('current').hidden=true;$('current-copy').hidden=false;$('edit-current').hidden=false;
-  const all=node('button','All','active');all.type='button';all.onclick=()=>{$('suggestions').scrollTop=0;};$('reflection-tabs').append(all);
-  let number=0;
-  for(const [key,title] of Object.entries(categories)){number++;const items=result.categories[key],group=node('section',undefined,'suggestion '+key);group.id='insight-'+key;
-    const heading=node('h3');heading.append(node('span',number,'category-number'),node('span',title),node('small',items.length+' points'));group.append(heading);
-    const tab=node('button',title+' · '+items.length,key);tab.type='button';tab.onclick=()=>group.scrollIntoView({block:'nearest'});$('reflection-tabs').append(tab);
-    for(const item of items){const row=node('article',undefined,'reflection-insight');row.append(node('p',item.explanation));
-      for(const kind of ['initial','current']){const ids=item[kind+'_span_ids'],spans=state.session[kind+'_opinion'].segments.filter(s=>ids.includes(s.id));if(spans.length)row.append(node('blockquote',(kind==='initial'?'BEFORE  ':'NOW  ')+spans.map(s=>s.text).join(' '),'opinion-reference'));}
-      for(const mid of item.related_message_ids){const button=node('button','관련 대화','source-button');button.type='button';button.onclick=()=>jumpTo(mid,result.context_message_refs).catch(e=>status(e.message));row.append(button);}group.append(row);
-    }
-    if(!items.length)group.append(node('p','No suggestions in this category.','hint'));
-    const adopt=node('button','Use these suggestions','secondary');adopt.type='button';adopt.disabled=!items.length;adopt.onclick=()=>{$(key).value=items.map(i=>i.explanation).join('\n');$('reflection-save-panel').open=true;$(key).focus();};group.append(adopt);$('suggestions').append(group);
-  }
+  $('suggestions').replaceChildren();$('reflection-tabs').replaceChildren();$('insight-panel').hidden=false;$('reflection-layout').classList.add('review');
+  $('current').hidden=true;$('current-copy').hidden=false;$('edit-current').hidden=false;$('reflection-legend').hidden=false;
+  $('reflection-title').textContent='How your thinking evolved';$('reflection-intro').hidden=true;$('reflection-review-intro').hidden=false;
+  state.reflectionFocus=null;
+  const all=node('button','All','reflect-chip chip-all');all.type='button';all.dataset.cat='all';all.onclick=()=>{state.reflectionFocus=null;applyReflectionFocus();$('suggestions').scrollTop=0;};$('reflection-tabs').append(all);
+  categoryOrder.forEach((key,n)=>{
+    const items=result.categories[key]||[],section=node('section',undefined,'reflect-section cat-'+key);section.id='insight-'+key;section.dataset.cat=key;
+    const head=node('header',undefined,'reflect-section-head'),title=node('div');
+    title.append(node('h3',categoryTitle[key]),node('p',categoryNote[key]));
+    head.append(node('span',String(n+1),'reflect-number'),title,node('span',items.length+' point'+(items.length===1?'':'s'),'reflect-count'));section.append(head);
+    const chip=node('button',undefined,'reflect-chip cat-'+key);chip.type='button';chip.dataset.cat=key;chip.append(node('span',String(n+1),'chip-dot'),node('span',categoryChip[key]+' · '+items.length));
+    chip.onclick=()=>{state.reflectionFocus=state.reflectionFocus===key?null:key;applyReflectionFocus();$('suggestions').scrollTop=0;};$('reflection-tabs').append(chip);
+    items.forEach((item,i)=>{
+      const point=node('article',undefined,'reflect-point'),body=node('div',undefined,'reflect-point-body'),[heading,detail]=splitExplanation(item.explanation);
+      body.append(node('h4',heading));if(detail)body.append(node('p',detail));
+      const quotes=node('div',undefined,'before-now');
+      for(const kind of ['initial','current']){const ids=item[kind+'_span_ids']||[],spans=state.session[kind+'_opinion'].segments.filter(s=>ids.includes(s.id));
+        if(spans.length){const row=node('div',undefined,'before-now-row');row.append(node('span',kind==='initial'?'BEFORE':'NOW','before-now-label'),node('span','“'+spans.map(s=>s.text).join(' ')+'”'));quotes.append(row);}}
+      if(quotes.childElementCount)body.append(quotes);
+      const related=node('div',undefined,'related');body.append(related);relatedCards(item,result,related);
+      point.append(node('span',undefined,'reflect-bar'),body);
+      const ref=key+':'+i;point.onmouseenter=()=>spotlightPoint(ref,true);point.onmouseleave=()=>spotlightPoint(ref,false);
+      section.append(point);
+    });
+    if(!items.length)section.append(node('p','No points in this part.','reflect-empty'));
+    $('suggestions').append(section);
+  });
   // Category fields are no longer shown: the analysis suggestions become what Save stores.
   for(const key of Object.keys(categories))$(key).value=(result.categories[key]||[]).map(i=>i.explanation).join('\n');
   highlightReflection(result);
@@ -1364,7 +1439,7 @@ $('comparison').addEventListener('close',()=>{$('comparison').hidden=true;state.
 $('go-reflect').onclick=()=>showStep('reflect');$('go-converse').onclick=()=>showStep('converse');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
-$('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};
+$('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('');}catch(e){status(e.message);}finally{button.disabled=false;}};
 $('save-reflection').onsubmit = async event => {
   event.preventDefault();
   const button = $('save-reflection').querySelector('button[type=submit]');

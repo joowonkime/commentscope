@@ -144,13 +144,20 @@ let server,browser,socket;
   await evaluate("document.querySelector('#go-reflect').click()");
   await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
   await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelector('#analyze').click()");
-  await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
+  await until(()=>evaluate("document.querySelectorAll('#suggestions .reflect-section').length===4"));
   report.checks.reflection_four_categories=true;
-  await evaluate("document.querySelector('#suggestions button.secondary').click()");
+  // Colour-coded review: a category chip keeps only that category in the panel and in both views.
+  await evaluate("document.querySelector('#reflection-tabs .reflect-chip.cat-stayed').click()");
+  report.checks.reflect_chip_focuses_category=await evaluate("document.querySelectorAll('#suggestions .reflect-section:not([hidden])').length===1&&[...document.querySelectorAll('#reflection-tabs .reflect-chip')].filter(c=>c.classList.contains('faded')).length===4&&[...document.querySelectorAll('#reflection-layout .reflect-mark:not(.quiet)')].every(m=>m.dataset.cat==='stayed')");
+  report.checks.reflect_has_no_mixed_colour=await evaluate("!document.querySelector('#reflection-layout .mark-mixed')&&document.querySelectorAll('#reflection-layout .reflect-mark').length>0");
+  await evaluate("document.querySelector('#reflection-tabs .chip-all').click()");
+  report.checks.reflect_all_restores=await evaluate("document.querySelectorAll('#suggestions .reflect-section:not([hidden])').length===4");
+  await screenshot('reflection-review.png');
   await submit('save-reflection');
   await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('저장했습니다')&&document.querySelector('#saved-reflections button')"));
   const beforeSave=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
-  await evaluate("document.querySelector('#suggestions .source-button').click()");
+  await until(()=>evaluate("!!document.querySelector('#suggestions .related-card')"));
+  await evaluate("document.querySelector('#suggestions .related-card').click()");
   await until(()=>evaluate("!document.querySelector('#converse').hidden"));report.checks.related_conversation_navigation=true;
   await evaluate("document.querySelector('[data-step=reflect]').click()");
   await until(()=>evaluate("!document.querySelector('#reflect').hidden"));
@@ -362,7 +369,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   }
   await fill('#current','I would separate justified review from a universal requirement.');
   await click('#analyze');
-  await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
+  await until(()=>evaluate("document.querySelectorAll('#suggestions .reflect-section').length===4"));
   checks.reflection_analysis_works=true;
   checks.analysis_fills_saved_categories=await evaluate("['stayed','changed','newly_learned','worth_more_thought'].some(k=>document.getElementById(k).value.trim())");
   await fill('#worth_more_thought','비용과 위험을 나누어 보는 것이 중요하다는 생각은 유지했습니다.');
