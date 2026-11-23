@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map()};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map(), closenessSummary:new Map()};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -72,7 +72,7 @@ function showStep(step){
   $('before').hidden=true;$('workspace').hidden=false;
   if(step==='converse'&&!state.room&&state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}
   if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
-  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
+  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog','evidence-drawer'])closeDialog(id);
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
   rememberConversation();
@@ -221,7 +221,7 @@ const groupTitles={close:'Close to your view',mixed:'Partly close, partly differ
   differ:'Different from your view',none:'No clear link to your view',error:'Could not compare right now'};
 async function renderPerspectives(){
   const box=$('perspectives'),render=state.cardRender=(state.cardRender||0)+1,list=state.analysis.perspectives;
-  state.closeness.clear();
+  state.closeness.clear();state.closenessSummary.clear();
   box.replaceChildren();
   if(!list.length){box.append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));return;}
   const cards=new Map(list.map(p=>[p.id,perspectiveCard(p)]));
@@ -243,7 +243,7 @@ async function renderPerspectives(){
     const items=result.value.result.items||[],level=closeness(items);
     // Lead with the explanation that matches the group.
     const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
-    setCloseness(card,level);summary.textContent=keySentence(lead,level);summary.title=summary.textContent;groups.get(level).push(card);state.closeness.set(p.id,level);
+    setCloseness(card,level);summary.textContent=keySentence(lead,level);summary.title=summary.textContent;state.closenessSummary.set(p.id,summary.textContent);groups.get(level).push(card);state.closeness.set(p.id,level);
   });
   // The four closeness groups sit side by side as columns; groups without a comparison result go on a row below.
   box.replaceChildren();
@@ -295,7 +295,7 @@ async function sourceText(id){
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
 function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
-function commentSourceButtons(container,sourceIds,caption='원문'){
+function commentSourceButtons(container,sourceIds,caption='Evidence'){
   for(const [index,sourceId] of sourceIds.entries()){
     const button=node('button',caption+' '+(index+1),'source-button');
     button.type='button';
@@ -374,11 +374,19 @@ const activeRoomStates=new Set(['running','opening','replying','synthesizing','c
 const lastRoomKey='commentscope-mvp-last-conversation';
 const defaultOpeningQuestion=$('opening-question').defaultValue;
 
-function roomName(room,index){
-  if(room.kind==='synthesis_chat')return '합의 Agent 대화 '+(index+1);
-  if(room.kind==='structured_debate')return '자동 토론 '+(index+1);
-  return (room.mode==='group'?'Group conversation ':'1:1 conversation ')+(index+1);
+function roomKindLabel(room){
+  if(room.kind==='synthesis_chat')return 'Consensus Agent chat';
+  if(room.kind==='structured_debate'||room.kind==='debate_draft')return 'Automatic debate';
+  return room.mode==='group'?'Group chat':'1:1 chat';
 }
+// A conversation is named after its first question; before that, after its kind.
+function roomName(room,index){
+  const question=(room.question||room.plan?.question||'').trim();
+  if(question)return [...question].length>48?[...question].slice(0,47).join('')+'…':question;
+  const kind=roomKindLabel(room);
+  return 'New '+(kind.startsWith('1:1')?kind:kind[0].toLowerCase()+kind.slice(1))+(index>=0?' '+(index+1):'');
+}
+function participantNames(room){return (room.participant_ids||[]).map(label).join(', ');}
 function roomPath(room){
   return room.debate_id?'/debates/'+encodeURIComponent(room.debate_id):'/rooms/'+encodeURIComponent(room.room_id);
 }
@@ -409,7 +417,7 @@ function renderRooms(){
   const query=$('room-search').value.toLowerCase();
   state.session.rooms.forEach((room,i)=>{if(room.room_id===state.room?.room_id)room=state.room;const title=roomName(room,i),option=node('option',title+' · '+(roomStates[room.state]||room.state));option.value=room.room_id;select.append(option);
     if(state.roomFilter!=='all'&&room.mode!==state.roomFilter||!title.toLowerCase().includes(query))return;
-    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);button.append(node('strong',title),node('small',roomStates[room.state]||room.state));button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
+    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);button.append(node('strong',title),node('small',[participantNames(room),roomStates[room.state]||room.state].filter(Boolean).join(' · ')));button.title=title;button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
   });
   if(!list.childNodes.length)list.append(node('p','No conversations here yet.','muted'));if(state.room?.room_id)select.value=state.room.room_id;
 }
@@ -426,51 +434,53 @@ function renderMessages(){
     if(m.author_kind==='agent'&&!m.points?.length){
       const expired=m.evidence_scope==='expired';
       bubble.append(node('p',expired?'근거 자료의 기한이 지났습니다.':m.limitation==='verification_hold'?'이 질문에 대한 답변을 검증하지 못했습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
-      if(!expired&&m.evidence_scope==='seeded_provenance'){
-        const original=perspective(m.agent_id);
-        if(original?.source_ids?.length){
-          const details=node('details',undefined,'source-disclosure');
-          details.append(node('summary','이 관점의 기존 입장과 원문 보기'),node('p',original.text));
-          commentSourceButtons(details,original.source_ids,'입장 원문');bubble.append(details);
-        }
-      }
     }
     for(const point of m.points||[]){
-      const origin=pointOrigin(point.origin);
-      if(origin)bubble.append(node('small',origin));
       const text=node('p',point.text);
       if(point.point_id)text.id='point-'+point.point_id;
+      const origin=pointOrigin(point.origin);
+      if(origin)text.append(node('span',origin,'origin-tag'));
       bubble.append(text);
-      if (m.evidence_scope === 'seeded_provenance' && point.origin === 'ai_reasoning' &&
-          point.citations?.anchor_claim_ids?.length) {
-        const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
-        if (aliases.length) {
-          const view = perspective(m.agent_id);
-          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, ground.text]));
-          if (view) claims.set(view.core_claim_id, view.text);
-          const details = node('details', undefined, 'source-disclosure');
-          details.append(node('summary', aliases.join(', ') + ' · 참조한 주장'),
-            node('p', 'E로 시작하는 번호는 Agent가 설명을 작성할 때 참고한 주장 항목을 가리킵니다.'));
-          for (const id of new Set(point.citations.anchor_claim_ids)) {
-            if (claims.has(id)) details.append(node('blockquote', claims.get(id)));
-          }
-          bubble.append(details);
-        }
-      }
-      sourceButtons(bubble,point);
-      for(const target of point.target_edges||[]){
-        appendPointLinks(bubble,[target.point_id],state.room,'응답 대상 · '+label(target.agent_id));
-      }
     }
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
-    if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
+    if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises)bubble.append(node('p',point.text));}
+    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button','Evidence · '+count,'evidence-button');button.type='button';button.onclick=()=>openEvidence(m);bubble.append(button);}}
     box.append(bubble);$('messages').append(box);
   }
 }
+// Comment-backed points need no tag; AI reasoning and external claims stay visibly separate (DEC-028).
+function evidenceItems(m){
+  const comments=new Map(),external=[],anchors=new Map(),targets=[];
+  const addComment=(id,quote,supports)=>{if(!comments.has(id))comments.set(id,{id,quote:quote||'',supports:[]});const c=comments.get(id);if(!c.quote&&quote)c.quote=quote;if(supports&&!c.supports.includes(supports))c.supports.push(supports);};
+  for(const point of [...(m.points||[]),...(m.required_premises||[])]){
+    for(const e of point.citations?.comment_evidence||[])addComment(e.source_id,e.span?.text,point.text);
+    for(const e of point.citations?.external_evidence||[]){let url;try{url=new URL(e.url);}catch(_){continue;}if(url.protocol==='https:'&&!url.username&&!url.password)external.push({url:url.href,title:e.title||url.hostname,text:e.text,supports:point.text});}
+    if(m.evidence_scope==='seeded_provenance'&&point.origin==='ai_reasoning'){const view=perspective(m.agent_id);const claims=new Map((view?.grounds||[]).map(g=>[g.claim_id,g.text]));if(view)claims.set(view.core_claim_id,view.text);for(const id of point.citations?.anchor_claim_ids||[])if(claims.has(id))anchors.set(id,claims.get(id));}
+    for(const target of point.target_edges||[])targets.push(target);
+  }
+  if(!m.points?.length&&m.evidence_scope==='seeded_provenance'){const view=perspective(m.agent_id);for(const id of view?.source_ids||[])addComment(id,'',view.text);}
+  return {comments:[...comments.values()],external,anchors:[...anchors.values()],targets};
+}
+function evidenceCount(m){const e=evidenceItems(m);return e.comments.length+e.external.length;}
+function openEvidence(m){
+  const e=evidenceItems(m),list=$('evidence-list');list.replaceChildren();
+  $('evidence-title').textContent='Evidence · '+label(m.agent_id);
+  $('evidence-context').textContent=e.comments.length+' comment'+(e.comments.length===1?'':'s')+(e.external.length?' · '+e.external.length+' external source'+(e.external.length===1?'':'s'):'')+' behind this message.';
+  for(const c of e.comments){
+    const item=node('article',undefined,'evidence-item'),quote=node('blockquote',c.quote||'…','evidence-text');item.append(quote);
+    sourceText(c.id).then(v=>{quote.textContent=v.text;if(v.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',v.PARENT_CONTEXT_ONLY.text));item.insertBefore(parent,quote);}}).catch(()=>{if(!c.quote)quote.textContent='This evidence could not be loaded.';});
+    if(c.supports.length){const sup=node('div',undefined,'evidence-supports');sup.append(node('span','Supports','evidence-label'));for(const t of c.supports)sup.append(node('p',t));item.append(sup);}
+    list.append(item);
+  }
+  if(e.external.length){list.append(node('h3','External sources','evidence-heading'));for(const x of e.external){const item=node('article',undefined,'evidence-item'),a=node('a',x.title+' ↗','evidence-link');a.href=x.url;a.target='_blank';a.rel='noopener noreferrer';item.append(a);if(x.text)item.append(node('p',x.text,'evidence-text'));list.append(item);}}
+  if(e.anchors.length){list.append(node('h3','Claims the agent referred to','evidence-heading'));for(const t of e.anchors)list.append(node('blockquote',t,'evidence-claim'));}
+  if(e.targets.length){list.append(node('h3','Responds to','evidence-heading'));const row=node('div');for(const t of e.targets)appendPointLinks(row,[t.point_id],state.room,label(t.agent_id));row.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>closeDialog('evidence-drawer')));list.append(row);}
+  if(!list.childElementCount)list.append(node('p','No evidence is attached to this message.','muted'));
+  openDialog('evidence-drawer');
+}
 function pointOrigin(origin){
-  return ({original_comment:'댓글 근거',ai_reasoning:'AI 추론 · 원작성자의 발언이 아닙니다',
-    external_evidence:'외부 자료 기반 주장'})[origin];
+  return ({ai_reasoning:'AI reasoning · not the commenters’ words',external_evidence:'Based on external sources'})[origin];
 }
 function appendPointLinks(parent,pointIds,room,title){
   for(const pointId of new Set(pointIds)){
@@ -578,13 +588,15 @@ function renderRoom(){
   renderConclusion(room);
   const ids=room.participant_ids||[];
   $('room-avatars').replaceChildren(...ids.map(id=>avatar(id)));
-  $('room-title').textContent=ids.map(label).join(' × ')||'Your conversation';
+  const index=state.session.rooms.findIndex(r=>r.room_id===room.room_id);
+  $('room-title').textContent=roomName(room,index);$('room-title').title=(room.question||room.plan?.question||'');
+  // Who is in this conversation.
+  const members=node('span',undefined,'room-members');members.append(node('span',roomKindLabel(room)+' with','room-members-label'));
+  for(const id of ids){const chip=node('span',undefined,'member-chip accent-'+Math.max(0,indexOf(id))%5);chip.append(avatar(id,true),node('span',label(id)));members.append(chip);}
   const automatic=room.kind==='structured_debate'||room.kind==='debate_draft';
   $('messages').classList.toggle('structured-transcript',automatic);
   $('show-debate-result').hidden=!room.conclusion;
-  $('room-summary').textContent=automatic?'관점별 입장과 응답을 읽고 마지막 결론을 확인하세요.':
-    room.kind==='synthesis_chat'?'공통 주장과 조건에 대해 질문할 수 있습니다.':
-    room.mode==='group'?'Different perspectives, in one conversation.':'A conversation with this perspective.';
+  $('room-summary').replaceChildren(members);
   const names={
     idle:'질문으로 시작할 수 있습니다.',running:'관점이 응답하고 있습니다.',
     opening:'각 관점이 입장을 설명하고 있습니다.',replying:'다른 관점의 발언에 답하고 있습니다.',
@@ -1033,32 +1045,74 @@ async function openConversation(ids,automatic,button){
         participant_ids:ids,initial_revision:state.session.initial_opinion.revision});
       setRoom(room);$('opening-question').value=defaultOpeningQuestion;await refreshSession();
     }
-    await refreshRoom();showStep('converse');status('');$('opening-question').focus();
+    closeDialog('new-chat-dialog');await refreshRoom();showStep('converse');status('');$('opening-question').focus();
   }catch(error){status(error.message);$('chat-picker-hint').textContent=error.message;}
   finally{creatingChat=false;button.disabled=false;updateSelection();}
 }
 if($('open-room'))$('open-room').onclick=()=>openConversation([...state.selected],supportsDebate(state.selected.size),$('open-room'));
+let chatMode=null;
 function chatParticipants(){return [...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value);}
+function chatFormat(){return $('chat-picker').querySelector('input[name=chat-format]:checked')?.value||'conversation';}
 function updateChatPicker(){
-  const ids=chatParticipants(),limit=ids.length>=3;
-  for(const input of $('chat-options').querySelectorAll('input'))input.disabled=limit&&!input.checked;
-  $('chat-format-label').hidden=!supportsDebate(ids.length);
-  $('chat-picker-hint').textContent=state.analysis.perspectives.length?ids.length+' / 3 selected':'This video has no available perspectives.';
-  $('chat-picker').querySelector('button[type=submit]').disabled=!ids.length||creatingChat;
+  const ids=chatParticipants(),group=chatMode==='group',limit=group?3:1;
+  for(const input of $('chat-options').querySelectorAll('input'))input.disabled=group&&ids.length>=limit&&!input.checked;
+  for(const card of $('chat-options').querySelectorAll('.picker-card'))card.classList.toggle('selected',card.querySelector('input').checked);
+  $('chat-format-label').hidden=!(group&&supportsDebate(ids.length));
+  $('chat-picker-hint').textContent=!state.analysis.perspectives.length?'This video has no available perspectives.':
+    group?ids.length+' / 3 selected · choose two or three':ids.length?'1 selected':'Choose one perspective';
+  $('chat-picker').querySelector('button[type=submit]').disabled=creatingChat||(group?ids.length<2:ids.length!==1);
+}
+function pickerCard(p){
+  const level=state.closeness.get(p.id)||(hasInitialView()?'pending':'empty');
+  const card=node('label',undefined,'picker-card accent-'+indexOf(p.id)%5+' closeness-'+level),input=node('input');
+  input.type=chatMode==='group'?'checkbox':'radio';input.name='chat-participant';input.value=p.id;input.onchange=updateChatPicker;
+  const top=node('header'),title=node('div',undefined,'card-title');title.append(node('strong',label(p.id)),perspectiveStats(p));top.append(avatar(p.id),title,node('span','✓','picker-check'));
+  const stance=node('p',p.text,'card-stance');stance.title=p.text;
+  card.append(input,top,stance);
+  const summary=state.closenessSummary.get(p.id);if(summary){const line=node('p',summary,'relation-summary');line.title=summary;card.append(line);}
+  return card;
+}
+function renderChatOptions(preselected){
+  const box=$('chat-options');box.replaceChildren();
+  const cards=new Map(state.analysis.perspectives.map(p=>[p.id,pickerCard(p)]));
+  for(const id of preselected){const input=cards.get(id)?.querySelector('input');if(input)input.checked=true;}
+  // Same closeness groups as Explore when comparisons are available.
+  if(state.closeness.size){
+    for(const levels of [['close','mixed','differ','consider'],['none','error']]){
+      const row=node('div',undefined,'closeness-row'+(levels[0]==='close'?'':' closeness-row-wide'));
+      for(const level of levels){
+        const members=state.analysis.perspectives.filter(p=>state.closeness.get(p.id)===level);if(!members.length)continue;
+        const section=node('section',undefined,'closeness-group closeness-'+level),stack=node('div',undefined,'group-cards');
+        stack.append(...members.map(p=>cards.get(p.id)));section.append(node('h3',groupTitles[level]+' · '+members.length,'closeness-group-title'),stack);row.append(section);
+      }
+      if(row.childElementCount)box.append(row);
+    }
+    const rest=state.analysis.perspectives.filter(p=>!state.closeness.has(p.id));
+    if(rest.length){const grid=node('div',undefined,'picker-grid');grid.append(...rest.map(p=>cards.get(p.id)));box.append(grid);}
+  }else{const grid=node('div',undefined,'picker-grid');grid.append(...cards.values());box.append(grid);}
+  updateChatPicker();
+}
+function chooseChatMode(mode,preselected=[]){
+  chatMode=mode;$('chat-step-mode').hidden=true;$('chat-step-people').hidden=false;
+  $('chat-step-label').textContent='NEW CHAT · STEP 2 OF 2';
+  $('new-chat-title').textContent=mode==='group'?'Choose two or three perspectives':'Choose one perspective';
+  $('chat-picker').querySelector('input[name=chat-format][value=conversation]').checked=true;
+  renderChatOptions(preselected);
 }
 function showChatPicker(preselected = []){
-  $('chat-options').replaceChildren();$('chat-format').value='conversation';
-  for(const p of state.analysis.perspectives){
-    const option=node('label'),check=node('input');check.type='checkbox';check.value=p.id;
-    check.checked=preselected.includes(p.id);
-    check.onchange=updateChatPicker;option.append(check,node('span',label(p.id)));$('chat-options').append(option);
-  }
-  updateChatPicker();openDialog('new-chat-dialog');
+  chatMode=null;$('chat-step-mode').hidden=false;$('chat-step-people').hidden=true;
+  $('chat-step-label').textContent='NEW CHAT · STEP 1 OF 2';$('new-chat-title').textContent='How would you like to talk?';
+  openDialog('new-chat-dialog');
+  if(preselected.length)chooseChatMode(preselected.length>1?'group':'one',preselected);
 }
+document.querySelectorAll('[data-chat-mode]').forEach(button=>button.onclick=()=>chooseChatMode(button.dataset.chatMode));
+$('chat-back').onclick=()=>showChatPicker();
 $('chat-picker').onsubmit=event=>{
-  event.preventDefault();openConversation(chatParticipants(),$('chat-format').value==='debate',$('chat-picker').querySelector('button[type=submit]'));
+  event.preventDefault();openConversation(chatParticipants(),chatMode==='group'&&chatFormat()==='debate',$('chat-picker').querySelector('button[type=submit]'));
 };
 $('close-chat-picker').onclick=()=>closeDialog('new-chat-dialog');
+$('close-evidence').onclick=()=>closeDialog('evidence-drawer');
+$('evidence-drawer').addEventListener('click',event=>{if(event.target===$('evidence-drawer'))closeDialog('evidence-drawer');});
 $('rooms').onchange=()=>{if($('rooms').value)chooseRoom($('rooms').value).catch(e=>status(e.message));};
 $('room-search').oninput=renderRooms;
 document.querySelectorAll('[data-room-filter]').forEach(button=>button.onclick=()=>{state.roomFilter=button.dataset.roomFilter;document.querySelectorAll('[data-room-filter]').forEach(b=>b.classList.toggle('active',b===button));renderRooms();});

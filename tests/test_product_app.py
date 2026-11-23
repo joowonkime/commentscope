@@ -195,6 +195,8 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(len(self.calls),4)
         self.assertTrue(any('PEER_CONTEXT_ONLY' in c['data'] for c in self.calls))
         self.assertNotIn('I support this policy.',json.dumps(self.calls))
+        summary=next(r for r in self.call('GET',self.base)[1]['rooms'] if r['room_id']==rid)
+        self.assertEqual((summary['participant_ids'],summary['question']),(['P1','P2'],'Your position?'))
 
     def test_in_flight_compare_reuses_one_job_and_session_summary_tracks_initial_revision(self):
         entered=threading.Event();release=threading.Event();original=self.app.model

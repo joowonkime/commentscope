@@ -236,7 +236,9 @@ class ProductApp:
         return {**deepcopy(session),'analysis':public,'comparisons':comparisons,
                 'initial_opinion':initial,
                 'current_opinion':self._opinion(db,sid,'current'),
-                'rooms':[{key:r[key] for key in ('room_id','mode','state','revision','kind','debate_id') if key in r}
+                # participant_ids and the first question let the conversation list name each room.
+                'rooms':[{key:deepcopy(r[key]) for key in ('room_id','mode','state','revision','kind','debate_id',
+                                                           'participant_ids','question') if key in r}
                          for r in [decode(x) for x in db.execute('SELECT data FROM rooms WHERE session_id=?',(sid,))]],
                 'reflections':[{'reflection_id':r['id'],'revision':r['revision']} for r in db.execute(
                     'SELECT id,max(revision) AS revision FROM reflections WHERE session_id=? GROUP BY id',(sid,))],

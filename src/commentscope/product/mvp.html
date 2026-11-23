@@ -83,14 +83,22 @@
       </section>
     </div>
   </dialog>
-  <dialog id="new-chat-dialog" class="perspective-modal" aria-labelledby="new-chat-title"><form id="chat-picker">
-    <header><h2 id="new-chat-title">New chat</h2><button type="button" id="close-chat-picker" class="close-button" aria-label="Close">×</button></header>
-    <fieldset><legend>Choose one to three perspectives</legend><div id="chat-options"></div></fieldset>
-    <label id="chat-format-label" hidden>Format <select id="chat-format"><option value="conversation">Group conversation</option><option value="debate">Automatic debate</option></select></label>
-    <p id="chat-picker-hint" class="muted" role="status"></p><button type="submit" class="primary" disabled>Open conversation</button>
+  <dialog id="new-chat-dialog" class="new-chat-modal" aria-labelledby="new-chat-title"><form id="chat-picker">
+    <header class="new-chat-header"><div><p class="eyebrow" id="chat-step-label">NEW CHAT · STEP 1 OF 2</p><h2 id="new-chat-title">How would you like to talk?</h2></div><button type="button" id="close-chat-picker" class="close-button" aria-label="Close"><img src="/mvp/assets/48623.svg" alt=""></button></header>
+    <section id="chat-step-mode" class="chat-step"><div class="chat-mode-options">
+      <button type="button" class="chat-mode" data-chat-mode="one"><span class="chat-mode-icon">1:1</span><strong>1:1 chat</strong><span>Talk with one perspective and ask follow-up questions.</span></button>
+      <button type="button" class="chat-mode" data-chat-mode="group"><span class="chat-mode-icon">1:N</span><strong>Group chat</strong><span>Bring two or three perspectives into one conversation or an automatic debate.</span></button>
+    </div></section>
+    <section id="chat-step-people" class="chat-step" hidden>
+      <div class="chat-step-bar"><button type="button" id="chat-back" class="quiet">← Back</button><p id="chat-picker-hint" role="status"></p></div>
+      <div id="chat-format-label" class="chat-format" hidden><span>Format</span><label><input type="radio" name="chat-format" value="conversation" checked> Group conversation</label><label><input type="radio" name="chat-format" value="debate"> Automatic debate</label></div>
+      <div id="chat-options"></div>
+      <div class="chat-submit"><button type="submit" class="primary" disabled>Start chat</button></div>
+    </section>
   </form></dialog>
   <dialog id="comparison" class="comparison-modal accent-0" hidden aria-labelledby="comparison-title" data-node-id="210:864"><div class="modal-accent"></div><header class="comparison-header"><div id="comparison-avatar" class="comparison-avatar"></div><div><p class="eyebrow">COMPARE WITH YOUR VIEW</p><h2 id="comparison-title">Perspective</h2><p id="comparison-stance"></p></div><button id="close-comparison" type="button" class="close-button" aria-label="Close comparison"><img src="/mvp/assets/48623.svg" alt=""></button></header><div class="comparison-body"><div id="comparison-tag" class="comparison-tag"></div><details id="comparison-your-view" class="comparison-your-view"><summary>✍ Your initial view <span class="comparison-legend"><span class="similar">━ Similar</span><span class="different">━ Different</span><span class="consideration">━ To consider</span></span></summary><div id="comparison-initial"></div></details><div id="comparison-items"></div></div></dialog>
-  <dialog id="source-dialog" class="source-modal" aria-labelledby="source-title"><header><h2 id="source-title">Original comment</h2><button id="close-source" type="button" class="close-button" aria-label="Close original comment"><img src="/mvp/assets/48623.svg" alt=""></button></header><p class="muted">Read the comment behind the response.</p><pre id="source">Choose an evidence link in the conversation.</pre></dialog>
+  <dialog id="evidence-drawer" class="evidence-drawer" aria-labelledby="evidence-title"><header><div><p class="eyebrow">EVIDENCE</p><h2 id="evidence-title">Evidence</h2></div><button id="close-evidence" type="button" class="close-button" aria-label="Close evidence"><img src="/mvp/assets/48623.svg" alt=""></button></header><p id="evidence-context" class="muted"></p><div id="evidence-list"></div></dialog>
+  <dialog id="source-dialog" class="source-modal" aria-labelledby="source-title"><header><h2 id="source-title">Evidence</h2><button id="close-source" type="button" class="close-button" aria-label="Close evidence"><img src="/mvp/assets/48623.svg" alt=""></button></header><p class="muted">Read the comment behind the response.</p><pre id="source">Choose an evidence link in the conversation.</pre></dialog>
   <dialog id="perspective-dialog" class="perspective-modal" aria-labelledby="perspective-info-title"><header><h2 id="perspective-info-title">About these perspectives</h2><button id="close-perspective" class="close-button" type="button" aria-label="Close perspective info"><img src="/mvp/assets/48623.svg" alt=""></button></header><div id="perspective-info"></div></dialog>
   <footer id="app-footer"><span id="analysis-state"></span></footer>
   <noscript>This experience needs JavaScript to save your view and connect conversations.</noscript>
