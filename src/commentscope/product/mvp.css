@@ -258,7 +258,13 @@ button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3
 .closeness-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: start; margin: 0 0 26px; }
 .closeness-row .closeness-group { margin: 0; min-width: 0; }
 .group-cards { display: flex; flex-direction: column; gap: 14px; }
-@media (max-width: 900px) { .closeness-row { grid-template-columns: 1fr; } }
 /* Lower groups lay their cards out horizontally, one row where space allows. */
 .closeness-row-wide { grid-template-columns: 1fr; gap: 22px; }
 .closeness-row-wide .group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+/* Both rows share one column grid, so every card has the same responsive width. */
+#perspectives { --cols: 4; --col-gap: 20px; }
+@media (max-width: 1100px) { #perspectives { --cols: 2; } }
+@media (max-width: 640px) { #perspectives { --cols: 1; } }
+.closeness-row { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 26px var(--col-gap); }
+.closeness-row-wide { grid-template-columns: 1fr; }
+.closeness-row-wide .group-cards { grid-template-columns: repeat(var(--cols), minmax(0, 1fr)); gap: 14px var(--col-gap); }

@@ -249,9 +249,9 @@ async function renderPerspectives(){
     const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
     setCloseness(card,level);summary.textContent=keySentence(lead,level);summary.title=summary.textContent;groups.get(level).push(card);state.closeness.set(p.id,level);
   });
-  // Close, to-consider and different sit side by side as columns; the remaining groups go on a row below.
+  // The four closeness groups sit side by side as columns; groups without a comparison result go on a row below.
   box.replaceChildren();
-  const rows=[['close','consider','differ'],['mixed','none','error']];
+  const rows=[['close','mixed','differ','consider'],['none','error']];
   for(const levels of rows){
     const row=node('div',undefined,'closeness-row'+(levels[0]==='close'?'':' closeness-row-wide'));
     for(const level of levels){
