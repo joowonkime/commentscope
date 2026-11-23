@@ -30,9 +30,15 @@
     <div id="workspace" hidden>
       <section id="explore" class="stage-page" data-node-id="121:11">
         <div class="section-title"><div><p class="eyebrow">STEP 01 · EXPLORE DIVERSE PERSPECTIVES</p><h1 id="explore-title" tabindex="-1">Here’s what the comments are saying</h1></div><button id="new-session" class="quiet" type="button">Start over</button></div><p id="analysis-summary" class="stage-description"></p>
+        <details id="opinion-sample" class="composition-panel sample-panel">
+          <summary><strong>Opinion shares in a comment sample</strong><span id="sample-preview"></span></summary>
+          <p id="sample-issue"></p><p id="sample-method" class="muted"></p>
+          <div id="sample-bars" class="sample-bars"></div>
+        </details>
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>
-        <div class="comparison-actions"><button id="compare-all" class="secondary" type="button">Compare all with my view</button><span id="compare-progress" class="muted" role="status"></span></div><div id="perspectives" class="cards"></div><section class="composition-panel"><h2>How the analyzed comments are composed</h2><p class="muted">Each analyzed comment counts once. “Multiple perspectives” groups comments that support two or more cards. “Other comments” groups comments with no verified link to a card.</p><div id="composition-chart"></div><div id="composition-legend" class="composition-legend"></div>
-          <h3>Share of likes on these comments</h3><p class="muted">Each segment adds up the likes recorded on its comments when the video was collected.</p><div id="likes-chart"></div><div id="likes-legend" class="composition-legend"></div></section>
+        <div class="comparison-actions"><button id="compare-all" class="secondary" type="button">Compare all with my view</button><span id="compare-progress" class="muted" role="status"></span></div><div id="perspectives" class="cards"></div><details class="composition-panel likes-panel"><summary>Likes on the processed comments</summary>
+          <p class="muted">Share of all recorded likes, grouped by how the comments link to the cards. Comments linked to multiple cards have their own segment.</p>
+          <div id="likes-chart"></div><div id="likes-legend" class="composition-legend"></div></details>
         <div class="action-bar"><p id="selection-hint">Choose one perspective for a 1:1 conversation, or up to three for a group.</p><button id="open-room" class="primary" type="button">Converse with selected perspectives <img src="/mvp/assets/0a7d3.svg" alt=""></button></div>
       </section>
       <section id="converse" hidden data-node-id="314:2807"><div class="conversation-shell">

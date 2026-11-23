@@ -12,6 +12,7 @@ import tempfile
 from urllib.parse import quote, urlsplit
 
 ASSETS = ('mvp.html', 'mvp.js', 'mvp.css')
+SAMPLE = 'opinion-samples.json'
 PUBLIC_ROOT = Path('/srv/commentscope-ui')
 PRODUCT = 'src/commentscope/product/'
 
@@ -23,7 +24,8 @@ def package(revision, destination):
     ).strip()
     destination.mkdir(parents=True, exist_ok=False)
     checksums = {}
-    for name in ASSETS:
+    reports = subprocess.check_output(['git', 'ls-tree', '--name-only', commit, '--', PRODUCT + SAMPLE], cwd=repo)
+    for name in (*ASSETS, SAMPLE) if reports else ASSETS:
         data = subprocess.check_output(['git', 'show', commit + ':' + PRODUCT + name], cwd=repo)
         (destination / name).write_bytes(data)
         checksums[name] = {'after': sha256(data).hexdigest()}
@@ -37,9 +39,10 @@ def activate(source, root=PUBLIC_ROOT):
     import fcntl  # The nginx evaluation host runs Linux.
     manifest = json.loads((source / 'static-manifest.json').read_text(encoding='utf-8'))
     commit = manifest['commit']
-    if not re.fullmatch('[0-9a-f]{40}', commit) or set(manifest['files']) != set(ASSETS):
-        raise ValueError('Expected a Git commit and the three public UI assets')
-    files = {name: (source / name).read_bytes() for name in ASSETS}
+    names = set(manifest['files'])
+    if not re.fullmatch('[0-9a-f]{40}', commit) or names not in (set(ASSETS), {*ASSETS, SAMPLE}):
+        raise ValueError('Expected a Git commit and known public UI assets')
+    files = {name: (source / name).read_bytes() for name in names}
     for name, data in files.items():
         if sha256(data).hexdigest() != manifest['files'][name]['after']:
             raise ValueError('UI checksum mismatch for ' + name)
@@ -83,6 +86,8 @@ def verify(origin, package_directory, browser_state):
     access = json.loads(credential['value'])
     manifest = json.loads((package_directory / 'static-manifest.json').read_text(encoding='utf-8'))
     routes = {'mvp.html': '/mvp', 'mvp.js': '/mvp/app.js', 'mvp.css': '/mvp/app.css'}
+    if SAMPLE in manifest['files']:
+        routes[SAMPLE] = '/mvp/opinion-samples.json'
     connection = HTTPSConnection(url.hostname, url.port or 443, timeout=15)
     def get(path, *, session=False):
         headers = {'X-Session-Token': access['token']} if session else {}

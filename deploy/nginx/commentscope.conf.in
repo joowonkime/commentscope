@@ -21,6 +21,7 @@ map $uri $commentscope_ui_file {
     /mvp/ /mvp.html;
     /mvp/app.css /mvp.css;
     /mvp/app.js /mvp.js;
+    /mvp/opinion-samples.json /opinion-samples.json;
 }
 
 server {
@@ -39,7 +40,7 @@ server {
     location = / { return 302 /mvp; }
 
     # Only the public presentation can change inside a running assessment.
-    location ~ ^/mvp(?:/?|/app\.(?:js|css))$ {
+    location ~ ^/mvp(?:/?|/app\.(?:js|css)|/opinion-samples\.json)$ {
         if ($commentscope_origin_ok = 0) { return 403; }
         if ($commentscope_site_ok = 0) { return 403; }
         limit_except GET { deny all; }

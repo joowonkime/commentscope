@@ -92,15 +92,15 @@ async function refreshSession(){setSession(await api(base()));}
 function renderAnalysis(){
   const a=state.analysis, video=a.video||{}, title=video.title||'This discussion', vid=video.video_id||video.id;
   $('video-title').textContent=title; $('sidebar-video-title').textContent=title;
-  const n=a.analyzed_comments, unit=a.count_scope==='registered_sources'?'registered source comments':'processed comments';
-  const other = a.composition?.find(entry => entry.kind === 'other');
-  let coverage = Number.isInteger(n) ? n+' '+unit : 'the registered comments';
-  if (n > 0 && other && a.count_scope === 'processed_comments') {
-    const linked = n - other.count;
-    coverage = linked+' of '+n+' '+unit+' linked to these perspectives ('+(100*linked/n).toFixed(1)+'%)';
+  const n=a.analyzed_comments, unit=a.count_scope==='registered_sources'?'registered source comments':'comments processed';
+  const other=a.composition?.find(entry=>entry.kind==='other');
+  const summary=[a.perspectives.length+' perspectives'];
+  if(Number.isInteger(n))summary.push(n+' '+unit);
+  if(a.status!=='expired' && Number.isInteger(n) && Number.isInteger(other?.count) && other.count<=n){
+    summary.push((n-other.count)+' linked as direct evidence');
   }
-  $('analysis-summary').textContent = a.perspectives.length+' perspectives · '+coverage
-    +(a.canonical_population && a.canonical_population !== n ? ' · Original population: '+a.canonical_population+' comments.' : '.');
+  if(a.canonical_population && a.canonical_population!==n)summary.push(a.canonical_population+' comments in the collected set');
+  $('analysis-summary').textContent=summary.join(' · ');
   $('sidebar-video-meta').textContent=Number.isInteger(n)?n+' '+unit:'';
   $('analysis-state').textContent=a.quality_gate_passed?'':'Development analysis · quality review pending';
   $('video-description').textContent=video.description||'Watch the source video, then write what you think.';
@@ -141,10 +141,51 @@ function renderAnalysis(){
 }
 function renderComposition(){
   const entries=state.analysis.composition||[];
-  renderDistribution('composition',entries,'count','comments','Comment counts are unavailable.');
+  loadOpinionSample(state.analysis);
   const engagement=state.analysis.engagement;
   renderDistribution('likes',engagement?.available?entries:[],'likes','likes',
     engagement?.available?'No likes were recorded on the analyzed comments.':'Like counts are unavailable for the full set of analyzed comments.');
+}
+let opinionCatalog;
+async function loadOpinionSample(analysis){
+  renderOpinionSample(analysis, null);
+  if(analysis.status==='expired' || analysis.count_scope!=='processed_comments' || !analysis.analysis_id)return;
+  if(!opinionCatalog){
+    opinionCatalog=fetch('/mvp/opinion-samples.json').then(response=>{
+      if(!response.ok)throw new Error('Sample catalog unavailable');
+      return response.json();
+    }).catch(()=>{opinionCatalog=null; return {};});
+  }
+  const catalog=await opinionCatalog;
+  if(state.analysis===analysis)renderOpinionSample(analysis, catalog?.[analysis.analysis_id]);
+}
+function renderOpinionSample(analysis, sample){
+  const preview=$('sample-preview'), issue=$('sample-issue'), method=$('sample-method'), bars=$('sample-bars');
+  preview.textContent='No reviewed sample available';
+  issue.textContent=''; method.textContent=''; bars.replaceChildren();
+  if(!sample || sample.population!==analysis.analyzed_comments || !sample.supports || typeof sample.issue!=='string' || !sample.issue.trim())return;
+  const {sample_size:size, positions, no_position:noPosition, unclear, unmatched}=sample;
+  const counts=analysis.perspectives.map(p=>sample.supports[p.id]);
+  if(![size,positions,noPosition,unclear,unmatched,...counts].every(n=>Number.isInteger(n)&&n>=0) ||
+      size===0 || size>sample.population || positions+noPosition+unclear!==size || unmatched>positions ||
+      Object.keys(sample.supports).length!==counts.length || counts.some(n=>n>positions-unmatched) ||
+      counts.reduce((sum,n)=>sum+n,0)<positions-unmatched || !['ai','human'].includes(sample.reviewer))return;
+  preview.textContent=positions+' of '+size+' sampled comments stated a position';
+  issue.textContent=sample.issue;
+  method.textContent=(sample.reviewer==='ai'?'AI':'Human')+' review of '+size+' comments drawn from '+sample.population+
+    ' processed comments. No position on this issue: '+noPosition+' · Unclear: '+unclear+'.';
+  if(!positions)return;
+  method.append(' Each bar counts comments out of the '+positions+' that stated a position. One comment can support several perspectives.');
+  const rows=analysis.perspectives.map((p,i)=>({name:p.display_name||p.text, count:counts[i], color:'accent-'+i%5}));
+  rows.sort((a,b)=>b.count-a.count);
+  rows.push({name:'Position outside these cards',count:unmatched,color:'sample-unmatched'});
+  for(const {name,count,color} of rows){
+    const row=node('div',undefined,'sample-row '+color);
+    const meter=node('meter');
+    meter.min=0; meter.max=positions; meter.value=count; meter.setAttribute('aria-hidden','true');
+    row.append(node('span',name), node('span',count+' / '+positions+' ('+Math.round(100*count/positions)+'%)','sample-value'),meter);
+    bars.append(row);
+  }
 }
 function renderDistribution(prefix,entries,field,unit,emptyText){
   const chart=$(prefix+'-chart'),legend=$(prefix+'-legend');
@@ -187,7 +228,7 @@ function renderPerspectives(){
     const top=node('header'),choice=node('label',undefined,'card-select'),check=node('input');check.type='checkbox';check.checked=state.selected.has(p.id);check.setAttribute('aria-label','Select '+label(p.id));
     check.onchange=()=>{if(check.checked){if(state.selected.size>=3){check.checked=false;status('한 대화에서 최대 세 관점을 선택할 수 있습니다.');return;}state.selected.add(p.id);}else state.selected.delete(p.id);card.classList.toggle('selected',check.checked);updateSelection();};
     choice.append(check,node('span','✓'));top.append(avatar(p.id),choice);
-    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
+    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+' direct source comment'+(p.source_count===1?'':'s'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
     if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
     card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
     const grounds=p.grounds||[];
@@ -1056,7 +1097,7 @@ $('agent-info').onclick=async()=>{
       for(const id of room?.participant_ids||[]){
         const p=perspective(id);
         const entry=node('section',undefined,'perspective-info-entry');
-        entry.append(node('h3',label(id)),node('p',p.text),node('small',p.source_count+(p.admission_policy?' verified source comments':' source comments')));
+        entry.append(node('h3',label(id)),node('p',p.text),node('small',p.source_count+' direct source comment'+(p.source_count===1?'':'s')));
         container.append(entry);
       }
     }

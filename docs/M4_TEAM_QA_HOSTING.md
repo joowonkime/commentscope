@@ -28,8 +28,8 @@
 모델·데이터·지출 장부를 묶은 평가 계획은 시작할 때 기준 HTML·CSS·JS까지 해시로 고정한다. 11월 23일 그 세 파일을 직접 덮어썼을 때 화면은 열렸지만 기존 세션의 원댓글 조회가 HTTP 410으로 실패했다. 원본을 복구하고 운영 웹 서버에 공개 UI 전용 디렉터리를 만들어 같은 세션에서 HTTP 200과 원문 일치를 재확인했다.
 
 1. UI 변경을 GitHub PR에 커밋하고 Node 회귀와 Linux Chrome 6개 화면 폭 검사를 실행한다. 기간 변경·서버 로직은 관련 Python 회귀와 양 OS CI로 확인한다.
-2. 운영 프로젝트의 nginx는 [공개 사이트 설정](../deploy/nginx/commentscope.conf.in)을 사용한다. `/mvp`의 HTML·CSS·JS는 `/srv/commentscope-ui/current`에서 읽고, API와 기존 이미지 경로는 원래 Python 서비스로 보낸다. 인증서와 비밀 설정은 서버에 보관한다.
-3. 운영자는 아래 명령으로 커밋의 세 파일과 SHA256 목록을 묶어 비공개 관리 경로로 전송한다. 호스트에서 같은 스크립트의 `activate`를 실행하면 세 파일을 검증한 뒤 공개 버전을 원자적으로 전환한다. 이전 버전도 같은 명령으로 다시 선택할 수 있다. 운영자의 로컬 명령과 VM 명령은 다음과 같다.
+2. 운영 프로젝트의 nginx는 [공개 사이트 설정](../deploy/nginx/commentscope.conf.in)을 사용한다. `/mvp`의 HTML·CSS·JS와 검토된 표본 집계 JSON은 `/srv/commentscope-ui/current`에서 읽고, API와 기존 이미지 경로는 원래 Python 서비스로 보낸다. 인증서와 비밀 설정은 서버에 보관한다.
+3. 운영자는 아래 명령으로 커밋의 공개 파일과 SHA256 목록을 묶어 비공개 관리 경로로 전송한다. 호스트에서 같은 스크립트의 `activate`를 실행하면 파일을 검증한 뒤 공개 버전을 원자적으로 전환한다. 이전 버전도 같은 명령으로 다시 선택할 수 있다. 운영자의 로컬 명령과 VM 명령은 다음과 같다.
 
 ```sh
 python3 deploy/assessment_ui.py package <commit> /tmp/commentscope-ui-release
@@ -37,7 +37,7 @@ python3 deploy/assessment_ui.py package <commit> /tmp/commentscope-ui-release
 sudo python3 assessment_ui.py activate /path/to/commentscope-ui-release
 ```
 
-4. 외부에서 기존 QA 세션으로 아래 검사를 실행한다. 공개 세 파일의 해시, 등록 목록, 세션, 실제 원댓글 본문까지 읽는다. 이 검사에 모델 비용은 없다. `qa-browser-state.json`은 운영자 전용 QA 브라우저의 Playwright storageState다. 이 파일은 비공개 디렉터리에만 보관한다.
+4. 외부에서 기존 QA 세션으로 아래 검사를 실행한다. 공개 파일의 해시, 등록 목록, 세션, 실제 원댓글 본문까지 읽는다. 이 검사에 모델 비용은 없다. `qa-browser-state.json`은 운영자 전용 QA 브라우저의 Playwright storageState다. 이 파일은 비공개 디렉터리에만 보관한다.
 5. 변경된 과업을 같은 URL에서 다시 조작하고, 유료 기능을 확인했다면 운영 장부에서 확정 청구와 미결 건을 대조한다. 실패가 남으면 직전 공개 UI를 다시 활성화해 같은 검사를 수행한다.
 
 ```sh
@@ -80,11 +80,26 @@ Figma의 원래 장면과 동일한 영상을 기본값으로 등록했다. Befo
 
 ## 조원이 직접 확인할 흐름
 
-1. 초기 의견을 적고 Explore로 들어간다. **Source comments**를 펼치고 입장과 개별 근거의 원댓글을 확인한다. 댓글 구성과 좋아요 구성의 분모는 각각 처리한 고유 댓글과 수집 당시의 좋아요 총합이다. 둘 이상의 관점에 연결된 댓글은 ‘Multiple perspectives’, 연결이 확인되지 않은 댓글은 ‘Other comments’에 한 번씩 들어간다. 예를 들어 SBS의 15/750은 입장에 연결된 비율이며, 나머지 댓글의 입장은 이 수치로 판별할 수 없다.
+1. 초기 의견을 적고 Explore로 들어간다. 각 카드의 **direct source comments**와 **Source comments**에서 해당 입장의 근거 수와 원문을 확인한다. 상단에서 처리한 댓글 수와 직접 근거로 연결된 고유 댓글 수를 확인한다. **Opinion shares in a comment sample**을 열면 별도 표본을 읽은 주체, 쟁점, 입장을 밝힌 댓글 수, 각 관점의 분자/분모가 나온다. **Position outside these cards**는 입장이 분명하지만 어떤 카드도 지지하지 않은 댓글이다. 펼칠 수 있는 좋아요 그래프의 분모는 처리 댓글의 수집 당시 좋아요 총합이다.
 2. **Compare with my view**를 열어 색과 글자로 표시된 관계를 양쪽 문장에서 찾는다. **Compare all with my view**로 카드별 결과를 비교한다. 새로고침해도 같은 초기 의견의 비교는 재사용한다.
 3. Converse의 **New chat**에서 참여자를 고른다. 한 명이면 1:1, 여러 명이면 그룹 대화 또는 자동 토론을 선택할 수 있다. 그룹 대화에서 한 명을 지정해 후속 질문을 보낸다.
 4. 검증 보류가 나오면 등록된 원댓글을 확인한다. 일반 대화가 오류로 멈추면 **Ask another question**으로 입력창을 다시 연다. 이전 발언과 지출이 유지된다.
 5. 자동 토론의 참여자별 발언과 결론을 읽는다. 실제로 검증·비준을 통과한 합의가 생기면 합의 Agent를 열고 질문한다. 근거가 부족하면 결론에서 어느 단계까지 진행됐는지 확인한다. Reflect에서 직접 작성하거나 제안을 검토해 저장하고 Library에서 다시 연다.
+
+
+### 다른 등록 영상의 관점 비율 검토
+
+1. 관점 근거의 수와 별개로, 검토할 쟁점을 먼저 문장으로 정한다. 해당 환경의 Factory 계획이 참조하는 스냅샷 경로를 읽을 수 있는 위치에서 아래 명령을 실행한다. 워크시트에는 원댓글과 부모 문맥이 들어가므로 비공개 경로에 보관한다.
+
+   ```sh
+   python tools/opinion_sample.py draw runs/VIDEO "Which policy should change?" /private/review.json
+   python tools/opinion_sample.py summarize runs/VIDEO /private/review.json --reviewer ai
+   ```
+
+2. 두 명령 사이에 워크시트의 각 댓글을 읽고 `classification`을 `position`(쟁점에 대한 자기 입장), `no_position`(다른 주제·무입장), `unclear`(귀속·빈정거림·문맥 등으로 판단 곤란) 중 하나로 기록한다. 쟁점에 대한 지지·반대·조건·대안·구체적 우려는 입장에 포함한다. `supports`에는 해당 작성자의 의견이 실제로 뒷받침하는 등록 입장 ID를 적는다. 다른 사람의 말이나 특정 조건을 무시해야 성립하는 지지는 제외한다. 동의하는 카드가 없어도 입장 댓글은 분모에 포함한다.
+3. 추출은 처리한 고유 댓글 ID 전체를 고정 시드와 영상 ID로 해시 정렬해 처음 50개를 쓴다(50개 이하면 전수). 순서·좋아요·Agent 근거 선정 여부를 추출에 쓰지 않는다. 직접 근거였던 댓글도 같은 확률로 뽑힐 수 있다. 분자·분모는 같은 표본에서 센다. 원래 영상에서 수집한 댓글 집합과 판독 방식의 한계가 있다.
+4. `summarize` 출력에서 `analysis_id`를 키로, 나머지 필드를 값으로 `src/commentscope/product/opinion-samples.json`에 등록한다. 공개 파일에는 집계만 둔다. 분석 ID는 Factory 계획·스냅샷·산출물에 결합되어 있다. 표본이 없거나 버전이 달라지면 제품은 비율 없이 직접 근거를 보여준다. 비율 등록과 화면 재열람에는 모델 호출이 없다.
+
 
 ## 개발과 운영의 역할
 
