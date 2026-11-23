@@ -57,6 +57,8 @@ let server,browser,socket;
   await command('Page.enable');await command('Runtime.enable');await command('Network.enable');
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
   await command('Page.navigate',{url:origin+'/mvp'});
+  await until(()=>evaluate("document.querySelector('#interface-language') && typeof state !== 'undefined' && !!state.analysis"));
+  await evaluate("document.querySelector('#interface-language').value='ko';document.querySelector('#interface-language').dispatchEvent(new Event('change'))");
   await until(()=>evaluate("document.querySelector('#status')?.textContent.includes('먼저')"));
   if(automatic){
     await verifyAutomaticDebate({command,evaluate,screenshot});
@@ -123,7 +125,7 @@ let server,browser,socket;
   await evaluate("document.querySelector('[data-step=reflect]').click()");
   await until(()=>evaluate("!document.querySelector('#reflect').hidden"));
   await evaluate("document.querySelector('#stayed').value='내가 직접 수정한 성찰입니다.'");
-  await submit('save-reflection');await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('2번째')"));
+  await submit('save-reflection');await until(()=>evaluate("document.querySelector('#saved-reflections button')?.textContent.includes('저장본 2')"));
   await screenshot('reflection.png');
   await command('Page.reload');
   await until(()=>evaluate("!document.querySelector('#workspace').hidden"));
