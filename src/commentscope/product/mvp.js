@@ -428,6 +428,29 @@ function renderRooms(){
   });
   if(!list.childNodes.length)list.append(node('p','No conversations here yet.','muted'));if(state.room?.room_id)select.value=state.room.room_id;
 }
+// Who is expected to speak next while the room is working. Debates expose their turn cursor;
+// other rooms follow the participant order after the last speaker (or the addressed perspective).
+function nextSpeaker(room){
+  const ids=room.participant_ids||[];if(!ids.length)return null;
+  if(room.plan&&Number.isInteger(room.cursor))return ids[room.cursor%ids.length];
+  const messages=room.messages||[],last=messages[messages.length-1];
+  if(!last||last.author_kind==='user')return last?.target_agent_id&&ids.includes(last.target_agent_id)?last.target_agent_id:ids[0];
+  const i=ids.indexOf(last.agent_id);return i<0?ids[0]:ids[(i+1)%ids.length];
+}
+function typingIndicator(room){
+  if(!['running','opening','replying','synthesizing','compiling','pausing'].includes(room.state))return null;
+  const box=node('div',undefined,'message typing'),content=node('div',undefined,'message-content'),dots=node('span',undefined,'typing-dots');
+  dots.append(node('i'),node('i'),node('i'));
+  if(['synthesizing','compiling'].includes(room.state)){
+    const icon=node('div',undefined,'message-avatar typing-icon');icon.append(node('span','✦'));box.append(icon);
+    content.append(node('div',roomStates[room.state],'typing-label'),dots);
+  }else{
+    const speaker=nextSpeaker(room);
+    const icon=node('div',undefined,'message-avatar');if(speaker)icon.append(avatar(speaker));box.append(icon);
+    content.append(node('div',(speaker?label(speaker):'A perspective')+' is writing…','typing-label'),dots);
+  }
+  box.setAttribute('role','status');box.append(content);return box;
+}
 function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return t&&!isNaN(t)?t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';}
 // Figma 314:2807: agent messages show avatar, a speaker row (name · time) above a grey bubble and an
 // Evidence chip below it; user messages are lavender bubbles on the right with the time beside them.
@@ -472,6 +495,7 @@ function renderMessages(){
     if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','📎 Evidence · '+count),node('span','›','evidence-chevron'));button.dataset.message=m.message_id;button.onclick=()=>openEvidence(m);content.append(button);}}
     box.append(content);$('messages').append(box);
   }
+  const typing=typingIndicator(state.room);if(typing)$('messages').append(typing);
 }
 // Comment-backed points need no tag; AI reasoning and external claims stay visibly separate (DEC-028).
 function evidenceItems(m){

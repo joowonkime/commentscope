@@ -107,6 +107,7 @@ let server,browser,socket;
   await startChat('group',2);
   report.checks.room_lists_participants=await evaluate("document.querySelectorAll('#room-summary .member-chip').length===2&&document.querySelector('#room-summary').textContent.includes('Group chat with')");
   await submit('opening');
+  report.checks.typing_indicator_while_waiting=await until(()=>evaluate("!!document.querySelector('.message.typing .typing-label')||document.querySelectorAll('.message.agent').length>=1"));
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length>=1"));
   await evaluate("document.querySelector('#pause').click()");
   await until(()=>evaluate("document.querySelector('#room-state').textContent.includes('잠시 멈췄습니다')"));
@@ -114,6 +115,11 @@ let server,browser,socket;
   await evaluate("document.querySelector('#resume').click()");
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
   report.checks.group_opening_and_reply=true;
+  // While a room is working, the next speaker is shown as writing (checked without waiting on timing).
+  report.checks.typing_indicator_names_next_speaker=await evaluate("(()=>{const saved=state.room.state;state.room.state='replying';renderMessages();const el=document.querySelector('#messages .message.typing .typing-label');const ok=!!el&&el.textContent.endsWith('is writing…')&&document.querySelectorAll('#messages .typing-dots i').length===3;return ok;})()");
+  await screenshot('typing.png');
+  await evaluate("state.room.state='awaiting_user';renderMessages()");
+  report.checks.typing_indicator_clears=await evaluate("!document.querySelector('#messages .message.typing')");
   if(report.seeded_mode){
     // AI reasoning and external claims stay tagged in the bubble; external links open from Evidence.
     report.checks.seeded_provenance_labels=await evaluate("['AI reasoning','Based on external sources'].every(label=>document.querySelector('#messages').textContent.includes(label))");
