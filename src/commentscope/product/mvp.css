@@ -68,6 +68,7 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 }
 
 .library-trigger { white-space: nowrap; }
+.initial-panel > .eyebrow { color: #5542b6; }
 .video-lookup { margin-bottom: 18px; }
 .video-lookup label { display: block; margin-bottom: 6px; font-size: 14px; font-weight: 650; }
 .video-lookup-controls { display: flex; gap: 8px; }
