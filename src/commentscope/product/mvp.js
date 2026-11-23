@@ -433,6 +433,9 @@ function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return 
 // Evidence chip below it; user messages are lavender bubbles on the right with the time beside them.
 function renderMessages(){
   $('messages').replaceChildren();
+  // Comment statements an agent already showed in this conversation are not repeated in later bubbles;
+  // they stay available under Evidence.
+  const shown=new Map();
   const first=state.room.messages.find(m=>m.created_at);
   if(first){const day=new Date(first.created_at),today=new Date().toDateString()===day.toDateString();
     const row=node('div',undefined,'date-row');row.append(node('span',(today?'Today':day.toLocaleDateString('en-US',{month:'short',day:'numeric'}))+' · '+messageTime(first)+' · continuing from your initial view'));$('messages').append(row);}
@@ -449,13 +452,18 @@ function renderMessages(){
       const expired=m.evidence_scope==='expired';
       bubble.append(node('p',expired?'근거 자료의 기한이 지났습니다.':m.limitation==='verification_hold'?'이 질문에 대한 답변을 검증하지 못했습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
     }
+    const seen=shown.get(m.agent_id)||new Set();shown.set(m.agent_id,seen);let visible=0;
     for(const point of m.points||[]){
       const text=node('p',point.text);
       if(point.point_id)text.id='point-'+point.point_id;
+      const key=point.origin==='original_comment'?point.claim_id||point.text:null;
+      if(key&&seen.has(key)){text.hidden=true;bubble.append(text);continue;}
+      if(key)seen.add(key);visible++;
       const origin=pointOrigin(point.origin);
       if(origin)text.append(node('span',origin,'origin-tag'));
       bubble.append(text);
     }
+    if(m.author_kind==='agent'&&m.points?.length&&!visible)bubble.append(node('p','Keeps the same position as before — see Evidence for the comments it rests on.','restated-note'));
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     content.append(bubble);
@@ -527,9 +535,10 @@ function appendPointLinks(parent,pointIds,room,title){
     link.type='button';
     link.onclick=()=>{
       const point=$('point-'+pointId);
-      point?.scrollIntoView({block:'center'});
-      point?.parentElement?.setAttribute('tabindex','-1');
-      point?.parentElement?.focus({preventScroll:true});
+      if(!point||point.hidden){jumpTo(message.message_id);return;}
+      point.scrollIntoView({block:'center'});
+      point.parentElement?.setAttribute('tabindex','-1');
+      point.parentElement?.focus({preventScroll:true});
     };
     parent.append(link);
   }
