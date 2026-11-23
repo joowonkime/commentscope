@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -76,10 +76,19 @@ function showStep(step){
   rememberConversation();
   document.querySelectorAll('button[data-step]').forEach(b=>{b.classList.toggle('active',b.dataset.step===step); if(b.dataset.step===step)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current');});
   if(step==='reflect')refreshReflection().catch(e=>status(e.message));
+  if(step==='explore')startComparisons();
+  else latestComparison++;
 }
 async function pollJob(value){
   const end=Date.now()+300000;
-  while(Date.now()<end){const job=await api('/jobs/'+value.job_id); if(!['queued','running'].includes(job.state)){if(job.state!=='succeeded')throw new Error(errorText(job.error?.code)); return job;} await wait(600);}
+  while(Date.now()<end){
+    const job=await api('/jobs/'+value.job_id);
+    if(job.state==='succeeded')return job;
+    if(!['queued','running'].includes(job.state)){
+      const error=new Error(errorText(job.error?.code));error.code=job.error?.code;throw error;
+    }
+    await wait(600);
+  }
   throw new Error('작업이 아직 진행 중입니다. 대화 상태에서 확인해 주세요.');
 }
 function setSession(session){
@@ -316,20 +325,121 @@ function renderPerspectives(){
       }
     }
     const compare=node('button','Compare with my view','secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
+    card.addEventListener('click',event=>{
+      if(!event.target.closest('button,a,input,label,details') && !window.getSelection()?.toString())compare.click();
+    });
     card.dataset.perspective=p.id;
     const relations=node('div',undefined,'card-relations');relations.setAttribute('aria-live','polite');renderRelations(relations,p.id);
     card.append(relations,compare,sourceDisclosure(p));$('perspectives').append(card);
   }
   updateSelection();
-  $('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length||comparingAll;
+  updateComparisonProgress();
 }
 const relationNames={agreement:'Agreement',difference:'Difference',additional_condition:'Additional condition',unclear:'Unclear'};
-let comparingAll=false,latestComparison=0;
+let comparisonRun, activeComparisons=0, latestComparison=0;
+const comparisonLimit=3;
+function isCurrentComparison(run){
+  return !!run && run.sessionId===state.session?.session_id && run.revision===state.session?.initial_opinion.revision;
+}
+function currentComparisons(){
+  if(!isCurrentComparison(comparisonRun)){
+    for(const entry of comparisonRun?.queue||[])entry.resolve(null);
+    comparisonRun={sessionId:state.session.session_id,revision:state.session.initial_opinion.revision,queue:[],entries:new Map()};
+  }
+  return comparisonRun;
+}
+function updateComparisonProgress(){
+  const ids=state.analysis.perspectives.map(p=>p.id);
+  const run=isCurrentComparison(comparisonRun)?comparisonRun:null;
+  const done=ids.filter(id=>state.session.comparisons?.[id] || run?.entries.get(id)?.phase==='done').length;
+  const failed=ids.filter(id=>run?.entries.get(id)?.phase==='failed').length;
+  const message=ids.length && state.session.initial_opinion.text.trim()
+    ? done+' / '+ids.length+' perspectives compared'+(failed?' · '+failed+' unavailable':'') : '';
+  if($('compare-progress').textContent!==message)$('compare-progress').textContent=message;
+  $('compare-all').hidden=!failed;
+}
+function refreshComparisonCard(id){
+  const card=[...$('perspectives').children].find(c=>c.dataset.perspective===id);
+  if(card)renderRelations(card.querySelector('.card-relations'),id);
+}
+function enqueueComparison(run,id,priority=false){
+  let entry=run.entries.get(id);
+  if(!entry || entry.phase==='failed'){
+    entry={id,phase:'queued'};
+    entry.promise=new Promise(resolve=>{entry.resolve=resolve;});
+    run.entries.set(id,entry);
+    run.queue.push(entry);
+    refreshComparisonCard(id);
+  }
+  if(priority && entry.phase==='queued'){
+    run.queue.splice(run.queue.indexOf(entry),1);run.queue.unshift(entry);
+  }
+  return entry;
+}
+function startComparisons(retry=false){
+  if(document.body.dataset.step!=='explore')return;
+  const run=currentComparisons();
+  if(!state.session.initial_opinion.text.trim()){updateComparisonProgress();return;}
+  for(const p of state.analysis.perspectives){
+    const entry=run.entries.get(p.id);
+    if(!state.session.comparisons?.[p.id] && (!entry || (retry && entry.phase==='failed')))enqueueComparison(run,p.id);
+  }
+  pumpComparisons();
+  updateComparisonProgress();
+}
+function pumpComparisons(){
+  const run=comparisonRun;
+  if(!isCurrentComparison(run) || document.body.dataset.step!=='explore')return;
+  while(activeComparisons<comparisonLimit && run.queue.length){
+    const entry=run.queue.shift();
+    entry.phase='running';activeComparisons++;
+    refreshComparisonCard(entry.id);
+    void processComparison(run,entry);
+  }
+}
+async function processComparison(run,entry){
+  let job;
+  try{
+    const saved=state.session.comparisons?.[entry.id];
+    const accepted=saved || await api('/sessions/'+run.sessionId+'/comparisons','POST',{
+      perspective_id:entry.id,initial_revision:run.revision,request_id:requestId()});
+    job=await pollJob(accepted);
+    if(job.stale){
+      const error=new Error(errorText('opinion_revision_conflict'));error.code='opinion_revision_conflict';throw error;
+    }
+    if(isCurrentComparison(run)){
+      state.session.comparisons??={};
+      entry.summary={job_id:job.job_id,available:job.result.available,
+        relations:[...new Set((job.result.items||[]).map(i=>i.relation))]};
+      state.session.comparisons[entry.id]=entry.summary;
+      entry.phase='done';
+    }
+  }catch(error){
+    entry.phase='failed';entry.error=error;
+    if(['budget_exhausted','cycle_deadline','reconcile_required','unconfirmed_provider_call','opinion_revision_conflict'].includes(error.code)){
+      for(const waiting of run.queue.splice(0)){
+        waiting.phase='failed';waiting.error=error;waiting.resolve(null);
+        if(isCurrentComparison(run))refreshComparisonCard(waiting.id);
+      }
+    }
+  }finally{
+    activeComparisons--;
+    entry.resolve(entry.phase==='done'?job:null);
+    if(isCurrentComparison(run)){
+      refreshComparisonCard(entry.id);
+      updateComparisonProgress();
+    }
+    pumpComparisons();
+  }
+}
 function renderRelations(container,id){
   container.replaceChildren();
-  const result=state.session.comparisons?.[id];
+  const entry=isCurrentComparison(comparisonRun)?comparisonRun.entries.get(id):null;
+  const result=state.session.comparisons?.[id] || entry?.summary;
+  container.dataset.state=result?'done':entry?.phase||'idle';
   if(!result?.relations.length){
-    const message=result?'No clear relationship found':state.session.initial_opinion.text.trim()?'Not compared yet':'Add your view to compare';
+    const labels={queued:'Waiting to compare',running:'Comparing with your view…',failed:'Comparison unavailable · retry this card'};
+    const message=result?'No clear relationship found':labels[entry?.phase]||(state.session.initial_opinion.text.trim()?'Not compared yet':'Add your view to compare');
     container.append(node('small',message,'muted'));return;
   }
   for(const relation of result.relations)container.append(node('span',relationNames[relation],'relation-chip mark-'+relation));
@@ -362,26 +472,18 @@ function highlighted(container,text,spans){
   valid.forEach(s=>{bounds.add(s.start);bounds.add(s.end);});const cuts=[...bounds].sort((a,b)=>a-b);container.replaceChildren();
   for(let i=1;i<cuts.length;i++){const start=cuts[i-1],end=cuts[i],keys=[...new Set(valid.filter(s=>s.start<=start&&s.end>=end).map(s=>s.category))],part=chars.slice(start,end).join('');container.append(keys.length?node('mark',part,'mark-'+(keys.length===1?keys[0]:'mixed')):document.createTextNode(part));}
 }
-async function compareWith(pid,show=true){
-  const view=show?++latestComparison:0;
-  const session=state.session,revision=session.initial_opinion.revision;
-  const key=session.session_id+'/'+revision+'/'+pid;
-  if(show)status('나의 의견과 관점을 비교하고 있습니다.');
-  let pending=state.comparisons.get(key);
-  if(!pending){
-    const previous=session.comparisons?.[pid];
-    pending=(previous?Promise.resolve(previous):api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:revision,request_id:requestId()})).then(pollJob);
-    state.comparisons.set(key,pending);
+async function compareWith(pid){
+  const view=++latestComparison,session=state.session,run=currentComparisons();
+  let job={result:{available:false,items:[]}};
+  if(session.initial_opinion.text.trim()){
+    status('나의 의견과 관점을 비교하고 있습니다.');
+    const entry=enqueueComparison(run,pid,true);
+    pumpComparisons();
+    job=await entry.promise;
+    if(!isCurrentComparison(run)||view!==latestComparison||document.body.dataset.step!=='explore')return;
+    if(!job){status(entry.error?.message||'현재 의견으로 비교를 다시 열어 주세요.');return;}
   }
-  let job;
-  try{job=await pending;}catch(error){state.comparisons.delete(key);throw error;}
-  if(job.stale||state.session.session_id!==session.session_id||state.session.initial_opinion.revision!==revision)return;
   const items=job.result.items||[];
-  state.session.comparisons??={};
-  state.session.comparisons[pid]={job_id:job.job_id,available:job.result.available,relations:[...new Set(items.map(i=>i.relation))]};
-  const card=[...$('perspectives').children].find(c=>c.dataset.perspective===pid);
-  if(card)renderRelations(card.querySelector('.card-relations'),pid);
-  if(!show||view!==latestComparison||document.body.dataset.step!=='explore')return;
   const p=perspective(pid);
   $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);
   const coreSpans=items.filter(i=>i.perspective_claims.some(c=>c.claim_id===p.core_claim_id)).map(i=>({start:0,end:[...p.text].length,category:i.relation}));
@@ -404,20 +506,7 @@ async function compareWith(pid,show=true){
   }
   openDialog('comparison');status('');
 }
-$('compare-all').onclick=async()=>{
-  if(comparingAll)return;
-  comparingAll=true;$('compare-all').disabled=true;
-  const sid=state.session.session_id,revision=state.session.initial_opinion.revision;
-  const ids=state.analysis.perspectives.map(p=>p.id);
-  try{
-    for(const [index,id] of ids.entries()){
-      if(state.session.session_id!==sid||state.session.initial_opinion.revision!==revision)break;
-      $('compare-progress').textContent=(index+1)+' / '+ids.length;
-      if(!state.session.comparisons?.[id])await compareWith(id,false);
-    }
-  }catch(error){status(error.message);}
-  finally{comparingAll=false;$('compare-progress').textContent='';$('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length;}
-};
+$('compare-all').onclick=()=>startComparisons(true);
 const roomStates={
   idle:'시작 전',running:'진행 중',pausing:'정지 중',paused:'일시 정지',awaiting_user:'질문 대기',
   opening:'입장 발언',replying:'상대 입장에 응답 중',synthesizing:'합의 검토 중',compiling:'결론 정리 중',
@@ -1032,7 +1121,18 @@ $('begin').onsubmit=async event=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
-$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await retryableWrite('initial',base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
+$('edit-initial').onsubmit=async event=>{
+  event.preventDefault();
+  const text=$('initial-edit').value;
+  if(text===state.session.initial_opinion.text){status('현재 저장된 의견입니다.');return;}
+  try{
+    await retryableWrite('initial',base()+'/opinions/initial','PUT',{text,expected_revision:state.session.initial_opinion.revision});
+    clearInsights();closeDialog('comparison');
+    await refreshSession();
+    currentComparisons();
+    renderPerspectives();startComparisons();status('초기 의견을 저장했습니다.');
+  }catch(error){status(error.message);}
+};
 let creatingChat=false;
 async function openConversation(ids,automatic,button){
   if(creatingChat||state.openingPending||!ids.length)return;

@@ -133,6 +133,8 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 
 .comparison-actions,.card-relations{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:1rem}
 .card-relations{margin-top:auto}.card-relations small{font-size:.78rem}
+.card-relations[data-state="running"] small { color: #5542b6; font-weight: 600; }
+.card-relations[data-state="failed"] small { color: #873e23; }
 .relation-chip{padding:.2rem .55rem;border-radius:.4rem;font-size:.8rem;font-weight:600}
 .mark-agreement{color:#125231;background:#d9f3e3;text-decoration:underline solid}
 .mark-difference{color:#812e1f;background:#ffe4dc;text-decoration:underline double}

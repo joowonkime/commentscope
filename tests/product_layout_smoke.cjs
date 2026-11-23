@@ -69,6 +69,106 @@ test('source notices remain readable and Reflect remains clickable at six viewpo
   }
 });
 
+test('Explore limits the comparison queue, publishes individual results, and resumes the current opinion', async () => {
+  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN});
+  try{
+    const page=await browser.newPage({viewport:{width:390,height:844}});
+    const submitted=[], jobs=new Map(), held=new Set(), failures=new Set();
+    const ids=Array.from({length:11},(_,i)=>'p'+(i+1));
+    let peak=0;
+    await page.route('**/*',async route=>{
+      const url=new URL(route.request().url()), pathname=url.pathname;
+      if(url.origin!==origin)return route.abort();
+      const file=files.get(pathname);
+      if(file)return route.fulfill({path:path.join(product,file[0]),contentType:file[1]});
+      if(pathname==='/api/v1/analyses')return route.fulfill({json:{analyses:[]}});
+      if(pathname==='/api/v1/sessions/qa/comparisons'){
+        const {perspective_id:id,initial_revision:revision}=route.request().postDataJSON();
+        const key=revision+'-'+id, job='j'+submitted.length;
+        submitted.push({key,job});jobs.set(job,key);held.add(job);peak=Math.max(peak,held.size);
+        return route.fulfill({status:202,json:{job_id:job}});
+      }
+      if(pathname.startsWith('/api/v1/jobs/')){
+        const job=pathname.split('/').pop(), key=jobs.get(job);
+        if(held.has(job))return route.fulfill({json:{job_id:job,state:'running'}});
+        if(failures.has(job))return route.fulfill({json:{job_id:job,state:'failed',error:{code:'test_failure'}}});
+        return route.fulfill({json:{job_id:job,state:'succeeded',result:{available:true,items:[]},stale:false}});
+      }
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/mvp');
+    await page.evaluate(ids=>{
+      state.analysis={perspectives:ids.map(id=>({id,display_name:id,text:'Test stance',source_count:1,grounds:[],source_ids:[]}))};
+      state.session={session_id:'qa',rooms:[],comparisons:{},capabilities:{},initial_opinion:{text:'',revision:1}};
+      $('before').hidden=true;$('workspace').hidden=false;renderPerspectives();showStep('explore');
+    },ids);
+    assert.equal(submitted.length,0);
+    assert.equal(await page.getByText('Add your view to compare',{exact:true}).count(),11);
+    await page.locator('.compare-button').first().click();
+    await page.locator('#comparison[open]').waitFor();
+    await page.locator('#close-comparison').click();
+    assert.equal(submitted.length,0);
+    const revision=(rev)=>page.evaluate(rev=>{
+      state.session.initial_opinion={text:'My view '+rev,revision:rev};state.session.comparisons={};
+      renderPerspectives();showStep('explore');
+    },rev);
+    const eventually=async condition=>{
+      const deadline=Date.now()+10000;
+      while(!condition()&&Date.now()<deadline)await new Promise(resolve=>setTimeout(resolve,25));
+      assert.ok(condition(),'Expected queued comparisons to settle');
+    };
+    const release=(key,fail=false)=>{
+      const item=submitted.find(x=>x.key===key && held.has(x.job));
+      assert.ok(item,key);
+      held.delete(item.job);if(fail)failures.add(item.job);
+    };
+    await revision(1);
+    await eventually(()=>submitted.length===3);
+    assert.deepEqual(submitted.map(x=>x.key).sort(),['1-p1','1-p2','1-p3']);
+    await page.locator('[data-perspective=p11] .card-stance').click();
+    release('1-p1');
+    await eventually(()=>submitted.length===4);
+    assert.equal(submitted[3].key,'1-p11');
+    await page.waitForFunction(()=>$('compare-progress').textContent.startsWith('1 / 11'));
+    assert.equal(await page.locator('[data-perspective=p1] .card-relations').getAttribute('data-state'),'done');
+    await page.evaluate(()=>showStep('converse'));
+    release('1-p2',true);release('1-p3');release('1-p11');
+    await page.waitForFunction(()=>activeComparisons===0);
+    assert.equal(submitted.length,4);
+    assert.equal(await page.locator('#comparison').isVisible(),false);
+    await page.evaluate(()=>showStep('explore'));
+    await eventually(()=>submitted.length===7);
+    while(submitted.length<11){
+      held.clear();
+      await eventually(()=>submitted.length===11||held.size>0);
+    }
+    held.clear();
+    await page.waitForFunction(()=>$('compare-progress').textContent==='10 / 11 perspectives compared · 1 unavailable');
+    assert.equal(new Set(submitted.map(x=>x.key)).size,11);
+    await page.locator('#compare-all').click();
+    await eventually(()=>submitted.length===12);
+    assert.equal(submitted[11].key,'1-p2');
+    held.clear();
+    await page.waitForFunction(()=>$('compare-progress').textContent==='11 / 11 perspectives compared');
+    await page.evaluate(()=>{showStep('converse');showStep('explore');});
+    await page.locator('[data-perspective=p1] .compare-button').click();
+    await page.locator('#comparison[open]').waitFor();
+    await page.locator('#close-comparison').click();
+    assert.equal(submitted.length,12);
+    // Changing the opinion while three jobs are in flight must not start three additional paid jobs.
+    await revision(2);
+    await eventually(()=>held.size===3);
+    await revision(3);
+    assert.equal(submitted.length,15);
+    held.clear();
+    await eventually(()=>submitted.length===18);
+    assert.equal(submitted.filter(x=>x.key.startsWith('2-')).length,3);
+    assert.equal(await page.locator('#compare-progress').innerText(),'0 / 11 perspectives compared');
+    assert.equal(peak,3);
+  }finally{await browser.close();}
+});
+
+
 test('Explore compares both shares without double counting, changing chat selection or borrowing another sample', async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROME_BIN});
   try {
