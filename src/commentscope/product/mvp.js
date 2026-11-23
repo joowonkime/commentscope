@@ -1,7 +1,7 @@
 'use strict';
 const $ = id => document.getElementById(id);
 const categories = {stayed:'What stayed the same', changed:'What changed', newly_learned:'Newly learned', worth_more_thought:'Worth more thought'};
-const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false};
+const state = {analysis:null, session:null, token:'', room:null, roomTimer:null, selected:new Set(), context:new Set(), comparisons:new Map(), reflectionJob:null, reflectionResult:null, saved:null, roomFilter:'all', openingPending:false, openComparison:null, sourceTexts:new Map(), editingInitial:false, closeness:new Map(), closenessSummary:new Map()};
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 const requestId = () => crypto.randomUUID();
 const savedSessionKey = 'commentscope-mvp-session';
@@ -60,17 +60,20 @@ async function retryableWrite(slot, path, method, fields, prepareRevision) {
   if (readStored(sessionStorage, key)?.requestId === attempt.requestId) sessionStorage.removeItem(key);
   return value;
 }
-function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
-function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
+function indexOf(id){return (state.analysis?.perspectives||[]).findIndex(p=>p.id===id);}
+function perspective(id){return (state.analysis?.perspectives||[]).find(p=>p.id===id);}
 function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return '합의 Agent';const p=perspective(id);return p?.display_name||p?.text||'Perspective';}
 function avatar(id,small=false){const i=Math.max(0,indexOf(id)); return asset(small?'0385b':['4ea9b','5e642','baf01','d51bb','e77a2'][i%5]);}
 function closeDialog(id){const dialog=$(id); if(dialog.open)dialog.close(); if(id==='comparison')dialog.hidden=true;}
 function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open)dialog.showModal();}
 function showStep(step){
   if(!state.session)return;
-  if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}}
+  if(state.editingInitial)leaveInitialEdit();
+  $('before').hidden=true;$('workspace').hidden=false;
+  if(step==='converse'&&!state.room&&state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}
   if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
   for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
+  closeEvidence();
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
   rememberConversation();
@@ -84,7 +87,7 @@ async function pollJob(value){
 }
 function setSession(session){
   state.session=session;
-  $('initial-edit').value=session.initial_opinion.text;
+  $('initial-peek-text').textContent=session.initial_opinion.text.trim()||'You started without an initial view.';
   renderRooms();
   renderSaved();
 }
@@ -102,8 +105,7 @@ function renderAnalysis(){
   $('analysis-summary').textContent = a.perspectives.length+' perspectives · '+coverage
     +(a.canonical_population && a.canonical_population !== n ? ' · Original population: '+a.canonical_population+' comments.' : '.');
   $('sidebar-video-meta').textContent=Number.isInteger(n)?n+' '+unit:'';
-  $('analysis-state').textContent=a.quality_gate_passed?'':'Development analysis · quality review pending';
-  $('video-description').textContent=video.description||'Watch the source video, then write what you think.';
+  $('video-description').textContent=video.description||'';
   $('sidebar-thumbnail').replaceChildren();
   $('video-frame').replaceChildren(node('p','No source video is linked to this analysis.','video-placeholder'));
   const videoLinks = ['original-video','before-video-link','sidebar-video'].map($);
@@ -140,99 +142,161 @@ function renderAnalysis(){
   renderComposition();
 }
 function renderComposition(){
-  const entries=state.analysis.composition||[];
-  renderDistribution('composition',entries,'count','comments','Comment counts are unavailable.');
-  const engagement=state.analysis.engagement;
-  renderDistribution('likes',engagement?.available?entries:[],'likes','likes',
+  const entries=state.analysis.composition||[],engagement=state.analysis.engagement;
+  renderBarChart('composition',entries,'count','comment','Comment composition is not available.');
+  renderBarChart('likes',engagement?.available?entries:[],'likes','like',
     engagement?.available?'No likes were recorded on the analyzed comments.':'Like counts are unavailable for the full set of analyzed comments.');
 }
-function renderDistribution(prefix,entries,field,unit,emptyText){
-  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend');
+// Both charts share one look and behaviour: the bar fills with what is linked to perspectives, the
+// unlinked remainder is listed in the legend, and hovering a segment or legend entry highlights its card.
+function renderBarChart(prefix,entries,field,unit,emptyText){
+  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend'),fmt=n=>Number(n).toLocaleString('en-US');
   chart.replaceChildren();legend.replaceChildren();
-  const total=entries.reduce((sum,e)=>sum+e[field],0);
+  const total=entries.reduce((sum,e)=>sum+(e[field]||0),0);
   if(!total){chart.append(node('p',emptyText,'muted'));return;}
-  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
-  svg.setAttribute('viewBox','0 0 1000 26');svg.setAttribute('role','img');svg.setAttribute('aria-label','Distribution of '+total+' '+unit);
-  let x=0;
-  for(const entry of entries){
-    const count=entry[field],id=entry.perspective_id;
-    const group=id?String(indexOf(id)%5):entry.kind;
-    const name=id?label(id):group==='multiple'?'Multiple perspectives':'Other comments';
-    const percent=count/total*100;
-    const caption=name+' · '+count+' '+unit+' ('+percent.toFixed(1)+'%)';
-    if(count){
-      const rect=document.createElementNS(ns,'rect');
-      for(const [attr,val] of Object.entries({x,width:percent*10,height:26,class:'chart-'+group}))rect.setAttribute(attr,String(val));
-      const title=document.createElementNS(ns,'title');title.textContent=caption;rect.append(title);svg.append(rect);x+=percent*10;
+  const linked=entries.filter(e=>e[field]&&e.kind!=='other'),linkedTotal=linked.reduce((sum,e)=>sum+e[field],0);
+  const hover=(el,pid)=>{el.dataset.perspective=pid;el.onmouseenter=()=>linkComposition(pid,true);el.onmouseleave=()=>linkComposition(pid,false);};
+  if(linkedTotal){
+    const bar=node('div',undefined,'composition-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label',unit[0].toUpperCase()+unit.slice(1)+'s linked to each perspective');
+    for(const e of linked){
+      const seg=node('span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
+      seg.style.flexGrow=String(e[field]);seg.title=fmt(e[field])+' '+unit+(e[field]===1?'':'s');
+      if(e.perspective_id)hover(seg,e.perspective_id);
+      bar.append(seg);
     }
-    const line=node('span',undefined,id?'accent-'+group:group);
-    line.append(node('i',undefined,'legend-dot'),node('span',caption));legend.append(line);
+    chart.append(bar);
   }
-  chart.append(svg);
+  for(const e of entries){
+    const value=e[field];if(!value)continue;
+    const cls=e.perspective_id?'accent-'+Math.max(0,indexOf(e.perspective_id))%5:e.kind;
+    const name=e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective';
+    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',name+' · '+fmt(value)+' ('+(value/total*100).toFixed(1)+'%)'));
+    if(e.perspective_id)hover(line,e.perspective_id);
+    legend.append(line);
+  }
+}
+// Hovering a card or a bar segment highlights its counterpart in both charts.
+function linkComposition(pid,on){
+  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective], #likes-chart [data-perspective], #likes-legend [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
 }
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
+  if(!$('open-room'))return;
   const count=state.selected.size;
   const mode=count===1?'Start a 1:1 conversation.':supportsDebate(count)?'Start an automatic debate.':'Start a group conversation.';
   $('selection-hint').textContent=count?count+' selected · '+mode:'Choose one perspective for a 1:1 conversation, or up to three for a group.';
   $('open-room').disabled=!count;
 }
-function renderPerspectives(){
-  $('perspectives').replaceChildren();
-  if(!state.analysis.perspectives.length){
-    $('perspectives').append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));
+function perspectiveCard(p){
+  const card=node('article',undefined,'card compact accent-'+indexOf(p.id)%5);card.dataset.perspective=p.id;
+  const top=node('header'),title=node('div',undefined,'card-title');
+  title.append(node('strong',label(p.id)),perspectiveStats(p));
+  top.append(avatar(p.id),title);
+  const relation=node('p','','relation-summary'),stance=node('p',p.text,'card-stance');stance.title=p.text;
+  card.append(top,stance,relation);
+  // The whole card opens the comparison popup.
+  card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
+  card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
+  card.onmouseenter=()=>linkComposition(p.id,true);card.onmouseleave=()=>linkComposition(p.id,false);
+  card.onkeydown=event=>{if(event.target===card&&(event.key==='Enter'||event.key===' ')){event.preventDefault();card.click();}};
+  return card;
+}
+// One sentence from what the popup shows: the consideration question for "consider", otherwise the lead explanation.
+function firstSentence(text){const t=(text||'').trim(),m=t.match(/^.*?[.!?。](?=\s|$)/s);return m?m[0]:t;}
+function keySentence(item,level){if(!item)return '';return firstSentence(level==='consider'&&item.consideration_question?item.consideration_question:item.explanation);}
+// Card totals count every comment that supports this perspective, including comments shared with
+// other perspectives (the composition charts count each comment once instead).
+function perspectiveStats(p){
+  const totals=p.support_totals,entry=(state.analysis.composition||[]).find(e=>e.perspective_id===p.id),stats=node('small',undefined,'card-stats');
+  const fmt=n=>Number(n).toLocaleString('en-US'),count=totals?.comments??entry?.count??0;
+  const likes=totals?totals.likes:(state.analysis.engagement?.available?entry?.likes:null);
+  stats.append(node('span',fmt(count)+' comment'+(count===1?'':'s')));
+  if(typeof likes==='number')stats.append(node('span','👍 '+fmt(likes)+' like'+(likes===1?'':'s'),'card-likes'));
+  stats.title='Comments that support this perspective, including comments shared with other perspectives'+(typeof likes==='number'?', and the likes they received when the video was collected.':'.')+' The charts below count each comment only once.';
+  return stats;
+}
+function cardGrid(cards){const grid=node('div',undefined,'cards');grid.append(...cards);return grid;}
+// Groups run from closest to most different, so reading top to bottom conveys distance without a score.
+const closenessOrder=['close','mixed','consider','differ','none','error'];
+const groupTitles={close:'Close to your view',mixed:'Partly close, partly different',consider:'Adds something to consider',
+  differ:'Different from your view',none:'No clear link to your view',error:'Could not compare right now'};
+async function renderPerspectives(){
+  const box=$('perspectives'),render=state.cardRender=(state.cardRender||0)+1,list=state.analysis.perspectives;
+  state.closeness.clear();state.closenessSummary.clear();
+  box.replaceChildren();
+  if(!list.length){box.append(node('p','근거를 확인한 관점이 아직 없습니다. 나의 의견은 Reflect에서 정리할 수 있습니다.','muted'));return;}
+  const cards=new Map(list.map(p=>[p.id,perspectiveCard(p)]));
+  if(!hasInitialView()){
+    for(const card of cards.values())setCloseness(card,'empty');
+    box.append(node('p','Write your initial view to see which perspectives are close to yours.','group-hint'),cardGrid([...cards.values()]));return;
   }
-  for(const p of state.analysis.perspectives){
-    const card=node('article',undefined,'card accent-'+indexOf(p.id)%5);card.classList.toggle('selected',state.selected.has(p.id));
-    const top=node('header'),choice=node('label',undefined,'card-select'),check=node('input');check.type='checkbox';check.checked=state.selected.has(p.id);check.setAttribute('aria-label','Select '+label(p.id));
-    check.onchange=()=>{if(check.checked){if(state.selected.size>=3){check.checked=false;status('한 대화에서 최대 세 관점을 선택할 수 있습니다.');return;}state.selected.add(p.id);}else state.selected.delete(p.id);card.classList.toggle('selected',check.checked);updateSelection();};
-    choice.append(check,node('span','✓'));top.append(avatar(p.id),choice);
-    const title=node('div',undefined,'card-title'),count=node('span',p.source_count+(p.admission_policy?' verified source comments':' source comments'),'source-badge');title.append(node('strong',label(p.id)),node('small','A viewpoint from the comments'));top.append(title);
-    if(p.admission_policy)card.append(node('small','댓글에 나타난 입장입니다. 전체 시청자의 비율을 뜻하지 않습니다.'));
-    card.append(top,count,node('p','STANCE','card-section-label'),node('p',p.text,'card-stance'));
-    const grounds=p.grounds||[];
-    if(grounds.length){
-      card.append(node('p','REASONS & CONDITIONS IN THE SOURCES','card-section-label'));
-      for(const g of grounds){
-        const row=node('p',undefined,'card-ground');
-        row.append(node('span',g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':''),
-          node('span',g.text),node('small',' · '+g.source_count+' source'+(g.source_count===1?'':'s'),'ground-count'));
-        card.append(row);
-      }
+  for(const card of cards.values()){setCloseness(card,'pending');card.querySelector('.relation-summary').textContent='Comparing with your view…';}
+  // While comparing, keep every card on one row; they are regrouped once all comparisons settle.
+  const row=cardGrid([...cards.values()]);row.classList.add('single-row');row.style.setProperty('--count',String(list.length));
+  box.append(node('p','Comparing your view with '+list.length+' perspective'+(list.length===1?'':'s')+'…','group-hint'),row);
+  const revision=state.session.initial_opinion.revision;
+  const results=await Promise.allSettled(list.map(p=>comparison(p.id)));
+  if(render!==state.cardRender||revision!==state.session.initial_opinion.revision)return;
+  const groups=new Map(closenessOrder.map(level=>[level,[]]));
+  results.forEach((result,i)=>{
+    const p=list[i],card=cards.get(p.id),summary=card.querySelector('.relation-summary');
+    if(result.status!=='fulfilled'||result.value.stale||!result.value.result.available){setCloseness(card,'error');summary.textContent='';groups.get('error').push(card);return;}
+    const items=result.value.result.items||[],level=closeness(items);
+    // Lead with the explanation that matches the group.
+    const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
+    setCloseness(card,level);summary.textContent=keySentence(lead,level);summary.title=summary.textContent;state.closenessSummary.set(p.id,summary.textContent);groups.get(level).push(card);state.closeness.set(p.id,level);
+  });
+  // The four closeness groups sit side by side as columns; groups without a comparison result go on a row below.
+  box.replaceChildren();
+  const rows=[['close','mixed','differ','consider'],['none','error']];
+  for(const levels of rows){
+    const row=node('div',undefined,'closeness-row'+(levels[0]==='close'?'':' closeness-row-wide'));
+    for(const level of levels){
+      const members=groups.get(level);if(!members.length)continue;
+      const section=node('section',undefined,'closeness-group closeness-'+level),stack=node('div',undefined,'group-cards');
+      stack.append(...members);section.append(node('h2',groupTitles[level]+' · '+members.length,'closeness-group-title'),stack);row.append(section);
     }
-    const compare=node('button','Compare with my view','secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
-    card.dataset.perspective=p.id;
-    const relations=node('div',undefined,'card-relations');relations.setAttribute('aria-live','polite');renderRelations(relations,p.id);
-    card.append(relations,compare,sourceDisclosure(p));$('perspectives').append(card);
+    if(row.childElementCount)box.append(row);
   }
-  updateSelection();
-  $('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length||comparingAll;
 }
-const relationNames={agreement:'Agreement',difference:'Difference',additional_condition:'Additional condition',unclear:'Unclear'};
-let comparingAll=false,latestComparison=0;
-function renderRelations(container,id){
-  container.replaceChildren();
-  const result=state.session.comparisons?.[id];
-  if(!result?.relations.length){
-    const message=result?'No clear relationship found':state.session.initial_opinion.text.trim()?'Not compared yet':'Add your view to compare';
-    container.append(node('small',message,'muted'));return;
+function hasInitialView(){return !!state.session.initial_opinion.text.trim();}
+// One comparison job per (initial revision, perspective). Revisiting reuses the finished job.
+function comparison(pid){
+  const session=state.session,revision=session.initial_opinion.revision,key=session.session_id+'/'+revision+'/'+pid;
+  if(!state.comparisons.has(key)){
+    // A comparison already recorded for this session is reopened instead of generated again.
+    const previous=session.comparisons?.[pid];
+    const pending=(previous?Promise.resolve(previous):api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:revision,request_id:requestId()})).then(pollJob);
+    pending.catch(()=>state.comparisons.delete(key));state.comparisons.set(key,pending);
   }
-  for(const relation of result.relations)container.append(node('span',relationNames[relation],'relation-chip mark-'+relation));
+  return state.comparisons.get(key);
 }
-function sourceDisclosure(p){
-  const details=node('details',undefined,'source-disclosure');
-  details.append(node('summary','Source comments'));
-  const stance=node('div',undefined,'card-sources');stance.append(node('p',p.text));
-  commentSourceButtons(stance,p.source_ids||[],'입장 원문');details.append(stance);
-  for(const ground of p.grounds||[]){
-    const row=node('div',undefined,'card-ground-sources');row.append(node('p',ground.text));
-    commentSourceButtons(row,ground.source_ids||[],'근거 원문');details.append(row);
-  }
-  return details;
+// Closeness is a fixed rule over the comparison's relation kinds, not a score:
+// shared points only -> close, differences only -> differ, both -> mixed.
+const closenessLabels={close:'Close to your view',mixed:'Partly close, partly different',differ:'Different from your view',
+  consider:'Adds something to consider',none:'No clear link to your view',pending:'Comparing with your view…',
+  empty:'Add your initial view to compare',error:'Comparison is not available right now'};
+function relationKind(relation){return relation==='agreement'||relation==='difference'?relation:'consider';}
+function closeness(items){
+  const kinds=new Set(items.map(i=>relationKind(i.relation)));
+  if(kinds.has('agreement')&&kinds.has('difference'))return 'mixed';
+  if(kinds.has('agreement'))return 'close';
+  if(kinds.has('difference'))return 'differ';
+  return kinds.size?'consider':'none';
+}
+function closenessTag(level){return node('span',closenessLabels[level],'closeness-text closeness-'+level);}
+function setCloseness(card,level){
+  for(const name of [...card.classList])if(name.startsWith('closeness-'))card.classList.remove(name);
+  card.classList.add('closeness-'+level);
+}
+async function sourceText(id){
+  const key=base()+'/sources/'+encodeURIComponent(id);
+  if(!state.sourceTexts.has(key))state.sourceTexts.set(key,api(key).catch(e=>{state.sourceTexts.delete(key);throw e;}));
+  return state.sourceTexts.get(key);
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));$('source').textContent=value.text+(value.PARENT_CONTEXT_ONLY?'\n\n부모 댓글 · 문맥 참고\n'+value.PARENT_CONTEXT_ONLY.text:'');openDialog('source-dialog');}catch(e){status(e.message);}}
 function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||'외부 자료','source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
-function commentSourceButtons(container,sourceIds,caption='원문'){
+function commentSourceButtons(container,sourceIds,caption='Evidence'){
   for(const [index,sourceId] of sourceIds.entries()){
     const button=node('button',caption+' '+(index+1),'source-button');
     button.type='button';
@@ -247,62 +311,59 @@ function highlighted(container,text,spans){
   valid.forEach(s=>{bounds.add(s.start);bounds.add(s.end);});const cuts=[...bounds].sort((a,b)=>a-b);container.replaceChildren();
   for(let i=1;i<cuts.length;i++){const start=cuts[i-1],end=cuts[i],keys=[...new Set(valid.filter(s=>s.start<=start&&s.end>=end).map(s=>s.category))],part=chars.slice(start,end).join('');container.append(keys.length?node('mark',part,'mark-'+(keys.length===1?keys[0]:'mixed')):document.createTextNode(part));}
 }
-async function compareWith(pid,show=true){
-  const view=show?++latestComparison:0;
-  const session=state.session,revision=session.initial_opinion.revision;
-  const key=session.session_id+'/'+revision+'/'+pid;
-  if(show)status('나의 의견과 관점을 비교하고 있습니다.');
-  let pending=state.comparisons.get(key);
-  if(!pending){
-    const previous=session.comparisons?.[pid];
-    pending=(previous?Promise.resolve(previous):api(base()+'/comparisons','POST',{perspective_id:pid,initial_revision:revision,request_id:requestId()})).then(pollJob);
-    state.comparisons.set(key,pending);
-  }
-  let job;
-  try{job=await pending;}catch(error){state.comparisons.delete(key);throw error;}
-  if(job.stale||state.session.session_id!==session.session_id||state.session.initial_opinion.revision!==revision)return;
-  const items=job.result.items||[];
-  state.session.comparisons??={};
-  state.session.comparisons[pid]={job_id:job.job_id,available:job.result.available,relations:[...new Set(items.map(i=>i.relation))]};
-  const card=[...$('perspectives').children].find(c=>c.dataset.perspective===pid);
-  if(card)renderRelations(card.querySelector('.card-relations'),pid);
-  if(!show||view!==latestComparison||document.body.dataset.step!=='explore')return;
-  const p=perspective(pid);
-  $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);
-  const coreSpans=items.filter(i=>i.perspective_claims.some(c=>c.claim_id===p.core_claim_id)).map(i=>({start:0,end:[...p.text].length,category:i.relation}));
-  highlighted($('comparison-stance'),p.text,coreSpans);
-  $('comparison-items').replaceChildren();$('comparison-sources').replaceChildren(sourceDisclosure(p));
-  highlighted($('comparison-initial'),session.initial_opinion.text,items.flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
-  if(!job.result.available)$('comparison-items').append(node('p','초기 의견을 적으면 이 관점과 비교할 수 있습니다.'));
-  else{
-    for(const item of items){
-      const row=node('article',undefined,'comparison-item '+item.relation);
-      row.append(node('h3',relationNames[item.relation]),node('p',item.explanation),node('blockquote','Your view · '+item.user_spans.map(s=>s.text).join(' ')));
-      for(const claim of item.perspective_claims){
-        const quote=node('blockquote');quote.append(node('mark',claim.text,'mark-'+item.relation));row.append(quote);sourceButtons(row,claim);
-      }
-      for(const premise of item.required_premises){row.append(node('p',premise.text,'required-premise'));sourceButtons(row,premise);}
-      if(item.consideration_question)row.append(node('p',item.consideration_question,'comparison-question'));
-      $('comparison-items').append(row);
-    }
-    if(!items.length)$('comparison-items').append(node('p','두 입력에서 분명한 공통점이나 차이를 확인하지 못했습니다.'));
-  }
-  openDialog('comparison');status('');
+// Every source comment of the perspective, in first-seen order, with the comparison items that cite it.
+function commentEntries(p,items){
+  const entries=new Map(),add=id=>{if(!entries.has(id))entries.set(id,{id,items:[],grounds:[],quote:''});return entries.get(id);};
+  for(const id of p.source_ids||[])add(id);
+  for(const g of p.grounds||[])for(const id of g.source_ids||[])add(id).grounds.push(g);
+  for(const item of items)for(const claim of [...(item.perspective_claims||[]),...(item.required_premises||[])])
+    for(const evidence of claim.citations?.comment_evidence||[]){const entry=add(evidence.source_id);if(!entry.items.includes(item))entry.items.push(item);if(!entry.quote)entry.quote=evidence.span?.text||'';}
+  return [...entries.values()];
 }
-$('compare-all').onclick=async()=>{
-  if(comparingAll)return;
-  comparingAll=true;$('compare-all').disabled=true;
-  const sid=state.session.session_id,revision=state.session.initial_opinion.revision;
-  const ids=state.analysis.perspectives.map(p=>p.id);
-  try{
-    for(const [index,id] of ids.entries()){
-      if(state.session.session_id!==sid||state.session.initial_opinion.revision!==revision)break;
-      $('compare-progress').textContent=(index+1)+' / '+ids.length;
-      if(!state.session.comparisons?.[id])await compareWith(id,false);
-    }
-  }catch(error){status(error.message);}
-  finally{comparingAll=false;$('compare-progress').textContent='';$('compare-all').disabled=!state.session.initial_opinion.text.trim()||!state.analysis.perspectives.length;}
-};
+const commentGroups=[['close','Comments close to your view'],['mixed','Comments partly close, partly different'],['differ','Comments different from your view'],['consider','Comments that add something to consider'],['none','Other comments in this perspective']];
+const relationIcons={agreement:'✓',difference:'✕',consider:'?'};
+function commentCard(entry,compared){
+  const article=node('article',undefined,'comment-entry'),quote=node('blockquote',entry.quote||'…','comment-text');
+  article.append(quote);
+  sourceText(entry.id).then(value=>{quote.textContent=value.text;
+    if(value.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',value.PARENT_CONTEXT_ONLY.text));article.insertBefore(parent,quote);}
+  }).catch(()=>{if(!entry.quote)quote.textContent='This comment could not be loaded.';});
+  for(const g of entry.grounds)article.append(node('p',(g.role==='essential_condition'?'Condition: ':g.role==='concession'?'Qualification: ':'Reason: ')+g.text,'comment-ground'));
+  if(compared)for(const item of entry.items){
+    const note=node('p',undefined,'comment-note note-'+relationKind(item.relation));note.append(node('span',relationIcons[relationKind(item.relation)],'note-icon'),node('span',item.explanation));article.append(note);
+    if(item.consideration_question)article.append(node('p','💭 '+item.consideration_question,'comment-question'));
+  }
+  return article;
+}
+function renderComments(p,items,compared){
+  const box=$('comparison-items');box.replaceChildren();
+  const entries=commentEntries(p,items);
+  if(!entries.length){box.append(node('p','No source comments are linked to this perspective.','muted'));return;}
+  if(!compared){box.append(node('h3','What commenters said','comment-group-title'));for(const e of entries)box.append(commentCard(e,false));return;}
+  for(const [level,title] of commentGroups){
+    const group=entries.filter(e=>closeness(e.items)===level);if(!group.length)continue;
+    const section=node('section',undefined,'comment-group closeness-'+level);section.append(node('h3',title+' · '+group.length,'comment-group-title'));
+    for(const e of group)section.append(commentCard(e,true));box.append(section);
+  }
+}
+async function compareWith(pid){
+  // Open immediately: the perspective's source comments are readable even without an initial view.
+  const p=perspective(pid),revision=state.session.initial_opinion.revision,dialog=$('comparison');
+  dialog.className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));$('comparison-title').textContent=label(pid);$('comparison-stance').textContent=p.text;
+  $('comparison-tag').replaceChildren();state.openComparison=pid;
+  $('comparison-your-view').hidden=!hasInitialView();$('comparison-initial').textContent=state.session.initial_opinion.text;
+  renderComments(p,[],false);openDialog('comparison');
+  if(!hasInitialView()){$('comparison-tag').append(closenessTag('empty'));return;}
+  $('comparison-tag').append(closenessTag('pending'));
+  let job;
+  try{job=await comparison(pid);}catch(e){if(state.openComparison===pid)$('comparison-tag').replaceChildren(closenessTag('error'));throw e;}
+  if(revision!==state.session.initial_opinion.revision||state.openComparison!==pid||!dialog.open)return;
+  if(job.stale||!job.result.available){$('comparison-tag').replaceChildren(closenessTag('empty'));return;}
+  const items=job.result.items||[];
+  dialog.classList.add('closeness-'+closeness(items));$('comparison-tag').replaceChildren(closenessTag(closeness(items)));
+  highlighted($('comparison-initial'),state.session.initial_opinion.text,items.flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
+  renderComments(p,items,true);
+}
 const roomStates={
   idle:'시작 전',running:'진행 중',pausing:'정지 중',paused:'일시 정지',awaiting_user:'질문 대기',
   opening:'입장 발언',replying:'상대 입장에 응답 중',synthesizing:'합의 검토 중',compiling:'결론 정리 중',
@@ -314,16 +375,28 @@ const activeRoomStates=new Set(['running','opening','replying','synthesizing','c
 const lastRoomKey='commentscope-mvp-last-conversation';
 const defaultOpeningQuestion=$('opening-question').defaultValue;
 
-function roomName(room,index){
-  if(room.kind==='synthesis_chat')return '합의 Agent 대화 '+(index+1);
-  if(room.kind==='structured_debate')return '자동 토론 '+(index+1);
-  return (room.mode==='group'?'Group conversation ':'1:1 conversation ')+(index+1);
+function roomKindLabel(room){
+  if(room.kind==='synthesis_chat')return 'Consensus Agent chat';
+  if(room.kind==='structured_debate'||room.kind==='debate_draft')return 'Automatic debate';
+  return room.mode==='group'?'Group chat':'1:1 chat';
 }
+// A conversation is named after its first question; before that, after its kind.
+function roomName(room,index){
+  const summary=state.session?.rooms?.find(r=>r.room_id===room.room_id);
+  const question=(room.question||summary?.question||room.plan?.question||room.messages?.find(m=>m.author_kind==='user')?.body||'').trim();
+  // The consensus agent's room is created by the debate itself, so it keeps the agent's name.
+  if(room.kind==='synthesis_chat')return '합의 Agent';
+  if(question)return [...question].length>48?[...question].slice(0,47).join('')+'…':question;
+  const kind=roomKindLabel(room);
+  return 'New '+(kind.startsWith('1:1')?kind:kind[0].toLowerCase()+kind.slice(1))+(index>=0?' '+(index+1):'');
+}
+function participantNames(room){return (room.participant_ids||[]).map(label).join(', ');}
 function roomPath(room){
   return room.debate_id?'/debates/'+encodeURIComponent(room.debate_id):'/rooms/'+encodeURIComponent(room.room_id);
 }
 function setRoom(room){
   if(room?.room_id!==state.room?.room_id||room?.kind==='debate_draft'){
+    if(typeof closeEvidence==='function'&&$('evidence-panel'))closeEvidence();
     $('question').value='';$('question-target').replaceChildren();
   }
   clearTimeout(state.roomTimer);
@@ -349,68 +422,136 @@ function renderRooms(){
   const query=$('room-search').value.toLowerCase();
   state.session.rooms.forEach((room,i)=>{if(room.room_id===state.room?.room_id)room=state.room;const title=roomName(room,i),option=node('option',title+' · '+(roomStates[room.state]||room.state));option.value=room.room_id;select.append(option);
     if(state.roomFilter!=='all'&&room.mode!==state.roomFilter||!title.toLowerCase().includes(query))return;
-    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);button.append(node('strong',title),node('small',roomStates[room.state]||room.state));button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
+    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);const faces=node('span',undefined,'room-faces'+((room.participant_ids||[]).length>1?' group':''));for(const id of (room.participant_ids||[]).slice(0,3))faces.append(avatar(id,true));
+    const text=node('span',undefined,'room-text');text.append(node('strong',title),node('small',[participantNames(room),roomStates[room.state]||room.state].filter(Boolean).join(' · ')));
+    button.append(faces,text);button.title=title;button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
   });
   if(!list.childNodes.length)list.append(node('p','No conversations here yet.','muted'));if(state.room?.room_id)select.value=state.room.room_id;
 }
+// Who is expected to speak next while the room is working. Debates expose their turn cursor;
+// other rooms follow the participant order after the last speaker (or the addressed perspective).
+function nextSpeaker(room){
+  const ids=room.participant_ids||[];if(!ids.length)return null;
+  if(room.plan&&Number.isInteger(room.cursor))return ids[room.cursor%ids.length];
+  const messages=room.messages||[],last=messages[messages.length-1];
+  if(!last||last.author_kind==='user')return last?.target_agent_id&&ids.includes(last.target_agent_id)?last.target_agent_id:ids[0];
+  const i=ids.indexOf(last.agent_id);return i<0?ids[0]:ids[(i+1)%ids.length];
+}
+function typingIndicator(room){
+  if(!['running','opening','replying','synthesizing','compiling','pausing'].includes(room.state))return null;
+  const box=node('div',undefined,'message typing'),content=node('div',undefined,'message-content'),dots=node('span',undefined,'typing-dots');
+  dots.append(node('i'),node('i'),node('i'));
+  if(['synthesizing','compiling'].includes(room.state)){
+    const icon=node('div',undefined,'message-avatar typing-icon');icon.append(node('span','✦'));box.append(icon);
+    content.append(node('div',roomStates[room.state],'typing-label'),dots);
+  }else{
+    const speaker=nextSpeaker(room);
+    const icon=node('div',undefined,'message-avatar');if(speaker)icon.append(avatar(speaker));box.append(icon);
+    content.append(node('div',(speaker?label(speaker):'A perspective')+' is writing…','typing-label'),dots);
+  }
+  box.setAttribute('role','status');box.append(content);return box;
+}
+function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return t&&!isNaN(t)?t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';}
+// Figma 314:2807: agent messages show avatar, a speaker row (name · time) above a grey bubble and an
+// Evidence chip below it; user messages are lavender bubbles on the right with the time beside them.
 function renderMessages(){
+  const scroller=$('chat-scroll'),atBottom=scroller.scrollHeight-scroller.scrollTop-scroller.clientHeight<80,count=$('messages').childElementCount;
+  requestAnimationFrame(()=>{if(atBottom&&$('messages').childElementCount!==count)scroller.scrollTop=scroller.scrollHeight;});
   $('messages').replaceChildren();
+  // Comment statements an agent already showed in this conversation are not repeated in later bubbles;
+  // they stay available under Evidence.
+  const shown=new Map();
+  const first=state.room.messages.find(m=>m.created_at);
+  if(first){const day=new Date(first.created_at),today=new Date().toDateString()===day.toDateString();
+    const row=node('div',undefined,'date-row');row.append(node('span',(today?'Today':day.toLocaleDateString('en-US',{month:'short',day:'numeric'}))+' · '+messageTime(first)+' · continuing from your initial view'));$('messages').append(row);}
   for(const m of state.room.messages){const box=node('article',undefined,'message '+m.author_kind);box.id='message-'+m.message_id;
-    if(m.author_kind==='agent'){const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id,true));box.append(icon);}
-    const bubble=node('div',undefined,'bubble');
+    const bubble=node('div',undefined,'bubble'),content=node('div',undefined,'message-content');
     const phase=({opening:'입장 발언',reply:'상대 입장 응답'})[m.phase];
-    const speaker=m.author_kind==='user'?'You':label(m.agent_id);
-    bubble.append(node('small',phase?speaker+' · '+phase:speaker));
-    if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')bubble.append(node('small',label(reply.agent_id)+'의 앞선 발언에 대한 응답'));}
+    if(m.author_kind==='agent'){
+      const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id));box.append(icon);
+      // Figma: the speaker row is just name · time; turn type and reply context live in Evidence.
+      const speaker=node('div',undefined,'speaker-row');speaker.append(node('strong',label(m.agent_id),'speaker-name'),node('span',messageTime(m),'message-time'));content.append(speaker);
+    }else box.append(node('span',messageTime(m),'message-time'));
     if(m.body)bubble.append(node('p',m.body));
     if(m.author_kind==='agent'&&!m.points?.length){
       const expired=m.evidence_scope==='expired';
       bubble.append(node('p',expired?'근거 자료의 기한이 지났습니다.':m.limitation==='verification_hold'?'이 질문에 대한 답변을 검증하지 못했습니다.':'이 질문에 답할 근거를 자료에서 찾지 못했습니다.'));
-      if(!expired&&m.evidence_scope==='seeded_provenance'){
-        const original=perspective(m.agent_id);
-        if(original?.source_ids?.length){
-          const details=node('details',undefined,'source-disclosure');
-          details.append(node('summary','이 관점의 기존 입장과 원문 보기'),node('p',original.text));
-          commentSourceButtons(details,original.source_ids,'입장 원문');bubble.append(details);
-        }
-      }
     }
+    const seen=shown.get(m.agent_id)||new Set();shown.set(m.agent_id,seen);let visible=0;
     for(const point of m.points||[]){
-      const origin=pointOrigin(point.origin);
-      if(origin)bubble.append(node('small',origin));
       const text=node('p',point.text);
       if(point.point_id)text.id='point-'+point.point_id;
+      const key=point.origin==='original_comment'?point.claim_id||point.text:null;
+      if(key&&seen.has(key)){text.hidden=true;bubble.append(text);continue;}
+      if(key)seen.add(key);visible++;
+      const origin=pointOrigin(point.origin);
+      if(origin)text.append(node('span',origin,'origin-tag'));
       bubble.append(text);
-      if (m.evidence_scope === 'seeded_provenance' && point.origin === 'ai_reasoning' &&
-          point.citations?.anchor_claim_ids?.length) {
-        const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
-        if (aliases.length) {
-          const view = perspective(m.agent_id);
-          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, ground.text]));
-          if (view) claims.set(view.core_claim_id, view.text);
-          const details = node('details', undefined, 'source-disclosure');
-          details.append(node('summary', aliases.join(', ') + ' · 참조한 주장'),
-            node('p', 'E로 시작하는 번호는 Agent가 설명을 작성할 때 참고한 주장 항목을 가리킵니다.'));
-          for (const id of new Set(point.citations.anchor_claim_ids)) {
-            if (claims.has(id)) details.append(node('blockquote', claims.get(id)));
-          }
-          bubble.append(details);
-        }
-      }
-      sourceButtons(bubble,point);
-      for(const target of point.target_edges||[]){
-        appendPointLinks(bubble,[target.point_id],state.room,'응답 대상 · '+label(target.agent_id));
-      }
     }
+    if(m.author_kind==='agent'&&m.points?.length&&!visible)bubble.append(node('p','Keeps the same position as before — see Evidence for the comments it rests on.','restated-note'));
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
-    if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
-    box.append(bubble);$('messages').append(box);
+    content.append(bubble);
+    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','📎 Evidence · '+count),node('span','›','evidence-chevron'));button.dataset.message=m.message_id;button.onclick=()=>openEvidence(m);content.append(button);}}
+    box.append(content);$('messages').append(box);
   }
+  const typing=typingIndicator(state.room);if(typing)$('messages').append(typing);
 }
+// Comment-backed points need no tag; AI reasoning and external claims stay visibly separate (DEC-028).
+function evidenceItems(m){
+  const comments=new Map(),external=[],anchors=new Map(),targets=[];
+  const addComment=(id,quote,supports)=>{if(!comments.has(id))comments.set(id,{id,quote:quote||'',supports:[]});const c=comments.get(id);if(!c.quote&&quote)c.quote=quote;if(supports&&!c.supports.includes(supports))c.supports.push(supports);};
+  for(const point of [...(m.points||[]),...(m.required_premises||[])]){
+    for(const e of point.citations?.comment_evidence||[])addComment(e.source_id,e.span?.text,point.text);
+    for(const e of point.citations?.external_evidence||[]){let url;try{url=new URL(e.url);}catch(_){continue;}if(url.protocol==='https:'&&!url.username&&!url.password)external.push({url:url.href,title:e.title||url.hostname,text:e.text,supports:point.text});}
+    if(m.evidence_scope==='seeded_provenance'&&point.origin==='ai_reasoning'){const view=perspective(m.agent_id);const claims=new Map((view?.grounds||[]).map(g=>[g.claim_id,g.text]));if(view)claims.set(view.core_claim_id,view.text);for(const id of point.citations?.anchor_claim_ids||[])if(claims.has(id))anchors.set(id,claims.get(id));}
+    for(const target of point.target_edges||[])targets.push(target);
+  }
+  if(!m.points?.length&&m.evidence_scope==='seeded_provenance'){const view=perspective(m.agent_id);for(const id of view?.source_ids||[])addComment(id,'',view.text);}
+  return {comments:[...comments.values()],external,anchors:[...anchors.values()],targets};
+}
+function evidenceCount(m){const e=evidenceItems(m);return e.comments.length+e.external.length;}
+function replyContext(m){const reply=m.reply_to_message_id&&state.room.messages.find(x=>x.message_id===m.reply_to_message_id);return reply?.author_kind==='agent'?reply:null;}
+function evidenceCard({category,title,origin,excerpt,jump,link}){
+  const card=node('article',undefined,'evidence-card');
+  if(title)card.append(node('h3',title,'evidence-card-title'));
+  if(origin)card.append(node('p',origin,'evidence-origin'));
+  if(link){const a=node('a',link.text+' ↗','evidence-link');a.href=link.url;a.target='_blank';a.rel='noopener noreferrer';card.append(a);}
+  const quote=node('blockquote',excerpt||'','evidence-text');if(excerpt!==undefined)card.append(quote);
+  const foot=node('div',undefined,'evidence-foot');foot.append(node('span',category,'evidence-category'));
+  if(jump){const go=node('button','Jump to reply ›','evidence-jump');go.type='button';go.onclick=jump;foot.append(go);}
+  card.append(foot);return {card,quote};
+}
+function jumpTo(messageId){const el=$('message-'+messageId);if(!el)return;el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('focused');setTimeout(()=>el.classList.remove('focused'),1600);}
+function openEvidence(m){
+  const e=evidenceItems(m),list=$('evidence-list');list.replaceChildren();
+  $('evidence-title').textContent='Evidence of Reply';
+  $('evidence-context').textContent=label(m.agent_id)+(messageTime(m)?' · '+messageTime(m):'')+' — '+e.comments.length+' comment'+(e.comments.length===1?'':'s')+(e.external.length?', '+e.external.length+' external source'+(e.external.length===1?'':'s'):'')+'.';
+  const jump=()=>jumpTo(m.message_id);
+  for(const c of e.comments){
+    const {card,quote}=evidenceCard({category:'COMMENT EVIDENCE',title:c.supports[0]||label(m.agent_id),origin:'Comment from the video'+(c.supports.length>1?' · supports '+c.supports.length+' points':''),excerpt:c.quote||'…',jump});
+    sourceText(c.id).then(v=>{quote.textContent=v.text;if(v.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',v.PARENT_CONTEXT_ONLY.text));card.insertBefore(parent,quote);}}).catch(()=>{if(!c.quote)quote.textContent='This evidence could not be loaded.';});
+    list.append(card);
+  }
+  for(const x of e.external)list.append(evidenceCard({category:'EXTERNAL SOURCE',title:x.supports,link:{url:x.url,text:x.title},excerpt:x.text||undefined,jump}).card);
+  for(const t of e.anchors)list.append(evidenceCard({category:'AGENT EXPLANATION',title:'A claim the agent referred to',excerpt:t,jump}).card);
+  for(const premise of m.required_premises||[])list.append(evidenceCard({category:'CONDITION TO CHECK',title:'Premise or condition to check together',excerpt:premise.text,jump}).card);
+  const reply=replyContext(m);
+  if(reply||e.targets.length){
+    const {card}=evidenceCard({category:'REPLY CONTEXT',title:reply?'Replying to '+label(reply.agent_id):'Responds to'});
+    const row=node('div',undefined,'evidence-targets');
+    if(reply){const go=node('button',label(reply.agent_id)+(messageTime(reply)?' · '+messageTime(reply):''),'source-button');go.type='button';go.onclick=()=>jumpTo(reply.message_id);row.append(go);}
+    for(const t of e.targets)appendPointLinks(row,[t.point_id],state.room,label(t.agent_id));
+    card.insertBefore(row,card.lastChild);list.append(card);
+  }
+  if(!list.childElementCount)list.append(node('p','No evidence is attached to this message.','evidence-intro'));
+  document.querySelectorAll('.evidence-button.active').forEach(b=>b.classList.remove('active'));
+  document.querySelector('.evidence-button[data-message="'+CSS.escape(m.message_id)+'"]')?.classList.add('active');
+  $('evidence-panel').hidden=false;$('converse').classList.add('with-evidence');$('evidence-panel').scrollTop=0;
+}
+function closeEvidence(){$('evidence-panel').hidden=true;$('converse').classList.remove('with-evidence');document.querySelectorAll('.evidence-button.active').forEach(b=>b.classList.remove('active'));}
 function pointOrigin(origin){
-  return ({original_comment:'댓글 근거',ai_reasoning:'AI 추론 · 원작성자의 발언이 아닙니다',
-    external_evidence:'외부 자료 기반 주장'})[origin];
+  return ({ai_reasoning:'AI reasoning · not the commenters’ words',external_evidence:'Based on external sources'})[origin];
 }
 function appendPointLinks(parent,pointIds,room,title){
   for(const pointId of new Set(pointIds)){
@@ -420,9 +561,10 @@ function appendPointLinks(parent,pointIds,room,title){
     link.type='button';
     link.onclick=()=>{
       const point=$('point-'+pointId);
-      point?.scrollIntoView({block:'center'});
-      point?.parentElement?.setAttribute('tabindex','-1');
-      point?.parentElement?.focus({preventScroll:true});
+      if(!point||point.hidden){jumpTo(message.message_id);return;}
+      point.scrollIntoView({block:'center'});
+      point.parentElement?.setAttribute('tabindex','-1');
+      point.parentElement?.focus({preventScroll:true});
     };
     parent.append(link);
   }
@@ -490,7 +632,7 @@ function renderConclusion(room){
     const references=node('div',undefined,'debate-references');
     const resource='/synthesis-agents/'+encodeURIComponent(room.synthesis_agent.agent_id);
     for(const [i,id] of (result.root_source_ids||[]).entries()){
-      const read=node('button','계보 원문 '+(i+1),'source-button');
+      const read=node('button','Evidence '+(i+1),'source-button');
       read.type='button';
       read.onclick=()=>source(id,resource);
       references.append(read);
@@ -518,13 +660,15 @@ function renderRoom(){
   renderConclusion(room);
   const ids=room.participant_ids||[];
   $('room-avatars').replaceChildren(...ids.map(id=>avatar(id)));
-  $('room-title').textContent=ids.map(label).join(' × ')||'Your conversation';
+  const index=state.session.rooms.findIndex(r=>r.room_id===room.room_id);
+  $('room-title').textContent=roomName(room,index);$('room-title').title=(room.question||room.plan?.question||'');
+  // Who is in this conversation.
+  const members=node('span',undefined,'room-members');members.append(node('span',roomKindLabel(room)+' with','room-members-label'));
+  for(const id of ids){const chip=node('span',undefined,'member-chip accent-'+Math.max(0,indexOf(id))%5);chip.append(avatar(id,true),node('span',label(id)));members.append(chip);}
   const automatic=room.kind==='structured_debate'||room.kind==='debate_draft';
   $('messages').classList.toggle('structured-transcript',automatic);
   $('show-debate-result').hidden=!room.conclusion;
-  $('room-summary').textContent=automatic?'관점별 입장과 응답을 읽고 마지막 결론을 확인하세요.':
-    room.kind==='synthesis_chat'?'공통 주장과 조건에 대해 질문할 수 있습니다.':
-    room.mode==='group'?'Different perspectives, in one conversation.':'A conversation with this perspective.';
+  $('room-summary').replaceChildren(members);
   const names={
     idle:'질문으로 시작할 수 있습니다.',running:'관점이 응답하고 있습니다.',
     opening:'각 관점이 입장을 설명하고 있습니다.',replying:'다른 관점의 발언에 답하고 있습니다.',
@@ -544,6 +688,14 @@ function renderRoom(){
     const all=node('option','Everyone');all.value='';target.replaceChildren(all);
     for(const id of ids){const option=node('option',label(id));option.value=id;target.append(option);}
     if(ids.includes(lastTarget))target.value=lastTarget;
+    // Pill buttons choose the recipient; the hidden select keeps the value the form sends.
+    const chips=$('recipient-chips');chips.replaceChildren();
+    for(const id of ['',...ids]){
+      const chip=node('button',undefined,'recipient-chip'+(id?' accent-'+Math.max(0,indexOf(id))%5:''));chip.type='button';chip.setAttribute('role','radio');
+      if(id)chip.append(avatar(id,true));chip.append(node('span',id?label(id):'Everyone'));
+      const sync=()=>{for(const c of chips.children){const on=c===chip;c.classList.toggle('active',on);c.setAttribute('aria-checked',String(on));}};
+      chip.onclick=()=>{target.value=id;sync();};if(target.value===id)setTimeout(sync);chips.append(chip);
+    }
   }
   const openingQuestion=$('opening-question');
   openingQuestion.readOnly=Boolean(room.plan)&&room.state==='idle';
@@ -822,7 +974,22 @@ function closeLibrary(){
   else closeDialog('library-dialog');
 }
 
-$('open-library').onclick=()=>openLibrary();
+$('open-library').onclick=()=>{closeDialog('account-drawer');openLibrary();};
+// The brand returns to the first page (video URL and initial view). The current session stays
+// reachable through the step buttons until a new one is started.
+document.querySelector('a.brand').addEventListener('click',event=>{
+  event.preventDefault();
+  for(const id of ['comparison','source-dialog','perspective-dialog','account-drawer'])closeDialog(id);
+  if(state.editingInitial)leaveInitialEdit();
+  $('workspace').hidden=true;$('before').hidden=false;$('initial').value='';$('initial').oninput();
+  clearStepNav();
+  status('');window.scrollTo(0,0);$('video-url').focus();
+});
+$('account-button').onclick=()=>openDialog('account-drawer');
+$('close-account').onclick=()=>closeDialog('account-drawer');
+$('original-video').addEventListener('click',()=>closeDialog('account-drawer'));
+// Clicking the dimmed area outside the drawer closes it.
+$('account-drawer').addEventListener('click',event=>{if(event.target===$('account-drawer'))closeDialog('account-drawer');});
 $('close-library').onclick=closeLibrary;
 $('library-dialog').addEventListener('cancel',event=>{event.preventDefault();closeLibrary();});
 window.addEventListener('popstate',()=>{
@@ -831,8 +998,8 @@ window.addEventListener('popstate',()=>{
 });
 
 async function enter(session,destination){
-  setSession(session);
   state.analysis=session.analysis;
+  setSession(session);
   sessionStorage.setItem(selectedAnalysisKey,session.analysis_id);
   renderAnalysis();
   $('before').hidden=true;
@@ -861,7 +1028,7 @@ async function enter(session,destination){
   }
   showStep('explore');
   $('explore-title').focus({preventScroll:true});
-  status('관점을 선택하고 나의 의견과 비교해 보세요.');
+  status('');
 }
 $('initial').oninput=()=>{$('initial-count').textContent='Characters: '+[...$('initial').value].length+' / 500';};
 $('clear-initial').onclick=()=>{$('initial').value='';$('initial').oninput();$('initial').focus();};
@@ -907,6 +1074,7 @@ $('begin').onsubmit=async event=>{
   event.preventDefault();
   const button=$('begin').querySelector('button[type=submit]');
   if(button.disabled)return;
+  if(state.editingInitial){button.disabled=true;try{await saveInitialEdit();}catch(e){status(e.message);}finally{button.disabled=false;}return;}
   button.disabled=true;
   $('open-video-url').disabled=true;
   try{
@@ -917,7 +1085,32 @@ $('begin').onsubmit=async event=>{
   }catch(error){status(error.message);}
   finally{button.disabled=false;$('open-video-url').disabled=false;}
 };
-$('edit-initial').onsubmit=async event=>{event.preventDefault();try{await retryableWrite('initial',base()+'/opinions/initial','PUT',{text:$('initial-edit').value,expected_revision:state.session.initial_opinion.revision});state.comparisons.clear();clearInsights();closeDialog('comparison');await refreshSession();renderPerspectives();status('초기 의견을 수정했습니다. 현재 의견으로 새 비교를 볼 수 있습니다.');}catch(e){status(e.message);}};
+// The step bar lights up only after the first page; it stays unlit while writing the initial view.
+function clearStepNav(){document.querySelectorAll('button[data-step]').forEach(b=>{b.classList.remove('active');b.removeAttribute('aria-current');});}
+function beginLabel(text){$('begin-label').textContent=text;}
+function startInitialEdit(){
+  for(const id of ['comparison','source-dialog','perspective-dialog'])closeDialog(id);
+  state.editingInitial=true;clearStepNav();$('workspace').hidden=true;$('before').hidden=false;$('video-lookup').hidden=true;$('cancel-initial-edit').hidden=false;
+  $('initial').value=state.session.initial_opinion.text;$('initial').oninput();beginLabel('Update my view & return');
+  $('begin').querySelector('button[type=submit]').disabled=false;window.scrollTo(0,0);$('initial').focus();
+  status('');
+}
+function leaveInitialEdit(){
+  state.editingInitial=false;$('before').hidden=true;$('workspace').hidden=false;$('video-lookup').hidden=false;$('cancel-initial-edit').hidden=true;
+  beginLabel('Save & explore perspectives');
+}
+async function saveInitialEdit(){
+  const text=$('initial').value,changed=text!==state.session.initial_opinion.text;
+  if(changed){
+    await retryableWrite('initial',base()+'/opinions/initial','PUT',{text,expected_revision:state.session.initial_opinion.revision});
+    state.comparisons.clear();clearInsights();await refreshSession();
+  }
+  leaveInitialEdit();showStep('explore');renderPerspectives();
+  status('');
+}
+$('toggle-initial').onclick=()=>{const open=$('initial-peek').hidden;$('initial-peek').hidden=!open;$('toggle-initial').setAttribute('aria-expanded',String(open));};
+$('edit-initial-first').onclick=startInitialEdit;
+$('cancel-initial-edit').onclick=()=>{leaveInitialEdit();showStep('explore');};
 let creatingChat=false;
 async function openConversation(ids,automatic,button){
   if(creatingChat||state.openingPending||!ids.length)return;
@@ -932,32 +1125,71 @@ async function openConversation(ids,automatic,button){
         participant_ids:ids,initial_revision:state.session.initial_opinion.revision});
       setRoom(room);$('opening-question').value=defaultOpeningQuestion;await refreshSession();
     }
-    await refreshRoom();showStep('converse');status('');$('opening-question').focus();
+    closeDialog('new-chat-dialog');await refreshRoom();showStep('converse');status('');$('opening-question').focus();
   }catch(error){status(error.message);$('chat-picker-hint').textContent=error.message;}
   finally{creatingChat=false;button.disabled=false;updateSelection();}
 }
-$('open-room').onclick=()=>openConversation([...state.selected],supportsDebate(state.selected.size),$('open-room'));
-function chatParticipants(){return [...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value);}
+if($('open-room'))$('open-room').onclick=()=>openConversation([...state.selected],supportsDebate(state.selected.size),$('open-room'));
+let chatMode=null,chatOrder=[];
+// Participants speak in the order they were picked.
+function chatParticipants(){const checked=new Set([...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value));chatOrder=chatOrder.filter(id=>checked.has(id));for(const id of checked)if(!chatOrder.includes(id))chatOrder.push(id);return [...chatOrder];}
+function chatFormat(){return $('chat-picker').querySelector('input[name=chat-format]:checked')?.value||'conversation';}
 function updateChatPicker(){
-  const ids=chatParticipants(),limit=ids.length>=3;
-  for(const input of $('chat-options').querySelectorAll('input'))input.disabled=limit&&!input.checked;
-  $('chat-format-label').hidden=!supportsDebate(ids.length);
-  $('chat-picker-hint').textContent=state.analysis.perspectives.length?ids.length+' / 3 selected':'This video has no available perspectives.';
-  $('chat-picker').querySelector('button[type=submit]').disabled=!ids.length||creatingChat;
+  const ids=chatParticipants(),group=chatMode==='group',limit=group?3:1;
+  for(const input of $('chat-options').querySelectorAll('input'))input.disabled=group&&ids.length>=limit&&!input.checked;
+  for(const row of $('chat-options').querySelectorAll('.picker-row'))row.classList.toggle('selected',row.querySelector('input').checked);
+  $('chat-format-label').hidden=!(group&&supportsDebate(ids.length));
+  $('chat-picker-hint').textContent=!state.analysis.perspectives.length?'This video has no available perspectives.':
+    group?ids.length+' / 3 selected · choose two or three':ids.length?'1 selected':'Choose one perspective';
+  $('chat-picker').querySelector('button[type=submit]').disabled=creatingChat||(group?ids.length<2:ids.length!==1);
+}
+// New chat rows follow the Figma conversation-list item: avatar, name, one line; groups stack vertically.
+function pickerCard(p){
+  const level=state.closeness.get(p.id)||(hasInitialView()?'pending':'empty');
+  const row=node('label',undefined,'picker-row accent-'+indexOf(p.id)%5+' closeness-'+level),input=node('input');
+  input.type=chatMode==='group'?'checkbox':'radio';input.name='chat-participant';input.value=p.id;
+  input.onchange=()=>{if(input.checked&&!chatOrder.includes(p.id))chatOrder.push(p.id);updateChatPicker();};
+  const face=node('span',undefined,'picker-face');face.append(avatar(p.id));
+  const text=node('span',undefined,'picker-text'),line=state.closenessSummary.get(p.id)||p.text;
+  text.append(node('strong',label(p.id)),node('small',line));text.title=line;
+  const meta=node('span',undefined,'picker-meta');meta.append(perspectiveStats(p));
+  row.append(input,face,text,meta,node('span','✓','picker-check'));
+  return row;
+}
+function renderChatOptions(preselected){
+  const box=$('chat-options');box.replaceChildren();chatOrder=[...preselected];
+  const rows=new Map(state.analysis.perspectives.map(p=>[p.id,pickerCard(p)]));
+  for(const id of preselected){const input=rows.get(id)?.querySelector('input');if(input)input.checked=true;}
+  const order=state.closeness.size?['close','mixed','differ','consider','none','error']:[];
+  for(const level of order){
+    const members=state.analysis.perspectives.filter(p=>state.closeness.get(p.id)===level);if(!members.length)continue;
+    const section=node('section',undefined,'picker-group closeness-'+level);
+    section.append(node('h3',groupTitles[level]+' · '+members.length,'closeness-group-title'),...members.map(p=>rows.get(p.id)));box.append(section);
+  }
+  const rest=state.analysis.perspectives.filter(p=>!state.closeness.has(p.id));
+  if(rest.length){const section=node('section',undefined,'picker-group');if(order.length)section.append(node('h3','Other perspectives','closeness-group-title'));section.append(...rest.map(p=>rows.get(p.id)));box.append(section);}
+  updateChatPicker();
+}
+function chooseChatMode(mode,preselected=[]){
+  chatMode=mode;$('chat-step-mode').hidden=true;$('chat-step-people').hidden=false;
+  $('chat-step-label').textContent='NEW CHAT · STEP 2 OF 2';
+  $('new-chat-title').textContent=mode==='group'?'Choose two or three perspectives':'Choose one perspective';
+  $('chat-picker').querySelector('input[name=chat-format][value=conversation]').checked=true;
+  renderChatOptions(preselected);
 }
 function showChatPicker(preselected = []){
-  $('chat-options').replaceChildren();$('chat-format').value='conversation';
-  for(const p of state.analysis.perspectives){
-    const option=node('label'),check=node('input');check.type='checkbox';check.value=p.id;
-    check.checked=preselected.includes(p.id);
-    check.onchange=updateChatPicker;option.append(check,node('span',label(p.id)));$('chat-options').append(option);
-  }
-  updateChatPicker();openDialog('new-chat-dialog');
+  chatMode=null;$('chat-step-mode').hidden=false;$('chat-step-people').hidden=true;
+  $('chat-step-label').textContent='NEW CHAT · STEP 1 OF 2';$('new-chat-title').textContent='How would you like to talk?';
+  openDialog('new-chat-dialog');
+  if(preselected.length)chooseChatMode(preselected.length>1?'group':'one',preselected);
 }
+document.querySelectorAll('[data-chat-mode]').forEach(button=>button.onclick=()=>chooseChatMode(button.dataset.chatMode));
+$('chat-back').onclick=()=>showChatPicker();
 $('chat-picker').onsubmit=event=>{
-  event.preventDefault();openConversation(chatParticipants(),$('chat-format').value==='debate',$('chat-picker').querySelector('button[type=submit]'));
+  event.preventDefault();openConversation(chatParticipants(),chatMode==='group'&&chatFormat()==='debate',$('chat-picker').querySelector('button[type=submit]'));
 };
 $('close-chat-picker').onclick=()=>closeDialog('new-chat-dialog');
+$('close-evidence').onclick=closeEvidence;
 $('rooms').onchange=()=>{if($('rooms').value)chooseRoom($('rooms').value).catch(e=>status(e.message));};
 $('room-search').oninput=renderRooms;
 document.querySelectorAll('[data-room-filter]').forEach(button=>button.onclick=()=>{state.roomFilter=button.dataset.roomFilter;document.querySelectorAll('[data-room-filter]').forEach(b=>b.classList.toggle('active',b===button));renderRooms();});
@@ -1064,8 +1296,8 @@ $('agent-info').onclick=async()=>{
   }catch(error){status(error.message);}
 };
 for(const [button,id] of [['close-comparison','comparison'],['close-source','source-dialog'],['close-perspective','perspective-dialog']])$(button).onclick=()=>closeDialog(id);
-$('comparison').addEventListener('close',()=>{$('comparison').hidden=true;});
-$('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
+$('comparison').addEventListener('close',()=>{$('comparison').hidden=true;state.openComparison=null;});
+$('go-reflect').onclick=()=>showStep('reflect');$('go-converse').onclick=()=>showStep('converse');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status('나의 의견과 선택한 대화를 정리하고 있습니다.');const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status('의견이 변경됐습니다. 현재 의견으로 다시 분석해 주세요.');return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status('제안에서 필요한 내용을 선택하거나 직접 수정해 저장해 주세요.');}catch(e){status(e.message);}finally{button.disabled=false;}};
@@ -1104,7 +1336,6 @@ $('save-reflection').onsubmit = async event => {
     button.disabled = false;
   }
 };
-$('new-session').onclick=()=>{clearTimeout(state.roomTimer);leaveSession();location.reload();};
 
 async function start(){
   const destination=readStored(sessionStorage,libraryDestinationKey);
@@ -1158,7 +1389,7 @@ async function start(){
   $('begin').querySelector('button[type=submit]').disabled=false;
   status(resumeMessage||(preferred&&preferred!==state.analysis.analysis_id
     ? '선택한 분석은 지금 열 수 없습니다. 현재 선택된 영상을 확인하세요.'
-    : '먼저 나의 초기 의견을 적어 주세요. 비워 두고 관점을 살펴봐도 됩니다.'));
+    : ''));
 }
 
 start().catch(error=>status(error.message)).finally(()=>{$('open-video-url').disabled=false;});

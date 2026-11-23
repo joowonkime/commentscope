@@ -33,10 +33,14 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(result['engagement'],{'available':True,'total_likes':25,'comments_with_likes':4})
         self.assertEqual([(r.get('kind'),r['likes']) for r in result['composition']],
                          [(None,0),(None,0),('multiple',10),('other',15)])
+        # Card totals count shared comments for every perspective that they support.
+        self.assertEqual([p['support_totals'] for p in result['perspectives']],
+                         [{'comments':3,'likes':10},{'comments':3,'likes':10}])
         presentation['likes_by_source']['other']=None
         result=Analysis(self.analysis.bundle,provenance,presentation).public()
         self.assertFalse(result['engagement']['available'])
         self.assertTrue(all('likes' not in row for row in result['composition']))
+        self.assertTrue(all(p['support_totals']['likes'] is None for p in result['perspectives']))
         presentation['likes_by_source']=dict.fromkeys(presentation['likes_by_source'],0)
         result=Analysis(self.analysis.bundle,provenance,presentation).public()
         self.assertTrue(result['engagement']['available'])
@@ -191,6 +195,8 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(len(self.calls),4)
         self.assertTrue(any('PEER_CONTEXT_ONLY' in c['data'] for c in self.calls))
         self.assertNotIn('I support this policy.',json.dumps(self.calls))
+        summary=next(r for r in self.call('GET',self.base)[1]['rooms'] if r['room_id']==rid)
+        self.assertEqual((summary['participant_ids'],summary['question']),(['P1','P2'],'Your position?'))
 
     def test_in_flight_compare_reuses_one_job_and_session_summary_tracks_initial_revision(self):
         entered=threading.Event();release=threading.Event();original=self.app.model
@@ -376,6 +382,7 @@ class ComparisonPremiseTests(unittest.TestCase):
             {'claim_id':'condition','text':'Only devices with high risk are in scope.',
              'kind':'value','role':'prerequisite','requires':[],'citations':{}}]}
         req=c.comparison_request(initial,allowed)
+        self.assertIn('exactly ONE relation',req['system'])
         row={'relation':'additional_condition','user_span_ids':['I000'],
              'perspective_claim_ids':['claim'],'explanation':'Both texts condition support on risk.',
              'consideration_question':None}

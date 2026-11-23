@@ -79,6 +79,12 @@ class Analysis:
                 totals[group] += likes_count
             for item in composition:
                 item['likes'] = totals[item['perspective_id'] or item['kind']]
+        # Per-perspective totals include comments shared with other perspectives, unlike the
+        # exclusive composition buckets above; likes stay unknown unless every count is known.
+        for perspective in perspectives:
+            supporting = [cid for cid, owners in memberships.items() if perspective['id'] in owners]
+            perspective['support_totals'] = {'comments': len(supporting),
+                                             'likes': sum(known_likes[cid] for cid in supporting) if complete else None}
         engagement = {'available': complete, 'comments_with_likes': len(known_likes),
                       'total_likes': sum(known_likes.values()) if complete else None}
         return {'analysis_id': self.id, 'bundle_revision': self.revision,

@@ -34,6 +34,9 @@ Do not invent a user's belief, a fact, a position, or a disagreement from missin
 Preserve conditions, uncertainty, attribution and quantifiers. Additional considerations
 are optional questions, never instructions to change an opinion. Empty items is valid.
 Use only supplied segment/claim IDs. Explanations are suggestions, not truth scores.
+Each item states exactly ONE relation, and its explanation describes only that relation.
+Do not append a qualification ("but", "however", a difference in strength, scope or condition)
+to an agreement; put it in its own difference, additional_condition or unclear item instead.
 Write explanations/questions in the language of the user's text.''',
             'data':{'INITIAL_SEGMENTS':deepcopy(initial),'PERSPECTIVE_CLAIMS':claims},
             'schema':obj({'items':array(item,minimum=0,maximum=6)}),'max_tokens':1536}
