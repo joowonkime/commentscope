@@ -60,7 +60,7 @@ python tools/serve_mvp.py serve runs/my-bounded-product \
 
 ## 선택 기능 Library
 
-REQ-009, TASK-036/038. Before Use의 YouTube video URL 입력은 영상 ID로 등록 분석을 찾는다. 유효한 분석을 만나면 해당 영상의 Before Use를 바로 열며, 같은 영상은 화면과 초안을 유지한다. 잘못된 URL, 미등록 영상, 만료된 분석은 입력 아래에 안내하고 현재 영상과 의견을 유지한다. Library에서도 기존 분석과 개인 기록을 계속 열 수 있다.
+REQ-009, TASK-036/038. Before Use의 YouTube video URL 입력은 영상 ID로 등록 분석을 찾는다. 유효한 분석을 만나면 해당 영상의 Before Use를 바로 열며, 같은 영상은 화면과 초안을 유지한다. 잘못된 URL, 미등록 영상, 만료된 분석은 입력 아래에 안내하고 현재 영상과 의견을 유지한다. Library에서도 기존 분석과 개인 기록을 계속 열 수 있다. 입력 옆에서 등록 영상 목록을 바로 열 수 있고, 목록 조회 실패는 같은 창에서 재시도한다. Reflect의 미저장 현재 의견은 탭 내 단계 이동과 문맥 선택 사이에 유지한다. 사용자가 의도적으로 비운 경우에도 유지하며 처음 의견을 다시 사용하는 동작은 본인이 선택한다.
 
 ### Explore의 직접 근거와 쟁점별 표본 (TASK-038 · REQ-009 · DEC-030)
 

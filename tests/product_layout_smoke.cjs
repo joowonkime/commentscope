@@ -555,3 +555,58 @@ test('registered perspective translations follow the language without moving sou
     assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
   } finally { release(); await browser.close(); }
 });
+
+test('first-time lookup recovers from a miss or catalog outage and an intentionally empty reflection survives navigation', async () => {
+  const browser = await chromium.launch({executablePath:process.env.CHROME_BIN});
+  try {
+    const page = await browser.newPage({viewport:{width:390,height:844},locale:'en-US'});
+    const analysis = {analysis_id:'analysis1', status:'available', video:{title:'Prepared discussion',video_id:'RrFaNO3rTaA'},
+      bundle_revision:'1', analyzed_comments:3, perspectives:[], composition:[]};
+    const original = 'I want to compare conditions.';
+    const session = {session_id:'session1',analysis_id:analysis.analysis_id,analysis,initial_opinion:{text:original,revision:1},
+      current_opinion:{text:'',revision:0},capabilities:{},rooms:[],reflections:[]};
+    let failCatalog=false;
+    await page.route('**/*', async route => {
+      const request=route.request(), url=new URL(request.url()), asset=files.get(url.pathname);
+      if(asset)return route.fulfill({path:path.join(product,asset[0]),contentType:asset[1]});
+      if(url.pathname==='/api/v1/analyses' && url.search)return route.fulfill({json:{analyses:[]}});
+      if(url.pathname==='/api/v1/analyses'){
+        if(failCatalog){failCatalog=false;return route.fulfill({status:503,json:{error:{code:'service_unavailable'}}});}
+        return route.fulfill({json:{analyses:[analysis]}});
+      }
+      if(url.pathname==='/api/v1/sessions' && request.method()==='POST')return route.fulfill({json:{...session,session_token:'fixture'}});
+      if(url.pathname==='/api/v1/sessions/session1')return route.fulfill({json:session});
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/mvp');
+    await page.locator('#initial').fill(original);
+    await page.locator('#video-url').fill('https://youtu.be/aaaaaaaaaaa');
+    await page.locator('#open-video-url').click();
+    await page.getByText('This video has no saved analysis yet. Choose an analyzed video in Library.').waitFor();
+    failCatalog=true;
+    await page.getByRole('button',{name:'Browse analyzed videos'}).click({timeout:1600});
+    await page.getByRole('button',{name:'Retry loading videos'}).click();
+    await page.locator('#library-videos').getByRole('button',{name:/Open video/}).click();
+    assert.equal(await page.locator('#initial').inputValue(),original);
+    assert.ok(await page.locator('#browse-videos').evaluate(el=>el===document.activeElement));
+    await page.locator('#begin button[type=submit]').click();
+    await page.locator('button[data-step=reflect]').click();
+    await page.waitForFunction(v=>document.getElementById('current').value===v,original);
+    await page.locator('#current').fill('');
+    await page.locator('button[data-step=explore]').click();
+    const refresh=page.waitForResponse(res=>new URL(res.url()).pathname==='/api/v1/sessions/session1');
+    await page.locator('button[data-step=reflect]').click();
+    await refresh;
+    await page.waitForFunction(()=>!document.getElementById('restore-initial').hidden);
+    assert.equal(await page.locator('#current').inputValue(),'');
+    await page.locator('#interface-language').selectOption('ko');
+    await page.getByRole('button',{name:'처음 의견 다시 사용'}).click();
+    assert.equal(await page.locator('#current').inputValue(),original);
+    assert.equal(await page.locator('#current').evaluate(el=>el===document.activeElement),true);
+    await page.locator('#current').fill('A draft I do not want replaced.');
+    await page.locator('button[data-step=explore]').click();
+    await page.locator('button[data-step=reflect]').click();
+    assert.equal(await page.locator('#current').inputValue(),'A draft I do not want replaced.');
+    assert.equal(await page.locator('#restore-initial').isVisible(),false);
+  } finally {await browser.close();}
+});

@@ -9,6 +9,7 @@ const librarySessionsKey = 'commentscope-mvp-library-sessions';
 const libraryDestinationKey = 'commentscope-mvp-library-destination';
 const selectedAnalysisKey = 'commentscope-mvp-selected-analysis';
 let libraryLoad = 0;
+let currentViewEdited = false;
 function node(tag, text, cls) { const n=document.createElement(tag); if(text!==undefined)setText(n,text); if(cls)n.className=cls; return n; }
 // Bind UI copy and registered presentation fields explicitly. Evidence and user text stay verbatim.
 let interfaceLanguage = 'en';
@@ -274,6 +275,7 @@ async function pollJob(value){
   throw new Error("This job is still running. Check the conversation for progress.");
 }
 function setSession(session){
+  if (state.session?.session_id !== session.session_id) currentViewEdited = false;
   state.session=session;
   $('initial-edit').value=session.initial_opinion.text;
   renderRooms();
@@ -1146,14 +1148,21 @@ async function openSynthesisChat(debate,button){
 }
 async function refreshReflection(){
   await refreshSession();setText($('initial-copy'), state.session.initial_opinion.text);
-  if(!$('current').value)$('current').value=state.session.current_opinion.revision?state.session.current_opinion.text:state.session.initial_opinion.text;
+  if (!currentViewEdited) {
+    const current = state.session.current_opinion;
+    $('current').value = current.revision ? current.text : state.session.initial_opinion.text;
+  }
+  updateRestoreInitial();
   $('reflection-rooms').replaceChildren();
   state.session.rooms.forEach((room,i)=>{const line=node('div',undefined,'reflection-room'),button=node('button',joinText([roomName(room,i),roomStates[room.state]||room.state]));button.type='button';button.onclick=()=>{setRoom(room);refreshReflection().catch(error=>status(error.message));};line.append(button);$('reflection-rooms').append(line);});
   $('context-messages').replaceChildren();
   if(state.room){await refreshRoom();for(const message of state.room.messages){const line=node('label',undefined,'context-item'),check=node('input');check.type='checkbox';check.checked=state.context.has(message.message_id);check.onchange=()=>{if(check.checked){if(state.context.size>=24){check.checked=false;status(errorText('context_capacity'));return;}state.context.add(message.message_id);}else state.context.delete(message.message_id);};line.append(check,node('span',joinText([message.author_kind==='user'?msg("You"):label(message.agent_id), (message.body||message.points?.map(p=>p.text).join(' ')||'').slice(0,160)||msg("No evidence")],': ')));$('context-messages').append(line);}}
   if(state.reflectionResult)highlightReflection(state.reflectionResult);
 }
-function clearInsights(){state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;}
+function updateRestoreInitial(){
+  $('restore-initial').hidden = $('current').hidden || Boolean($('current').value) || !state.session?.initial_opinion.text;
+}
+function clearInsights(){state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;updateRestoreInitial();}
 async function saveCurrent() {
   const value = $('current').value;
   const current = state.session.current_opinion;
@@ -1170,7 +1179,7 @@ function highlightReflection(result){
 }
 const categories = {stayed:msg("What stayed the same"), changed:msg("What changed"), newly_learned:msg("Newly learned"), worth_more_thought:msg("Worth more thought")};
 function renderSuggestions(result){
-  $('suggestions').replaceChildren();$('reflection-tabs').replaceChildren();$('insight-panel').hidden=false;$('reflection-layout').classList.add('review');$('current').hidden=true;$('current-copy').hidden=false;$('edit-current').hidden=false;
+  $('suggestions').replaceChildren();$('reflection-tabs').replaceChildren();$('insight-panel').hidden=false;$('reflection-layout').classList.add('review');$('current').hidden=true;$('current-copy').hidden=false;$('edit-current').hidden=false;updateRestoreInitial();
   const all=node('button',msg("All"),'active');all.type='button';all.onclick=()=>{$('suggestions').scrollTop=0;};$('reflection-tabs').append(all);
   let number=0;
   for(const [key,title] of Object.entries(categories)){number++;const items=result.categories[key],group=node('section',undefined,'suggestion '+key);group.id='insight-'+key;
@@ -1305,7 +1314,15 @@ async function renderLibrary(){
     }
     if(!analyses.length)videos.append(node('p',msg("No analyzed videos are available."),'muted'));
   }).catch(()=>{
-    if(current())videos.replaceChildren(node('p',msg("Could not load videos. Reopen Library to retry."),'muted'));
+    if(!current())return;
+    const retry=node('button',msg("Retry loading videos"),'secondary');
+    retry.type='button';
+    retry.onclick=async()=>{
+      await renderLibrary();
+      if($('library-dialog').open && [document.body, $('library-dialog')].includes(document.activeElement))
+        videos.querySelector('button:not(:disabled)')?.focus();
+    };
+    videos.replaceChildren(node('p',msg("Could not load the video list."),'muted'),retry);
   });
   const recordsLoad=Promise.allSettled(browser.map(async access=>{
     const session=await api('/sessions/'+encodeURIComponent(access.session_id),'GET',undefined,access.token);
@@ -1352,6 +1369,7 @@ function closeLibrary(){
 }
 
 $('open-library').onclick=()=>openLibrary();
+$('browse-videos').onclick=()=>openLibrary();
 $('close-library').onclick=closeLibrary;
 $('library-dialog').addEventListener('cancel',event=>{event.preventDefault();closeLibrary();});
 window.addEventListener('popstate',()=>{
@@ -1605,6 +1623,12 @@ $('agent-info').onclick=async()=>{
 for(const [button,id] of [['close-comparison','comparison'],['close-source','source-dialog'],['close-perspective','perspective-dialog']])$(button).onclick=()=>closeDialog(id);
 $('comparison').addEventListener('close',()=>{$('comparison').hidden=true;});
 $('go-reflect').onclick=()=>showStep('reflect');document.querySelectorAll('button[data-step]').forEach(button=>button.onclick=()=>showStep(button.dataset.step));
+$('current').oninput=()=>{currentViewEdited=true;updateRestoreInitial();};
+$('restore-initial').onclick=()=>{
+  $('current').value=state.session.initial_opinion.text;
+  $('current').oninput();
+  $('current').focus();
+};
 $('edit-current').onclick=()=>{clearInsights();$('current').focus();};
 $('write-manually').onclick=()=>{$('reflection-save-panel').open=true;$('stayed').focus();};
 $('analyze').onclick=async()=>{const button=$('analyze');button.disabled=true;try{await saveCurrent();status(msg("Reviewing your views and selected conversations."));const value=await api(base()+'/reflection-analyses','POST',{initial_revision:state.session.initial_opinion.revision,current_revision:state.session.current_opinion.revision,context_message_ids:[...state.context],request_id:requestId()});const job=await pollJob(value);if(job.stale){status(msg("Your view has changed. Analyze the current version again."));return;}state.reflectionJob=job.job_id;state.reflectionResult=job.result;renderSuggestions(job.result);status(msg("Choose the suggestions you want or edit them before saving."));}catch(e){status(e.message);}finally{button.disabled=false;}};

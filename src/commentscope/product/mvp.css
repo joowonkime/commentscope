@@ -83,6 +83,9 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 .video-lookup-controls button { flex-shrink: 0; }
 #video-lookup-status { margin: 6px 0 0; font-size: 13px; }
 #video-lookup-status:empty { margin: 0; }
+.video-lookup-help { display: flex; align-items: baseline; flex-wrap: wrap; gap: 2px 8px; margin-top: 6px; color: var(--muted); font-size: 13px; }
+.video-lookup-help button { text-decoration: underline; text-underline-offset: 2px; }
+
 .library-dialog {
   width: min(680px, calc(100vw - 24px));
   max-height: min(82dvh, 720px);
