@@ -73,8 +73,11 @@ def preflight(deployment,metadata=None):
     if metadata is None:
         url='https://openrouter.ai/api/v1/models/'+deployment['model']+'/endpoints'
         with build_opener(ProxyHandler({}),NoRedirect()).open(url,timeout=20) as response:metadata=json.load(response)['data']
-    endpoints=[e for e in metadata.get('endpoints',[]) if e.get('tag')==deployment['provider']]
-    if metadata.get('id')!=deployment['model'] or len(endpoints)!=1:raise ValueError('Pinned provider endpoint required')
+    provider=deployment['provider']
+    endpoints=[e for e in metadata.get('endpoints',[]) if str(e.get('tag','')).partition('/')[0]==provider]
+    if (metadata.get('id')!=deployment['model'] or len(endpoints)!=1
+            or endpoints[0]['tag'] not in (provider,provider+'/zdr')):
+        raise ValueError('Pinned provider endpoint required')
     e=endpoints[0];prices=endpoint_price_ceiling(e['pricing'])
     if (e.get('provider_name')!=deployment['provider_name'] or e.get('context_length')!=deployment['context']
             or e.get('status')!=0 or e.get('name','').split(' | ')[-1] not in deployment['response_models']

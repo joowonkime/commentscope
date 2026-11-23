@@ -266,7 +266,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
     await until(()=>evaluate("document.querySelector('.message.agent')?.innerText.includes('sets no mandatory threshold')"));
     checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI 추론')");
     await click('#agent-info');
-    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes([label('P2'),label('P1')].join(', '))"));
+    await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes(['P2','P1'].map(id=>formatText(label(id))).join(', '))"));
     checks.agent_parent_lineage_visible=true;
     await click('#close-perspective');
     await screenshot('synthesis-agent-followup.png');
