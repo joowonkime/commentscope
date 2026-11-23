@@ -140,16 +140,20 @@ function updatePerspectiveLanguageNote() {
     : msg("Perspectives are translated. Source comments open in their original language."));
 }
 
+function presentationCatalog() {
+  translationCatalog ??= fetch('/mvp/perspective-translations.json').then(response => {
+    if (!response.ok) throw new Error('Presentation catalog unavailable');
+    return response.json();
+  }).catch(error => {
+    translationCatalog = undefined;
+    throw error;
+  });
+  return translationCatalog;
+}
+
 async function resolvePerspectiveText(analysis, key, field) {
   try {
-    translationCatalog ??= fetch('/mvp/perspective-translations.json').then(response => {
-      if (!response.ok) throw new Error('Translation catalog unavailable');
-      return response.json();
-    }).catch(error => {
-      translationCatalog = undefined;
-      throw error;
-    });
-    const catalog = await translationCatalog;
+    const catalog = await presentationCatalog();
     const record = catalog[analysis.analysis_id];
     const entry = record?.fields?.[key];
     field.sourceLanguage = entry?.source_language ?? record?.source_language;
@@ -551,9 +555,72 @@ function updateSelection(){
   const mode=count===1?msg("Start a 1:1 conversation."):supportsDebate(count)?msg("Start an automatic debate."):msg("Start a group conversation.");
   setText($('selection-hint'), count?msg("{0} selected · {1}",count,mode):msg("Choose one perspective for a 1:1 conversation, or up to three for a group."));
   $('open-room').disabled=!count;
+  for (const topic of $('perspectives').querySelectorAll('.perspective-topic')) {
+    const selected = topic.querySelectorAll('.card-select input:checked').length;
+    const note = topic.querySelector('.topic-selected');
+    note.hidden = !selected;
+    if (selected) setText(note, msg("{0} selected", selected));
+  }
 }
+
+async function showPerspectiveTopics(analysis, cards, expanded) {
+  if (!analysis.analysis_id || cards.size < 2) return;
+  let catalog;
+  try { catalog = await presentationCatalog(); } catch { return; }
+  const container = $('perspectives');
+  if (state.analysis !== analysis || cards.values().next().value.parentElement !== container) return;
+  const topics = catalog?.[analysis.analysis_id]?.topics;
+  if (!Array.isArray(topics) || !topics.every(t => t && typeof t.en === 'string'
+      && typeof t.ko === 'string' && Array.isArray(t.members))) return;
+  if (!topics.some(t => t.members.filter(id => cards.has(id)).length > 1)) return;
+
+  const focused = container.contains(document.activeElement) ? document.activeElement : null;
+  const remaining = new Map(cards);
+  const list = document.createDocumentFragment();
+  for (const topic of topics) {
+    const members = topic.members.filter(id => remaining.has(id));
+    if (!members.length) continue;
+    const detail = node('details', undefined, 'perspective-topic');
+    detail.dataset.topic = members[0];
+    const summary = node('summary');
+    const title = node('strong', {original:topic.en, translation:{ko:topic.ko}});
+    const count = node('span', msg(members.length === 1 ? "{0} perspective" : "{0} perspectives", members.length));
+    const selected = node('span', undefined, 'topic-selected');
+    selected.hidden = true;
+    summary.append(title, count, selected);
+    const grid = node('div', undefined, 'cards');
+    detail.open = expanded.has(members[0]) || members.some(id =>
+      cards.get(id).contains(focused) || cards.get(id).querySelector('details[open]'));
+    for (const id of members) {
+      grid.append(cards.get(id));
+      remaining.delete(id);
+    }
+    detail.append(summary, grid);
+    list.append(detail);
+  }
+  if (remaining.size) {
+    const grid = node('div', undefined, 'cards');
+    grid.append(...remaining.values());
+    list.append(grid);
+  }
+  container.replaceChildren(list);
+  container.classList.add('topic-list');
+  $('topic-intro').hidden = false;
+  $('perspective-picker').after($('breakdown-title').closest('.breakdown'));
+  updateSelection();
+  if (focused) focused.focus({preventScroll:true});
+}
+
 function renderPerspectives(){
-  $('perspectives').replaceChildren();
+  const container = $('perspectives'), analysis = state.analysis;
+  const expanded = new Set(container.dataset.analysis === analysis.analysis_id
+    ? [...container.querySelectorAll('.perspective-topic[open]')].map(topic => topic.dataset.topic) : []);
+  container.dataset.analysis = analysis.analysis_id || '';
+  container.classList.remove('topic-list');
+  $('topic-intro').hidden = true;
+  $('perspective-language-note').after($('breakdown-title').closest('.breakdown'));
+  container.replaceChildren();
+  const cards = new Map();
   if(!state.analysis.perspectives.length){
     $('perspectives').append(node('p',msg("No perspective has verified sources yet. You can write your own view in Reflect."),'muted'));
   }
@@ -577,14 +644,17 @@ function renderPerspectives(){
     }
     const compare=node('button',msg("Compare with my view"),'secondary compare-button');compare.type='button';compare.onclick=async()=>{compare.disabled=true;try{await compareWith(p.id);}catch(e){status(e.message);}finally{compare.disabled=false;}};
     card.addEventListener('click',event=>{
-      if(!event.target.closest('button,a,input,label,details') && !window.getSelection()?.toString())compare.click();
+      if(!card.contains(event.target.closest('button,a,input,label,details')) && !window.getSelection()?.toString())compare.click();
     });
     card.dataset.perspective=p.id;
+    card.id='perspective-card-'+p.id;
     const relations=node('div',undefined,'card-relations');relations.setAttribute('aria-live','polite');renderRelations(relations,p.id);
-    card.append(relations,compare,sourceDisclosure(p));$('perspectives').append(card);
+    card.append(relations,compare,sourceDisclosure(p));container.append(card);
+    cards.set(p.id,card);
   }
   updateSelection();
   updateComparisonProgress();
+  void showPerspectiveTopics(analysis, cards, expanded);
 }
 const relationNames={agreement:msg("Agreement"),difference:msg("Difference"),additional_condition:msg("Additional condition"),unclear:msg("Unclear")};
 let comparisonRun, activeComparisons=0, latestComparison=0;
@@ -610,7 +680,7 @@ function updateComparisonProgress(){
   $('compare-all').hidden=!failed;
 }
 function refreshComparisonCard(id){
-  const card=[...$('perspectives').children].find(c=>c.dataset.perspective===id);
+  const card=$('perspective-card-'+id);
   if(card)renderRelations(card.querySelector('.card-relations'),id);
 }
 function enqueueComparison(run,id,priority=false){

@@ -132,6 +132,22 @@ dialog{border:0;border-radius:24px;padding:0;color:var(--ink);max-width:calc(100
 }
 
 .comparison-actions,.card-relations{display:flex;flex-wrap:wrap;align-items:center;gap:.5rem;margin-bottom:1rem}
+#topic-intro:not([hidden]) { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:baseline; gap:8px 20px; margin-bottom:16px; }
+#topic-intro h2 { font-size:20px; margin:0 0 4px; }
+#topic-intro p { margin:0; color:#514b65; }
+#topic-intro a { color:#48379f; text-underline-offset:3px; }
+#perspectives.topic-list { display:flex; flex-direction:column; gap:10px; }
+.perspective-topic { border:1px solid #ddd9eb; border-radius:12px; background:white; }
+.perspective-topic > summary { display:flex; flex-wrap:wrap; align-items:center; gap:5px 12px; min-height:48px; padding:10px 16px; cursor:pointer; }
+.perspective-topic > summary::-webkit-details-marker { display:none; }
+.perspective-topic > summary::before { content:''; border:solid #625a76; border-width:0 2px 2px 0; width:7px; height:7px; transform:rotate(-45deg); }
+.perspective-topic[open] > summary::before { transform:rotate(45deg); }
+.perspective-topic > summary:focus-visible { outline:2px solid #6251ca; outline-offset:2px; border-radius:12px; }
+.perspective-topic > summary strong { flex:1 1 9rem; overflow-wrap:anywhere; }
+.perspective-topic > summary span { color:#514b65; font-size:.85rem; }
+.perspective-topic > summary .topic-selected { color:#48379f; font-weight:600; }
+.perspective-topic > .cards { padding:4px 12px 12px; grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr)); }
+#perspective-picker + .breakdown { margin-top:26px; }
 .card-relations{margin-top:auto}.card-relations small{font-size:.78rem}
 .card-relations[data-state="running"] small { color: #5542b6; font-weight: 600; }
 .card-relations[data-state="failed"] small { color: #873e23; }

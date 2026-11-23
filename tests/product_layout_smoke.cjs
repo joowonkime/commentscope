@@ -11,6 +11,75 @@ const files = new Map([
   ['/mvp/app.js', ['mvp.js', 'text/javascript']],
 ]);
 
+test('Explore topics disclose individual evidence and preserve cross-topic debate choices and shares', async () => {
+  const browser = await chromium.launch({executablePath:process.env.CHROME_BIN});
+  try {
+    const page = await browser.newPage({viewport:{width:390,height:844},locale:'en-US'});
+    const topics = [
+      {en:'School schedules',ko:'수업 시간',members:['a','b']},
+      {en:'Transport',ko:'통학 수단',members:['c']},
+    ];
+    const all = ['a','b','c','d'].map(id=>({id,display_name:'View '+id,text:'Claim '+id,
+      source_count:1,source_ids:['s'+id],core_claim_id:'C'+id,grounds:[]}));
+    const writes = [];
+    await page.route('**/*', route => {
+      const req=route.request(), url=new URL(req.url());
+      if (url.origin!==origin) return route.abort();
+      if (req.method()!=='GET') writes.push(url.pathname);
+      const file=files.get(url.pathname);
+      if (file) return route.fulfill({path:path.join(product,file[0]),contentType:file[1]});
+      if (url.pathname.startsWith('/mvp/assets/')) return route.fulfill({path:path.join(product,'assets',path.basename(url.pathname))});
+      if (url.pathname==='/api/v1/analyses') return route.fulfill({json:{analyses:[]}});
+      if (url.pathname==='/mvp/perspective-translations.json') return route.fulfill({json:{reviewed:{topics}}});
+      if (url.pathname==='/mvp/opinion-samples.json') return route.fulfill({json:{}});
+      if (url.pathname.endsWith('/sources/sa')) return route.fulfill({json:{id:'sa',text:'Original evidence for a.'}});
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/mvp');
+    await page.getByText('No analyses are available yet.',{exact:true}).waitFor();
+    const load = id => page.evaluate(({id,all}) => {
+      state.analysis={analysis_id:id,perspectives:all,status:'available',count_scope:'processed_comments',
+        analyzed_comments:4,composition:all.map(p=>({perspective_id:p.id,count:1,likes:2})),
+        engagement:{available:true,total_likes:8}};
+      state.session={session_id:'S',initial_opinion:{text:'',revision:1},rooms:[],comparisons:{},capabilities:{structured_debate:true}};
+      $('before').hidden=true;$('workspace').hidden=false;showStep('explore');renderAnalysis();renderPerspectives();
+    },{id,all});
+    await load('reviewed');
+    const groups=page.locator('#perspectives > .perspective-topic');
+    await groups.first().locator(':scope > summary').waitFor({timeout:3000});
+    assert.equal(await groups.count(),2);
+    const first=groups.nth(0),second=groups.nth(1), a=page.locator('[data-perspective="a"]');
+    assert.equal(await a.isVisible(),false);
+    assert.equal(await page.locator('[data-perspective="d"]').isVisible(),true);
+    assert.equal(await page.locator('#perspectives .card').count(),4);
+    const metricRows = await page.locator('#share-table tbody tr').allTextContents();
+    assert.equal(metricRows.length,4);
+    await first.locator(':scope > summary').press('Enter');
+    await a.locator('.source-disclosure summary').click();
+    await a.locator('.source-button').click();
+    assert.match(await page.locator('#source-dialog[open]').innerText(),/Original evidence for a/);
+    await page.locator('#close-source').click();
+    await a.getByRole('checkbox').check();
+    await first.locator(':scope > summary').click();
+    await page.locator('#interface-language').selectOption('ko');
+    assert.match(await first.locator(':scope > summary').innerText(),/수업 시간/);
+    assert.match(await first.locator(':scope > summary').innerText(),/1개 선택/);
+    await second.locator(':scope > summary').click();
+    await second.getByRole('checkbox').check();
+    await page.locator('#interface-language').selectOption('en');
+    assert.deepEqual(await page.locator('#share-table tbody tr').allTextContents(),metricRows);
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    await page.locator('#open-room').click();
+    await page.waitForFunction(()=>state.room?.kind==='debate_draft');
+    assert.deepEqual(await page.evaluate(()=>state.room.participant_ids),['a','c']);
+    await load('unregistered');
+    await page.locator('[data-perspective="a"]').waitFor();
+    assert.equal(await groups.count(),0);
+    assert.equal(await page.locator('#perspectives > .card').count(),4);
+    assert.deepEqual(writes,[]);
+  } finally { await browser.close(); }
+});
+
 test('source notices remain readable and Reflect remains clickable at six viewport widths', async () => {
   const browser = await chromium.launch({executablePath: process.env.CHROME_BIN});
   try {

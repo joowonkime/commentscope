@@ -35,3 +35,13 @@ class PerspectiveTranslationTests(unittest.TestCase):
         del self.review['fields']['claim:G']
         with self.assertRaises(ValueError):
             publish(self.view, self.issue, self.review)
+
+    def test_optional_topics_publish_bilingual_labels_and_unique_registered_members(self):
+        topic = {'en': 'School schedules', 'ko': '등교 시간', 'members': ['P']}
+        self.review['topics'] = [topic]
+        self.assertEqual(publish(self.view, self.issue, self.review)['A']['topics'], [topic])
+        for invalid in ([topic, topic], [{**topic, 'ko': ' '}], [{**topic, 'members': ['unknown']}],
+                        [{**topic, 'members': ['P', 'P']}], [{**topic, 'members': []}]):
+            with self.subTest(invalid=invalid), self.assertRaises(ValueError):
+                publish(self.view, self.issue, {**self.review, 'topics': invalid})
+        self.assertNotIn('topics', publish(self.view, self.issue, {**self.review, 'topics': []})['A'])

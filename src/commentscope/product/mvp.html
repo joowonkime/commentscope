@@ -40,6 +40,11 @@
   "Some perspective text is shown in its original language.": "일부 관점 설명은 원문으로 표시합니다.",
   "Perspectives are translated. Source comments open in their original language.": "관점 설명은 번역본이며, 출처 댓글을 열면 원문을 볼 수 있습니다.",
   "Perspective breakdown": "관점별 비교",
+  "Browse perspectives by topic": "논점별 관점 탐색",
+  "Open a topic to read the views and choose who joins the conversation.": "논점을 펼쳐 관점을 읽고 대화에 참여할 에이전트를 선택하세요.",
+  "Compare opinion and like shares": "관점별 지지율·좋아요 비교",
+  "{0} perspective": "관점 {0}개",
+  "{0} selected": "{0}개 선택",
   "Rank perspectives by": "관점 정렬 기준",
   "Rank by": "정렬 기준",
   "Opinions": "지지 댓글",
@@ -423,7 +428,7 @@
         <p class="muted" id="perspective-language-note" hidden></p>
         <section class="breakdown" aria-labelledby="breakdown-title">
           <div class="breakdown-heading">
-            <div><h2 id="breakdown-title">Perspective breakdown</h2><p id="share-issue" dir="auto" hidden></p></div>
+            <div><h2 id="breakdown-title" tabindex="-1">Perspective breakdown</h2><p id="share-issue" dir="auto" hidden></p></div>
             <div id="share-ranking" role="group" aria-label="Rank perspectives by"><span>Rank by</span><button id="rank-opinions" type="button" aria-pressed="true">Opinions</button><button id="rank-likes" type="button" aria-pressed="false">Likes</button></div>
           </div>
           <p id="share-coverage" hidden></p>
@@ -454,8 +459,11 @@
           </details>
         </section>
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>
+        <div id="perspective-picker">
+        <div id="topic-intro" hidden><div><h2>Browse perspectives by topic</h2><p>Open a topic to read the views and choose who joins the conversation.</p></div><a href="#breakdown-title">Compare opinion and like shares</a></div>
         <div class="comparison-actions"><span id="compare-progress" class="muted" role="status"></span><button id="compare-all" class="secondary" type="button" hidden>Retry unavailable comparisons</button></div><div id="perspectives" class="cards"></div>
         <div class="action-bar"><p id="selection-hint">Choose one perspective for a 1:1 conversation, or up to three for a group.</p><button id="open-room" class="primary" type="button">Converse with selected perspectives <img src="/mvp/assets/0a7d3.svg" alt=""></button></div>
+        </div>
       </section>
       <section id="converse" hidden data-node-id="314:2807"><div class="conversation-shell">
         <aside class="conversations-sidebar"><h2>Conversations</h2><a id="sidebar-video" class="sidebar-video" target="_blank" rel="noopener noreferrer"><div id="sidebar-thumbnail" class="sidebar-thumbnail"></div><div><p class="eyebrow">SOURCE VIDEO</p><strong id="sidebar-video-title">This discussion</strong><small id="sidebar-video-meta"></small></div></a><div class="recent-header"><span>RECENT</span><div class="room-filters"><button type="button" data-room-filter="all" class="active">All</button><button type="button" data-room-filter="one_to_one">1:1</button><button type="button" data-room-filter="group">Group</button></div></div><label class="sr-only" for="room-search">Search conversations</label><input id="room-search" type="search" placeholder="⌕ Search conversations"><label class="sr-only" for="rooms">Previous conversation</label><select id="rooms" class="sr-only"><option value="">Choose a conversation</option></select><div id="room-list" class="room-list"></div><button id="new-chat" class="primary wide" type="button">＋ New chat</button></aside>

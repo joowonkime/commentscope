@@ -22,7 +22,7 @@ def presentation_fields(analysis, issue=None):
 def worksheet(analysis, issue, source_language):
     if source_language not in ('ko', 'en'):
         raise ValueError('Choose ko or en for the source language')
-    return {'analysis_id': analysis['analysis_id'], 'source_language': source_language,
+    return {'analysis_id': analysis['analysis_id'], 'source_language': source_language, 'topics': [],
             'fields': {key: {'original': original, 'translation': ''}
                        for key, original in presentation_fields(analysis, issue).items()}}
 
@@ -48,7 +48,26 @@ def publish(analysis, issue, reviewed):
                           target: translated.strip()}
         if language != source_language:
             published[key]['source_language'] = language
-    return {analysis['analysis_id']: {'source_language': source_language, 'fields': published}}
+    record = {'source_language': source_language, 'fields': published}
+    topics = reviewed.get('topics', [])
+    if not isinstance(topics, list):
+        raise ValueError('Supply topics as a list')
+    if topics:
+        available = {view['id'] for view in analysis['perspectives']}
+        record['topics'] = []
+        for topic in topics:
+            if not isinstance(topic, dict) or any(not isinstance(topic.get(k), str) or not topic[k].strip()
+                                                  for k in ('en', 'ko')):
+                raise ValueError('Every topic needs English and Korean labels')
+            members = topic.get('members')
+            if not isinstance(members, list) or not members:
+                raise ValueError('Every topic needs registered perspective IDs')
+            for member in members:
+                if not isinstance(member, str) or member not in available:
+                    raise ValueError('Topic members must be unique registered perspective IDs')
+                available.remove(member)
+            record['topics'].append({'en': topic['en'].strip(), 'ko': topic['ko'].strip(), 'members': members})
+    return {analysis['analysis_id']: record}
 
 
 def main():

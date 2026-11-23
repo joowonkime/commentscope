@@ -102,7 +102,44 @@
         "sha256": "b6ccd12e5b3cfb869aaa508386ef97f911594e3943c7b343bf99e948fb0ac4cf",
         "en": "A schedule that runs from 9 a.m. to 5 p.m. is desirable."
       }
-    }
+    },
+    "topics": [
+      {
+        "en": "Daily schedules and finishing times",
+        "ko": "하루 근무시간과 퇴근 시각",
+        "members": [
+          "MC064d0983242f252130ad73720fb07cad1abef7a01c730f6fe0765ec152108bbf",
+          "MC5423718a87db97fcf6b999e546244e6b5869e36c66cce75ad292bbf06be142c2",
+          "MC9b2f3d116a8fdcb109084f1f6c52d8abb8e462488399b2a81201609d167de072",
+          "MCd5d0b09d80bcd3fceebc362b9570d2582d32a18ed61f9248906e3614eb6bf5f7",
+          "MCfb51b131d79180df6cf63a89536a9016c6cbae7f8add9933a4bf448f293b579a"
+        ]
+      },
+      {
+        "en": "Shortening working hours",
+        "ko": "전반적인 노동시간 단축",
+        "members": [
+          "MC23d1bccab55e657ef99d7f4d0a64dde50775da1c31af89379d4a64e8c8e590c4",
+          "MCb46a01c92c94875932b1f9279e64f408862d2c13ea58580cdd1443d29eea7cc8",
+          "MCe180243574f9d90ce91d2626450493a4534f04f89b538092ff2bcc70f39ed1a5"
+        ]
+      },
+      {
+        "en": "The inclusive wage system",
+        "ko": "포괄임금제",
+        "members": [
+          "MC218735dca1443fe1d4d162acf900e4a5b75dd19ce7a0ed0972f1dc9e15dc9d17",
+          "MC8d01282fca21d41b5d76deee865a39f955db7dbce3e78f58193facdac05caaf6"
+        ]
+      },
+      {
+        "en": "Feasibility of a 4.5-day week",
+        "ko": "주 4.5일제의 현실성",
+        "members": [
+          "MC830cebf60f5ed3b288fed657692e1a4384c137efdaaf9664ea78f0b20649e07e"
+        ]
+      }
+    ]
   },
   "AN86686e2ac5ada934d9ba3b23": {
     "source_language": "en",
@@ -147,7 +184,25 @@
         "sha256": "2efb462a125dfbb4096113281029212443f82b7ae2bac66484d153bcbfae2610",
         "ko": "주 4일 근무제를 도입해야 한다."
       }
-    }
+    },
+    "topics": [
+      {
+        "en": "Number of working days",
+        "ko": "주당 근무일수",
+        "members": [
+          "MC092f0d5ac8eb2106e118d54a9fa0160c85e861208d31e5d5ab7abd2e60c92a92",
+          "MC349adb7f2b614d251ea9ed6413cb17f2dc1c95450ad514ac60be6074752472c2",
+          "MCbdc5cdf67669ab59fc3e5c31ef995356306e7c26ab0413d16da061d4f303ee76"
+        ]
+      },
+      {
+        "en": "Time outside work",
+        "ko": "일 밖의 시간",
+        "members": [
+          "MC3c7a9ec0d8c5dd7a6b9b821a9c9ffbaa8e766b8a9a84a8a3c33868d19870ddb2"
+        ]
+      }
+    ]
   },
   "ANfd69493b361ad885010fc447": {
     "source_language": "en",
