@@ -1118,7 +1118,6 @@ async function enter(session,destination){
   }
   showStep('explore');
   $('explore-title').focus({preventScroll:true});
-  status('관점을 선택하고 나의 의견과 비교해 보세요.');
 }
 $('initial').oninput=()=>{$('initial-count').textContent='Characters: '+[...$('initial').value].length+' / 500';};
 $('clear-initial').onclick=()=>{$('initial').value='';$('initial').oninput();$('initial').focus();};

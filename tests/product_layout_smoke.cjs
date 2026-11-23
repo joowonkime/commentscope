@@ -202,15 +202,10 @@ test('Explore compares both shares without double counting, changing chat select
       return route.fulfill({status:404,body:''});
     });
     await page.goto(origin+'/mvp');
-    const selectAnalysis = analysis => page.evaluate(a => {
-      state.analysis=a;
-      state.session={initial_opinion:{text:''},capabilities:{}};
-      document.getElementById('before').hidden=true;
-      document.getElementById('workspace').hidden=false;
-      document.body.dataset.step='explore';
-      renderAnalysis();
-      renderPerspectives();
-    }, analysis);
+    const selectAnalysis = analysis => page.evaluate(a => enter({
+      session_id:'chart-session', analysis_id:a.analysis_id, analysis:a,
+      initial_opinion:{text:''}, capabilities:{}, rooms:[], reflections:[],
+    }), analysis);
     const stripWidths = figure => figure.locator('rect').evaluateAll(nodes => nodes.map(r => Number(r.getAttribute('width'))));
     const opinion = page.locator('#opinion-share'), likes = page.locator('#like-share');
     const view = page.getByLabel('Show coverage for');
@@ -222,6 +217,7 @@ test('Explore compares both shares without double counting, changing chat select
     await page.evaluate(()=>opinionCatalog);
     assert.equal(await table.isVisible(),true);
     assert.equal(await view.isVisible(),false);
+    assert.equal(await page.locator('#status').isVisible(),false);
     assert.equal(await page.locator('#opinion-base').innerText(),'No reviewed sample');
     await page.locator('#share-details summary').click();
     assert.match(await opinion.innerText(),/No reviewed opinion sample/);
