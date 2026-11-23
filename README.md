@@ -21,7 +21,9 @@ Agent 생성 이후의1:1/그룹·근거·성찰도 구현돼 있지만 실제 �
 토론→합의→통합 Agent는 DS-v2 검토본에서 연결돼 있습니다. 기술 상세는 DEC-029에서 검토 중입니다.
 [계층 구조와 구현 근거](docs/design/DEBATE_IMPLEMENTATION.md)
 
-M4 기준과 제출 준비는 [채점 기준과 준비도 감사](docs/M4_PROTOTYPE_REVIEW.md)와
+11월 24일 공개판은 [채점 기준별 검증과 대본 밖 QA](docs/M4_STUDIO_READINESS.md), [영어 발표 대본과 전체 기능 가이드](docs/M4_PRESENTER_GUIDE_EN.md)에서 확인할 수 있습니다. [공개 프로토타입](https://35.212.169.73/mvp)
+
+이전 단계의 판단은 [11월 19일 준비도 감사](docs/M4_PROTOTYPE_REVIEW.md)와
 [MVP 완주·선택 인계](docs/MVP_IMPLEMENTATION_HANDOFF.md)에 기록했습니다. 자동 토론 연결 이전의 감사 결과와
 검증 브랜치의 현재 화면은 각각 문서의 기준 커밋으로 구별합니다.
 
