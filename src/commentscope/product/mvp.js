@@ -397,7 +397,7 @@ function roomPath(room){
 function setRoom(room){
   if(room?.room_id!==state.room?.room_id||room?.kind==='debate_draft'){
     if(typeof closeEvidence==='function'&&$('evidence-panel'))closeEvidence();
-    $('question').value='';$('question-target').replaceChildren();
+    $('question').value='';state.recipients=new Set();
   }
   clearTimeout(state.roomTimer);
   state.room=room;
@@ -450,6 +450,55 @@ function typingIndicator(room){
     content.append(node('div',(speaker?label(speaker):'A perspective')+' is writing…','typing-label'),dots);
   }
   box.setAttribute('role','status');box.append(content);return box;
+}
+const talkingStates=new Set(['running','opening','replying','pausing']);
+// The composer follows the room: while perspectives talk it offers a pause to jump in; once paused or
+// waiting it takes a question for everyone or for the chosen perspectives, and Resume lets everyone continue.
+function renderComposer(room,ids,automatic){
+  const group=room.mode==='group'&&room.kind!=='synthesis_chat';
+  const talking=talkingStates.has(room.state),pausing=room.state==='pausing';
+  $('jump-in').hidden=automatic||!talking;
+  $('jump-in-label').textContent=pausing?'Pausing after this reply…':(ids.length>1?'Perspectives are talking…':label(ids[0])+' is answering…');
+  $('jump-in-button').disabled=pausing;$('jump-in-button').textContent=pausing?'Pausing…':'✋ Pause to jump in';
+  $('composer-body').hidden=talking;
+  state.recipients=new Set([...(state.recipients||[])].filter(id=>ids.includes(id)));
+  $('address-agent').hidden=!group;
+  if(group){
+    const chips=$('recipient-chips');chips.replaceChildren();
+    const everyone=node('button','Everyone','recipient-chip'+(state.recipients.size?'':' active'));everyone.type='button';everyone.setAttribute('aria-pressed',String(!state.recipients.size));
+    everyone.onclick=()=>{state.recipients.clear();renderComposer(state.room,ids,automatic);};chips.append(everyone);
+    for(const id of ids){
+      const on=state.recipients.has(id),chip=node('button',undefined,'recipient-chip accent-'+Math.max(0,indexOf(id))%5+(on?' active':''));
+      chip.type='button';chip.setAttribute('aria-pressed',String(on));chip.append(avatar(id,true),node('span',label(id)));
+      chip.onclick=()=>{if(state.recipients.has(id))state.recipients.delete(id);else state.recipients.add(id);if(state.recipients.size===ids.length)state.recipients.clear();renderComposer(state.room,ids,automatic);};
+      chips.append(chip);
+    }
+  }
+  const resumable=group&&(room.can_resume||(room.state==='awaiting_user'&&room.can_ask));
+  $('resume-all').hidden=!resumable;
+  $('resume-all').textContent=room.can_resume?'▶ Resume — let the round continue':'▶ Resume — let everyone continue';
+  renderSuggestedQuestions(room,ids,group);
+}
+// Suggested questions come from the conversation so far (no model call).
+function renderSuggestedQuestions(room,ids,group){
+  const name=id=>label(id).replace(/[.。]$/,'');
+  const box=$('suggested-questions');box.replaceChildren();
+  const agentTurns=(room.messages||[]).filter(m=>m.author_kind==='agent');
+  if(!agentTurns.length){box.hidden=true;return;}
+  const last=agentTurns[agentTurns.length-1],other=[...agentTurns].reverse().find(m=>m.agent_id!==last.agent_id);
+  const ideas=[];
+  if(group&&other)ideas.push({text:`Where do ${name(last.agent_id)} and ${name(other.agent_id)} disagree most?`,to:[]});
+  if(group&&other)ideas.push({text:`How would you answer ${name(other.agent_id)}'s last point?`,to:[last.agent_id]});
+  ideas.push({text:'Can you give a concrete example from the comments?',to:group?[last.agent_id]:[]});
+  if(evidenceCount(last))ideas.push({text:'Which comments support what you just said?',to:group?[last.agent_id]:[]});
+  if(group&&ids.length>1)ideas.push({text:'Is there anything you all agree on?',to:[]});
+  for(const idea of ideas.slice(0,3)){
+    const chip=node('button',idea.text,'suggested-question');chip.type='button';
+    if(idea.to.length)chip.title='Asks '+idea.to.map(label).join(', ');
+    chip.onclick=()=>{$('question').value=idea.text;state.recipients=new Set(idea.to);renderComposer(state.room,room.participant_ids||[],false);$('question').focus();};
+    box.append(chip);
+  }
+  box.hidden=!box.childElementCount;
 }
 function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return t&&!isNaN(t)?t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';}
 // Figma 314:2807: agent messages show avatar, a speaker row (name · time) above a grey bubble and an
@@ -522,12 +571,12 @@ function evidenceCard({category,title,origin,excerpt,jump,link}){
   if(jump){const go=node('button','Jump to reply ›','evidence-jump');go.type='button';go.onclick=jump;foot.append(go);}
   card.append(foot);return {card,quote};
 }
-function jumpTo(messageId){const el=$('message-'+messageId);if(!el)return;el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('focused');setTimeout(()=>el.classList.remove('focused'),1600);}
+function scrollToMessage(messageId){const el=$('message-'+messageId);if(!el)return;el.scrollIntoView({block:'center',behavior:'smooth'});el.classList.add('focused');setTimeout(()=>el.classList.remove('focused'),1600);}
 function openEvidence(m){
   const e=evidenceItems(m),list=$('evidence-list');list.replaceChildren();
   $('evidence-title').textContent='Evidence of Reply';
   $('evidence-context').textContent=label(m.agent_id)+(messageTime(m)?' · '+messageTime(m):'')+' — '+e.comments.length+' comment'+(e.comments.length===1?'':'s')+(e.external.length?', '+e.external.length+' external source'+(e.external.length===1?'':'s'):'')+'.';
-  const jump=()=>jumpTo(m.message_id);
+  const jump=()=>scrollToMessage(m.message_id);
   for(const c of e.comments){
     const {card,quote}=evidenceCard({category:'COMMENT EVIDENCE',title:c.supports[0]||label(m.agent_id),origin:'Comment from the video'+(c.supports.length>1?' · supports '+c.supports.length+' points':''),excerpt:c.quote||'…',jump});
     sourceText(c.id).then(v=>{quote.textContent=v.text;if(v.PARENT_CONTEXT_ONLY){const parent=node('details',undefined,'comment-parent');parent.append(node('summary','Replying to another comment'),node('p',v.PARENT_CONTEXT_ONLY.text));card.insertBefore(parent,quote);}}).catch(()=>{if(!c.quote)quote.textContent='This evidence could not be loaded.';});
@@ -540,7 +589,7 @@ function openEvidence(m){
   if(reply||e.targets.length){
     const {card}=evidenceCard({category:'REPLY CONTEXT',title:reply?'Replying to '+label(reply.agent_id):'Responds to'});
     const row=node('div',undefined,'evidence-targets');
-    if(reply){const go=node('button',label(reply.agent_id)+(messageTime(reply)?' · '+messageTime(reply):''),'source-button');go.type='button';go.onclick=()=>jumpTo(reply.message_id);row.append(go);}
+    if(reply){const go=node('button',label(reply.agent_id)+(messageTime(reply)?' · '+messageTime(reply):''),'source-button');go.type='button';go.onclick=()=>scrollToMessage(reply.message_id);row.append(go);}
     for(const t of e.targets)appendPointLinks(row,[t.point_id],state.room,label(t.agent_id));
     card.insertBefore(row,card.lastChild);list.append(card);
   }
@@ -561,7 +610,7 @@ function appendPointLinks(parent,pointIds,room,title){
     link.type='button';
     link.onclick=()=>{
       const point=$('point-'+pointId);
-      if(!point||point.hidden){jumpTo(message.message_id);return;}
+      if(!point||point.hidden){scrollToMessage(message.message_id);return;}
       point.scrollIntoView({block:'center'});
       point.parentElement?.setAttribute('tabindex','-1');
       point.parentElement?.focus({preventScroll:true});
@@ -682,21 +731,7 @@ function renderRoom(){
   $('room-state').textContent=(names[room.state]||roomStates[room.state]||room.state)+' · '+room.turn_count+'/'+room.turn_limit;
   if(room.error_code)$('room-state').textContent+=' · '+errorText(room.error_code);
   $('recover-room').hidden=automatic||room.state!=='error';
-  const target=$('question-target'),lastTarget=target.value;
-  $('address-agent').hidden=automatic||room.mode!=='group';
-  if(!$('address-agent').hidden){
-    const all=node('option','Everyone');all.value='';target.replaceChildren(all);
-    for(const id of ids){const option=node('option',label(id));option.value=id;target.append(option);}
-    if(ids.includes(lastTarget))target.value=lastTarget;
-    // Pill buttons choose the recipient; the hidden select keeps the value the form sends.
-    const chips=$('recipient-chips');chips.replaceChildren();
-    for(const id of ['',...ids]){
-      const chip=node('button',undefined,'recipient-chip'+(id?' accent-'+Math.max(0,indexOf(id))%5:''));chip.type='button';chip.setAttribute('role','radio');
-      if(id)chip.append(avatar(id,true));chip.append(node('span',id?label(id):'Everyone'));
-      const sync=()=>{for(const c of chips.children){const on=c===chip;c.classList.toggle('active',on);c.setAttribute('aria-checked',String(on));}};
-      chip.onclick=()=>{target.value=id;sync();};if(target.value===id)setTimeout(sync);chips.append(chip);
-    }
-  }
+  renderComposer(room,ids,automatic);
   const openingQuestion=$('opening-question');
   openingQuestion.readOnly=Boolean(room.plan)&&room.state==='idle';
   if(openingQuestion.readOnly)openingQuestion.value=room.plan.question;
@@ -704,9 +739,11 @@ function renderRoom(){
   $('opening').querySelector('button[type=submit]').disabled=state.openingPending||room.can_start===false;
   $('opening').querySelector('h2').textContent=automatic?'어떤 쟁점을 토론할까요?':'What would you like to ask?';
   $('opening-submit-label').textContent=automatic?'자동 토론 시작':'Start conversation';
+  // Conversations are steered from the composer; the toolbar controls stay for automatic debates.
+  for(const id of ['pause','resume'])$(id).hidden=!automatic;
   $('pause').disabled=automatic?!room.can_pause:!['running','awaiting_user'].includes(room.state);
   $('resume').disabled=!room.can_resume;
-  $('next-round').hidden=automatic||room.kind==='synthesis_chat';
+  $('next-round').hidden=true;
   $('next-round').disabled=!room.can_ask;
   $('close-room').disabled=automatic?!room.can_close:room.state==='closed'||room.state==='closing';
   $('interject').hidden=automatic||(room.kind==='synthesis_chat'?!room.can_ask:
@@ -1263,17 +1300,24 @@ async function revisionForQuestion(roomId) {
 $('interject').onsubmit=async event=>{
   event.preventDefault();
   const button=$('interject').querySelector('button[type=submit]'),roomId=state.room?.room_id;
-  const question=$('question').value,recipient=$('address-agent').hidden?'':$('question-target').value;
+  const question=$('question').value,recipients=$('address-agent').hidden?[]:[...(state.recipients||[])];
   if(button.disabled||!roomId||!question.trim())return;
   button.disabled=true;
   try{
     await retryableWrite('message-'+roomId,'/rooms/'+roomId+'/messages','POST',{
-      text:question,reply_to_message_id:null,...(recipient?{target_agent_id:recipient}:{})
+      text:question,reply_to_message_id:null,...(recipients.length?{target_agent_ids:recipients}:{})
     },()=>revisionForQuestion(roomId));
     if(state.room?.room_id===roomId){if($('question').value===question)$('question').value='';await refreshRoom();}
   }catch(error){status(error.message);}finally{button.disabled=false;}
 };
-document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('question').value=button.dataset.prompt;$('question').focus();});
+function closeToolbox(){$('toolbox').hidden=true;$('toolbox-toggle').setAttribute('aria-expanded','false');}
+document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('question').value=button.dataset.prompt;closeToolbox();$('question').focus();});
+$('toolbox-toggle').onclick=()=>{const open=$('toolbox').hidden;$('toolbox').hidden=!open;$('toolbox-toggle').setAttribute('aria-expanded',String(open));};
+document.addEventListener('click',event=>{if(!$('toolbox').hidden&&!event.target.closest('.toolbox-wrap'))closeToolbox();});
+$('toolbox').addEventListener('keydown',event=>{if(event.key==='Escape'){closeToolbox();$('toolbox-toggle').focus();}});
+$('jump-in-button').onclick=()=>control('pause').catch(e=>status(e.message));
+// Resume finishes a paused round, or after an answer lets every perspective continue the discussion.
+$('resume-all').onclick=()=>{state.recipients=new Set();control(state.room?.can_resume?'resume':'next_round').catch(e=>status(e.message));};
 $('agent-info').onclick=async()=>{
   const container=$('perspective-info');
   container.replaceChildren();

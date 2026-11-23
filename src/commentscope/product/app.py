@@ -420,7 +420,9 @@ class ProductApp:
         elif action=='start':self._fields(body,'opening_question expected_revision request_id')
         elif action=='messages':
             fields='text reply_to_message_id expected_revision request_id'
-            self._fields(body,fields+(' target_agent_id' if 'target_agent_id' in body else ''))
+            for optional in ('target_agent_id','target_agent_ids'):
+                if optional in body:fields+=' '+optional
+            self._fields(body,fields)
         else:raise WebError(404,'not_found')
         def mutate():
             integer(body['expected_revision'])
@@ -446,9 +448,16 @@ class ProductApp:
             participants=room['participant_ids']
             if action=='messages' and 'target_agent_id' in body:
                 target=body['target_agent_id']
-                if room['mode']!='group' or not isinstance(target,str) or target not in participants:
+                if room['mode']!='group' or 'target_agent_ids' in body or not isinstance(target,str) or target not in participants:
                     raise WebError(422,'invalid_participants')
                 participants=[target]
+            if action=='messages' and 'target_agent_ids' in body:
+                # Several addressed perspectives answer one by one in the given order, then the room waits.
+                targets=body['target_agent_ids']
+                if (room['mode']!='group' or not isinstance(targets,list) or not targets or len(targets)!=len(set(targets))
+                        or any(not isinstance(t,str) or t not in participants for t in targets)):
+                    raise WebError(422,'invalid_participants')
+                participants=list(targets)
             if action=='start':
                 if room['state']!='idle':raise WebError(409,'room_not_ready')
                 question=text(body['opening_question'],1000,empty=False)

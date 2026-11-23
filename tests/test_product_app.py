@@ -217,6 +217,23 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(self.call('GET',self.base)[1]['comparisons'],{})
         self.assertEqual(len(self.calls),1)
 
+    def test_group_message_can_address_several_participants_in_order(self):
+        room=self.room();rid=room['room_id'];path='/api/v1/rooms/'+rid
+        self.job(self.call('POST',path+'/start',{'opening_question':'Your position?','expected_revision':room['revision'],'request_id':'s1'})[1])
+        room=self.call('GET',path)[1]
+        before=len(self.calls)
+        body={'text':'Both of you, why?','reply_to_message_id':None,'target_agent_ids':['P2','P1'],
+              'expected_revision':room['revision'],'request_id':'m1'}
+        self.job(self.call('POST',path+'/messages',body)[1])
+        value=self.call('GET',path)[1]
+        answers=[m['agent_id'] for m in value['messages'] if m['author_kind']=='agent'][-2:]
+        self.assertEqual(answers,['P2','P1']);self.assertEqual(value['state'],'awaiting_user')
+        self.assertEqual(len(self.calls)-before,2)
+        for n,bad in enumerate(([],['P1','P1'],['P9'],'P1')):
+            body={'text':'x','reply_to_message_id':None,'target_agent_ids':bad,'expected_revision':value['revision'],'request_id':'bad'+str(n)}
+            with self.subTest(targets=bad),self.assertRaises(WebError) as error:self.call('POST',path+'/messages',body)
+            self.assertEqual(error.exception.args[:2],(422,'invalid_participants'))
+
     def test_group_followup_targets_one_current_participant_after_recoverable_failure(self):
         room=self.room();path='/api/v1/rooms/'+room['room_id']
         self.app.model=lambda *args:{'output':None,'errors':['invalid'],'new_cost_usd':'0'}

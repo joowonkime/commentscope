@@ -51,6 +51,8 @@ let server,browser,socket;
     }
   });
   const command=(method,params={})=>new Promise((resolve,reject)=>{const id=++sequence;const timer=setTimeout(()=>{pending.delete(id);reject(Error('CDP timeout'));},12000);pending.set(id,{resolve,reject,timer});socket.send(JSON.stringify({id,method,params}));});
+  // On failure, record what the page was showing.
+  globalThis.pageState=()=>evaluate("JSON.stringify({status:document.querySelector('#status')?.textContent,room:state.room&&{state:state.room.state,kind:state.room.kind,mode:state.room.mode,messages:(state.room.messages||[]).length},step:document.body.dataset.step})").catch(()=>null);
   const evaluate=async expression=>{const result=await command('Runtime.evaluate',{expression,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw Error('Page expression failed: '+expression.slice(0,80));return result.result.value;};
   const screenshot=async name=>{const result=await command('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});fs.writeFileSync(path.join(output,name),Buffer.from(result.data,'base64'),{flag:'wx'});};
   const submit=id=>evaluate(`document.getElementById(${JSON.stringify(id)}).dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))`);
@@ -109,16 +111,17 @@ let server,browser,socket;
   await submit('opening');
   report.checks.typing_indicator_while_waiting=await until(()=>evaluate("!!document.querySelector('.message.typing .typing-label')||document.querySelectorAll('.message.agent').length>=1"));
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length>=1"));
-  await evaluate("document.querySelector('#pause').click()");
+  // The composer offers 'Pause to jump in' while perspectives talk, and Resume afterwards.
+  await evaluate("document.querySelector('#jump-in-button').click()");
   await until(()=>evaluate("document.querySelector('#room-state').textContent.includes('잠시 멈췄습니다')"));
-  report.checks.pause_control=true;
-  await evaluate("document.querySelector('#resume').click()");
+  report.checks.pause_control=await evaluate("document.querySelector('#jump-in').hidden&&!document.querySelector('#composer-body').hidden");
+  await evaluate("document.querySelector('#resume-all').click()");
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
   report.checks.group_opening_and_reply=true;
   // While a room is working, the next speaker is shown as writing (checked without waiting on timing).
-  report.checks.typing_indicator_names_next_speaker=await evaluate("(()=>{const saved=state.room.state;state.room.state='replying';renderMessages();const el=document.querySelector('#messages .message.typing .typing-label');const ok=!!el&&el.textContent.endsWith('is writing…')&&document.querySelectorAll('#messages .typing-dots i').length===3;return ok;})()");
+  report.checks.typing_indicator_names_next_speaker=await evaluate("(()=>{const saved=state.room.state;state.room.state='replying';renderRoom();const el=document.querySelector('#messages .message.typing .typing-label');const ok=!!el&&el.textContent.endsWith('is writing…')&&document.querySelectorAll('#messages .typing-dots i').length===3&&!document.querySelector('#jump-in').hidden&&document.querySelector('#composer-body').hidden;return ok;})()");
   await screenshot('typing.png');
-  await evaluate("state.room.state='awaiting_user';renderMessages()");
+  await evaluate("state.room.state='awaiting_user';renderRoom()");
   report.checks.typing_indicator_clears=await evaluate("!document.querySelector('#messages .message.typing')");
   if(report.seeded_mode){
     // AI reasoning and external claims stay tagged in the bubble; external links open from Evidence.
@@ -172,6 +175,25 @@ let server,browser,socket;
   await submit('interject');
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===2&&document.querySelectorAll('.message.user').length===2"));
   report.checks.one_to_one_and_followup=true;
+  // Group follow-ups: suggestions, the + toolbox, addressing one perspective, then Resume for everyone.
+  await startChat('group',2);
+  await submit('opening');
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&state.room.state==='awaiting_user'"));
+  report.checks.composer_recipients_and_suggestions=await evaluate("document.querySelectorAll('#recipient-chips .recipient-chip').length===3&&document.querySelectorAll('#suggested-questions .suggested-question').length>0");
+  await evaluate("document.querySelector('#toolbox-toggle').click()");
+  report.checks.toolbox_opens=await evaluate("!document.querySelector('#toolbox').hidden&&document.querySelectorAll('#toolbox .toolbox-item').length===4");
+  await evaluate("document.querySelector('#toolbox .toolbox-item[data-prompt*=\"example\"]').click()");
+  report.checks.toolbox_fills_question=await evaluate("document.querySelector('#toolbox').hidden&&document.querySelector('#question').value.includes('example')");
+  const addressed=await evaluate("state.room.participant_ids[1]");
+  await evaluate("document.querySelectorAll('#recipient-chips .recipient-chip')[2].click()");
+  await submit('interject');
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===5&&state.room.state==='awaiting_user'"));
+  report.checks.addressed_perspective_answers_alone=await evaluate(`state.room.messages.filter(m=>m.author_kind==='agent').at(-1).agent_id===${JSON.stringify(addressed)}`);
+  await evaluate("document.querySelector('#resume-all').click()");
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===7&&state.room.state==='awaiting_user'"));
+  report.checks.resume_lets_everyone_continue=true;
+  await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
+  await screenshot('composer.png');
   // Intercept media before dispatch. This checks browser request identity and layout, not YouTube playback.
   report.media_fixture_mode=true;report.media_fixture_requests=[];report.youtube_playback_measured=false;
   await command('Fetch.enable',{patterns:[{urlPattern:'https://i.ytimg.com/vi/ABCDEFGHIJK/*'},{urlPattern:'https://www.youtube-nocookie.com/embed/ABCDEFGHIJK*'}]});
@@ -194,7 +216,7 @@ let server,browser,socket;
   report.synthetic_provider_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_provider_calls;
   report.passed=Object.values(report.checks).every(Boolean)&&report.page_errors.length===0&&report.external_requests.length===0;
   if(!report.passed)throw Error('Product browser checks failed');
-})().catch(error=>{report.error=error.message;process.exitCode=1;}).finally(async()=>{
+})().catch(async error=>{report.error=error.message;report.page_state=globalThis.pageState?await globalThis.pageState():null;process.exitCode=1;}).finally(async()=>{
   if(socket)socket.close();
   for(const child of [browser,server])if(child&&child.exitCode===null&&child.signalCode===null){child.kill('SIGTERM');await until(()=>child.exitCode!==null||child.signalCode!==null,4000).catch(()=>child.kill('SIGKILL'));}
   fs.writeFileSync(path.join(output,'checks.json'),JSON.stringify(report,null,2),{flag:'wx'});
@@ -278,6 +300,8 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await evaluate("document.querySelector('.message.agent .evidence-button').click()");
   await until(()=>evaluate("!document.querySelector('#evidence-panel').hidden&&document.querySelectorAll('#evidence-list .evidence-card').length>0"));
   checks.evidence_panel_lists_comments=true;
+  await evaluate("document.querySelector('#evidence-list .evidence-jump').click()");
+  checks.evidence_jump_reaches_message=await until(()=>evaluate("!!document.querySelector('#messages .message.focused')"));
   await click('#close-evidence');
   // Explore compares every perspective automatically (two here), one more call than a single manual comparison.
   checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===9&&metrics().synthetic_typed_calls===7;

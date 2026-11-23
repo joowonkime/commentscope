@@ -93,6 +93,7 @@ Converse에서 같은 방·수신자에게 보낸 후속 질문의 응답을 잃
 각 `perspectives[].support_totals`는 `{comments, likes}`로, 다른 관점과 함께 지지한 댓글까지 해당 관점에 포함한다.
 따라서 관점별 합계를 더하면 분석 댓글 수를 넘을 수 있다. 좋아요 수가 하나라도 불명확하면 `likes`는 null이다.
 세션의 `rooms[]` 요약은 `participant_ids`와 첫 질문 `question`(시작 전에는 빈 문자열)을 포함해 대화 목록의 이름에 쓴다.
+그룹 대화의 `POST {room}/messages`는 `target_agent_id`(한 명) 대신 `target_agent_ids`(참가자 중 1명 이상, 중복 없음)를 받을 수 있다. 지정한 관점이 그 순서대로 한 번씩 답한 뒤 방은 `awaiting_user`가 된다. 이후 `next_round` control은 전원이 다시 이어 말하게 한다.
 
 아래 `{session}`은 `/api/v1/sessions/{sid}`, `{room}`은 `/api/v1/rooms/{rid}`이다.
 각 요청의 전체 필드는 [상호작용 계약 I-02](design/INTERACTIONS.md#i-02-리소스와-api)를 따른다.
