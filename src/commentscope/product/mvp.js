@@ -826,6 +826,8 @@ async function refreshReflection(){
   state.session.rooms.forEach((room,i)=>{const line=node('div',undefined,'reflection-room'),button=node('button',roomName(room,i)+' · '+(roomStates[room.state]||room.state));button.type='button';button.onclick=()=>{setRoom(room);refreshReflection().catch(error=>status(error.message));};line.append(button);$('reflection-rooms').append(line);});
   $('context-messages').replaceChildren();
   if(state.room){await refreshRoom();for(const message of state.room.messages){const line=node('label',undefined,'context-item'),check=node('input');check.type='checkbox';check.checked=state.context.has(message.message_id);check.onchange=()=>{if(check.checked){if(state.context.size>=24){check.checked=false;status(errorText('context_capacity'));return;}state.context.add(message.message_id);}else state.context.delete(message.message_id);};line.append(check,node('span',(message.author_kind==='user'?'You':label(message.agent_id))+': '+(message.body||message.points?.map(p=>p.text).join(' ')||'근거 없음').slice(0,160)));$('context-messages').append(line);}}
+  // Without per-message picking, the chosen conversation's latest messages (up to 24) give the analysis its context.
+  if(state.room&&![...state.context].some(id=>state.room.messages.some(m=>m.message_id===id)))state.context=new Set(state.room.messages.slice(-24).map(m=>m.message_id));
   if(state.reflectionResult)highlightReflection(state.reflectionResult);
 }
 function clearInsights(){state.reflectionJob=null;state.reflectionResult=null;$('suggestions').replaceChildren();$('insight-panel').hidden=true;$('reflection-layout').classList.remove('review');$('current').hidden=false;$('current-copy').hidden=true;$('edit-current').hidden=true;}
@@ -857,6 +859,8 @@ function renderSuggestions(result){
     if(!items.length)group.append(node('p','No suggestions in this category.','hint'));
     const adopt=node('button','Use these suggestions','secondary');adopt.type='button';adopt.disabled=!items.length;adopt.onclick=()=>{$(key).value=items.map(i=>i.explanation).join('\n');$('reflection-save-panel').open=true;$(key).focus();};group.append(adopt);$('suggestions').append(group);
   }
+  // Category fields are no longer shown: the analysis suggestions become what Save stores.
+  for(const key of Object.keys(categories))$(key).value=(result.categories[key]||[]).map(i=>i.explanation).join('\n');
   highlightReflection(result);
 }
 async function openSavedReflection(id){

@@ -143,7 +143,7 @@ let server,browser,socket;
   report.checks.source_drawer_dismissal=await evaluate("document.querySelector('#evidence-panel').hidden");await screenshot('conversation.png');
   await evaluate("document.querySelector('#go-reflect').click()");
   await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
-  await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelectorAll('#context-messages input')[1].click();document.querySelector('#analyze').click()");
+  await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelector('#analyze').click()");
   await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
   report.checks.reflection_four_categories=true;
   await evaluate("document.querySelector('#suggestions button.secondary').click()");
@@ -354,17 +354,17 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
 
   await click('#go-reflect');
   await until(()=>evaluate("!document.querySelector('#reflect').hidden&&document.querySelectorAll('#context-messages input').length>=2"));
-  await click('#context-messages .context-item:nth-child(2) input');
+  // There is no per-message picking: choosing a conversation gives the analysis its latest messages.
+  checks.reflect_hides_message_picking=await evaluate("document.querySelector('#context-messages').hidden&&document.querySelector('.reflection-fields').hidden");
   if(debateResult==='consensus'){
-    await click('#reflection-rooms .reflection-room:first-child button');
-    await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
-    await click('#context-messages .context-item:nth-child(2) input');
+    await evaluate("[...document.querySelectorAll('#reflection-rooms .reflection-room button')].find(b=>b.textContent.startsWith('합의 Agent')).click()");
+    checks.chosen_conversation_is_analysis_context=await until(()=>evaluate("state.room?.kind==='synthesis_chat'&&(state.room.messages||[]).length>0&&state.room.messages.every(m=>state.context.has(m.message_id))"));
   }
   await fill('#current','I would separate justified review from a universal requirement.');
   await click('#analyze');
   await until(()=>evaluate("document.querySelectorAll('#suggestions .suggestion').length===4"));
   checks.reflection_analysis_works=true;
-  await click('#insight-stayed button.secondary');
+  checks.analysis_fills_saved_categories=await evaluate("['stayed','changed','newly_learned','worth_more_thought'].some(k=>document.getElementById(k).value.trim())");
   await fill('#worth_more_thought','비용과 위험을 나누어 보는 것이 중요하다는 생각은 유지했습니다.');
   await click('#save-reflection button[type=submit]');
   await until(()=>evaluate("document.querySelector('#save-state').textContent.includes('저장했습니다')"));

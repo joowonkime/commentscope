@@ -520,3 +520,9 @@ button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3
 .resume-all { font-size: 12px; font-weight: 600; color: #6657e8; background: white; border: 1px solid #c9bfff; border-radius: 999px; padding: 7px 14px; }
 .resume-all:hover { background: #f0edff; }
 .recipient-chip[aria-pressed=true] { background: #6657e8; border-color: #6657e8; color: white; }
+/* Reflect: one Save button; the category fields are filled from the analysis instead of typed. */
+.reflection-save-panel { border: 0; background: none; padding: 0; display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.reflection-save-panel form > .primary { margin: 0; min-width: 260px; }
+.reflection-fields[hidden] { display: none; }
+/* Suggestions are saved automatically, so the per-category "Use these suggestions" button is not needed. */
+.suggestion > .secondary { display: none; }
