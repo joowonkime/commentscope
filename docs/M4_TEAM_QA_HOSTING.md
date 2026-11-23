@@ -100,6 +100,17 @@ Figma의 원래 장면과 동일한 영상을 기본값으로 등록했다. Befo
 4. `summarize` 출력에서 `analysis_id`를 키로, 나머지 필드를 값으로 `src/commentscope/product/opinion-samples.json`에 등록한다. 공개 파일에는 집계만 둔다. 분석 ID는 Factory 계획·스냅샷·산출물에 결합되어 있다. 표본이 없거나 버전이 달라지면 제품은 비율 없이 직접 근거를 보여준다. 비율 등록과 화면 재열람에는 모델 호출이 없다.
 
 
+### 새 등록 영상의 관점 번역
+
+한영 화면은 같은 분석에 준비한 관점 이름·주장·이유·조건·쟁점 번역을 재사용한다. 직접 작성한 의견과 실제 출처 댓글은 원문으로 열린다. 신규 영상에서는 Factory 실행 폴더로 작업지를 만들고 각 `translation`을 반대 언어로 작성한다. 이름은 짧게 유지하고, 주장과 이유의 조건·확신 정도·대상은 원문과 대조한다. 같은 분석에 대해 다음 명령을 실행한다.
+
+```sh
+python tools/perspective_translations.py draw runs/VIDEO ko > /private/views.json
+python tools/perspective_translations.py publish runs/VIDEO /private/views.json > /private/published-views.json
+```
+
+영어 원문의 경우 첫 명령의 `ko` 대신 `en`을 사용한다. 원문 언어가 섞인 영상은 해당 작업지 필드에 개별 `source_language`를 지정할 수 있다. 두 번째 명령의 출력 객체를 `src/commentscope/product/perspective-translations.json`에 분석 ID별로 합친 뒤 UI와 함께 배포한다. 공개 항목은 번역과 원문 해시를 담는다. 분석·필드·원문이 일치하는 번역만 적용되며, 카드가 달라졌거나 번역이 아직 없는 문장은 원문으로 표시한다.
+
 ## 개발과 운영의 역할
 
 | 계층 | 구현과 책임 |

@@ -13,6 +13,7 @@ from urllib.parse import quote, urlsplit
 
 ASSETS = ('mvp.html', 'mvp.js', 'mvp.css')
 SAMPLE = 'opinion-samples.json'
+CATALOGS = (SAMPLE, 'perspective-translations.json')
 PUBLIC_ROOT = Path('/srv/commentscope-ui')
 PRODUCT = 'src/commentscope/product/'
 
@@ -24,8 +25,9 @@ def package(revision, destination):
     ).strip()
     destination.mkdir(parents=True, exist_ok=False)
     checksums = {}
-    reports = subprocess.check_output(['git', 'ls-tree', '--name-only', commit, '--', PRODUCT + SAMPLE], cwd=repo)
-    for name in (*ASSETS, SAMPLE) if reports else ASSETS:
+    present = subprocess.check_output(['git', 'ls-tree', '--name-only', commit, '--',
+                                       *(PRODUCT + name for name in CATALOGS)], cwd=repo, text=True).splitlines()
+    for name in (*ASSETS, *(name for name in CATALOGS if PRODUCT + name in present)):
         data = subprocess.check_output(['git', 'show', commit + ':' + PRODUCT + name], cwd=repo)
         (destination / name).write_bytes(data)
         checksums[name] = {'after': sha256(data).hexdigest()}
@@ -40,7 +42,7 @@ def activate(source, root=PUBLIC_ROOT):
     manifest = json.loads((source / 'static-manifest.json').read_text(encoding='utf-8'))
     commit = manifest['commit']
     names = set(manifest['files'])
-    if not re.fullmatch('[0-9a-f]{40}', commit) or names not in (set(ASSETS), {*ASSETS, SAMPLE}):
+    if not re.fullmatch('[0-9a-f]{40}', commit) or not (set(ASSETS) <= names <= {*ASSETS, *CATALOGS}):
         raise ValueError('Expected a Git commit and known public UI assets')
     files = {name: (source / name).read_bytes() for name in names}
     for name, data in files.items():
@@ -86,8 +88,9 @@ def verify(origin, package_directory, browser_state):
     access = json.loads(credential['value'])
     manifest = json.loads((package_directory / 'static-manifest.json').read_text(encoding='utf-8'))
     routes = {'mvp.html': '/mvp', 'mvp.js': '/mvp/app.js', 'mvp.css': '/mvp/app.css'}
-    if SAMPLE in manifest['files']:
-        routes[SAMPLE] = '/mvp/opinion-samples.json'
+    for name in CATALOGS:
+        if name in manifest['files']:
+            routes[name] = '/mvp/' + name
     connection = HTTPSConnection(url.hostname, url.port or 443, timeout=15)
     def get(path, *, session=False):
         headers = {'X-Session-Token': access['token']} if session else {}

@@ -411,3 +411,78 @@ test('the interface language survives reloads and switches in place without tran
     assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
   } finally { await browser.close(); }
 });
+
+test('registered perspective translations follow the language without moving source highlights or borrowing other analyses', async () => {
+  const {createHash} = require('node:crypto');
+  const field = (source, ko) => ({sha256:createHash('sha256').update(source).digest('hex'), ko});
+  const p = {id:'P1', display_name:'Library', core_claim_id:'C1', text:'Start later.', grounds:[
+    {claim_id:'G1', text:'School starts then.', role:'reason', kind:'value', source_count:1, source_ids:['S']}],
+    source_count:1, source_ids:['S']};
+  const first = {analysis_id:'A1', video:{title:'Library'}, status:'available', count_scope:'processed_comments', analyzed_comments:1, perspectives:[p]};
+  const second = {...first, analysis_id:'A2'};
+  const catalog = {A1:{source_language:'en',fields:{
+    'name:P1':field('Library','시작 시간 제안'), 'claim:C1':field(p.text,'더 늦게 시작하자.'),
+    'claim:G1':field(p.grounds[0].text,'그때 학교 수업이 시작된다.'), issue:field('What time?','몇 시에 시작할까?')}},
+    A2:{source_language:'en',fields:{'name:P1':field('Previous name','이전 이름')}}};
+  const report = {issue:'What time?',reviewer:'ai',sample_size:1,population:1,positions:1,no_position:0,unclear:0,unmatched:0,supports:{P1:1}};
+  const item = {relation:'agreement',explanation:'A comparison result',user_spans:[{start:0,end:7,text:'Library'}],
+    perspective_claims:[{claim_id:'C1',text:p.text},{claim_id:'G1',text:'School'}],required_premises:[]};
+  let release, catalogReads=0;
+  const pending = new Promise(resolve=>{release=resolve;});
+  const writes=[], errors=[];
+  const browser=await chromium.launch({executablePath:process.env.CHROME_BIN});
+  try {
+    const page=await browser.newPage({locale:'en-US',viewport:{width:390,height:844}});
+    page.on('pageerror',e=>errors.push(e.message));
+    await page.route('**/*', async route=>{
+      const req=route.request(), u=new URL(req.url());
+      if(u.origin!==origin)return route.abort();
+      if(req.method()!=='GET'){writes.push(u.pathname);return route.abort();}
+      const staticFile=files.get(u.pathname);
+      if(staticFile)return route.fulfill({path:path.join(product,staticFile[0]),contentType:staticFile[1]});
+      if(u.pathname==='/api/v1/analyses')return route.fulfill({json:{analyses:[first,second]}});
+      if(u.pathname==='/mvp/opinion-samples.json')return route.fulfill({json:{A1:report,A2:report}});
+      if(u.pathname==='/mvp/perspective-translations.json'){catalogReads++;await pending;return route.fulfill({json:catalog});}
+      if(u.pathname==='/api/v1/jobs/j')return route.fulfill({json:{job_id:'j',state:'succeeded',result:{available:true,items:[item]}}});
+      if(u.pathname.endsWith('/sources/S'))return route.fulfill({json:{text:'Library',PARENT_CONTEXT_ONLY:{text:p.text}}});
+      return route.fulfill({status:404,body:''});
+    });
+    await page.goto(origin+'/mvp');
+    await page.waitForFunction(()=>$('begin').querySelector('button[type=submit]').disabled===false);
+    const enterSession=a=>page.evaluate(analysis=>enter({session_id:'qa',analysis_id:analysis.analysis_id,analysis,
+      initial_opinion:{text:'Library',revision:1},capabilities:{},rooms:[],reflections:[],
+      comparisons:{P1:{job_id:'j',available:true,relations:['agreement']}}}),a);
+    await enterSession(first);
+    await page.locator('#perspectives input').check();
+    await page.locator('.compare-button').first().click();
+    const modal=page.locator('#comparison[open]');
+    await modal.waitFor();
+    await modal.locator('.interface-language').selectOption('ko');
+    release();
+    await page.waitForFunction(()=>$('comparison-title').textContent==='시작 시간 제안');
+    assert.equal(await page.locator('#comparison-stance mark.mark-agreement').innerText(),'더 늦게 시작하자.');
+    assert.equal(await page.locator('#comparison-initial mark').innerText(),'Library');
+    assert.deepEqual(await modal.locator('.comparison-item blockquote mark').allTextContents(),['더 늦게 시작하자.','School']);
+    assert.equal(await page.locator('#share-issue').textContent(),'몇 시에 시작할까?');
+    assert.equal(await page.locator('#share-table tbody th').textContent(),'시작 시간 제안');
+    assert.equal(await page.locator('#share-view option[value=P1]').textContent(),'시작 시간 제안');
+    assert.equal(await page.locator('#perspectives .card-ground span').nth(1).textContent(),'그때 학교 수업이 시작된다.');
+    await modal.locator('.source-disclosure summary').click();
+    await modal.locator('.card-sources button').click();
+    const sources=page.locator('#source-dialog[open]');
+    assert.ok((await sources.innerText()).includes('Library'));
+    await sources.locator('.interface-language').selectOption('en');
+    assert.equal(await page.locator('#source').innerText(),'Library\n\nParent comment for context\nStart later.');
+    await page.locator('#close-source').click();
+    assert.equal(await page.locator('#comparison-stance mark').innerText(),p.text);
+    await page.locator('#close-comparison').click();
+    assert.equal(await page.locator('#perspectives input').isChecked(),true);
+    await enterSession(second);
+    await page.locator('#interface-language').selectOption('ko');
+    await page.waitForFunction(()=>!$('perspective-language-note').hidden && $('perspective-language-note').textContent.includes('일부'));
+    assert.equal(await page.locator('#perspectives .card-title strong').innerText(),'Library');
+    assert.equal(await page.locator('#perspectives .card-stance').innerText(),p.text);
+    assert.equal(catalogReads,1);
+    assert.deepEqual(writes,[]);assert.deepEqual(errors,[]);
+  } finally { release(); await browser.close(); }
+});

@@ -10,7 +10,7 @@ const libraryDestinationKey = 'commentscope-mvp-library-destination';
 const selectedAnalysisKey = 'commentscope-mvp-selected-analysis';
 let libraryLoad = 0;
 function node(tag, text, cls) { const n=document.createElement(tag); if(text!==undefined)setText(n,text); if(cls)n.className=cls; return n; }
-// UI messages are explicitly bound. Source text, model output and input values stay plain strings.
+// Bind UI copy and registered presentation fields explicitly. Evidence and user text stay verbatim.
 let interfaceLanguage = 'en';
 let koreanInterface = {};
 const textBindings = new WeakMap();
@@ -21,6 +21,7 @@ function msg(key, ...values) { return {key, values}; }
 function joinText(parts, separator = ' · ') { return {parts, separator}; }
 function formatText(value) {
   if (typeof value !== 'object' || value === null) return String(value ?? '');
+  if (Object.hasOwn(value, 'original')) return value.translation?.[interfaceLanguage] ?? value.original;
   if (value.parts) return value.parts.map(formatText).join(value.separator);
   const pattern = interfaceLanguage === 'ko' ? (koreanInterface[value.key] ?? value.key) : value.key;
   return pattern.replace(/\{(\d+)\}/g, (_, index) => formatText(value.values[index]));
@@ -47,18 +48,22 @@ function browserLanguage() {
   }
   return 'en';
 }
-function applyInterfaceLanguage(language) {
-  const opening = $('opening-question');
-  const useSuggested = opening.hasAttribute('data-suggested') && !opening.readOnly
-    && opening.value === formatText(msg(defaultOpeningQuestion));
-  interfaceLanguage = language;
-  document.documentElement.lang = language;
+function refreshBoundText() {
   const walker = document.createTreeWalker(document.documentElement, NodeFilter.SHOW_ELEMENT | NodeFilter.SHOW_TEXT);
   for (let item = walker.nextNode(); item; item = walker.nextNode()) {
     const text = textBindings.get(item);
     if (text) item.nodeValue = formatText(text);
     for (const [attribute, value] of attributeBindings.get(item) || []) item.setAttribute(attribute, formatText(value));
   }
+}
+function applyInterfaceLanguage(language) {
+  const opening = $('opening-question');
+  const useSuggested = opening.hasAttribute('data-suggested') && !opening.readOnly
+    && opening.value === formatText(msg(defaultOpeningQuestion));
+  interfaceLanguage = language;
+  document.documentElement.lang = language;
+  refreshBoundText();
+  updatePerspectiveLanguageNote();
   for (const select of document.querySelectorAll('.interface-language')) select.value = language;
   if (useSuggested) opening.value = formatText(msg(defaultOpeningQuestion));
   if (state.session && $('room-search').value) renderRooms();
@@ -109,6 +114,79 @@ function installInterfaceLanguage() {
 
 function interfaceNotice(text) {
   return typeof text === 'string' && Object.hasOwn(koreanInterface,text) ? msg(text) : text;
+}
+
+// A field is bound to its registered analysis, claim/name ID and exact source wording.
+const perspectiveFields = new WeakMap();
+let translationCatalog, translationFrame;
+
+function refreshTranslatedText() {
+  if (translationFrame) return;
+  translationFrame = requestAnimationFrame(() => {
+    translationFrame = null;
+    refreshBoundText();
+    updatePerspectiveLanguageNote();
+  });
+}
+
+function updatePerspectiveLanguageNote() {
+  const note = $('perspective-language-note');
+  const registered = state.analysis && perspectiveFields.get(state.analysis);
+  const fields = registered ? [...registered.values()] : [];
+  const missing = fields.some(field => field.missing && field.sourceLanguage !== interfaceLanguage);
+  note.hidden = !missing && !fields.some(field => field.translation?.[interfaceLanguage]);
+  if (note.hidden) return;
+  setText(note, missing ? msg("Some perspective text is shown in its original language.")
+    : msg("Perspectives are translated. Source comments open in their original language."));
+}
+
+async function resolvePerspectiveText(analysis, key, field) {
+  try {
+    translationCatalog ??= fetch('/mvp/perspective-translations.json').then(response => {
+      if (!response.ok) throw new Error('Translation catalog unavailable');
+      return response.json();
+    }).catch(error => {
+      translationCatalog = undefined;
+      throw error;
+    });
+    const catalog = await translationCatalog;
+    const record = catalog[analysis.analysis_id];
+    const entry = record?.fields?.[key];
+    field.sourceLanguage = entry?.source_language ?? record?.source_language;
+    const target = field.sourceLanguage === 'en' ? 'ko' : 'en';
+    if (entry?.sha256 && typeof entry[target] === 'string' && entry[target].trim() && crypto.subtle) {
+      const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(field.original));
+      const digest = Array.from(new Uint8Array(bytes), n => n.toString(16).padStart(2, '0')).join('');
+      if (entry.sha256 === digest) field.translation = {[target]:entry[target]};
+    }
+  } catch { /* The registered source wording is always available. */ }
+  field.missing = !field.translation;
+  if (state.analysis === analysis) refreshTranslatedText();
+}
+
+function presentationText(key, original) {
+  const analysis = state.analysis;
+  if (!analysis?.analysis_id || !key || !original) return original;
+  let fields = perspectiveFields.get(analysis);
+  if (!fields) {
+    fields = new Map();
+    perspectiveFields.set(analysis, fields);
+  }
+  let field = fields.get(key);
+  if (!field || field.original !== original) {
+    field = {original};
+    fields.set(key, field);
+    void resolvePerspectiveText(analysis, key, field);
+  }
+  return field;
+}
+
+function perspectiveName(view) { return presentationText('name:' + view.id, view.display_name || view.text); }
+function claimText(id, text) { return id ? presentationText('claim:' + id, text) : text; }
+function referencedClaim(view, claim) {
+  const original = claim.claim_id === view.core_claim_id ? view.text
+    : view.grounds?.find(ground => ground.claim_id === claim.claim_id)?.text;
+  return original === claim.text ? claimText(claim.claim_id, original) : claim.text;
 }
 
 function asset(name) { const img=node('img'); img.src='/mvp/assets/'+name+'.svg'; img.alt=''; return img; }
@@ -162,7 +240,7 @@ async function retryableWrite(slot, path, method, fields, prepareRevision) {
 }
 function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
 function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
-function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return msg("Consensus agent");const p=perspective(id);return p?.display_name||p?.text||msg("Perspective");}
+function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return msg("Consensus agent");const p=perspective(id);return p ? perspectiveName(p) : msg("Perspective");}
 function avatar(id,small=false){const i=Math.max(0,indexOf(id)); return asset(small?'0385b':['4ea9b','5e642','baf01','d51bb','e77a2'][i%5]);}
 function closeDialog(id){const dialog=$(id); if(dialog.open)dialog.close(); if(id==='comparison')dialog.hidden=true;}
 function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open)dialog.showModal();}
@@ -246,6 +324,7 @@ function renderAnalysis(){
     play.onclick=()=>{const frame=node('iframe');frame.src='https://www.youtube-nocookie.com/embed/'+vid+'?autoplay=1';setLabel(frame,'title',title);frame.referrerPolicy='strict-origin-when-cross-origin';frame.allow='autoplay; encrypted-media; picture-in-picture';frame.allowFullscreen=true;$('video-frame').replaceChildren(frame);};
     $('video-frame').replaceChildren(play);
   }
+  updatePerspectiveLanguageNote();
   renderComposition();
 }
 let opinionCatalog;
@@ -263,7 +342,11 @@ function renderComposition(){
   const all = node('option',msg("All perspectives"));
   all.value = '';
   select.replaceChildren(all);
-  for(const p of analysis.perspectives)select.add(new Option(p.display_name || p.text, p.id));
+  for(const p of analysis.perspectives){
+    const option = node('option', perspectiveName(p));
+    option.value = p.id;
+    select.add(option);
+  }
   select.value = previous;
   if(select.selectedIndex < 0)select.selectedIndex = 0;
   select.disabled = !analysis.perspectives.length;
@@ -359,7 +442,7 @@ function renderCoverage(analysis, sample, likes){
   const view = $('share-view').value;
   const issue = $('share-issue');
   issue.hidden = !sample;
-  setText(issue, sample?.issue || '');
+  setText(issue, sample ? presentationText('issue', sample.issue) : '');
   setText($('share-method'), sample
     ? msg(sample.reviewer === 'ai'
       ? "AI review of {0} of the {1} processed comments. {2} stated no position on this issue and {3} were unclear."
@@ -411,7 +494,7 @@ function renderShareRanking(analysis, sample, likes){
   setText($('opinion-base'), sample ? msg("of {0} sampled positions",shareNumber.format(opinions)) : msg("No reviewed sample"));
   setText($('like-base'), !likes ? msg("Counts unavailable") : !likes.total ? msg("No recorded likes") :
     !totalLikes ? msg("No linked likes") : msg("of {0} linked likes",shareNumber.format(totalLikes)));
-  const ranked = analysis.perspectives.map(p => ({name:p.display_name || p.text, opinions:sample?.supports[p.id], likes:likes?.byGroup.get(p.id)}));
+  const ranked = analysis.perspectives.map(p => ({name:perspectiveName(p), opinions:sample?.supports[p.id], likes:likes?.byGroup.get(p.id)}));
   const secondary = sortBy === 'likes' ? 'opinions' : 'likes';
   ranked.sort((a,b) => (b[sortBy] ?? 0) - (a[sortBy] ?? 0) || (b[secondary] ?? 0) - (a[secondary] ?? 0));
   let peak = totalLikes ? 100 * sharedLikes / totalLikes : 0;
@@ -481,14 +564,14 @@ function renderPerspectives(){
     choice.append(check,node('span','✓'));top.append(avatar(p.id),choice);
     const title=node('div',undefined,'card-title'),count=node('span',msg(p.source_count===1?"{0} direct source comment":"{0} direct source comments",p.source_count),'source-badge');title.append(node('strong',label(p.id)),node('small',msg("A viewpoint from the comments")));top.append(title);
     if(p.admission_policy)card.append(node('small',msg("This stance appears in the comments. Its source count describes the evidence for this card.")));
-    card.append(top,count,node('p',msg("STANCE"),'card-section-label'),node('p',p.text,'card-stance'));
+    card.append(top,count,node('p',msg("STANCE"),'card-section-label'),node('p',claimText(p.core_claim_id, p.text),'card-stance'));
     const grounds=p.grounds||[];
     if(grounds.length){
       card.append(node('p',msg("REASONS & CONDITIONS IN THE SOURCES"),'card-section-label'));
       for(const g of grounds){
         const row=node('p',undefined,'card-ground');
         row.append(node('span',g.role==='essential_condition'?joinText([msg("Condition:"),' '],''):g.role==='concession'?joinText([msg("Qualification:"),' '],''):''),
-          node('span',g.text),node('small',joinText([' · ',msg(g.source_count===1?"{0} source":"{0} sources",g.source_count)],''),'ground-count'));
+          node('span',claimText(g.claim_id, g.text)),node('small',joinText([' · ',msg(g.source_count===1?"{0} source":"{0} sources",g.source_count)],''),'ground-count'));
         card.append(row);
       }
     }
@@ -615,10 +698,10 @@ function renderRelations(container,id){
 function sourceDisclosure(p){
   const details=node('details',undefined,'source-disclosure');
   details.append(node('summary',msg("Source comments")));
-  const stance=node('div',undefined,'card-sources');stance.append(node('p',p.text));
+  const stance=node('div',undefined,'card-sources');stance.append(node('p',claimText(p.core_claim_id, p.text)));
   commentSourceButtons(stance,p.source_ids||[],msg("Stance source"));details.append(stance);
   for(const ground of p.grounds||[]){
-    const row=node('div',undefined,'card-ground-sources');row.append(node('p',ground.text));
+    const row=node('div',undefined,'card-ground-sources');row.append(node('p',claimText(ground.claim_id, ground.text)));
     commentSourceButtons(row,ground.source_ids||[],msg("Reason source"));details.append(row);
   }
   return details;
@@ -654,8 +737,10 @@ async function compareWith(pid){
   const items=job.result.items||[];
   const p=perspective(pid);
   $('comparison').className='comparison-modal accent-'+indexOf(pid)%5;$('comparison-avatar').replaceChildren(avatar(pid));setText($('comparison-title'), label(pid));
-  const coreSpans=items.filter(i=>i.perspective_claims.some(c=>c.claim_id===p.core_claim_id)).map(i=>({start:0,end:[...p.text].length,category:i.relation}));
-  highlighted($('comparison-stance'),p.text,coreSpans);
+  const coreRelations = [...new Set(items.filter(item=>item.perspective_claims.some(c=>c.claim_id===p.core_claim_id)).map(item=>item.relation))];
+  const stance = claimText(p.core_claim_id, p.text);
+  if(coreRelations.length) $('comparison-stance').replaceChildren(node('mark', stance, 'mark-' + (coreRelations.length === 1 ? coreRelations[0] : 'mixed')));
+  else setText($('comparison-stance'), stance);
   $('comparison-items').replaceChildren();$('comparison-sources').replaceChildren(sourceDisclosure(p));
   highlighted($('comparison-initial'),session.initial_opinion.text,items.flatMap(i=>i.user_spans.map(s=>({...s,category:i.relation}))));
   if(!job.result.available)$('comparison-items').append(node('p',msg("Add your initial view to compare it with this perspective.")));
@@ -664,9 +749,9 @@ async function compareWith(pid){
       const row=node('article',undefined,'comparison-item '+item.relation);
       row.append(node('h3',relationNames[item.relation]),node('p',item.explanation),node('blockquote',msg("Your view · {0}",item.user_spans.map(s=>s.text).join(' '))));
       for(const claim of item.perspective_claims){
-        const quote=node('blockquote');quote.append(node('mark',claim.text,'mark-'+item.relation));row.append(quote);sourceButtons(row,claim);
+        const quote=node('blockquote');quote.append(node('mark',referencedClaim(p,claim),'mark-'+item.relation));row.append(quote);sourceButtons(row,claim);
       }
-      for(const premise of item.required_premises){row.append(node('p',premise.text,'required-premise'));sourceButtons(row,premise);}
+      for(const premise of item.required_premises){row.append(node('p',referencedClaim(p,premise),'required-premise'));sourceButtons(row,premise);}
       if(item.consideration_question)row.append(node('p',item.consideration_question,'comparison-question'));
       $('comparison-items').append(row);
     }
@@ -742,7 +827,7 @@ function renderMessages(){
         const original=perspective(m.agent_id);
         if(original?.source_ids?.length){
           const details=node('details',undefined,'source-disclosure');
-          details.append(node('summary',msg("View this perspective’s original stance and sources")),node('p',original.text));
+          details.append(node('summary',msg("View this perspective’s original stance and sources")),node('p',claimText(original.core_claim_id,original.text)));
           commentSourceButtons(details,original.source_ids,msg("Stance source"));bubble.append(details);
         }
       }
@@ -758,8 +843,8 @@ function renderMessages(){
         const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
         if (aliases.length) {
           const view = perspective(m.agent_id);
-          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, ground.text]));
-          if (view) claims.set(view.core_claim_id, view.text);
+          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, claimText(ground.claim_id, ground.text)]));
+          if (view) claims.set(view.core_claim_id, claimText(view.core_claim_id, view.text));
           const details = node('details', undefined, 'source-disclosure');
           details.append(node('summary', msg("{0} · Referenced claims",aliases.join(', '))),
             node('p', msg("An E-number identifies a claim the agent referred to when writing its explanation.")));
@@ -1440,7 +1525,7 @@ $('agent-info').onclick=async()=>{
       for(const id of room?.participant_ids||[]){
         const p=perspective(id);
         const entry=node('section',undefined,'perspective-info-entry');
-        entry.append(node('h3',label(id)),node('p',p.text),node('small',msg(p.source_count===1?"{0} direct source comment":"{0} direct source comments",p.source_count)));
+        entry.append(node('h3',label(id)),node('p',claimText(p.core_claim_id, p.text)),node('small',msg(p.source_count===1?"{0} direct source comment":"{0} direct source comments",p.source_count)));
         container.append(entry);
       }
     }

@@ -5,7 +5,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
 
-from deploy.assessment_ui import ASSETS, SAMPLE, activate, package
+from deploy.assessment_ui import ASSETS, CATALOGS, SAMPLE, activate, package
 
 
 @unittest.skipUnless(os.name == 'posix', 'Public nginx host runs Linux')
@@ -25,7 +25,7 @@ class AssessmentUiTests(unittest.TestCase):
             updated.mkdir()
             revision = 'f' * 40
             hashes = {}
-            for name, data in {**frozen, SAMPLE:b'{}'}.items():
+            for name, data in {**frozen, **dict.fromkeys(CATALOGS, b'{}')}.items():
                 value = data + b'\n'
                 (updated / name).write_bytes(value)
                 hashes[name] = {'after': sha256(value).hexdigest()}
@@ -33,7 +33,8 @@ class AssessmentUiTests(unittest.TestCase):
             self.assertEqual(activate(updated, root), revision)
             self.assertEqual(activate(updated, root), revision)
             self.assertEqual((root / 'current/mvp.js').read_bytes(), frozen['mvp.js'] + b'\n')
-            self.assertEqual((root / 'current' / SAMPLE).read_bytes(), b'{}\n')
+            for name in CATALOGS:
+                self.assertEqual((root / 'current' / name).read_bytes(), b'{}\n')
 
             (updated / 'mvp.js').write_bytes(b'damaged transfer')
             with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
