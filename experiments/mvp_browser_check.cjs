@@ -263,7 +263,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.no_additional_turn_or_merge_clicks=!requests.some(item=>item.method==='POST'&&/\/syntheses\b|\/ratif/.test(item.path));
   checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
   checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
-  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
+  checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .speaker-name')).map(x=>x.textContent))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
   // Reply targets moved from the bubble into each message's Evidence panel.
   checks.visible_reply_links=await evaluate("state.room.messages.filter(m=>m.author_kind==='agent'&&evidenceItems(m).targets.length).length===2");
   checks.agent_bubbles_have_evidence_buttons=await evaluate("document.querySelectorAll('.message.agent .evidence-button').length>0&&!document.querySelector('.message.agent .bubble .source-button')");
@@ -341,6 +341,8 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   await click('[data-step=converse]');
   await until(()=>evaluate("document.body.dataset.step==='converse'&&!document.querySelector('#debate-conclusion').hidden"));
   checks.mobile_conclusion_fits=await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth');
+  // On failure, name the elements that stick out past the viewport.
+  if(!checks.mobile_conclusion_fits)report.mobile_overflow=await evaluate("JSON.stringify({scroll:document.documentElement.scrollWidth,client:document.documentElement.clientWidth,wide:[...document.querySelectorAll('body *')].filter(e=>{const r=e.getBoundingClientRect();return r.width&&r.right>document.documentElement.clientWidth+1&&getComputedStyle(e).visibility!=='hidden';}).slice(0,10).map(e=>e.tagName+'.'+String(e.className).slice(0,40)+'#'+e.id+' <'+String(e.parentElement.className).slice(0,30)+' '+Math.round(e.getBoundingClientRect().right)),spill:[...document.querySelectorAll('body, body *')].filter(e=>e.scrollWidth>e.clientWidth+1&&getComputedStyle(e).overflowX==='visible'&&e.getBoundingClientRect().width).slice(0,10).map(e=>e.tagName+'.'+String(e.className).slice(0,40)+'#'+e.id+' '+e.clientWidth+'->'+e.scrollWidth)})");
   await screenshot('mobile-debate-result.png');
   if(debateResult==='consensus'){
     const savedSession=await evaluate("JSON.parse(localStorage.getItem('commentscope-mvp-session')).session_id");

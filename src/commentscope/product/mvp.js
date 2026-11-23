@@ -381,8 +381,10 @@ function roomKindLabel(room){
 }
 // A conversation is named after its first question; before that, after its kind.
 function roomName(room,index){
-  const question=(room.question||room.plan?.question||'').trim();
-  if(room.kind==='synthesis_chat'&&!question)return '합의 Agent';
+  const summary=state.session?.rooms?.find(r=>r.room_id===room.room_id);
+  const question=(room.question||summary?.question||room.plan?.question||room.messages?.find(m=>m.author_kind==='user')?.body||'').trim();
+  // The consensus agent's room is created by the debate itself, so it keeps the agent's name.
+  if(room.kind==='synthesis_chat')return '합의 Agent';
   if(question)return [...question].length>48?[...question].slice(0,47).join('')+'…':question;
   const kind=roomKindLabel(room);
   return 'New '+(kind.startsWith('1:1')?kind:kind[0].toLowerCase()+kind.slice(1))+(index>=0?' '+(index+1):'');
@@ -418,19 +420,30 @@ function renderRooms(){
   const query=$('room-search').value.toLowerCase();
   state.session.rooms.forEach((room,i)=>{if(room.room_id===state.room?.room_id)room=state.room;const title=roomName(room,i),option=node('option',title+' · '+(roomStates[room.state]||room.state));option.value=room.room_id;select.append(option);
     if(state.roomFilter!=='all'&&room.mode!==state.roomFilter||!title.toLowerCase().includes(query))return;
-    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);button.append(node('strong',title),node('small',[participantNames(room),roomStates[room.state]||room.state].filter(Boolean).join(' · ')));button.title=title;button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
+    const button=node('button',undefined,'room-entry');button.type='button';button.classList.toggle('active',state.room?.room_id===room.room_id);const faces=node('span',undefined,'room-faces'+((room.participant_ids||[]).length>1?' group':''));for(const id of (room.participant_ids||[]).slice(0,3))faces.append(avatar(id,true));
+    const text=node('span',undefined,'room-text');text.append(node('strong',title),node('small',[participantNames(room),roomStates[room.state]||room.state].filter(Boolean).join(' · ')));
+    button.append(faces,text);button.title=title;button.onclick=()=>chooseRoom(room.room_id).catch(e=>status(e.message));list.append(button);
   });
   if(!list.childNodes.length)list.append(node('p','No conversations here yet.','muted'));if(state.room?.room_id)select.value=state.room.room_id;
 }
+function messageTime(m){const t=m.created_at?new Date(m.created_at):null;return t&&!isNaN(t)?t.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}):'';}
+// Figma 314:2807: agent messages show avatar, a speaker row (name · time) above a grey bubble and an
+// Evidence chip below it; user messages are lavender bubbles on the right with the time beside them.
 function renderMessages(){
   $('messages').replaceChildren();
+  const first=state.room.messages.find(m=>m.created_at);
+  if(first){const day=new Date(first.created_at),today=new Date().toDateString()===day.toDateString();
+    const row=node('div',undefined,'date-row');row.append(node('span',(today?'Today':day.toLocaleDateString('en-US',{month:'short',day:'numeric'}))+' · '+messageTime(first)+' · continuing from your initial view'));$('messages').append(row);}
   for(const m of state.room.messages){const box=node('article',undefined,'message '+m.author_kind);box.id='message-'+m.message_id;
-    if(m.author_kind==='agent'){const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id,true));box.append(icon);}
-    const bubble=node('div',undefined,'bubble');
+    const bubble=node('div',undefined,'bubble'),content=node('div',undefined,'message-content');
     const phase=({opening:'입장 발언',reply:'상대 입장 응답'})[m.phase];
-    const speaker=m.author_kind==='user'?'You':label(m.agent_id);
-    bubble.append(node('small',phase?speaker+' · '+phase:speaker));
-    if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')bubble.append(node('small',label(reply.agent_id)+'의 앞선 발언에 대한 응답'));}
+    if(m.author_kind==='agent'){
+      const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id));box.append(icon);
+      const speaker=node('div',undefined,'speaker-row');speaker.append(node('strong',label(m.agent_id),'speaker-name'));
+      if(phase)speaker.append(node('span',phase,'speaker-phase'));
+      if(m.reply_to_message_id){const reply=state.room.messages.find(x=>x.message_id===m.reply_to_message_id);if(reply?.author_kind==='agent')speaker.append(node('span',label(reply.agent_id)+'의 앞선 발언에 대한 응답','reply-reference'));}
+      speaker.append(node('span',messageTime(m),'message-time'));content.append(speaker);
+    }else box.append(node('span',messageTime(m),'message-time'));
     if(m.body)bubble.append(node('p',m.body));
     if(m.author_kind==='agent'&&!m.points?.length){
       const expired=m.evidence_scope==='expired';
@@ -446,8 +459,9 @@ function renderMessages(){
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     if(m.required_premises?.length){bubble.append(node('small','함께 확인할 전제·조건'));for(const point of m.required_premises)bubble.append(node('p',point.text));}
-    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button','Evidence · '+count,'evidence-button');button.type='button';button.onclick=()=>openEvidence(m);bubble.append(button);}}
-    box.append(bubble);$('messages').append(box);
+    content.append(bubble);
+    if(m.author_kind==='agent'){const count=evidenceCount(m);if(count){const button=node('button',undefined,'evidence-button');button.type='button';button.append(node('span','📎 Evidence · '+count),node('span','›','evidence-chevron'));button.onclick=()=>openEvidence(m);content.append(button);}}
+    box.append(content);$('messages').append(box);
   }
 }
 // Comment-backed points need no tag; AI reasoning and external claims stay visibly separate (DEC-028).
@@ -561,7 +575,7 @@ function renderConclusion(room){
     const references=node('div',undefined,'debate-references');
     const resource='/synthesis-agents/'+encodeURIComponent(room.synthesis_agent.agent_id);
     for(const [i,id] of (result.root_source_ids||[]).entries()){
-      const read=node('button','계보 원문 '+(i+1),'source-button');
+      const read=node('button','Evidence '+(i+1),'source-button');
       read.type='button';
       read.onclick=()=>source(id,resource);
       references.append(read);
