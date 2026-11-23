@@ -89,6 +89,10 @@ Converse에서 같은 방·수신자에게 보낸 후속 질문의 응답을 잃
 작업은202와 `job_id`를 반환하고 `GET /api/v1/jobs/{id}`로 완료를 확인한다. 원시 모델 출력은 공개하지 않는다.
 다른 세션의 자원은404다. opinion500/2000자, 질문1000자 제한은 Unicode code point 기준이다.
 
+분석 응답의 `composition[].count/likes`는 각 댓글을 한 구간에만 센다(관점 하나만 지지·여러 관점·기타).
+각 `perspectives[].support_totals`는 `{comments, likes}`로, 다른 관점과 함께 지지한 댓글까지 해당 관점에 포함한다.
+따라서 관점별 합계를 더하면 분석 댓글 수를 넘을 수 있다. 좋아요 수가 하나라도 불명확하면 `likes`는 null이다.
+
 아래 `{session}`은 `/api/v1/sessions/{sid}`, `{room}`은 `/api/v1/rooms/{rid}`이다.
 각 요청의 전체 필드는 [상호작용 계약 I-02](design/INTERACTIONS.md#i-02-리소스와-api)를 따른다.
 

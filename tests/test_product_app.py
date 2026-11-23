@@ -33,10 +33,14 @@ class ProductAppTests(unittest.TestCase):
         self.assertEqual(result['engagement'],{'available':True,'total_likes':25,'comments_with_likes':4})
         self.assertEqual([(r.get('kind'),r['likes']) for r in result['composition']],
                          [(None,0),(None,0),('multiple',10),('other',15)])
+        # Card totals count shared comments for every perspective that they support.
+        self.assertEqual([p['support_totals'] for p in result['perspectives']],
+                         [{'comments':3,'likes':10},{'comments':3,'likes':10}])
         presentation['likes_by_source']['other']=None
         result=Analysis(self.analysis.bundle,provenance,presentation).public()
         self.assertFalse(result['engagement']['available'])
         self.assertTrue(all('likes' not in row for row in result['composition']))
+        self.assertTrue(all(p['support_totals']['likes'] is None for p in result['perspectives']))
         presentation['likes_by_source']=dict.fromkeys(presentation['likes_by_source'],0)
         result=Analysis(self.analysis.bundle,provenance,presentation).public()
         self.assertTrue(result['engagement']['available'])

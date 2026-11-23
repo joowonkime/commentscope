@@ -141,57 +141,42 @@ function renderAnalysis(){
   renderComposition();
 }
 function renderComposition(){
-  const entries=state.analysis.composition||[], total=entries.reduce((sum,e)=>sum+e.count,0);
-  const linked=entries.filter(e=>e.count&&e.kind!=='other'),linkedTotal=linked.reduce((sum,e)=>sum+e.count,0);
-  $('composition-chart').replaceChildren();$('composition-legend').replaceChildren();
-  if(!total){$('composition-chart').append(node('p','Comment composition is not available.','muted'));return;}
-  // The bar fills its width with the comments linked to perspectives; unlinked comments are counted in text.
-  if(linkedTotal){
-    const bar=node('div',undefined,'composition-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label','Comments linked to each perspective');
-    for(const e of linked){
-      const seg=node('span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
-      seg.style.flexGrow=String(e.count);seg.title=e.count+' comments';
-      if(e.perspective_id){seg.dataset.perspective=e.perspective_id;seg.onmouseenter=()=>linkComposition(e.perspective_id,true);seg.onmouseleave=()=>linkComposition(e.perspective_id,false);}
-      bar.append(seg);
-    }
-    $('composition-chart').append(bar);
-  }
-  for(const e of entries){if(!e.count)continue;const i=indexOf(e.perspective_id),cls=e.perspective_id?'accent-'+Math.max(0,i)%5:e.kind,percent=e.count/total*100;
-    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',(e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective')+' · '+e.count+' ('+percent.toFixed(1)+'%)'));
-    if(e.perspective_id){line.dataset.perspective=e.perspective_id;line.onmouseenter=()=>linkComposition(e.perspective_id,true);line.onmouseleave=()=>linkComposition(e.perspective_id,false);}
-    $('composition-legend').append(line);
-  }
-  const engagement=state.analysis.engagement;
-  renderDistribution('likes',engagement?.available?entries:[],'likes','likes',
+  const entries=state.analysis.composition||[],engagement=state.analysis.engagement;
+  renderBarChart('composition',entries,'count','comment','Comment composition is not available.');
+  renderBarChart('likes',engagement?.available?entries:[],'likes','like',
     engagement?.available?'No likes were recorded on the analyzed comments.':'Like counts are unavailable for the full set of analyzed comments.');
 }
-// Hovering a card or a bar segment highlights its counterpart.
-function linkComposition(pid,on){
-  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
-}
-function renderDistribution(prefix,entries,field,unit,emptyText){
-  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend');
+// Both charts share one look and behaviour: the bar fills with what is linked to perspectives, the
+// unlinked remainder is listed in the legend, and hovering a segment or legend entry highlights its card.
+function renderBarChart(prefix,entries,field,unit,emptyText){
+  const chart=$(prefix+'-chart'),legend=$(prefix+'-legend'),fmt=n=>Number(n).toLocaleString('en-US');
   chart.replaceChildren();legend.replaceChildren();
-  const total=entries.reduce((sum,e)=>sum+e[field],0);
+  const total=entries.reduce((sum,e)=>sum+(e[field]||0),0);
   if(!total){chart.append(node('p',emptyText,'muted'));return;}
-  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
-  svg.setAttribute('viewBox','0 0 1000 26');svg.setAttribute('role','img');svg.setAttribute('aria-label','Distribution of '+total+' '+unit);
-  let x=0;
-  for(const entry of entries){
-    const count=entry[field],id=entry.perspective_id;
-    const group=id?String(indexOf(id)%5):entry.kind;
-    const name=id?label(id):group==='multiple'?'Multiple perspectives':'Other comments';
-    const percent=count/total*100;
-    const caption=name+' · '+count+' '+unit+' ('+percent.toFixed(1)+'%)';
-    if(count){
-      const rect=document.createElementNS(ns,'rect');
-      for(const [attr,val] of Object.entries({x,width:percent*10,height:26,class:'chart-'+group}))rect.setAttribute(attr,String(val));
-      const title=document.createElementNS(ns,'title');title.textContent=caption;rect.append(title);svg.append(rect);x+=percent*10;
+  const linked=entries.filter(e=>e[field]&&e.kind!=='other'),linkedTotal=linked.reduce((sum,e)=>sum+e[field],0);
+  const hover=(el,pid)=>{el.dataset.perspective=pid;el.onmouseenter=()=>linkComposition(pid,true);el.onmouseleave=()=>linkComposition(pid,false);};
+  if(linkedTotal){
+    const bar=node('div',undefined,'composition-bar');bar.setAttribute('role','img');bar.setAttribute('aria-label',unit[0].toUpperCase()+unit.slice(1)+'s linked to each perspective');
+    for(const e of linked){
+      const seg=node('span',e.perspective_id?label(e.perspective_id):'Multiple',e.perspective_id?'chart-'+Math.max(0,indexOf(e.perspective_id))%5:'chart-'+e.kind);
+      seg.style.flexGrow=String(e[field]);seg.title=fmt(e[field])+' '+unit+(e[field]===1?'':'s');
+      if(e.perspective_id)hover(seg,e.perspective_id);
+      bar.append(seg);
     }
-    const line=node('span',undefined,id?'accent-'+group:group);
-    line.append(node('i',undefined,'legend-dot'),node('span',caption));legend.append(line);
+    chart.append(bar);
   }
-  chart.append(svg);
+  for(const e of entries){
+    const value=e[field];if(!value)continue;
+    const cls=e.perspective_id?'accent-'+Math.max(0,indexOf(e.perspective_id))%5:e.kind;
+    const name=e.perspective_id?label(e.perspective_id):e.kind==='multiple'?'Multiple perspectives':'Not linked to a perspective';
+    const line=node('span',undefined,cls);line.append(node('i',undefined,'legend-dot'),node('span',name+' · '+fmt(value)+' ('+(value/total*100).toFixed(1)+'%)'));
+    if(e.perspective_id)hover(line,e.perspective_id);
+    legend.append(line);
+  }
+}
+// Hovering a card or a bar segment highlights its counterpart in both charts.
+function linkComposition(pid,on){
+  for(const el of document.querySelectorAll('#composition-chart [data-perspective], #composition-legend [data-perspective], #likes-chart [data-perspective], #likes-legend [data-perspective], #perspectives .card'))if(el.dataset.perspective===pid)el.classList.toggle('linked',on);
 }
 function supportsDebate(count){return count>=2&&state.session.capabilities?.structured_debate;}
 function updateSelection(){
@@ -218,14 +203,15 @@ function perspectiveCard(p){
 // One sentence from what the popup shows: the consideration question for "consider", otherwise the lead explanation.
 function firstSentence(text){const t=(text||'').trim(),m=t.match(/^.*?[.!?。](?=\s|$)/s);return m?m[0]:t;}
 function keySentence(item,level){if(!item)return '';return firstSentence(level==='consider'&&item.consideration_question?item.consideration_question:item.explanation);}
-// Comment and like totals use the same counting as the composition charts: comments that support only
-// this perspective. Comments shared with other perspectives are counted under "Multiple perspectives".
+// Card totals count every comment that supports this perspective, including comments shared with
+// other perspectives (the composition charts count each comment once instead).
 function perspectiveStats(p){
-  const entry=(state.analysis.composition||[]).find(e=>e.perspective_id===p.id),stats=node('small',undefined,'card-stats');
-  const fmt=n=>Number(n).toLocaleString('en-US'),count=entry?.count??0;
-  stats.append(node('span',count?fmt(count)+' comment'+(count===1?'':'s'):'Comments shared with other perspectives'));
-  if(count&&state.analysis.engagement?.available&&typeof entry?.likes==='number')stats.append(node('span','👍 '+fmt(entry.likes)+' like'+(entry.likes===1?'':'s'),'card-likes'));
-  stats.title='Comments that support only this perspective'+(state.analysis.engagement?.available?', and the likes they received when the video was collected.':'.')+' Comments shared with other perspectives are counted under “Multiple perspectives”.';
+  const totals=p.support_totals,entry=(state.analysis.composition||[]).find(e=>e.perspective_id===p.id),stats=node('small',undefined,'card-stats');
+  const fmt=n=>Number(n).toLocaleString('en-US'),count=totals?.comments??entry?.count??0;
+  const likes=totals?totals.likes:(state.analysis.engagement?.available?entry?.likes:null);
+  stats.append(node('span',fmt(count)+' comment'+(count===1?'':'s')));
+  if(typeof likes==='number')stats.append(node('span','👍 '+fmt(likes)+' like'+(likes===1?'':'s'),'card-likes'));
+  stats.title='Comments that support this perspective, including comments shared with other perspectives'+(typeof likes==='number'?', and the likes they received when the video was collected.':'.')+' The charts below count each comment only once.';
   return stats;
 }
 function cardGrid(cards){const grid=node('div',undefined,'cards');grid.append(...cards);return grid;}
