@@ -117,6 +117,8 @@ let server,browser,socket;
   report.checks.pause_control=await evaluate("document.querySelector('#jump-in').hidden&&!document.querySelector('#composer-body').hidden");
   await evaluate("document.querySelector('#resume-all').click()");
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
+  // Stop the automatic next round here so later counts stay fixed (auto-continue is checked below).
+  await evaluate("state.autoContinue=false");
   report.checks.group_opening_and_reply=true;
   // While a room is working, the next speaker is shown as writing (checked without waiting on timing).
   report.checks.typing_indicator_names_next_speaker=await evaluate("(()=>{const saved=state.room.state;state.room.state='replying';renderRoom();const el=document.querySelector('#messages .message.typing .typing-label');const ok=!!el&&el.textContent.endsWith('is writing…')&&document.querySelectorAll('#messages .typing-dots i').length===3&&!document.querySelector('#jump-in').hidden&&document.querySelector('#composer-body').hidden;return ok;})()");
@@ -178,7 +180,14 @@ let server,browser,socket;
   // Group follow-ups: suggestions, the + toolbox, addressing one perspective, then Resume for everyone.
   await startChat('group',2);
   await submit('opening');
-  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&state.room.state==='awaiting_user'"));
+  // By default the perspectives keep talking: after the first round another round starts by itself.
+  await until(()=>evaluate("document.querySelectorAll('.message.agent').length>=6"),15000);
+  report.checks.group_keeps_talking_until_user_steps_in=true;
+  await evaluate("document.querySelector('#jump-in-button').click()");
+  await until(()=>evaluate("['paused','awaiting_user'].includes(state.room.state)&&!state.autoContinue"));
+  const settled=await evaluate("document.querySelectorAll('.message.agent').length");
+  await new Promise(resolve=>setTimeout(resolve,3500));
+  report.checks.jump_in_stops_auto_continue=await evaluate(`document.querySelectorAll('.message.agent').length===${settled}`);
   report.checks.composer_recipients_and_suggestions=await evaluate("document.querySelectorAll('#recipient-chips .recipient-chip').length===3&&document.querySelectorAll('#suggested-questions .suggested-question').length>0");
   await evaluate("document.querySelector('#toolbox-toggle').click()");
   report.checks.toolbox_opens=await evaluate("!document.querySelector('#toolbox').hidden&&document.querySelectorAll('#toolbox .toolbox-item').length===4");
@@ -186,11 +195,15 @@ let server,browser,socket;
   report.checks.toolbox_fills_question=await evaluate("document.querySelector('#toolbox').hidden&&document.querySelector('#question').value.includes('example')");
   const addressed=await evaluate("state.room.participant_ids[1]");
   await evaluate("document.querySelectorAll('#recipient-chips .recipient-chip')[2].click()");
+  const beforeAsk=await evaluate("document.querySelectorAll('.message.agent').length");
   await submit('interject');
-  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===5&&state.room.state==='awaiting_user'"));
+  await until(()=>evaluate(`document.querySelectorAll('.message.agent').length===${beforeAsk}+1&&state.room.state==='awaiting_user'`));
   report.checks.addressed_perspective_answers_alone=await evaluate(`state.room.messages.filter(m=>m.author_kind==='agent').at(-1).agent_id===${JSON.stringify(addressed)}`);
+  await new Promise(resolve=>setTimeout(resolve,3500));
+  report.checks.waits_after_addressed_answer=await evaluate(`document.querySelectorAll('.message.agent').length===${beforeAsk}+1`);
   await evaluate("document.querySelector('#resume-all').click()");
-  await until(()=>evaluate("document.querySelectorAll('.message.agent').length===7&&state.room.state==='awaiting_user'"));
+  await until(()=>evaluate(`document.querySelectorAll('.message.agent').length>=${beforeAsk}+3`));
+  await evaluate("state.autoContinue=false");
   report.checks.resume_lets_everyone_continue=true;
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1000,deviceScaleFactor:1,mobile:false});
   await screenshot('composer.png');

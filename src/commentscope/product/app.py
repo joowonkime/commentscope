@@ -568,7 +568,8 @@ class ProductApp:
                 task=room['schedule'][room['cursor']];messages=self._messages(db,rid)
                 peer=next((m for m in reversed(messages) if m['author_kind']=='agent' and m['agent_id']!=task['agent_id']),None) if task['phase']=='reply' else None
                 history=[m['_history'] for m in messages if m.get('agent_id')==task['agent_id']][-2:]
-                question=room['question'] if task['phase']!='reply' else 'Respond to the preceding perspective using your own position and explicit grounds.'
+                question=room['question'] if task['phase']!='reply' else ('Reply to the previous speaker in a sentence or two from your own position, then move the conversation '
+                          'to a related aspect the user is likely to wonder about. Do not repeat earlier points.')
                 cost_before=Decimal(room['cost_usd']);limit=Decimal(room['maximum_cost_usd'])
             charged=Decimal(0)
             seeded=seed_policy.seeded(analysis.bundle)

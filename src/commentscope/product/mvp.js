@@ -397,7 +397,7 @@ function roomPath(room){
 function setRoom(room){
   if(room?.room_id!==state.room?.room_id||room?.kind==='debate_draft'){
     if(typeof closeEvidence==='function'&&$('evidence-panel'))closeEvidence();
-    $('question').value='';state.recipients=new Set();
+    $('question').value='';state.recipients=new Set();state.autoContinue=false;clearTimeout(autoTimer);
   }
   clearTimeout(state.roomTimer);
   state.room=room;
@@ -452,13 +452,26 @@ function typingIndicator(room){
   box.setAttribute('role','status');box.append(content);return box;
 }
 const talkingStates=new Set(['running','opening','replying','pausing']);
+// By default every perspective in a group chat keeps talking, round after round, until the user steps in
+// (pausing or asking). After a question to chosen perspectives, the room waits for the user instead.
+let autoTimer=null;
+function scheduleAutoContinue(room){
+  clearTimeout(autoTimer);autoTimer=null;
+  if(!state.autoContinue||room.mode!=='group'||room.kind==='synthesis_chat'||room.state!=='awaiting_user'||!room.can_ask)return;
+  autoTimer=setTimeout(()=>{
+    const now=state.room;
+    if(!state.autoContinue||now?.room_id!==room.room_id||now.state!=='awaiting_user'||$('question').value.trim()||document.hidden)return;
+    control('next_round').catch(e=>{state.autoContinue=false;status(e.message);});
+  },2500);
+}
 // The composer follows the room: while perspectives talk it offers a pause to jump in; once paused or
 // waiting it takes a question for everyone or for the chosen perspectives, and Resume lets everyone continue.
 function renderComposer(room,ids,automatic){
   const group=room.mode==='group'&&room.kind!=='synthesis_chat';
   const talking=talkingStates.has(room.state),pausing=room.state==='pausing';
   $('jump-in').hidden=automatic||!talking;
-  $('jump-in-label').textContent=pausing?'Pausing after this reply…':(ids.length>1?'Perspectives are talking…':label(ids[0])+' is answering…');
+  $('jump-in-label').textContent=pausing?'Pausing after this reply…':(ids.length>1?'Perspectives are talking'+(state.autoContinue?' · turn '+room.turn_count+'/'+room.turn_limit:'')+'…':label(ids[0])+' is answering…');
+  scheduleAutoContinue(room);
   $('jump-in-button').disabled=pausing;$('jump-in-button').textContent=pausing?'Pausing…':'✋ Pause to jump in';
   $('composer-body').hidden=talking;
   state.recipients=new Set([...(state.recipients||[])].filter(id=>ids.includes(id)));
@@ -531,13 +544,14 @@ function renderMessages(){
       const text=node('p',point.text);
       if(point.point_id)text.id='point-'+point.point_id;
       const key=point.origin==='original_comment'?point.claim_id||point.text:null;
-      if(key&&seen.has(key)){text.hidden=true;bubble.append(text);continue;}
+      // Comment statements are evidence, not the agent's words: they stay in the Evidence panel.
+      if(key&&(m.evidence_scope==='seeded_provenance'||seen.has(key))){text.hidden=true;bubble.append(text);continue;}
       if(key)seen.add(key);visible++;
       const origin=pointOrigin(point.origin);
       if(origin)text.append(node('span',origin,'origin-tag'));
       bubble.append(text);
     }
-    if(m.author_kind==='agent'&&m.points?.length&&!visible)bubble.append(node('p','Keeps the same position as before — see Evidence for the comments it rests on.','restated-note'));
+    if(m.author_kind==='agent'&&m.points?.length&&!visible)bubble.append(node('p',m.limitation==='verification_hold'?'This reply did not pass the evidence check, so only the comments it drew on are shown under Evidence.':'Keeps the same position as before — see Evidence for the comments it rests on.','restated-note'));
     if(m.status==='abstain'&&m.points?.length)bubble.append(node('small','요청한 답을 확인할 수 없어 자료의 한계를 설명합니다.'));
     if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small','추가 설명을 확인하지 못해, 확인할 수 있는 내용만 표시했습니다.'));
     content.append(bubble);
@@ -1253,6 +1267,7 @@ $('opening').onsubmit=async event=>{
     return;
   }
   state.openingPending=true;
+  state.autoContinue=room?.mode==='group'&&room?.kind!=='debate_draft'&&room?.kind!=='structured_debate';
   status('');
   $('opening').querySelector('button[type=submit]').disabled=true;
   try{
@@ -1301,6 +1316,7 @@ $('interject').onsubmit=async event=>{
   event.preventDefault();
   const button=$('interject').querySelector('button[type=submit]'),roomId=state.room?.room_id;
   const question=$('question').value,recipients=$('address-agent').hidden?[]:[...(state.recipients||[])];
+  state.autoContinue=false;clearTimeout(autoTimer);
   if(button.disabled||!roomId||!question.trim())return;
   button.disabled=true;
   try{
@@ -1315,9 +1331,9 @@ document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$
 $('toolbox-toggle').onclick=()=>{const open=$('toolbox').hidden;$('toolbox').hidden=!open;$('toolbox-toggle').setAttribute('aria-expanded',String(open));};
 document.addEventListener('click',event=>{if(!$('toolbox').hidden&&!event.target.closest('.toolbox-wrap'))closeToolbox();});
 $('toolbox').addEventListener('keydown',event=>{if(event.key==='Escape'){closeToolbox();$('toolbox-toggle').focus();}});
-$('jump-in-button').onclick=()=>control('pause').catch(e=>status(e.message));
+$('jump-in-button').onclick=()=>{state.autoContinue=false;clearTimeout(autoTimer);control('pause').catch(e=>status(e.message));};
 // Resume finishes a paused round, or after an answer lets every perspective continue the discussion.
-$('resume-all').onclick=()=>{state.recipients=new Set();control(state.room?.can_resume?'resume':'next_round').catch(e=>status(e.message));};
+$('resume-all').onclick=()=>{state.recipients=new Set();state.autoContinue=true;control(state.room?.can_resume?'resume':'next_round').catch(e=>status(e.message));};
 $('agent-info').onclick=async()=>{
   const container=$('perspective-info');
   container.replaceChildren();
