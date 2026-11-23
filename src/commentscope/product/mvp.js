@@ -206,8 +206,8 @@ function perspectiveCard(p){
   const top=node('header'),title=node('div',undefined,'card-title');
   title.append(node('strong',label(p.id)),node('small',p.source_count+(p.admission_policy?' verified source comments':' source comments')));
   top.append(avatar(p.id),title);
-  const relation=node('p','','relation-summary');
-  card.append(top,node('p',p.text,'card-stance'),relation);
+  const relation=node('p','','relation-summary'),stance=node('p',p.text,'card-stance');stance.title=p.text;
+  card.append(top,stance,relation);
   // The whole card opens the comparison popup.
   card.classList.add('clickable');card.tabIndex=0;card.setAttribute('role','button');card.setAttribute('aria-label','Compare '+label(p.id)+' with your view');
   card.onclick=()=>compareWith(p.id).catch(e=>status(e.message));
@@ -247,13 +247,19 @@ async function renderPerspectives(){
     const items=result.value.result.items||[],level=closeness(items);
     // Lead with the explanation that matches the group.
     const lead=items.find(i=>level==='differ'||level==='mixed'?i.relation==='difference':level==='close'?i.relation==='agreement':true);
-    setCloseness(card,level);summary.textContent=keySentence(lead,level);groups.get(level).push(card);state.closeness.set(p.id,level);
+    setCloseness(card,level);summary.textContent=keySentence(lead,level);summary.title=summary.textContent;groups.get(level).push(card);state.closeness.set(p.id,level);
   });
+  // Close, to-consider and different sit side by side as columns; the remaining groups go on a row below.
   box.replaceChildren();
-  for(const [level,members] of groups){
-    if(!members.length)continue;
-    const section=node('section',undefined,'closeness-group closeness-'+level);
-    section.append(node('h2',groupTitles[level]+' · '+members.length,'closeness-group-title'),cardGrid(members));box.append(section);
+  const rows=[['close','consider','differ'],['mixed','none','error']];
+  for(const levels of rows){
+    const row=node('div',undefined,'closeness-row'+(levels[0]==='close'?'':' closeness-row-wide'));
+    for(const level of levels){
+      const members=groups.get(level);if(!members.length)continue;
+      const section=node('section',undefined,'closeness-group closeness-'+level),stack=node('div',undefined,'group-cards');
+      stack.append(...members);section.append(node('h2',groupTitles[level]+' · '+members.length,'closeness-group-title'),stack);row.append(section);
+    }
+    if(row.childElementCount)box.append(row);
   }
 }
 function hasInitialView(){return !!state.session.initial_opinion.text.trim();}

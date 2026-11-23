@@ -249,3 +249,16 @@ button.user-avatar:hover, button.user-avatar:focus-visible { box-shadow: 0 0 0 3
 #chat-picker-hint{margin:.7rem 0}#address-agent,#chat-format-label{font-size:.85rem}
 #question-target,#chat-format{max-width:100%;padding:.3rem;margin-bottom:.5rem}
 .card-title strong,.chat-heading h1,.source-disclosure p,.composition-legend span{overflow-wrap:anywhere}
+/* One card size everywhere: stance and explanation are clamped to three lines each (full text on hover). */
+.cards:has(> .card.compact) { row-gap: 18px; }
+.card.compact { display: flex; flex-direction: column; grid-row: auto; height: 228px; margin-bottom: 0; overflow: hidden; }
+.card.compact .card-stance, .card.compact .relation-summary { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.card.compact .card-stance { flex: none; }
+.cards.single-row { grid-template-columns: repeat(var(--count), 260px); }
+.closeness-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 22px; align-items: start; margin: 0 0 26px; }
+.closeness-row .closeness-group { margin: 0; min-width: 0; }
+.group-cards { display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 900px) { .closeness-row { grid-template-columns: 1fr; } }
+/* Lower groups lay their cards out horizontally, one row where space allows. */
+.closeness-row-wide { grid-template-columns: 1fr; gap: 22px; }
+.closeness-row-wide .group-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
