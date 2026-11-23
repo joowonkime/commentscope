@@ -13,7 +13,7 @@ const profile=fs.mkdtempSync(path.join(os.tmpdir(),'commentscope-mvp-browser-'))
 const report={synthetic_only:true,seeded_mode:mode==='--seeded',paid_calls:0,semantic_quality_measured:false,checks:{},page_errors:[],external_requests:[]};
 const requests=[];
 const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
-async function until(fn,timeout=12000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(value)return value;await sleep(80);}throw Error('Browser assertion deadline');}
+async function until(fn,timeout=12000){const end=Date.now()+timeout;while(Date.now()<end){const value=await fn();if(value)return value;await sleep(80);}throw Error('Browser assertion deadline: '+String(fn).replace(/\s+/g,' ').slice(0,220));}
 let server,browser,socket;
 (async()=>{
   let stdout='';
@@ -57,7 +57,7 @@ let server,browser,socket;
   await command('Page.enable');await command('Runtime.enable');await command('Network.enable');
   await command('Emulation.setDeviceMetricsOverride',{width:1440,height:1100,deviceScaleFactor:1,mobile:false});
   await command('Page.navigate',{url:origin+'/mvp'});
-  await until(()=>evaluate("document.querySelector('#status')?.textContent.includes('먼저')"));
+  await until(()=>evaluate("document.querySelector('#begin button[type=submit]')?.disabled===false"));
   if(automatic){
     await verifyAutomaticDebate({command,evaluate,screenshot});
     report.passed=Object.values(report.checks).every(Boolean)&&report.page_errors.length===0&&
@@ -92,8 +92,20 @@ let server,browser,socket;
   await evaluate('document.fonts.ready');
   report.checks.packaged_font_and_images_load=await evaluate("document.fonts.check('14px Inter')&&document.fonts.check('14px Geologica')&&Array.from(document.querySelectorAll('img')).every(i=>i.complete&&i.naturalWidth>0)");
   await screenshot('explore.png');
-  await evaluate("document.querySelectorAll('.card input').forEach(x=>x.click());document.querySelector('#open-room').click()");
-  await until(()=>evaluate("!document.querySelector('#opening').hidden&&!document.querySelector('#converse').hidden"));
+  // Conversations start from Converse: New chat → 1:1 or group → pick perspectives.
+  const startChat=async(mode,count)=>{
+    await evaluate("document.querySelector('[data-step=converse]').click()");
+    await until(()=>evaluate("!document.querySelector('#converse').hidden"));
+    await evaluate("(document.querySelector('#empty-conversation').hidden?document.querySelector('#new-chat'):document.querySelector('#empty-new-chat')).click()");
+    await until(()=>evaluate("document.querySelector('#new-chat-dialog').open&&!document.querySelector('#chat-step-mode').hidden"));
+    await evaluate(`document.querySelector('[data-chat-mode=${mode}]').click()`);
+    await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-card input').length>0"));
+    await evaluate(`[...document.querySelectorAll('#chat-options .picker-card input')].slice(0,${count}).forEach(input=>input.click());document.querySelector('#chat-picker button[type=submit]').click()`);
+    // Converse is already visible here, so wait until the new room itself has rendered.
+    await until(()=>evaluate(`state.room?.room_id&&state.room.state==='idle'&&!document.querySelector('#new-chat-dialog').open&&!document.querySelector('#opening').hidden&&document.querySelectorAll('#room-summary .member-chip').length===${count}`));
+  };
+  await startChat('group',2);
+  report.checks.room_lists_participants=await evaluate("document.querySelectorAll('#room-summary .member-chip').length===2&&document.querySelector('#room-summary').textContent.includes('Group chat with')");
   await submit('opening');
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length>=1"));
   await evaluate("document.querySelector('#pause').click()");
@@ -103,16 +115,20 @@ let server,browser,socket;
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
   report.checks.group_opening_and_reply=true;
   if(report.seeded_mode){
-    report.checks.seeded_provenance_labels=await evaluate("['댓글 근거','AI 추론 · 원작성자의 발언이 아닙니다','외부 자료 기반 주장'].every(label=>document.querySelector('#messages').textContent.includes(label))");
-    report.checks.seeded_external_reference_link=await evaluate("Array.from(document.querySelectorAll('.message.agent a.source-button')).some(a=>a.protocol==='https:'&&a.rel.includes('noopener'))");
+    // AI reasoning and external claims stay tagged in the bubble; external links open from Evidence.
+    report.checks.seeded_provenance_labels=await evaluate("['AI reasoning','Based on external sources'].every(label=>document.querySelector('#messages').textContent.includes(label))");
+    const externalIndex=await evaluate("state.room.messages.filter(m=>m.author_kind==='agent').findIndex(m=>evidenceItems(m).external.length)");
+    await evaluate(`document.querySelectorAll('.message.agent')[${externalIndex}].querySelector('.evidence-button').click()`);
+    report.checks.seeded_external_reference_link=await until(()=>evaluate("Array.from(document.querySelectorAll('#evidence-list a.evidence-link')).some(a=>a.protocol==='https:'&&a.rel.includes('noopener'))"));
+    await evaluate("document.querySelector('#close-evidence').click()");
     report.checks.seeded_typed_calls=JSON.parse(fs.readFileSync(path.join(output,'fixture/metrics.json'),'utf8')).synthetic_typed_calls===4;
   }
   report.checks.peer_reply_links=await evaluate("document.querySelector('#messages').textContent.split('앞선 발언에 대한 응답').length===3");
-  await evaluate("document.querySelector('.message.agent .source-button').click()");
-  await until(()=>evaluate("document.querySelector('#source').textContent.includes('Safety reviews')"));
-  report.checks.source_lookup=await evaluate("document.querySelector('#source-dialog').open");await screenshot('source.png');
-  await evaluate("document.querySelector('#close-source').click()");
-  report.checks.source_drawer_dismissal=await evaluate("!document.querySelector('#source-dialog').open");await screenshot('conversation.png');
+  await evaluate("document.querySelector('.message.agent .evidence-button').click()");
+  await until(()=>evaluate("document.querySelector('#evidence-list').textContent.includes('Safety reviews')"));
+  report.checks.source_lookup=await evaluate("document.querySelector('#evidence-drawer').open");await screenshot('source.png');
+  await evaluate("document.querySelector('#close-evidence').click()");
+  report.checks.source_drawer_dismissal=await evaluate("!document.querySelector('#evidence-drawer').open");await screenshot('conversation.png');
   await evaluate("document.querySelector('#go-reflect').click()");
   await until(()=>evaluate("document.querySelectorAll('#context-messages input').length===5"));
   await evaluate("document.querySelector('#current').value='I still support safety reviews.';document.querySelectorAll('#context-messages input')[1].click();document.querySelector('#analyze').click()");
@@ -142,8 +158,7 @@ let server,browser,socket;
   await command('Emulation.setDeviceMetricsOverride',{width:390,height:844,deviceScaleFactor:1,mobile:true});
   report.checks.no_mobile_overflow=await evaluate('document.documentElement.scrollWidth<=document.documentElement.clientWidth');
   await screenshot('mobile.png');
-  await evaluate("document.querySelector('[data-step=explore]').click();document.querySelector('.card input').click();document.querySelector('#open-room').click()");
-  await until(()=>evaluate("!document.querySelector('#opening').hidden&&!document.querySelector('#converse').hidden"));
+  await startChat('one',1);
   await submit('opening');
   await until(()=>evaluate("document.querySelectorAll('.message.agent').length===1&&document.querySelector('#room-state').textContent.includes('대화가 끝났습니다')"));
   await evaluate("document.querySelector('#question').value='What supports this position?'");
@@ -189,7 +204,8 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   const reload=async()=>{
     const originalPage=await evaluate('performance.timeOrigin');
     await command('Page.reload');
-    await until(()=>evaluate(`performance.timeOrigin!==${originalPage}&&document.querySelector('#workspace')?.hidden===false&&document.querySelectorAll('.card').length===2`));
+    try{await until(()=>evaluate(`performance.timeOrigin!==${originalPage}&&document.querySelector('#workspace')?.hidden===false&&document.querySelectorAll('.card').length===2`));}
+    catch(error){throw Error(error.message+' | state: '+await evaluate("JSON.stringify({before:document.querySelector('#before')?.hidden,workspace:document.querySelector('#workspace')?.hidden,cards:document.querySelectorAll('.card').length,step:document.body.dataset.step,status:document.querySelector('#status')?.textContent})"));}
   };
   report.mode='automatic_debate';
   report.expected_outcome=debateResult;
@@ -207,9 +223,18 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.explore_source_access_does_not_generate=!callsBeforeSources ||
     (metrics().synthetic_provider_calls===callsBeforeSources.synthetic_provider_calls && metrics().synthetic_typed_calls===callsBeforeSources.synthetic_typed_calls);
   await click('#close-comparison');
-  await click('.card:nth-child(2) input');
-  await click('.card:nth-child(1) input');
-  await click('#open-room');
+  await click('#go-converse');
+  await until(()=>evaluate("!document.querySelector('#converse').hidden&&!document.querySelector('#empty-conversation').hidden"));
+  await click('#empty-new-chat');
+  await until(()=>evaluate("document.querySelector('#new-chat-dialog').open&&!document.querySelector('#chat-step-mode').hidden"));
+  await click('[data-chat-mode=group]');
+  await until(()=>evaluate("document.querySelectorAll('#chat-options .picker-card').length===2"));
+  checks.picker_groups_follow_explore=await evaluate("document.querySelectorAll('#chat-options .closeness-group').length>0");
+  // Pick P2 first, then P1: the speaking order must follow the picking order.
+  await evaluate("[...document.querySelectorAll('#chat-options .picker-card input')].sort((a,b)=>a.value<b.value?1:-1).forEach(input=>input.click())");
+  await until(()=>evaluate("!document.querySelector('#chat-format-label').hidden"));
+  await click('#chat-picker input[name=chat-format][value=debate]');
+  await click('#chat-picker button[type=submit]');
   await until(()=>evaluate("!document.querySelector('#converse').hidden&&!document.querySelector('#opening').hidden"));
   checks.automatic_offered_for_two=await evaluate("document.querySelector('#opening-submit-label').textContent==='자동 토론 시작'");
   await click('#opening button[type=submit]');
@@ -239,8 +264,15 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.debate_path_polled=requests.some(item=>item.method==='GET'&&item.path===debatePath);
   checks.question_and_four_visible_turns=await evaluate(`document.querySelector('.message.user').textContent.includes(${JSON.stringify(question)})&&document.querySelectorAll('.message.agent').length===4&&document.querySelector('#room-state').textContent.endsWith('4/4')`);
   checks.selected_order=await evaluate("JSON.stringify(Array.from(document.querySelectorAll('.message.agent .bubble>small:first-child')).map(x=>x.textContent.split(' · ')[0]))===JSON.stringify([label('P2'),label('P1'),label('P2'),label('P1')])");
-  checks.visible_reply_links=await evaluate("Array.from(document.querySelectorAll('.message.agent .source-button')).filter(x=>x.textContent.startsWith('응답 대상')).length===2");
-  checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===8&&metrics().synthetic_typed_calls===7;
+  // Reply targets moved from the bubble into each message's Evidence panel.
+  checks.visible_reply_links=await evaluate("state.room.messages.filter(m=>m.author_kind==='agent'&&evidenceItems(m).targets.length).length===2");
+  checks.agent_bubbles_have_evidence_buttons=await evaluate("document.querySelectorAll('.message.agent .evidence-button').length>0&&!document.querySelector('.message.agent .bubble .source-button')");
+  await evaluate("document.querySelector('.message.agent .evidence-button').click()");
+  await until(()=>evaluate("document.querySelector('#evidence-drawer').open&&document.querySelectorAll('#evidence-list .evidence-item').length>0"));
+  checks.evidence_panel_lists_comments=true;
+  await click('#close-evidence');
+  // Explore compares every perspective automatically (two here), one more call than a single manual comparison.
+  checks.pending_request_count_unchanged=metrics().synthetic_provider_calls===9&&metrics().synthetic_typed_calls===7;
   await click('#show-debate-result');
   checks.conclusion_reachable=await evaluate("document.activeElement?.id==='debate-conclusion'");
   await screenshot('debate-result.png');
@@ -259,7 +291,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
     await fill('#opening-question','What exactly was agreed and what remains uncertain?');
     await click('#opening button[type=submit]');
     await until(()=>evaluate("document.querySelector('.message.agent')?.innerText.includes('sets no mandatory threshold')"));
-    checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI 추론')");
+    checks.derived_answer_boundary=await evaluate("document.querySelector('.message.agent')?.innerText.includes('합의 Agent')&&document.querySelector('.message.agent')?.innerText.includes('AI reasoning')");
     await click('#agent-info');
     await until(()=>evaluate("document.querySelector('#perspective-dialog').open&&document.querySelector('#perspective-info').innerText.includes([label('P2'),label('P1')].join(', '))"));
     checks.agent_parent_lineage_visible=true;
@@ -269,7 +301,7 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
     checks.explanation_and_no_synthesis=await evaluate("!!document.querySelector('#debate-conclusion>p')&&!document.querySelector('.synthesis-card')&&!document.querySelector('#go-reflect').disabled");
     const postsBeforePicker = requests.filter(row=>row.method==='POST').length;
     await click('#discuss-with-participants');
-    checks.followup_picker_preserves_participants = await evaluate("document.querySelector('#new-chat-dialog').open && chatParticipants().sort().join() === [...state.room.participant_ids].sort().join() && document.querySelector('#chat-format').value==='conversation'");
+    checks.followup_picker_preserves_participants = await evaluate("document.querySelector('#new-chat-dialog').open && chatParticipants().sort().join() === [...state.room.participant_ids].sort().join() && chatFormat()==='conversation'&&!document.querySelector('#chat-step-people').hidden");
     await click('#close-chat-picker');
     checks.opening_followup_picker_keeps_conclusion = requests.filter(row=>row.method==='POST').length===postsBeforePicker
       && await evaluate("!document.querySelector('#debate-conclusion').hidden");

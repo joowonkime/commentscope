@@ -60,8 +60,8 @@ async function retryableWrite(slot, path, method, fields, prepareRevision) {
   if (readStored(sessionStorage, key)?.requestId === attempt.requestId) sessionStorage.removeItem(key);
   return value;
 }
-function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
-function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
+function indexOf(id){return (state.analysis?.perspectives||[]).findIndex(p=>p.id===id);}
+function perspective(id){return (state.analysis?.perspectives||[]).find(p=>p.id===id);}
 function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return '합의 Agent';const p=perspective(id);return p?.display_name||p?.text||'Perspective';}
 function avatar(id,small=false){const i=Math.max(0,indexOf(id)); return asset(small?'0385b':['4ea9b','5e642','baf01','d51bb','e77a2'][i%5]);}
 function closeDialog(id){const dialog=$(id); if(dialog.open)dialog.close(); if(id==='comparison')dialog.hidden=true;}
@@ -382,6 +382,7 @@ function roomKindLabel(room){
 // A conversation is named after its first question; before that, after its kind.
 function roomName(room,index){
   const question=(room.question||room.plan?.question||'').trim();
+  if(room.kind==='synthesis_chat'&&!question)return '합의 Agent';
   if(question)return [...question].length>48?[...question].slice(0,47).join('')+'…':question;
   const kind=roomKindLabel(room);
   return 'New '+(kind.startsWith('1:1')?kind:kind[0].toLowerCase()+kind.slice(1))+(index>=0?' '+(index+1):'');
@@ -918,8 +919,8 @@ window.addEventListener('popstate',()=>{
 });
 
 async function enter(session,destination){
-  setSession(session);
   state.analysis=session.analysis;
+  setSession(session);
   sessionStorage.setItem(selectedAnalysisKey,session.analysis_id);
   renderAnalysis();
   $('before').hidden=true;
@@ -1050,8 +1051,9 @@ async function openConversation(ids,automatic,button){
   finally{creatingChat=false;button.disabled=false;updateSelection();}
 }
 if($('open-room'))$('open-room').onclick=()=>openConversation([...state.selected],supportsDebate(state.selected.size),$('open-room'));
-let chatMode=null;
-function chatParticipants(){return [...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value);}
+let chatMode=null,chatOrder=[];
+// Participants speak in the order they were picked.
+function chatParticipants(){const checked=new Set([...$('chat-options').querySelectorAll('input:checked')].map(input=>input.value));chatOrder=chatOrder.filter(id=>checked.has(id));for(const id of checked)if(!chatOrder.includes(id))chatOrder.push(id);return [...chatOrder];}
 function chatFormat(){return $('chat-picker').querySelector('input[name=chat-format]:checked')?.value||'conversation';}
 function updateChatPicker(){
   const ids=chatParticipants(),group=chatMode==='group',limit=group?3:1;
@@ -1065,7 +1067,8 @@ function updateChatPicker(){
 function pickerCard(p){
   const level=state.closeness.get(p.id)||(hasInitialView()?'pending':'empty');
   const card=node('label',undefined,'picker-card accent-'+indexOf(p.id)%5+' closeness-'+level),input=node('input');
-  input.type=chatMode==='group'?'checkbox':'radio';input.name='chat-participant';input.value=p.id;input.onchange=updateChatPicker;
+  input.type=chatMode==='group'?'checkbox':'radio';input.name='chat-participant';input.value=p.id;
+  input.onchange=()=>{if(input.checked&&!chatOrder.includes(p.id))chatOrder.push(p.id);updateChatPicker();};
   const top=node('header'),title=node('div',undefined,'card-title');title.append(node('strong',label(p.id)),perspectiveStats(p));top.append(avatar(p.id),title,node('span','✓','picker-check'));
   const stance=node('p',p.text,'card-stance');stance.title=p.text;
   card.append(input,top,stance);
@@ -1073,7 +1076,7 @@ function pickerCard(p){
   return card;
 }
 function renderChatOptions(preselected){
-  const box=$('chat-options');box.replaceChildren();
+  const box=$('chat-options');box.replaceChildren();chatOrder=[...preselected];
   const cards=new Map(state.analysis.perspectives.map(p=>[p.id,pickerCard(p)]));
   for(const id of preselected){const input=cards.get(id)?.querySelector('input');if(input)input.checked=true;}
   // Same closeness groups as Explore when comparisons are available.
