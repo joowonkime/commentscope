@@ -1,5 +1,7 @@
 # GitHub에서 각자 AI로 CommentScope 개발하기
 
+최종 발표 앱에 참여하는 팀원은 [발표 화면과 검증 방법](../presentation/README.md), [편집할 React·Python 소스](../apps/commentmas)를 사용합니다. 아래 절차는 이전 Python 제품의 협업 기록입니다.
+
 2026-11-19 / TASK-030 / REQ-009·010. 처음 받은 팀원과 코딩 AI의 시작 안내다.
 상태·품질 근거는 [인수인계](HANDOFF.md), 구조와 Mermaid는
 [현재 구현 구조](design/IMPLEMENTED_STRUCTURE.md), 작업 정본은
