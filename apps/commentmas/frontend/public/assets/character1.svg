@@ -1,0 +1,32 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="48" height="48" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Character" clip-path="url(#clip0_0_270)">
+<path id="Vector" d="M24 48C37.2548 48 48 37.2548 48 24C48 10.7452 37.2548 0 24 0C10.7452 0 0 10.7452 0 24C0 37.2548 10.7452 48 24 48Z" fill="#FADBE2"/>
+<path id="Vector_2" d="M7 48C8.6 39 15.2 34 24 34C32.8 34 39.4 39 41 48H7Z" fill="#2E3150"/>
+<path id="Vector_3" d="M19.5 34.5L24 42L28.5 34.5H19.5Z" fill="white"/>
+<path id="Vector_4" d="M23 37H25L26.2 43.5L24 46L21.8 43.5L23 37Z" fill="#D64F6B"/>
+<path id="Vector_5" d="M27 30H21V35H27V30Z" fill="#D9A27E"/>
+<path id="Vector_6" d="M24 33C28.9706 33 33 28.9706 33 24C33 19.0294 28.9706 15 24 15C19.0294 15 15 19.0294 15 24C15 28.9706 19.0294 33 24 33Z" fill="#E9B48E"/>
+<path id="Vector_7" d="M14.8 22.5C14.4 16.5 18.4 13 24.2 13C29.6 13 33.5 16 33.4 21.4C31 19.4 27.4 18.4 23.4 18.6C19.8 18.8 17 20 14.8 22.5Z" fill="#2B2238"/>
+<path id="Vector_8" d="M21.4 23.3H19C18.1163 23.3 17.4 24.0163 17.4 24.9V25.9C17.4 26.7837 18.1163 27.5 19 27.5H21.4C22.2837 27.5 23 26.7837 23 25.9V24.9C23 24.0163 22.2837 23.3 21.4 23.3Z" fill="white" fill-opacity="0.35" stroke-width="1.2" stroke="#2B2238"/>
+<path id="Vector_9" d="M29 23.3H26.6C25.7163 23.3 25 24.0163 25 24.9V25.9C25 26.7837 25.7163 27.5 26.6 27.5H29C29.8837 27.5 30.6 26.7837 30.6 25.9V24.9C30.6 24.0163 29.8837 23.3 29 23.3Z" fill="white" fill-opacity="0.35" stroke-width="1.2" stroke="#2B2238"/>
+<g id="Vector_10">
+<path d="M23 25H25Z" fill="black"/>
+<path d="M23 25H25" stroke-width="1.2" stroke="#2B2238"/>
+</g>
+<path id="Vector_11" d="M20.2 26.5C20.7523 26.5 21.2 26.0523 21.2 25.5C21.2 24.9477 20.7523 24.5 20.2 24.5C19.6477 24.5 19.2 24.9477 19.2 25.5C19.2 26.0523 19.6477 26.5 20.2 26.5Z" fill="#2B2238"/>
+<path id="Vector_12" d="M27.8 26.5C28.3523 26.5 28.8 26.0523 28.8 25.5C28.8 24.9477 28.3523 24.5 27.8 24.5C27.2477 24.5 26.8 24.9477 26.8 25.5C26.8 26.0523 27.2477 26.5 27.8 26.5Z" fill="#2B2238"/>
+<g id="Vector_13">
+<path d="M25.6 21.2L29.8 20Z" fill="black"/>
+<path d="M25.6 21.2L29.8 20" stroke-width="1.3" stroke-linecap="round" stroke="#2B2238"/>
+</g>
+<g id="Vector_14">
+<path d="M21.5 30.2H26.5Z" fill="black"/>
+<path d="M21.5 30.2H26.5" stroke-width="1.3" stroke-linecap="round" stroke="#2B2238"/>
+</g>
+</g>
+<defs>
+<clipPath id="clip0_0_270">
+<rect width="48" height="48" fill="white"/>
+</clipPath>
+</defs>
+</svg>

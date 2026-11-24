@@ -1,0 +1,22 @@
+{
+  "meta": {
+    "title": "주4일·4.5일제 도입과 근무시간 단축에 대한 논쟁",
+    "source_kind": "handwritten_and_one_real_comment",
+    "purpose": "실제 API로 의미 필터링의 기본 동작을 확인하는 수작업 사례와 실제 오분류 사례. 정확도 측정용 대표 표본은 아님."
+  },
+  "comments": [
+    {"comment_id": "stance-short", "parent_id": "", "text": "주4일제 반대", "expected_status": "keep"},
+    {"comment_id": "stance-sarcasm", "parent_id": "", "text": "공장은 시간이 줄면 생산량도 줄 텐데ㅋㅋ 비용은 누가 감당함?", "expected_status": "keep"},
+    {"comment_id": "stance-alternative", "parent_id": "", "text": "일수보다 매일 일하는 시간을 줄였으면 좋겠습니다.", "expected_status": "keep"},
+    {"comment_id": "stance-wages", "parent_id": "", "text": "주4일제는 좋지만 시급제 노동자는 월급이 줄어드니 임금 보전이 필요해요.", "expected_status": "keep"},
+    {"comment_id": "reply-agree", "parent_id": "stance-wages", "text": "동의합니다", "expected_status": "keep"},
+    {"comment_id": "stance-insult", "parent_id": "", "text": "저 발표자는 무슨 헛소리야. 인력 부족한 병원에서 근무일을 줄이면 환자를 누가 돌봐?", "expected_status": "keep"},
+    {"comment_id": "real-sarcasm-regression", "parent_id": "", "text": "서울과기대는 돌팔이인듯 ㅋㅋ 양에 치중해야하는기업들은 걍 나가뒤지라는건지???", "expected_status": "keep", "source_comment_id": "UgyhWMhhCNhwNRlkoM54AaABAg"},
+    {"comment_id": "joke-only", "parent_id": "", "text": "지나가던 고양이가 댓글 쓰고 갑니다 야옹야옹", "expected_status": "exclude"},
+    {"comment_id": "spam", "parent_id": "", "text": "하루 500만원 수익 보장! 제 프로필 링크로 코인 투자방 입장하세요.", "expected_status": "exclude"},
+    {"comment_id": "reaction", "parent_id": "", "text": "댓글 1등 먹었다ㅋㅋ", "expected_status": "exclude"},
+    {"comment_id": "noise", "parent_id": "", "text": "😂😂😂", "expected_status": "exclude"},
+    {"comment_id": "missing-context", "parent_id": "unavailable-parent", "text": "그건 좀 아닌 것 같은데", "expected_status": "review"},
+    {"comment_id": "unrelated", "parent_id": "", "text": "제주도 여행 갔는데 바다가 너무 예뻤다", "expected_status": "exclude"}
+  ]
+}

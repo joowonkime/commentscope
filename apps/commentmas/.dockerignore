@@ -1,0 +1,13 @@
+.env
+.env.*
+.git
+.venv
+.vercel
+**/node_modules
+**/__pycache__
+frontend
+screenshots
+tests
+deploy
+data
+!deploy-data

@@ -1,0 +1,13 @@
+.git
+.env
+.env.*
+.venv
+.vercel
+.deploy
+__pycache__
+**/__pycache__
+frontend
+screenshots
+tests
+data
+*.log
