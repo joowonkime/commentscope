@@ -26,3 +26,7 @@ export const number=(value:number)=>new Intl.NumberFormat('en-US').format(value)
 export const compact=(value:number)=>new Intl.NumberFormat('en-US',{notation:'compact',maximumFractionDigits:1}).format(value);
 export const alignmentLabel=(score:number)=>score>=80?'Very similar':score>=60?'Similar':score>=40?'Mixed':score>=20?'Different':'Very different';
 export const alignmentTone=(score:number)=>score>=60?'similar':score>=40?'mixed':'different';
+
+export const videoThumbnail = (id:string) => id === 'BAHKmi4F1L8'
+  ? '/assets/videothumbnail.png'
+  : 'https://i.ytimg.com/vi/'+encodeURIComponent(id)+'/hqdefault.jpg';

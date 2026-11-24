@@ -2,6 +2,8 @@
 
 팀원이 GitHub에 공유한 원본으로 SBS 주 4.5일제 영상의 댓글 1,217개와 관점 5개를 볼 수 있습니다. [발표 사이트](https://commentmas.vercel.app/) · [최종 소스](../apps/commentmas) · [팀 반입 이력](https://github.com/joowonkime/commentscope/pull/122)
 
+영상 입력을 추가한 버전은 첫 화면에서 **YouTube video URL → Generate agents**로 시작합니다. 이미 준비한 SBS 영상은 **Open prepared video**로 엽니다. 결과가 준비되면 아래 세 화면을 사용할 수 있습니다. [새 버전 실행·배포 방법](../apps/commentmas/README.md#영상-url로-agent-생성)
+
 | 화면 | 직접 해볼 수 있는 일 | 편집 위치 |
 | --- | --- | --- |
 | Explore | 첫 의견을 쓰고 **Save & explore perspectives**를 선택합니다. **Similar to me**, **New considerations**, **Most liked**로 관점을 비교합니다. **287 other opinions**에서 다섯 그룹 밖의 의견도 볼 수 있습니다. | [관점 카드와 비교 화면](../apps/commentmas/frontend/src/components.tsx) |
@@ -12,9 +14,11 @@
 
 ## 발표본 재현
 
-Python 3.12 이상, Node.js 22.12 이상에서 저장소 루트 기준으로 실행합니다. Windows에서는 설치 환경에 따라 `python` 대신 `py -3`를 사용할 수 있습니다.
+다음 명령은 11월 24일 발표 스냅샷을 별도 폴더에 재현합니다. Python 3.12 이상과 Node.js 22.12 이상을 사용합니다. Windows에서는 설치 환경에 따라 `python` 대신 `py -3`를 사용할 수 있습니다.
 
 ```bash
+git worktree add --detach ../commentmas-presentation-1124 6eb0035
+cd ../commentmas-presentation-1124
 npm --prefix apps/commentmas/frontend ci
 python presentation/check_release.py build
 npm --prefix apps/commentmas/frontend run preview:presentation

@@ -13,8 +13,9 @@ async function mockApi(page:Page,{existing=false,partial=false}={}){
   const jobs=new Map<string,any>();
   await page.route('**/api/**',async route=>{
     const request=route.request(),path=new URL(request.url()).pathname,method=request.method(),body=method==='GET'?undefined:request.postDataJSON();
-    requests.push({path,method,body});
+    requests.push({path,method,body,video:request.headers()['x-review-video']});
     const respond=(json:any,status=200)=>route.fulfill({status,contentType:'application/json',body:JSON.stringify(json)});
+    if(path==='/api/videos' && method==='GET')return respond({demo:catalog.video,can_generate:true,comment_limit:100});
     if(path==='/api/bootstrap')return respond({...catalog,rooms:hasRoom?[state]:[]});
     if(path==='/api/rooms'&&method==='GET')return respond(hasRoom?[state]:[]);
     if(path==='/api/rooms'&&method==='POST'){state={...state,participants:body.participants,initial_opinion:body.initial_opinion,messages:[],errors:[],message_count:0};hasRoom=true;return respond(state,201);}
@@ -34,7 +35,94 @@ async function mockApi(page:Page,{existing=false,partial=false}={}){
   });
   return {requests};
 }
-async function initial(page:Page){await page.goto('/');await page.getByRole('textbox',{name:'Your initial view',exact:true}).fill('I support shorter weeks and want to protect shift workers.');await page.getByRole('button',{name:'Save & explore perspectives'}).click();}
+async function initial(page:Page){await page.goto('/');await page.getByRole('link',{name:'Open prepared video'}).click();await page.getByRole('textbox',{name:'Your initial view',exact:true}).fill('I support shorter weeks and want to protect shift workers.');await page.getByRole('button',{name:'Save & explore perspectives'}).click();}
+
+test('A submitted URL survives reload and opens a conversation in that video', async({page})=>{
+  const api=await mockApi(page);
+  const id='newvideo123', video={video_id:id,title:'A new discussion',url:'https://youtu.be/'+id};
+  let ready=false, starts=0, reads=0;
+  await page.route('**/api/**',async route=>{
+    const req=route.request(),path=new URL(req.url()).pathname;
+    if(path==='/api/videos' && req.method()==='POST'){
+      starts++;
+      expect(req.postDataJSON()).toEqual({url:video.url});
+      return route.fulfill({status:202,json:{video_id:id,status:'running',stage:'collecting'}});
+    }
+    if(path==='/api/videos/'+id){
+      reads++;
+      return route.fulfill({json:{video_id:id,status:ready?'ready':'running',stage:'grouping'}});
+    }
+    if(path==='/api/bootstrap' && req.headers()['x-review-video']===id)
+      return route.fulfill({json:{...catalog,video,fingerprint:id,agents:[agents[0]]}});
+    return route.fallback();
+  });
+  await page.setViewportSize({width:390,height:844});
+  await page.goto('/');
+  const start=page.getByRole('button',{name:'Generate agents'});
+  await expect(start).toBeDisabled();
+  await page.getByLabel('YouTube video URL').fill(video.url);
+  await start.click();
+  await expect(page).toHaveURL(/\?prepare=newvideo123$/);
+  await expect(page.getByRole('status')).toContainText('Grouping related perspectives');
+  await page.reload();
+  await expect(page.getByRole('status')).toContainText('Grouping related perspectives');
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  ready=true;
+  await expect(page).toHaveURL(/\?video=newvideo123$/);
+  await page.getByLabel('Your initial view',{exact:true}).fill('I want to understand this video.');
+  await page.getByRole('button',{name:'Save & explore perspectives'}).click();
+  await expect(page.locator('.perspective-card')).toHaveCount(1);
+  await page.getByRole('button',{name:'Converse with the perspectives'}).click();
+  await expect(page.getByRole('button',{name:/Group chat \(1:N\)/})).toBeDisabled();
+  await page.getByRole('button',{name:/1:1 chat/}).click();
+  await page.getByRole('radio').first().click();
+  await page.getByRole('button',{name:/Start 1:1 chat/}).click();
+  await expect(page.getByRole('textbox',{name:'Message',exact:true})).toBeVisible();
+  expect(api.requests.find(r=>r.path==='/api/rooms'&&r.method==='POST')?.video).toBe(id);
+  expect(starts).toBe(1);
+  expect(reads).toBeGreaterThan(1);
+  await page.getByRole('link',{name:'Choose video',exact:true}).click();
+  await expect(page.getByLabel('YouTube video URL')).toHaveValue('');
+});
+
+test('Invalid links and failed preparations leave the URL editable and the example usable', async({page})=>{
+  await mockApi(page);
+  const id='badvideo123';
+  let starts=0;
+  await page.route('**/api/videos',async route=>{
+    if(route.request().method()==='GET')return route.fallback();
+    starts++;
+    if(starts===1)return route.fulfill({status:400,json:{error:'Enter a YouTube video link or its 11-character video ID.'}});
+    return route.fulfill({status:202,json:{video_id:id,status:'running',stage:'collecting'}});
+  });
+  await page.route('**/api/videos/'+id,route=>route.fulfill({json:{video_id:id,status:'failed',error:'Comments are disabled for this video. Choose another video.'}}));
+  await page.goto('/');
+  const input=page.getByLabel('YouTube video URL');
+  await input.fill('invalid');
+  await page.getByRole('button',{name:'Generate agents'}).click();
+  await expect(page.getByRole('alert')).toContainText('Enter a YouTube video');
+  await input.fill('https://youtu.be/'+id);
+  await page.getByRole('button',{name:'Generate agents'}).click();
+  await expect(page.getByRole('alert')).toContainText('Comments are disabled');
+  await expect(input).toBeEditable();
+  await page.getByRole('link',{name:'Open prepared video'}).click();
+  await expect(page.getByLabel('Your initial view',{exact:true})).toBeVisible();
+  expect(starts).toBe(2);
+});
+
+test('The previous API still opens its SBS example during a staged deployment',async({page})=>{
+  const api=await mockApi(page);
+  await page.route('**/api/videos',route=>route.fulfill({status:404,json:{error:'API endpoint not found.'}}));
+  await page.goto('/');
+  await expect(page.getByText('New video generation is unavailable on this server.',{exact:false})).toBeVisible();
+  await page.getByRole('link',{name:'Open prepared video'}).click();
+  await expect(page.getByLabel('Your initial view',{exact:true})).toBeVisible();
+  await page.goto('/?video=newvideo123');
+  await expect(page.getByRole('alert')).toContainText('This analysis is unavailable');
+  await page.getByRole('link',{name:'Choose video',exact:true}).click();
+  await expect(page.getByLabel('YouTube video URL')).toBeVisible();
+  expect(api.requests.filter(r=>r.method==='POST')).toHaveLength(0);
+});
 
 test('Explore uses five actual groups, preserves other opinions and compares the initial view',async({page})=>{
   await mockApi(page);await initial(page);

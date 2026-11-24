@@ -3,6 +3,7 @@
 Uses the active gcloud identity. Model keys are read locally and sent to Secret
 Manager via HTTPS, never command arguments or build uploads.
 """
+import base64
 import json
 import subprocess
 import sys
@@ -33,8 +34,6 @@ def main():
     settings = read_settings()
     provider = settings.get('LLM_PROVIDER') or ('openai' if settings.get('OPENAI_API_KEY') else 'openrouter')
     key_name = 'OPENAI_API_KEY' if provider == 'openai' else 'OPENROUTER_API_KEY'
-    if not settings.get(key_name):
-        raise SystemExit('The selected model provider key is missing.')
     gcloud('services', 'enable', 'run.googleapis.com', 'cloudbuild.googleapis.com',
            'artifactregistry.googleapis.com', 'secretmanager.googleapis.com', 'firebaserules.googleapis.com')
     subprocess.run([sys.executable, str(ROOT/'scripts/configure_demo_auth.py'), '--project', PROJECT], check=True)
@@ -62,15 +61,23 @@ def main():
             # Error payloads may contain submitted values; do not print them.
             raise RuntimeError(f'Cloud configuration request failed with HTTP {error.code}.') from None
 
-    secret = 'commentmas-'+provider+'-key'
-    secrets = gcloud('secrets', 'list', '--filter=name:'+secret, '--format=value(name)', capture=True)
-    if not secrets:
-        gcloud('secrets', 'create', secret, '--replication-policy=automatic')
-    import base64
-    call('POST', f'https://secretmanager.googleapis.com/v1/projects/{PROJECT}/secrets/{secret}:addVersion',
-         {'payload': {'data': base64.b64encode(settings[key_name].encode()).decode()}})
-    gcloud('secrets', 'add-iam-policy-binding', secret, '--member=serviceAccount:'+SA,
-           '--role=roles/secretmanager.secretAccessor', '--condition=None')
+    model_secret = 'commentmas-'+provider+'-key'
+    secrets_to_bind = []
+    for name, secret in ((key_name, model_secret), ('YOUTUBE_API_KEY', 'commentmas-youtube-key')):
+        exists = gcloud('secrets', 'list', '--filter=name:'+secret, '--format=value(name)', capture=True)
+        value = settings.get(name)
+        if not exists and not value:
+            if name == key_name:
+                raise SystemExit(f'Set {name} or create the server secret {secret} for the selected provider.')
+            continue
+        if not exists:
+            gcloud('secrets', 'create', secret, '--replication-policy=automatic')
+        if value:
+            call('POST', f'https://secretmanager.googleapis.com/v1/projects/{PROJECT}/secrets/{secret}:addVersion',
+                 {'payload': {'data': base64.b64encode(value.encode()).decode()}})
+        gcloud('secrets', 'add-iam-policy-binding', secret, '--member=serviceAccount:'+SA,
+               '--role=roles/secretmanager.secretAccessor', '--condition=None')
+        secrets_to_bind.append(f'{name}={secret}:latest')
     ruleset = call('POST', f'https://firebaserules.googleapis.com/v1/projects/{PROJECT}/rulesets',
                   {'source': {'files': [{'name': 'firestore.rules', 'content': (ROOT/'firestore.rules').read_text()}]}})
     release = {'name': f'projects/{PROJECT}/releases/cloud.firestore', 'rulesetName': ruleset['name']}
@@ -78,8 +85,9 @@ def main():
         call('PATCH', 'https://firebaserules.googleapis.com/v1/'+release['name'], {'release': release})
     except RuntimeError:
         call('POST', f'https://firebaserules.googleapis.com/v1/projects/{PROJECT}/releases', release)
-    env = {'FIREBASE_PROJECT_ID': PROJECT, 'LLM_PROVIDER': provider}
-    for key in ('OPENAI_MODEL', 'OPENAI_REASONING_EFFORT', 'OPENROUTER_MODEL'):
+    env = {'FIREBASE_PROJECT_ID': PROJECT, 'LLM_PROVIDER': provider,
+           'ALLOWED_ORIGINS': settings.get('ALLOWED_ORIGINS') or 'https://commentmas.vercel.app'}
+    for key in ('OPENAI_MODEL', 'OPENAI_REASONING_EFFORT', 'OPENROUTER_MODEL', 'VIDEO_COMMENT_LIMIT'):
         if settings.get(key):
             env[key] = settings[key]
     # Hosting contains only public runtime configuration. Secrets use bindings.
@@ -91,11 +99,11 @@ def main():
            '--build-service-account=projects/'+PROJECT+'/serviceAccounts/'+build_sa,
            '--allow-unauthenticated', '--no-cpu-throttling', '--min=0', '--max=1', '--concurrency=40',
            '--memory=512Mi', '--timeout=3600', '--env-vars-file='+str(env_file),
-           '--set-secrets='+key_name+'='+secret+':latest')
+           '--update-secrets='+','.join(secrets_to_bind))
     url = gcloud('run', 'services', 'describe', SERVICE, '--region='+REGION, '--format=value(status.url)', capture=True)
     subprocess.run([sys.executable, str(ROOT/'scripts/write_vercel_config.py'), '--api-url', url], check=True)
     print('API deployed: '+url)
-    print('Deploy the frontend to Vercel, then set ALLOWED_ORIGINS to its exact HTTPS origin.')
+    print('Deploy the frontend to the Vercel origin configured in ALLOWED_ORIGINS.')
 
 
 if __name__ == '__main__':

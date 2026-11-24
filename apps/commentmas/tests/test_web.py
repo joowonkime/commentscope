@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from filter_comments import digest
 from llm_client import ModelError
-from perspective_agents import ChatSession
+from perspective_agents import ChatSession, bundle_fingerprint
 from test_perspective_agents import bundle
 from web_data import Translator
 from web_server import Application, BusyError
@@ -100,6 +100,20 @@ class WebTests(unittest.TestCase):
         self.assertNotIn('retrieval_query', public['messages'][0])
         self.assertEqual(public['messages'][1]['evidence'][0]['text'], 'A full day off for family time.')
         self.assertEqual(self.app.room(rid).state['initial_opinion'], 'I want time with family.')
+
+    def test_english_video_uses_the_english_question_for_source_retrieval(self):
+        for source in self.b['agents'][0]['comments']:
+            source['text'] = 'English comments about coverage for shift workers.'
+        self.b['meta']['content_sha256'] = bundle_fingerprint(self.b)
+        self.app = Application(self.root, self.client, presentation=self.app.data,
+                               executor=self.app.executor, titles=self.app.titles)
+        rid = self.create(['g1'])
+        question = 'What about coverage for shift workers?'
+        job = self.app.ask(rid, {'text': question, 'request_id': 'english-source'})
+        self.assertEqual(self.wait(job)['status'], 'completed')
+        self.assertEqual(self.app.room(rid).state['messages'][0]['retrieval_query'], question)
+        self.assertFalse(any(name == 'web_translation' and 'Korean for searching' in prompt
+                             for prompt, _, name in self.client.calls))
 
     def test_korean_question_gets_korean_replies_focused_on_the_question(self):
         self.client.korean_answer = True

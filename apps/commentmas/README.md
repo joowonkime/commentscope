@@ -5,14 +5,31 @@
 
 공유 범위와 기존 CommentScope 구현과의 관계는 [소스 반입 기록](IMPORT.md)을 확인하세요.
 `.env`, Firebase 웹 환경 설정, 실제 댓글/분석 결과, 개인 대화·회고, 인증 캐시는 포함하지 않습니다.
-새 clone에서 실제 모델 대화를 실행하려면 API 키와 별도 분석 자료가 필요합니다.
-분석 자료를 기존 경로에 제공하거나 `--data PATH`로 지정하세요. 합성 자료를 사용하는 Python 회귀 테스트는 자료·키 없이 실행할 수 있습니다.
+새 clone은 서버용 키를 설정하고 새 영상부터 시작할 수 있습니다. 기존 SBS 사례를 열려면 해당 분석 자료를 기존 경로에 제공하거나 `--data PATH`로 지정하세요. 합성 자료로 실행하는 회귀 테스트는 키 없이 실행할 수 있습니다.
 
 유튜브 댓글의 다양한 관점을 탐색하는 멀티에이전트 시스템입니다.
 `Milestone3_Report.pdf`의 Explore → Converse → Reflect 흐름을 참고합니다.
 현재 구현 범위는 **댓글 수집, 필터링, 관점 그룹핑, 관점별 에이전트, React 기반 Step1·Step2 화면과 실제 대화 연결**입니다.
 
 백엔드는 Python 3.10 이상에서 외부 패키지 설치 없이 실행합니다. 웹 화면은 Node.js 22.12 이상과 npm을 사용합니다.
+
+## 영상 URL로 Agent 생성
+
+1. `apps/commentmas/.env` 또는 서버 환경에 `YOUTUBE_API_KEY`와 모델 제공자 설정을 넣습니다. 예를 들어 OpenRouter 사용 시 `LLM_PROVIDER=openrouter`, `OPENROUTER_API_KEY`, `OPENROUTER_MODEL=openai/gpt-4.1-mini`를 설정합니다. `VIDEO_COMMENT_LIMIT` 기본값은 100이고 1~500 사이에서 정할 수 있습니다.
+2. 아래 명령을 `apps/commentmas`에서 실행하고 브라우저로 **http://127.0.0.1:8000/** 를 엽니다.
+
+   ```bash
+   npm --prefix frontend ci
+   npm --prefix frontend run build
+   python3 web_server.py
+   ```
+
+3. **YouTube video URL**에 공개 영상 링크를 붙이고 **Generate agents**를 누릅니다. 댓글과 답글 수집, 필터링, 군집화, Agent와 카드 준비 순으로 진행합니다. 생성 중 새로고침하면 현재 단계부터 상태를 보여 줍니다.
+4. 완료되면 첫 의견을 쓰고 **Save & explore perspectives → Converse with the perspectives**에서 Agent를 선택합니다. 하나의 관점이면 1:1 대화를, 두 개 이상이면 그룹 대화도 열 수 있습니다. **Choose video**로 돌아가 같은 URL을 제출하면 기존 결과를 엽니다. SBS 데이터가 설치된 서버에서는 **Open prepared video**로 기존 개인 기록도 다시 열 수 있습니다.
+
+표본 한도에는 원댓글과 답글이 함께 들어갑니다. 관련도 순으로 원댓글을 읽고 한 스레드에서는 답글을 최대 3개 담습니다. 충분한 근거가 있는 관점을 최대 5개 표시합니다. 상태 확인과 완료된 영상 재열람에는 생성용 모델 호출이 없습니다. 실패하거나 중단된 작업에서 사용자가 다시 생성을 요청하면 외부 호출 비용이 발생할 수 있습니다. 로컬 저장 위치는 기본 `data/runtime`입니다. 운영에서는 분석 결과를 영상 단위로 Firestore에 저장하고, 방·초기 의견·성찰은 사용자와 영상 단위로 저장합니다.
+
+**기존 팀 서비스에 배포할 때**는 SBS 분석 자료가 있는 운영자 체크아웃에서 먼저 `python3 scripts/deploy_backend.py`, 다음으로 `python3 scripts/deploy_frontend.py`를 실행합니다. 현재 운영 모델을 `LLM_PROVIDER`로 지정하고, 서버의 `YOUTUBE_API_KEY`를 설정하거나 Secret Manager에 `commentmas-youtube-key`를 준비합니다. 같은 이름의 기존 모델·YouTube 시크릿을 재사용할 수 있습니다. 배포 후 첫 화면의 **Generate agents**와 **Open prepared video**를 각각 확인합니다.
 
 ## 시연 링크 배포
 
@@ -42,7 +59,7 @@ python3 scripts/deploy_backend.py
 API 배포 스크립트는 익명 세션 설정, 전용 서비스 계정, 모델 키의 Secret Manager 저장,
 Firestore 접근 규칙과 Cloud Run 배포를 처리하고 `frontend/vercel.json`에 API 경로를 설정합니다.
 서버는 백그라운드 대화를 위해 CPU 할당을 유지하며, 유휴 시 0개·최대 1개 인스턴스로 구성합니다.
-작업 상태는 서버 메모리에 있으므로 서버 교체 시 진행 중 요청은 재시도가 필요할 수 있습니다.
+영상 생성 상태와 완료 결과는 Firestore에 저장합니다. 서버 교체로 영상 생성이 중단되면 마지막 상태 갱신 후 2분이 지나 재시도할 수 있습니다. 진행 중이던 개별 대화 요청은 서버 메모리를 사용하므로 재시도가 필요할 수 있습니다.
 대화 본문은 각 저장 시 Firestore에 기록하며 큰 기록은 압축하여 여러 문서에 나눠 저장합니다.
 
 현재 Vercel 프로젝트는 `angelas-projects-91a6cf82/commentmas`입니다.
@@ -59,10 +76,10 @@ Firebase SDK 키는 공개 웹 설정이고, 모델 API 키와 Firebase 관리 �
 
 Figma MAS의 Step1·Step2를 React + TypeScript + Vite로 구현했습니다.
 레이아웃·보라색 테마·아바타·아이콘은 디자인을 따르고, 숫자와 요약은 실제 분석 결과를 사용합니다.
-현재 데이터는 수집 1,217개, 유지 1,150개, 그룹 배정 863개, 그 외의 의견 287개입니다.
+기존 SBS 사례는 수집 1,217개, 유지 1,150개, 그룹 배정 863개, 그 외의 의견 287개입니다.
 기타 의견은 여섯 번째 agent가 되지 않습니다. 5% 미만 제거 규칙도 적용하지 않습니다.
 
-최초 준비:
+기존 SBS 분석 자료로 발표 화면을 준비할 때 실행합니다.
 
 ```bash
 cd frontend
@@ -94,7 +111,7 @@ python3 web_server.py
 - Other opinions에서 그룹에 억지로 배정하지 않은 댓글을 페이지별로 확인합니다.
 
 화면·요약·비교·agent 응답과 추천 후속 질문은 영어입니다. 한국어 원문은 사용자가 `Show Korean original`을 눌렀을 때만 표시합니다.
-영어 질문은 검색용 한국어로 한 번 번역해 각 agent의 한국어 댓글 검색에 사용하며, 사용자 메시지 원문은 유지합니다.
+Agent는 선택한 관점의 원댓글 언어에 맞춰 영어·한국어 검색문을 만들고, 사용자가 쓴 언어로 답합니다.
 원문 댓글·기존 그룹·agent bundle은 수정하지 않고 표시 번역을 별도 캐시에 저장합니다.
 모델이 한국어 답변을 반환하면 수용하지 않고 한 번 재시도합니다.
 

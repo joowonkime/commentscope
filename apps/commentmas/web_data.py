@@ -18,7 +18,7 @@ class Translator:
     def __init__(self, path, client):
         self.path, self.client = Path(path), client
         self.lock = threading.RLock()
-        self.cache = json.loads(self.path.read_text()) if self.path.exists() else {}
+        self.cache = json.loads(self.path.read_text(encoding='utf-8')) if self.path.exists() else {}
 
     def translate(self, texts, language='en'):
         with self.lock:
@@ -46,11 +46,11 @@ class Translator:
 class WebData:
     def __init__(self, root, client):
         self.root, self.client = Path(root), client
-        self.bundle = json.loads((self.root/'03_agents/agents.json').read_text())
+        self.bundle = json.loads((self.root/'03_agents/agents.json').read_text(encoding='utf-8'))
         validate_bundle(self.bundle)
-        self.grouped = json.loads((self.root/'02_group/groups.json').read_text())
+        self.grouped = json.loads((self.root/'02_group/groups.json').read_text(encoding='utf-8'))
         require(self.bundle['meta']['grouping_sha256'] == digest(self.grouped), 'Grouping and agent bundle do not match.')
-        self.filter_meta = json.loads((self.root/'01_filter/filtered.json').read_text())['meta']
+        self.filter_meta = json.loads((self.root/'01_filter/filtered.json').read_text(encoding='utf-8'))['meta']
         self.output = self.root/'04_web'
         self.output.mkdir(parents=True, exist_ok=True)
         self.translator = Translator(self.output/'translations.json', client)
@@ -71,7 +71,7 @@ class WebData:
 
     def prepare(self):
         if self.catalog_path.exists():
-            cached = json.loads(self.catalog_path.read_text())
+            cached = json.loads(self.catalog_path.read_text(encoding='utf-8'))
             if cached.get('fingerprint') == self.fingerprint:
                 return cached
         schema = obj({'agents': arr(obj({k: STRING for k in ('agent_id', 'title', 'subtitle', 'stance', 'reasoning')}))})
@@ -110,7 +110,7 @@ class WebData:
 
     def catalog(self):
         require(self.catalog_path.exists(), 'Run python3 prepare_web.py before starting the web server.')
-        result = json.loads(self.catalog_path.read_text())
+        result = json.loads(self.catalog_path.read_text(encoding='utf-8'))
         require(result.get('fingerprint') == self.fingerprint, 'English catalog is stale. Run python3 prepare_web.py.')
         return result
 
@@ -120,7 +120,7 @@ class WebData:
         key = digest(['alignment-v2', self.fingerprint, opinion])
         path = self.output/'alignments'/f'{key}.json'
         if path.exists():
-            return json.loads(path.read_text())
+            return json.loads(path.read_text(encoding='utf-8'))
         schema = obj({'agents': arr(obj({'agent_id': STRING, 'score': {'type': 'integer'}, 'reason': STRING,
                                           'novelty': {'type': 'integer'}, 'new_point': STRING}))})
         profiles = [{'agent_id': p['agent_id'], 'stance': p['stance'], 'key_arguments': [a['argument'] for a in p['key_arguments']]}
@@ -150,7 +150,7 @@ class WebData:
         key = digest(['comparison-v1', self.fingerprint, aid, opinion])
         path = self.output/'comparisons'/f'{key}.json'
         if path.exists():
-            return json.loads(path.read_text())
+            return json.loads(path.read_text(encoding='utf-8'))
         p = self.profiles[aid]
         schema = obj({'similar': STRING, 'different': STRING, 'consideration': STRING,
                       'similar_quotes': arr(STRING), 'different_quotes': arr(STRING)})

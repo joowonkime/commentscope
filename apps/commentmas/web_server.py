@@ -19,6 +19,7 @@ from llm_client import ModelError, create_client, read_settings
 from perspective_agents import ChatSession, clone, detect_language
 from web_data import DEFAULT_DATA, ROOT, WebData
 from firebase_backend import AuthenticationError, FirebaseBackend
+from video_library import IntakeError, VideoLibrary
 
 
 class BusyError(ValueError):
@@ -42,9 +43,11 @@ class Application:
         # Short topic titles run beside replies; rooms saved before titles existed get one in the background.
         self.titles = titles or ThreadPoolExecutor(max_workers=2)
         self.agent_titles = {a['agent_id']: a['title'] for a in self.catalog.get('agents', [])}
+        self.source_languages = {a['agent_id']: {detect_language(c['text']) for c in a['comments']}
+                                 for a in self.data.bundle['agents']}
         for path in ([] if storage else self.rooms_dir.glob('*.json')):
             try:
-                state = json.loads(path.read_text())
+                state = json.loads(path.read_text(encoding='utf-8'))
             except (OSError, ValueError):
                 continue
             if not state.get('web_title') and any(m['role'] == 'user' for m in state.get('messages', [])):
@@ -241,12 +244,14 @@ class Application:
             opening = not room.state['messages']
             if opening and len(recipients) > 1:
                 self.pause_event(room_id).clear()
-            # Agents reply in the question's language. Source comments are Korean, so an English
-            # question gets one shared Korean search query; the original user text is kept as written.
             language = detect_language(text)
             questions = [m['text'] for m in room.state['messages'] if m['role'] == 'user']+[text]
             title = self.titles.submit(self.topic_title, questions)
-            query = text if language == 'ko' else self.data.translator.translate([text], 'ko')[0]
+            languages = set().union(*(self.source_languages[aid] for aid in recipients))
+            queries = [text] if language in languages else []
+            for target in sorted(languages - {language}):
+                queries.append(self.data.translator.translate([text], target)[0])
+            query = ' '.join(queries)
             result = room.ask(text, self.client, recipients, retrieval_query=query, language=language)
             try:
                 room.state['web_title'] = title.result(timeout=90)
@@ -323,7 +328,7 @@ class Application:
         if stored is not None:
             return stored
         if not self.storage and path.exists():
-            return json.loads(path.read_text())
+            return json.loads(path.read_text(encoding='utf-8'))
         text = {'type': 'string'}
         item = obj({'category': enum(('stayed', 'changed', 'new', 'open')), 'title': text, 'explanation': text,
                     'before_quote': text, 'now_quote': text, 'room_id': text, 'message_id': text,
@@ -419,22 +424,41 @@ class Application:
 
 class Accounts:
     """Each verified UID has independent rooms, jobs, caches and reflection inputs."""
-    def __init__(self, data, client, backend, runtime_dir):
+    def __init__(self, data, client, backend, runtime_dir, *, library=None):
         self.data, self.client, self.backend = data, client, backend
-        self.presentation = WebData(data, client)
+        self.presentation = WebData(data, client) if data is not None else None
         self.runtime_dir = Path(runtime_dir)
+        self.library = library
+        self.presentations = {}
         self.apps = {}
         self.lock = threading.RLock()
         self.executor = ThreadPoolExecutor(max_workers=6)
         self.titles = ThreadPoolExecutor(max_workers=2)
 
-    def for_user(self, uid):
+    def for_user(self, uid, video_id=None):
+        if video_id and self.library and self.library.demo and self.library.demo['video_id'] == video_id:
+            video_id = None  # Keep the original SBS rooms and profile at their existing paths.
+        key = (uid, video_id) if video_id else uid
         with self.lock:
-            if uid not in self.apps:
-                self.apps[uid] = Application(self.data, self.client, storage=self.backend.for_user(uid),
-                    presentation=self.presentation, output=self.runtime_dir/digest(uid),
-                    executor=self.executor, titles=self.titles)
-            return self.apps[uid]
+            if key in self.apps:
+                return self.apps[key]
+            output = self.runtime_dir / digest(uid) if self.backend else None
+            if video_id:
+                if not self.library:
+                    raise IntakeError(404, 'This video has not been prepared.')
+                if video_id not in self.presentations:
+                    self.presentations[video_id] = WebData(self.library.directory(video_id), self.client)
+                presentation = self.presentations[video_id]
+                output = self.runtime_dir / digest(uid) / 'videos' / video_id
+                storage = self.backend.for_user(uid, video_id) if self.backend else None
+            else:
+                presentation = self.presentation
+                if presentation is None:
+                    raise IntakeError(404, 'Choose a video to start exploring.')
+                storage = self.backend.for_user(uid) if self.backend else None
+            self.apps[key] = Application(self.data, self.client, storage=storage, presentation=presentation,
+                                         output=output, executor=self.executor, titles=self.titles)
+            return self.apps[key]
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -486,14 +510,24 @@ class Handler(BaseHTTPRequestHandler):
                 allowed_origins = self.server.allowed_origins
                 if origin and origin not in allowed_origins:
                     raise AuthenticationError('This site is not allowed to access the API.')
-                if isinstance(app, Accounts):
+                if isinstance(app, Accounts) and app.backend:
                     uid = app.backend.verify(self.headers.get('Authorization'))
-                    app = app.for_user(uid)
                 else:
                     host = self.headers.get('Host', '')
                     require(host in (f'127.0.0.1:{self.server.server_port}', f'localhost:{self.server.server_port}'), 'Unrecognized local host.')
+                    uid = 'local'
                 if method in ('POST', 'PATCH'):
                     require(self.headers.get('Content-Type', '').startswith('application/json'), 'Expected application/json.')
+                if isinstance(app, Accounts):
+                    if app.library and path == '/api/videos':
+                        if method == 'GET':
+                            return self.json_response(app.library.options())
+                        if method == 'POST':
+                            result = app.library.start(self.body().get('url'))
+                            return self.json_response(result, 202 if result['status'] == 'running' else 200)
+                    if app.library and path.startswith('/api/videos/') and method == 'GET':
+                        return self.json_response(app.library.status(path[len('/api/videos/'):]))
+                    app = app.for_user(uid, self.headers.get('X-Review-Video'))
                 if path == '/api/bootstrap' and method == 'GET':
                     return self.json_response({**app.catalog, 'rooms': app.list_rooms(), 'profile': app.profile(), 'account_storage': app.storage is not None})
                 if path == '/api/profile' and method == 'PATCH':
@@ -560,6 +594,8 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header('Content-Length', str(len(content)))
             self.end_headers()
             self.wfile.write(content)
+        except IntakeError as e:
+            self.json_response({'error': str(e)}, e.status)
         except AuthenticationError as e:
             self.json_response({'error': str(e)}, 401)
         except BusyError as e:
@@ -584,8 +620,14 @@ def main():
     project_id = settings.get('FIREBASE_PROJECT_ID', '')
     if settings.get('K_SERVICE') and not project_id:
         raise ValueError('Cloud deployments require FIREBASE_PROJECT_ID; local mode cannot be published.')
-    app = (Accounts(args.data, client, FirebaseBackend(project_id), settings.get('RUNTIME_DIR', '/tmp/review-runtime'))
-           if project_id else Application(args.data, client))
+    backend = FirebaseBackend(project_id) if project_id else None
+    runtime = Path(settings.get('RUNTIME_DIR') or ('/tmp/review-runtime' if project_id else ROOT/'data/runtime'))
+    data = Path(args.data)
+    catalog = data/'04_web/catalog.json'
+    demo = json.loads(catalog.read_text(encoding='utf-8'))['video'] if catalog.is_file() else None
+    library = VideoLibrary(runtime/'video-library', settings, client, demo,
+                           backend.video_store() if backend else None)
+    app = Accounts(data if demo else None, client, backend, runtime, library=library)
     server = ThreadingHTTPServer((args.host, args.port), Handler)
     server.allowed_origins = {o.strip() for o in settings.get('ALLOWED_ORIGINS', '').split(',') if o.strip()}
     if not project_id:
@@ -599,6 +641,7 @@ def main():
         pass
     finally:
         server.server_close()
+        library.worker.shutdown(wait=False)
         app.executor.shutdown(wait=False)
         app.titles.shutdown(wait=False)
 

@@ -3,16 +3,22 @@ let account:User|null=null;
 export const accountKey=()=>account?.uid||'local';
 export function setAccount(user:User|null){if(user?.uid!==account?.uid)tasks.clear();account=user;}
 import type {Job} from './types';
+export const selectedVideo = () => new URLSearchParams(location.search).get('video');
+export class RequestError extends Error {
+  constructor(message:string, public status:number) {super(message);}
+}
 export async function request<T>(path:string,body?:unknown,method=body?'POST':'GET',signal?:AbortSignal):Promise<T>{
   const uid=accountKey();
   const token=account?await account.getIdToken():null;
   const headers:Record<string,string>={};
+  const video = selectedVideo();
+  if (video && !path.startsWith('/videos')) headers['X-Review-Video'] = video;
   if(body)headers['Content-Type']='application/json';
   if(token)headers.Authorization=`Bearer ${token}`;
   const response=await fetch(`/api${path}`,{method,headers,body:body?JSON.stringify(body):undefined,signal});
   if(uid!==accountKey())throw new DOMException('Account changed','AbortError');
   const data=await response.json();
-  if(!response.ok)throw new Error(data.error||'The request could not be completed.');
+  if(!response.ok)throw new RequestError(data.error||'The request could not be completed.',response.status);
   return data;
 }
 export async function waitJob<T>(job:Job<T>,signal?:AbortSignal):Promise<T>{
@@ -26,7 +32,7 @@ export async function waitJob<T>(job:Job<T>,signal?:AbortSignal):Promise<T>{
 }
 const tasks=new Map<string,Promise<unknown>>();
 export async function task<T>(path:string,body:Record<string,unknown>,signal?:AbortSignal):Promise<T>{
-  const key=accountKey()+path+JSON.stringify(body);
+  const key=JSON.stringify([accountKey(),selectedVideo(),path,body]);
   if(!tasks.has(key)){
     const promise=request<Job<T>>(path,{...body,request_id:crypto.randomUUID()}).then(job=>waitJob(job));
     tasks.set(key,promise);
