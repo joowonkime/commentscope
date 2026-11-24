@@ -1,5 +1,7 @@
 # Re.View / CommentScope MVP 명세
 
+2026-11-24 팀 발표본 인계(TASK-038·039, REQ-009·010)는 [발표 사이트와 재현 범위](../presentation/README.md)를 따른다. 아래 Python 제품의 연구 목표와 검증 이력은 별도로 보존한다.
+
 버전: `commentscope-mvp-20261120-v84`. B1 구현 병합 기준: `b361afce`. 완료된 확대 실행 코드 `096cb98`의 결과는 [실제999 결과](design/WIDE_MINING_EXPERIMENT_RESULT.md)로 보존한다.
 상태: 기존 의도·완료 기준을 대조한 기준본. 제품 개발 구현은 [현재 API](PRODUCT_API.md)와 [확인 결과](PRODUCT_DELIVERY_RESULT.md)를 따른다. 후보 설계와 최종 품질 합격은 구별한다.
 

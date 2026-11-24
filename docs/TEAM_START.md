@@ -1,5 +1,7 @@
 # GitHub에서 각자 AI로 CommentScope 개발하기
 
+**발표본으로 시작하는 팀원**은 [Re.View 발표 사이트](https://commentmas.vercel.app/)와 [현재 코드·실행·검증 안내](../presentation/README.md)를 사용합니다. 이 문서는 이전 Python 구현의 개발·협업 기록입니다.
+
 2026-11-19 / TASK-030 / REQ-009·010. 처음 받은 팀원과 코딩 AI의 시작 안내다.
 상태·품질 근거는 [인수인계](HANDOFF.md), 구조와 Mermaid는
 [현재 구현 구조](design/IMPLEMENTED_STRUCTURE.md), 작업 정본은
