@@ -277,3 +277,16 @@ test('explicit collective requests and ordinary questions take different paths i
     assert.equal(context.asksForGroupConclusion(question),false,question);
   }
 });
+
+test('when developed reasoning is held, show an actual source reason and distinguish a predicted effect',()=>{
+  const view=render([
+    {origin:'original_comment',text:'Try a later start.',declared_role:'core'},
+    {origin:'original_comment',text:'People might have more time to eat.',declared_role:'reason',kind:'prediction'},
+    {origin:'original_comment',text:'Start later!',declared_role:'core_restatement'}
+  ],{evidence_scope:'seeded_provenance'});
+  const detail=flatten(view).find(n=>n.tagName==='details');
+  const bubble=flatten(view).find(n=>n.children.includes(detail));
+  const visible=bubble.children.filter(n=>n!==detail).map(text).join(' ');
+  assert.match(visible,/댓글에서 기대한 효과.*People might have more time to eat/);
+  assert.doesNotMatch(visible,/Start later!/);
+});

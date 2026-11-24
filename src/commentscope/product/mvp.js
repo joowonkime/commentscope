@@ -921,12 +921,16 @@ function renderMessages(start=0){
       const evidence=node('details',undefined,'turn-evidence');
       evidence.append(node('summary',msg("Evidence and conditions")));
       const developed=points.filter(p=>p.origin==='ai_reasoning'||p.origin==='external_evidence');
-      const primary=developed.length ? developed : points.slice(0,1);
+      const stance=points.find(p=>p.declared_role==='core')||points[0];
+      const support=points.find(p=>p!==stance&&['reason','essential_condition'].includes(p.declared_role));
+      const primary=developed.length ? developed : [stance,...(support?[support]:[])];
       const seen=new Set();
       let previousOrigin;
       for(const point of primary){
-        if(point.origin&&previousOrigin!==point.origin){
-          const originLabel=point.origin==='ai_reasoning'?msg("Agent reasoning"):
+        if(point.origin&&(previousOrigin!==point.origin||point===support)){
+          const supportLabel=point.declared_role==='essential_condition'?msg("Condition in the source"):
+            point.kind==='prediction'?msg("Expected effect in the source"):msg("Reason given in the source");
+          const originLabel=point===support?supportLabel:point.origin==='ai_reasoning'?msg("Agent reasoning"):
             point.origin==='original_comment'?msg("Source position"):pointOrigin(point.origin);
           if(originLabel)bubble.append(node('small',originLabel,'answer-origin'));
         }

@@ -10,9 +10,9 @@ from commentscope.factory.automatic_contract import digest
 TURN_CHECKS = {
     'kind': ('Does the text match the claimed origin? AI reasoning is conditional or normative '
              'and cannot contain new empirical assertions.', 'matches_origin'),
-    'attribution': ('Does this avoid changing attribution, adding author experiences or claiming endorsement?', 'faithful'),
+    'attribution': ('The speaker of a new proposal is the AI participant. Does it speak for itself or accurately attribute a source, without inventing personal history or endorsement by a commenter, another speaker or the group?', 'faithful'),
     'scope': ('Compare this point with QUESTION as well as the source anchors and applicable CONDITIONS. '
-              'Reject a changed user scenario even if the source stance is faithfully represented. '
+              'Reject a changed user scenario even if the source stance is faithfully represented. A participant can offer its own option when the user asks for a group conclusion. Check substantive restrictions here. PHASE_TASK governs which part of the question is due now. '
               'Keep the stance, required conditions and uncertainty. '+QUESTION_SCOPE, 'preserved'),
     'basis': ('Is the point grounded in the cited anchors and any exact reference? Preserve hypothetical worlds. Peer speech and model memory '
               'are not factual evidence. A quote selected by the host must fit its use here. An AI proposal or value judgment '
@@ -20,7 +20,7 @@ TURN_CHECKS = {
 }
 TURN_TASKS = {
     'opening': 'State this perspective’s own question-specific reason or evidence limitation. '
-               'Leave peer responses and joint conclusions to later phases, including when the question requests them.',
+               'Leave peer responses and joint conclusions to later phases, including when the question requests them. For a group conclusion request, offer one option this speaker would put on the table and why or under what condition.',
     'reply': 'Address each supplied peer target with an explicit relation and a question-specific reason or evidence limitation.',
     'followup': 'Address the new question using the accepted claims and their limitations. These claims record agreement '
                 'among selected AI participants. Retain conditions and unresolved differences, and do not infer commenter agreement.',
@@ -122,6 +122,8 @@ def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None,
 Address the original QUESTION from this perspective's CLAIMS, respecting CONDITIONS and PHASE_TASK.
 Give the reader your position or a concrete proposal first, followed by its reason or decisive condition.
 Use the language of QUESTION for each new sentence. Speak in a concise conversational voice.
+For a decision, explain what you would do next or which trade-off you would accept. Keep a proposed
+action and any cited empirical result in separate points. Reserve statements of collective agreement for ratification.
 If PRIOR_DISCUSSION_CONTEXT_ONLY is present, use the user's earlier questions and previous public
 ideas to resolve references to this discussion. Ground any new point in your own available CLAIMS.
 In a reply, use the supplied TARGETS and your own grounds.
