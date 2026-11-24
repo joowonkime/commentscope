@@ -73,7 +73,6 @@ test('A submitted URL survives reload and opens a conversation in that video', a
   await page.getByRole('button',{name:'Save & explore perspectives'}).click();
   await expect(page.locator('.perspective-card')).toHaveCount(1);
   await page.getByRole('button',{name:'Converse with the perspectives'}).click();
-  await page.getByRole('button',{name:/Group chat \(1:N\)/}).waitFor();
   await expect(page.getByRole('button',{name:/Group chat \(1:N\)/})).toBeDisabled();
   await page.getByRole('button',{name:/1:1 chat/}).click();
   await page.getByRole('radio').first().click();
@@ -109,6 +108,20 @@ test('Invalid links and failed preparations leave the URL editable and the examp
   await page.getByRole('link',{name:'Open prepared video'}).click();
   await expect(page.getByLabel('Your initial view',{exact:true})).toBeVisible();
   expect(starts).toBe(2);
+});
+
+test('The previous API still opens its SBS example during a staged deployment',async({page})=>{
+  const api=await mockApi(page);
+  await page.route('**/api/videos',route=>route.fulfill({status:404,json:{error:'API endpoint not found.'}}));
+  await page.goto('/');
+  await expect(page.getByText('New video generation is unavailable on this server.',{exact:false})).toBeVisible();
+  await page.getByRole('link',{name:'Open prepared video'}).click();
+  await expect(page.getByLabel('Your initial view',{exact:true})).toBeVisible();
+  await page.goto('/?video=newvideo123');
+  await expect(page.getByRole('alert')).toContainText('This analysis is unavailable');
+  await page.getByRole('link',{name:'Choose video',exact:true}).click();
+  await expect(page.getByLabel('YouTube video URL')).toBeVisible();
+  expect(api.requests.filter(r=>r.method==='POST')).toHaveLength(0);
 });
 
 test('Explore uses five actual groups, preserves other opinions and compares the initial view',async({page})=>{
