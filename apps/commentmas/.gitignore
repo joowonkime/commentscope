@@ -1,0 +1,25 @@
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.DS_Store
+.venv/
+data/processed/
+frontend/node_modules/
+frontend/dist/
+frontend/test-results/
+frontend/playwright-report/
+
+.vercel/
+deploy-data/
+.deploy/
+
+*-debug.log
+
+# Shared source excludes local datasets, reports and credentials.
+data/
+screenshots/
+*.tsbuildinfo
+*.pem
+*.key

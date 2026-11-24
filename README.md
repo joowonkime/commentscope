@@ -1,5 +1,10 @@
 # CommentScope — 지금까지 만든 것
 
+**별도 배포 시연 앱:** [CommentMAS 시연 링크](https://commentmas.vercel.app) ·
+[소스 및 실행 안내](apps/commentmas/README.md) · [공유 범위·검증 기록](apps/commentmas/IMPORT.md).
+2026-11-24 사용자 요청으로 배포된 React/Python 앱을 `apps/commentmas/`에 추가했습니다.
+기존 `src/commentscope`의 API·Factory·명세 상태는 유지합니다. 실제 댓글·키·개인 기록은 포함하지 않습니다.
+
 **2026-11-18 인수인계:** 새 담당자는 [HANDOFF — 현재 상태·무료 실행·필요 자료](docs/HANDOFF.md) →
 [현재 구현 구조와 Mermaid](docs/design/IMPLEMENTED_STRUCTURE.md)부터 읽습니다.
 Agent 생성 이후의1:1/그룹·근거·성찰도 구현돼 있지만 실제 답변 유용성은 부족합니다.

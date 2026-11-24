@@ -1,0 +1,22 @@
+{
+  "meta": {"stage": "01_filter", "selection": "keep", "topic": "주4일·4.5일제와 근무시간 단축", "synthetic": true},
+  "comments": [
+    {"comment_id": "w1", "parent_id": "", "text": "주4일제 찬성입니다. 쉬는 날 하루가 더 있으면 충분히 회복하고 가족과 시간을 보낼 수 있어요.", "like_count": 0},
+    {"comment_id": "w2", "parent_id": "", "text": "지금 격주로 주4일제를 하는데 만족합니다. 매일 조금 일찍 끝나는 것보다 하루를 통째로 쉬는 게 낫습니다.", "like_count": 0},
+    {"comment_id": "d1", "parent_id": "", "text": "주4일제로 몰아서 쉬기보다 주5일을 유지하고 매일 오후 4~5시에 퇴근했으면 좋겠습니다.", "like_count": 0},
+    {"comment_id": "d2", "parent_id": "", "text": "매일 아이 하원시키려면 하루만 일찍 끝나서는 소용없어요. 근무일수는 유지하되 하루 노동시간을 줄이는 게 낫죠.", "like_count": 0},
+    {"comment_id": "c1", "parent_id": "", "text": "일하는 시간은 줄고 임금은 유지하면 기업 비용이 감당되지 않습니다. 주4일제 도입에 반대합니다.", "like_count": 0},
+    {"comment_id": "c2", "parent_id": "", "text": "제조업은 가동시간이 생산량인데 생산은 줄여놓고 월급을 그대로 주라는 건 무리입니다. 지금 도입하면 고용도 줄 겁니다.", "like_count": 0},
+    {"comment_id": "f1", "parent_id": "", "text": "사무직에는 도입하되 병원과 교대직은 다른 방식이 필요합니다. 직종별로 적용 방식을 달리하는 게 맞아요.", "like_count": 0},
+    {"comment_id": "f2", "parent_id": "", "text": "회사와 직무 상황이 다르니 일괄 시행보다 노사가 자율적으로 쉬는 날과 근무표를 정해야 합니다.", "like_count": 0},
+    {"comment_id": "l1", "parent_id": "", "text": "새 제도보다 포괄임금제부터 폐지하세요. 야근을 공짜로 시킬 수 있으면 법정 근무시간만 줄여도 의미 없습니다.", "like_count": 0},
+    {"comment_id": "l2", "parent_id": "", "text": "우리 현장은 아직 주6일입니다. 4일제 얘기 전에 지금 있는 주5일제와 초과근무 수당부터 제대로 지켜주세요.", "like_count": 0},
+    {"comment_id": "mixed", "parent_id": "", "text": "주4일제에 찬성하고 하루 더 쉬고 싶지만, 포괄임금제 폐지와 기존 노동법 집행이 먼저라고 생각합니다.", "like_count": 0},
+    {"comment_id": "reply", "parent_id": "d1", "text": "동의합니다. 매일 가족이랑 저녁 먹을 수 있는 쪽이 좋아요.", "like_count": 0}
+  ],
+  "semantic_expectations": {
+    "same_primary": [["w1", "w2"], ["d1", "d2"], ["d1", "reply"], ["l1", "l2"]],
+    "different_primary": [["w1", "d1"], ["w1", "c1"], ["w1", "l1"], ["d1", "c1"]],
+    "multi_view_comment": "mixed"
+  }
+}
