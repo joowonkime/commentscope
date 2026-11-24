@@ -182,3 +182,9 @@ YOUR_HOST {
 과목 OpenRouter 크레딧은 모델 호출에 쓰인다. Google Cloud에서 서버를 만드는 경우 프로젝트에 사용 가능한 Cloud Billing 계정을 연결한다. 결제 계정이 없다면 팀이 승인한 계정을 만들거나 학교가 제공하는 계정의 연결 권한을 받는다. [Google Cloud 결제 계정 만들기](https://docs.cloud.google.com/billing/docs/how-to/create-billing-account) · [프로젝트 연결](https://docs.cloud.google.com/billing/docs/how-to/modify-project)
 
 팀에 연결할 계정이 없고 전일제 대학생 자격이 있으면 **Azure for Students → Start free**에서 학교 이메일로 인증할 수 있다. Microsoft는 카드 없이 가입하는 학생 구독과 12개월 동안 사용할 수 있는 Azure 크레딧 $100을 안내한다. 이 경로를 쓰면 팀의 Python 서버와 지속 디스크를 Azure에 둔다. [Microsoft 학생 구독](https://azure.microsoft.com/en-us/free/students)
+
+## 팀 전달본 초기 관점과 공개판 토론
+
+새 방문자가 SBS 영상을 열면 **업종별 서비스 공백, 임금·고용 여건, 매일의 근무시간, 포괄임금·무급 야근, 평일 하루 휴식**을 비교한다. 카드와 분포의 댓글 수는 주된 관점에 한 번 배정된 수다. 그룹 안에서도 입장과 이유의 예시 원문을 따로 열 수 있다. 그룹 배정 수와 특정 발언을 지지하는 원문 수는 의미가 다르다. 한국어·영어 선택, 기존 Library 기록, 원래 대화·자동 토론·합의 Agent·Reflect는 공개판 API를 사용한다.
+
+운영자는 표준 수집 snapshot 또는 팀 수집 JSON에서 `PYTHONPATH=src python -m tools.perspective_groups.prepare SNAPSHOT PRIVATE_OUTPUT --provider openrouter --model OPENROUTER_MODEL_ID`로 새 영상을 준비할 수 있다. 이 명령은 모델을 호출한다. 이미 준비된 표본은 `PYTHONPATH=src python -m tools.perspective_groups.catalog PRIVATE_PREPARED_DIR PRIVATE_CATALOG_JSON`으로 다시 등록한다. `--youtube-refresh`에는 재확인한 댓글 본문·부모·영상 귀속 자료를, `--reference`에는 같은 영상의 검토된 문헌과 만료일을 전달할 수 있다. 이 등록에는 모델 호출이 없다. 운영 데이터와 대화 DB는 비공개로 보관한다.

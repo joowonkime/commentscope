@@ -431,7 +431,33 @@
   "Conversation progress": "대화 진행 상태",
   "Ask about a shared claim or one of its conditions.": "합의한 주장이나 그 조건에 관해 질문해 보세요.",
   "Evidence from these turns": "근거가 된 발언과 출처",
-  "Original comments for the consensus agent": "합의 Agent의 원문 보기"
+  "Original comments for the consensus agent": "합의 Agent의 원문 보기",
+  "Explore perspectives by": "관점 정렬",
+  "All viewpoints": "전체 관점",
+  "Similar to me": "나와 유사한 관점",
+  "New considerations": "새롭게 볼 관점",
+  "Most liked": "좋아요가 많은 관점",
+  "Largest group": "가장 큰 그룹",
+  "Distinct perspective": "주요 관점",
+  "{0} of likes": "좋아요의 {0}",
+  "{0} of comments": "댓글의 {0}",
+  "WHY THEY THINK SO": "이렇게 생각하는 이유",
+  "{0} comments · {1} likes": "댓글 {0}개 · 좋아요 {1}개",
+  "Here’s what {0} comments are saying": "댓글 {0}개에서 찾은 관점",
+  "{0} perspectives · {1} retained opinions · {2} other opinions": "관점 {0}개 · 의견 댓글 {1}개 · 기타 의견 {2}개",
+  "Of {0} retained opinions, each comment counts once.": "의견이 담긴 댓글 {0}개를 각각 한 번씩 집계했습니다.",
+  "Of {0} likes on retained opinions. Likes measure engagement.": "의견 댓글에 달린 좋아요 {0}개 기준입니다. 좋아요는 반응을 나타냅니다.",
+  "How the comment section is composed": "댓글과 좋아요의 관점별 비중",
+  "Other opinions": "기타 의견",
+  "Comments": "댓글",
+  "Browse other opinions ({0})": "기타 의견 {0}개 보기",
+  "Browse group comments ({0})": "이 그룹의 댓글 {0}개 보기",
+  "Perspective profile": "관점 프로필",
+  "Loading source comments…": "원댓글을 불러오는 중…",
+  "This comment could not be loaded.": "이 댓글을 불러오지 못했습니다.",
+  "Previous": "이전",
+  "Next": "다음",
+  "{0}–{1} of {2}": "전체 {2}개 중 {0}–{1}"
 }
   </script>
   <link rel="stylesheet" href="/mvp/app.css"><script defer src="/mvp/app.js"></script>
@@ -498,7 +524,9 @@
         <details class="initial-summary"><summary>✍ Your initial view <span>View or edit</span></summary><form id="edit-initial"><label class="sr-only" for="initial-edit">Your initial view</label><textarea id="initial-edit" rows="3"></textarea><button type="submit" class="secondary">Save changes</button></form></details>
         <div id="perspective-picker">
         <div id="topic-intro" hidden><div><h2>Browse perspectives by topic</h2><p>Open a topic to read the views and choose who joins the conversation.</p></div><a href="#breakdown-title">Compare opinion and like shares</a></div>
+        <div id="group-sort" class="group-sort" role="group" aria-label="Explore perspectives by" hidden></div>
         <div class="comparison-actions"><span id="compare-progress" class="muted" role="status"></span><button id="compare-all" class="secondary" type="button" hidden>Retry unavailable comparisons</button></div><div id="perspectives" class="cards"></div>
+        <section id="group-distribution" class="group-distribution" hidden></section>
         <div class="action-bar"><p id="selection-hint">Choose one perspective for a 1:1 conversation, or up to three for a group.</p><button id="open-room" class="primary" type="button">Converse with selected perspectives <img src="/mvp/assets/0a7d3.svg" alt=""></button></div>
         </div>
       </section>
@@ -547,6 +575,7 @@
     <p id="chat-picker-hint" class="muted" role="status"></p><button type="submit" class="primary" disabled>Open conversation</button>
   </form></dialog>
   <dialog id="comparison" class="comparison-modal accent-0" hidden aria-labelledby="comparison-title" data-node-id="210:864"><div class="modal-accent"></div><header class="comparison-header"><div id="comparison-avatar" class="comparison-avatar"></div><div><p class="eyebrow">COMPARE WITH YOUR VIEW</p><h2 id="comparison-title">Perspective</h2><p id="comparison-stance"></p></div><button id="close-comparison" type="button" class="close-button" aria-label="Close comparison"><img src="/mvp/assets/48623.svg" alt=""></button></header><div class="comparison-body"><aside class="comparison-your-view"><h3>✍ YOUR INITIAL VIEW</h3><div id="comparison-initial"></div><div class="comparison-legend"><span class="similar">━ Similar</span><span class="different">━ Different</span><span class="consideration">━ To consider</span></div></aside><div><div id="comparison-items"></div><div id="comparison-sources"></div></div></div></dialog>
+  <dialog id="group-sources" class="source-modal" aria-labelledby="group-source-title"><header><h2 id="group-source-title"></h2><button type="button" id="close-group-sources" class="close-button" aria-label="Close">×</button></header><ol id="group-source-list"></ol><footer id="group-source-pages"></footer></dialog>
   <dialog id="source-dialog" class="source-modal" aria-labelledby="source-title"><header><h2 id="source-title">Original comment</h2><button id="close-source" type="button" class="close-button" aria-label="Close original comment"><img src="/mvp/assets/48623.svg" alt=""></button></header><p class="muted">Read the comment behind the response.</p><pre id="source">Choose an evidence link in the conversation.</pre></dialog>
   <dialog id="perspective-dialog" class="perspective-modal" aria-labelledby="perspective-info-title"><header><h2 id="perspective-info-title">About these perspectives</h2><button id="close-perspective" class="close-button" type="button" aria-label="Close perspective info"><img src="/mvp/assets/48623.svg" alt=""></button></header><div id="perspective-info"></div></dialog>
   <footer id="app-footer">Re.View · Understand different reasons. Make room for your own thinking.<span id="analysis-state"></span></footer>

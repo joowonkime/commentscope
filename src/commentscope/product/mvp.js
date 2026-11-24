@@ -171,6 +171,8 @@ async function resolvePerspectiveText(analysis, key, field) {
 
 function presentationText(key, original) {
   const analysis = state.analysis;
+  const grouped = analysis?.grouping && key && groupedViewField(key);
+  if (grouped) return grouped;
   if (!analysis?.analysis_id || !key || !original) return original;
   let fields = perspectiveFields.get(analysis);
   if (!fields) {
@@ -246,7 +248,8 @@ async function retryableWrite(slot, path, method, fields, prepareRevision) {
 function indexOf(id){return state.analysis.perspectives.findIndex(p=>p.id===id);}
 function perspective(id){return state.analysis.perspectives.find(p=>p.id===id);}
 function label(id){if(state.room?.kind==='synthesis_chat'&&state.room.participant_ids?.includes(id))return msg("Consensus agent");const p=perspective(id);return p ? perspectiveName(p) : msg("Perspective");}
-function avatar(id,small=false){const i=Math.max(0,indexOf(id)); return asset(small?'0385b':['4ea9b','5e642','baf01','d51bb','e77a2'][i%5]);}
+function avatar(id,small=false){const i=Math.max(0,indexOf(id)); const icons=state.analysis.grouping?['4ea9b','e77a2','baf01','d51bb','5e642']:['4ea9b','5e642','baf01','d51bb','e77a2'];return asset(small&&!state.analysis.grouping?'0385b':icons[i%5]);}
+$('close-group-sources').onclick=()=>closeDialog('group-sources');
 function closeDialog(id){const dialog=$(id); if(dialog.open)dialog.close(); if(id==='comparison')dialog.hidden=true;}
 function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open)dialog.showModal();}
 function showStep(step){
@@ -254,7 +257,7 @@ function showStep(step){
   if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}}
   if(step==='converse'&&!state.room)$('participant-panel').hidden=true;
   if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
-  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
+  for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog','group-sources'])closeDialog(id);
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
   document.body.dataset.step=step;
   rememberConversation();
@@ -294,7 +297,11 @@ function renderAnalysis(){
     summary.push(msg("{0} linked as direct evidence",n-other.count));
   }
   if(a.canonical_population && a.canonical_population!==n)summary.push(msg("{0} comments in the collected set",a.canonical_population));
-  setText($('analysis-summary'), joinText(summary));
+  document.body.classList.toggle('grouped-analysis',Boolean(a.grouping));
+  $('group-sort').hidden = $('group-distribution').hidden = !a.grouping;
+  $('breakdown-title').closest('.breakdown').hidden = Boolean(a.grouping);
+  setText($('explore-title'),a.grouping?msg('Here’s what {0} comments are saying',shareNumber.format(a.grouping.collected)):msg('Here’s what the comments are saying'));
+  setText($('analysis-summary'),a.grouping?msg('{0} perspectives · {1} retained opinions · {2} other opinions',a.perspectives.length,shareNumber.format(a.grouping.retained),a.grouping.other):joinText(summary));
   setText($('sidebar-video-meta'), Number.isInteger(n)?processedCount:'');
   setText($('analysis-state'), a.quality_gate_passed?'':msg("Development analysis · quality review pending"));
   setText($('video-description'), video.description||msg("Watch the source video, then write what you think."));
@@ -332,7 +339,7 @@ function renderAnalysis(){
     $('video-frame').replaceChildren(play);
   }
   updatePerspectiveLanguageNote();
-  renderComposition();
+  if(a.grouping)groupedDistribution();else renderComposition();
 }
 let opinionCatalog;
 let activeOpinionSample;
@@ -614,10 +621,129 @@ async function showPerspectiveTopics(analysis, cards, expanded) {
   if (focused) focused.focus({preventScroll:true});
 }
 
+let groupOrder = 'all';
+const groupPalette = ['#e8774a','#d64f6b','#6554e8','#1f9e8a','#3b82f6','#a9a8bb'];
+function groupedViewField(key) {
+  if (!state.analysis?.grouping) return null;
+  const [kind,id] = key.split(':');
+  if(kind==='name')return perspective(id)?.group?.name;
+  if(kind==='claim')return state.analysis.perspectives.map(p=>p.group?.claims[id]).find(Boolean);
+  return null;
+}
+
+function groupSortValue(p) {
+  const relations=state.session?.comparisons?.[p.id]?.relations || [];
+  if(groupOrder==='likes')return p.group.likes;
+  if(groupOrder==='similar')return Number(relations.includes('agreement'));
+  if(groupOrder==='new')return Number(relations.includes('additional_condition') || relations.includes('difference'));
+  return 0;
+}
+function sortGroupCards() {
+  if(!state.analysis?.grouping)return;
+  const container=$('perspectives');
+  const ranked=[...state.analysis.perspectives].sort((a,b)=>groupSortValue(b)-groupSortValue(a));
+  for(const p of ranked){
+    const card=$('perspective-card-'+p.id);
+    if(card && card.parentElement===container)container.append(card);
+  }
+  for(const button of $('group-sort').querySelectorAll('button'))
+    button.setAttribute('aria-pressed',String(button.dataset.order===groupOrder));
+}
+function groupedControls() {
+  const box=$('group-sort');box.replaceChildren(node('span',msg('Explore perspectives by')));
+  for(const [key,title] of [['all','All viewpoints'],['similar','Similar to me'],['new','New considerations'],['likes','Most liked']]){
+    const choice=node('button',msg(title),'quiet');choice.type='button';choice.dataset.order=key;
+    choice.onclick=()=>{groupOrder=key;sortGroupCards();};
+    box.append(choice);
+  }
+}
+function showGroupedCard(card, p, top, compare, relations) {
+  const g=p.group, report=state.analysis.grouping, views=state.analysis.perspectives;
+  const peakComments=Math.max(...views.map(v=>v.group.comments)), peakLikes=Math.max(...views.map(v=>v.group.likes));
+  const liked=peakLikes>0 && g.likes===peakLikes;
+  const standout=g.comments===peakComments?msg('Largest group'):liked?msg('Most liked'):msg('Distinct perspective');
+  const badge=node('span',joinText([standout,msg(liked?'{0} of likes':'{0} of comments',sharePercent(liked?g.likes:g.comments,liked?report.likes:report.retained))]),'source-badge');
+  const name=top.querySelector('.card-title');
+  const subtitle=name.querySelector('small');
+  if(g.subtitle?.original || g.subtitle?.translation?.en)setText(subtitle,g.subtitle);
+  const why=node('div',undefined,'group-why');
+  why.append(node('h3',msg('WHY THEY THINK SO')),node('p',g.why));
+  const totals=node('p',msg('{0} comments · {1} likes',shareNumber.format(g.comments),shareNumber.format(g.likes)),'group-totals');
+  card.replaceChildren(top,badge,totals,node('h3',msg('STANCE'),'card-section-label'),node('p',g.stance,'card-stance'),why,relations,compare,groupedProfile(p));
+}
+function groupShareGraphic(views, group, metric, denominator) {
+  const wrap=node('div',undefined,'group-bar-row');
+  wrap.append(node('h3',msg(metric==='comments'?'Comments':'Likes')));
+  const rows=views.map((v,i)=>({title:label(v.id),count:v.group[metric],color:groupPalette[i]}));
+  rows.push({title:msg('Other opinions'),count:metric==='comments'?group.other:group.other_likes,color:groupPalette[5]});
+  const graph=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  graph.setAttribute('viewBox','0 0 1000 26');graph.setAttribute('preserveAspectRatio','none');graph.setAttribute('aria-hidden','true');
+  let start=0;
+  for(const row of rows){
+    if(!row.count||!denominator)continue;
+    const rect=document.createElementNS(graph.namespaceURI,'rect');
+    rect.setAttribute('x',String(start*1000/denominator));rect.setAttribute('width',String(row.count*1000/denominator));
+    rect.setAttribute('height','26');rect.setAttribute('fill',row.color);graph.append(rect);
+    if(row.count/denominator>=0.05){
+      const text=document.createElementNS(graph.namespaceURI,'text');
+      text.setAttribute('x',String((start+row.count/2)*1000/denominator));text.setAttribute('y','17');
+      text.setAttribute('text-anchor','middle');text.textContent=Math.round(100*row.count/denominator)+'%';graph.append(text);
+    }
+    start+=row.count;
+  }
+  const legend=node('ul',undefined,'group-legend');
+  rows.forEach((row,i)=>{
+    const item=node('li',undefined,'group-color-'+i);
+    item.append(node('i'),uiTextNode(row.title),' ',node('strong',sharePercent(row.count,denominator)));
+    legend.append(item);
+  });
+  wrap.append(node('p',msg(metric==='comments'?'Of {0} retained opinions, each comment counts once.':'Of {0} likes on retained opinions. Likes measure engagement.',shareNumber.format(denominator)),'muted'),graph,legend);
+  return wrap;
+}
+function groupedDistribution(){
+  const a=state.analysis,g=a.grouping,panel=$('group-distribution');
+  const other=node('button',msg('Browse other opinions ({0})',g.other),'secondary');other.type='button';
+  other.onclick=()=>openGroupSources(msg('Other opinions'),g.other_ids);
+  panel.replaceChildren(node('h2',msg('How the comment section is composed')),
+    groupShareGraphic(a.perspectives,g,'comments',g.retained),groupShareGraphic(a.perspectives,g,'likes',g.likes),other);
+}
+let groupSourcePage=0;
+async function openGroupSources(title,ids,start=0){
+  const request=++groupSourcePage,dialog=$('group-sources'),session=state.session?.session_id;
+  if(!session)return;
+  setText($('group-source-title'),title);
+  const content=$('group-source-list'),actions=$('group-source-pages'),pageSize=6;
+  content.replaceChildren(node('p',msg('Loading source comments…')));actions.replaceChildren();
+  openDialog('group-sources');
+  const fetched=await Promise.allSettled(ids.slice(start,start+pageSize).map(id=>api(base()+'/sources/'+encodeURIComponent(id))));
+  if(request!==groupSourcePage || session!==state.session?.session_id || !dialog.open)return;
+  content.replaceChildren();
+  for(const result of fetched){
+    const item=node('li',result.status==='fulfilled'?result.value.text:msg('This comment could not be loaded.'));
+    item.dir='auto';content.append(item);
+  }
+  for(const [caption,next] of [['Previous',start-pageSize],['Next',start+pageSize]]){
+    const b=node('button',msg(caption),'secondary');b.type='button';b.disabled=next<0 || next>=ids.length;
+    b.onclick=()=>void openGroupSources(title,ids,next);
+    actions.append(b);
+  }
+  actions.append(node('span',msg('{0}–{1} of {2}',ids.length?start+1:0,Math.min(start+pageSize,ids.length),ids.length)));
+}
+function groupedProfile(p){
+  const box=node('details',undefined,'source-disclosure');
+  box.append(node('summary',msg('Perspective profile')),node('p',p.group.claims[p.id+'-profile'] || p.group.stance));
+  for(const item of [...p.group.variations,...p.group.limitations])box.append(node('p',item));
+  const sources=node('button',msg('Browse group comments ({0})',p.group.comments),'secondary');
+  sources.type='button'; sources.onclick=()=>void openGroupSources(label(p.id),p.group.members);
+  box.append(sources);
+  return box;
+}
+
 function renderPerspectives(){
   const container = $('perspectives'), analysis = state.analysis;
   const expanded = new Set(container.dataset.analysis === analysis.analysis_id
     ? [...container.querySelectorAll('.perspective-topic[open]')].map(topic => topic.dataset.topic) : []);
+  if(container.dataset.analysis !== analysis.analysis_id)groupOrder='all';
   container.dataset.analysis = analysis.analysis_id || '';
   container.classList.remove('topic-list');
   $('topic-intro').hidden = true;
@@ -652,12 +778,15 @@ function renderPerspectives(){
     card.dataset.perspective=p.id;
     card.id='perspective-card-'+p.id;
     const relations=node('div',undefined,'card-relations');relations.setAttribute('aria-live','polite');renderRelations(relations,p.id);
-    card.append(relations,compare,sourceDisclosure(p));container.append(card);
+    if(p.group)showGroupedCard(card,p,top,compare,relations);
+    else card.append(relations,compare,sourceDisclosure(p));
+    container.append(card);
     cards.set(p.id,card);
   }
   updateSelection();
   updateComparisonProgress();
-  void showPerspectiveTopics(analysis, cards, expanded);
+  if(analysis.grouping){groupedControls();sortGroupCards();groupedDistribution();}
+  else void showPerspectiveTopics(analysis, cards, expanded);
 }
 const relationNames={agreement:msg("Agreement"),difference:msg("Difference"),additional_condition:msg("Additional condition"),unclear:msg("Unclear")};
 let comparisonRun, activeComparisons=0, latestComparison=0;
@@ -752,6 +881,7 @@ async function processComparison(run,entry){
     if(isCurrentComparison(run)){
       refreshComparisonCard(entry.id);
       updateComparisonProgress();
+      if(state.analysis.grouping && ['similar','new'].includes(groupOrder))sortGroupCards();
     }
     pumpComparisons();
   }
@@ -841,6 +971,7 @@ async function compareWith(pid){
     }
     if(!items.length)$('comparison-items').append(node('p',msg("No clear similarity or difference could be established from the two views.")));
   }
+  if(p.group)$('comparison-items').append(groupedProfile(p));
   openDialog('comparison');status('');
 }
 $('compare-all').onclick=()=>startComparisons(true);
@@ -1474,7 +1605,8 @@ async function renderLibrary(){
   const catalog=api('/analyses','GET',undefined,'').then(({analyses})=>{
     if(!current())return;
     videos.replaceChildren();
-    for(const analysis of analyses){
+    const preferredVideos = new Set(analyses.filter(a=>a.grouping&&availableAnalysis(a)).map(a=>a.video?.video_id));
+    for(const analysis of analyses.filter(a=>a.grouping||!preferredVideos.has(a.video?.video_id))){
       const title=analysis.video?.title||msg("Registered discussion");
       const detail=availableAnalysis(analysis)
         ? msg("{0} analyzed comments · {1} perspectives",analysis.analyzed_comments,analysis.perspectives.length)
