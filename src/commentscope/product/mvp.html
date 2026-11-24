@@ -402,7 +402,30 @@
   "{0} / 3 selected": "{0} / 3개 선택",
   "Saved · Revision {0}": "저장했습니다 · 저장본 {0}",
   "What original comments support this perspective?": "이 관점을 뒷받침하는 원댓글은 무엇인가요?",
-  "What conditions or limits do these comments mention?": "이 댓글에서 제시한 조건이나 한계는 무엇인가요?"
+  "What conditions or limits do these comments mention?": "이 댓글에서 제시한 조건이나 한계는 무엇인가요?",
+  "Perspectives in this chat": "참여 Agent의 입장",
+  "Agent reasoning": "AI 추론",
+  "Source position": "출처에서 확인된 입장",
+  "Starting position": "출발 입장",
+  "Latest contribution": "최근 발언",
+  "My starting view": "나의 처음 의견",
+  "Waiting to speak": "발언 대기",
+  "Speaking": "답변 작성 중",
+  "Published": "발언 게시됨",
+  "Only the source position is available for this question.": "이 질문에는 출처에서 확인된 입장까지만 답할 수 있습니다.",
+  "Evidence and conditions": "근거와 조건 보기",
+  "Find common ground": "이 대화의 합의점 찾기",
+  "What practical idea can we agree on from this discussion, and under what conditions?": "지금까지의 대화에서 함께 제안할 만한 아이디어 하나와 그 조건은 무엇인가요?",
+  "Return to group chat": "원래 그룹 대화로",
+  "Preparing your question…": "질문을 전달하고 있습니다…",
+  "{0} of {1} turns published": "발언 {1}개 중 {0}개 게시됨",
+  "{0} is preparing a reply": "{0} 답변 작성 중",
+  "Checking which ideas everyone accepts…": "모두가 수용하는 주장을 검토하고 있습니다…",
+  "Preparing the consensus agent…": "합의 Agent를 준비하고 있습니다…",
+  "Conversation progress": "대화 진행 상태",
+  "Ask about a shared claim or one of its conditions.": "합의한 주장이나 그 조건에 관해 질문해 보세요.",
+  "Evidence from these turns": "근거가 된 발언과 출처",
+  "Original comments for the consensus agent": "합의 Agent의 원문 보기"
 }
   </script>
   <link rel="stylesheet" href="/mvp/app.css"><script defer src="/mvp/app.js"></script>
@@ -474,10 +497,13 @@
         </div>
       </section>
       <section id="converse" hidden data-node-id="314:2807"><div class="conversation-shell">
-        <aside class="conversations-sidebar"><h2>Conversations</h2><a id="sidebar-video" class="sidebar-video" target="_blank" rel="noopener noreferrer"><div id="sidebar-thumbnail" class="sidebar-thumbnail"></div><div><p class="eyebrow">SOURCE VIDEO</p><strong id="sidebar-video-title">This discussion</strong><small id="sidebar-video-meta"></small></div></a><div class="recent-header"><span>RECENT</span><div class="room-filters"><button type="button" data-room-filter="all" class="active">All</button><button type="button" data-room-filter="one_to_one">1:1</button><button type="button" data-room-filter="group">Group</button></div></div><label class="sr-only" for="room-search">Search conversations</label><input id="room-search" type="search" placeholder="⌕ Search conversations"><label class="sr-only" for="rooms">Previous conversation</label><select id="rooms" class="sr-only"><option value="">Choose a conversation</option></select><div id="room-list" class="room-list"></div><button id="new-chat" class="primary wide" type="button">＋ New chat</button></aside>
-        <section id="empty-conversation" class="empty-conversation" hidden><h1>Start a conversation</h1><p>Choose which perspectives you’d like to hear from.</p><button class="primary" id="empty-new-chat" type="button">Choose perspectives</button></section><section id="chat-workspace" class="chat-workspace"><header class="chat-header"><div id="room-avatars" class="room-avatars"></div><div class="chat-heading"><h1 id="room-title">Choose a perspective</h1><p id="room-summary">Your conversation stays connected to its source comments.</p></div><button id="agent-info" type="button" class="tiny-button">ⓘ Perspective info</button></header><div class="conversation-toolbar"><span id="room-state" role="status">Choose perspectives in Explore to start.</span><div><button id="recover-room" class="secondary" type="button" hidden>Ask another question</button><button id="pause" class="quiet" type="button">Pause</button><button id="resume" class="quiet" type="button">Resume</button><button id="next-round" class="quiet" type="button">Next round</button><button id="close-room" class="quiet" type="button">End chat</button><button id="show-debate-result" class="secondary" type="button" hidden>View debate conclusion</button></div></div>
-          <form id="opening" class="opening-card"><p class="eyebrow">START A CONVERSATION</p><h2>What would you like to ask?</h2><label class="sr-only" for="opening-question">Opening question</label><textarea id="opening-question" rows="3">What is this perspective’s central position, and what reasons support it?</textarea><button class="primary" type="submit"><span id="opening-submit-label">Start conversation</span> <img src="/mvp/assets/0a7d3.svg" alt=""></button></form><div id="messages" class="messages" aria-live="polite" aria-relevant="additions"></div>
+        <aside class="conversations-sidebar"><h2>Conversations</h2><a id="sidebar-video" class="sidebar-video" target="_blank" rel="noopener noreferrer"><div id="sidebar-thumbnail" class="sidebar-thumbnail"></div><div><p class="eyebrow">SOURCE VIDEO</p><strong id="sidebar-video-title">This discussion</strong><small id="sidebar-video-meta"></small></div></a><section id="participant-panel" class="participant-panel" aria-labelledby="participant-title" hidden><h3 id="participant-title">Perspectives in this chat</h3><div id="participant-list"></div></section><div class="recent-header"><span>RECENT</span><div class="room-filters"><button type="button" data-room-filter="all" class="active">All</button><button type="button" data-room-filter="one_to_one">1:1</button><button type="button" data-room-filter="group">Group</button></div></div><label class="sr-only" for="room-search">Search conversations</label><input id="room-search" type="search" placeholder="⌕ Search conversations"><label class="sr-only" for="rooms">Previous conversation</label><select id="rooms" class="sr-only"><option value="">Choose a conversation</option></select><div id="room-list" class="room-list"></div><button id="new-chat" class="primary wide" type="button">＋ New chat</button></aside>
+        <section id="empty-conversation" class="empty-conversation" hidden><h1>Start a conversation</h1><p>Choose which perspectives you’d like to hear from.</p><button class="primary" id="empty-new-chat" type="button">Choose perspectives</button></section><section id="chat-workspace" class="chat-workspace"><header class="chat-header"><div id="room-avatars" class="room-avatars"></div><div class="chat-heading"><h1 id="room-title">Choose a perspective</h1><p id="room-summary">Your conversation stays connected to its source comments.</p></div><button id="agent-info" type="button" class="tiny-button">ⓘ Perspective info</button></header><div class="conversation-toolbar"><span id="room-state" role="status">Choose perspectives in Explore to start.</span><div><button id="recover-room" class="secondary" type="button" hidden>Ask another question</button><button id="pause" class="quiet" type="button">Pause</button><button id="resume" class="quiet" type="button">Resume</button><button id="next-round" class="quiet" type="button">Next round</button><button id="close-room" class="quiet" type="button">End chat</button><button id="return-to-group" class="quiet" type="button" hidden>Return to group chat</button><button id="show-debate-result" class="secondary" type="button" hidden>View debate conclusion</button></div></div>
+          <div id="conversation-progress" class="conversation-progress" role="status" hidden><span id="progress-description"></span><progress id="turn-progress" aria-label="Conversation progress"></progress></div>
+          <form id="opening" class="opening-card"><p class="eyebrow">START A CONVERSATION</p><h2>What would you like to ask?</h2><label class="sr-only" for="opening-question">Opening question</label><textarea id="opening-question" rows="3">What is this perspective’s central position, and what reasons support it?</textarea><button class="primary" type="submit"><span id="opening-submit-label">Start conversation</span> <img src="/mvp/assets/0a7d3.svg" alt=""></button></form>
           <section id="debate-conclusion" class="debate-conclusion" aria-label="토론 결론" tabindex="-1" hidden></section>
+          <div id="messages" class="messages" aria-live="polite" aria-relevant="additions"></div>
+          <button id="group-consensus" class="secondary group-consensus" type="button" hidden>Find common ground</button>
           <form id="interject" class="composer"><label id="address-agent" hidden>Send question to <select id="question-target"></select></label><label class="sr-only" for="question">Your question or contribution</label><textarea id="question" rows="2" placeholder="Ask why, request evidence, or explore another angle…"></textarea><div class="composer-footer"><div><button type="button" class="prompt-button" data-prompt="What original comments support this perspective?">⌁ Ask for evidence</button><button type="button" class="prompt-button" data-prompt="What conditions or limits do these comments mention?">Ask about conditions</button></div><button type="submit" class="send-button" aria-label="Send question"><img src="/mvp/assets/05ed3.svg" alt=""></button></div></form><button id="go-reflect" class="reflect-link" type="button">Reflect on your own view →</button>
         </section>
       </div></section>

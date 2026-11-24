@@ -252,6 +252,7 @@ function openDialog(id){const dialog=$(id); dialog.hidden=false; if(!dialog.open
 function showStep(step){
   if(!state.session)return;
   if(step==='converse'&&!state.room){if(state.session.rooms.length){chooseRoom(state.session.rooms[0].room_id).catch(e=>status(e.message));return;}}
+  if(step==='converse'&&!state.room)$('participant-panel').hidden=true;
   if(step==='converse'){$('empty-conversation').hidden=Boolean(state.room);$('chat-workspace').hidden=!state.room;}
   for(const id of ['comparison','source-dialog','perspective-dialog','new-chat-dialog'])closeDialog(id);
   for(const name of ['explore','converse','reflect'])$(name).hidden=name!==step;
@@ -779,7 +780,18 @@ function sourceDisclosure(p){
   return details;
 }
 async function source(id, resource=base()){try{const value=await api(resource+'/sources/'+encodeURIComponent(id));setText($('source'), value.PARENT_CONTEXT_ONLY ? joinText([value.text,'\n\n',msg("Parent comment for context"),'\n',value.PARENT_CONTEXT_ONLY.text],'') : value.text);openDialog('source-dialog');}catch(e){status(e.message);}}
-function sourceButtons(container,point){commentSourceButtons(container,(point.citations?.comment_evidence||[]).map(e=>e.source_id));for(const evidence of point.citations?.external_evidence||[]){let url;try{url=new URL(evidence.url);}catch(_){continue;}if(url.protocol!=='https:'||url.username||url.password)continue;const a=node('a',evidence.title||msg("External source"),'source-button');a.href=url.href;a.target='_blank';a.rel='noopener noreferrer';a.title=evidence.text;container.append(a);}}
+function sourceButtons(container,point,seen=new Set()){
+  commentSourceButtons(container,[...new Set((point.citations?.comment_evidence||[]).map(e=>e.source_id))]);
+  for(const evidence of point.citations?.external_evidence||[]){
+    let url;
+    try{url=new URL(evidence.url);}catch{continue;}
+    if(url.protocol!=='https:'||url.username||url.password||seen.has(url.href))continue;
+    seen.add(url.href);
+    const link=node('a',evidence.title||msg("External source"),'source-button');
+    link.href=url.href;link.target='_blank';link.rel='noopener noreferrer';link.title=evidence.text;
+    container.append(link);
+  }
+}
 function commentSourceButtons(container,sourceIds,caption=msg("Source")){
   for(const [index,sourceId] of sourceIds.entries()){
     const button=node('button',joinText([caption,index+1],' '),'source-button');
@@ -882,9 +894,9 @@ function renderRooms(){
   });
   if(!list.childNodes.length)list.append(node('p',msg("No conversations here yet."),'muted'));if(state.room?.room_id)select.value=state.room.room_id;
 }
-function renderMessages(){
-  $('messages').replaceChildren();
-  for(const m of state.room.messages){const box=node('article',undefined,'message '+m.author_kind);box.id='message-'+m.message_id;
+function renderMessages(start=0){
+  if(!start)$('messages').replaceChildren();
+  for(const m of state.room.messages.slice(start)){const box=node('article',undefined,'message '+m.author_kind);box.id='message-'+m.message_id;
     if(m.author_kind==='agent'){const icon=node('div',undefined,'message-avatar');icon.append(avatar(m.agent_id,true));box.append(icon);}
     const bubble=node('div',undefined,'bubble');
     const phase=({opening:msg("Opening statement"),reply:msg("Reply to another perspective")})[m.phase];
@@ -904,36 +916,67 @@ function renderMessages(){
         }
       }
     }
-    for(const point of m.points||[]){
-      const origin=pointOrigin(point.origin);
-      if(origin)bubble.append(node('small',origin));
-      const text=node('p',point.text);
-      if(point.point_id)text.id='point-'+point.point_id;
-      bubble.append(text);
-      if (m.evidence_scope === 'seeded_provenance' && point.origin === 'ai_reasoning' &&
-          point.citations?.anchor_claim_ids?.length) {
-        const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
-        if (aliases.length) {
-          const view = perspective(m.agent_id);
-          const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, claimText(ground.claim_id, ground.text)]));
-          if (view) claims.set(view.core_claim_id, claimText(view.core_claim_id, view.text));
-          const details = node('details', undefined, 'source-disclosure');
-          details.append(node('summary', msg("{0} · Referenced claims",aliases.join(', '))),
-            node('p', msg("An E-number identifies a claim the agent referred to when writing its explanation.")));
-          for (const id of new Set(point.citations.anchor_claim_ids)) {
-            if (claims.has(id)) details.append(node('blockquote', claims.get(id)));
+    const points=m.points||[];
+    if(points.length){
+      const evidence=node('details',undefined,'turn-evidence');
+      evidence.append(node('summary',msg("Evidence and conditions")));
+      const developed=points.filter(p=>p.origin==='ai_reasoning'||p.origin==='external_evidence');
+      const primary=developed.length ? developed : points.slice(0,1);
+      const seen=new Set();
+      let previousOrigin;
+      for(const point of primary){
+        if(point.origin&&previousOrigin!==point.origin){
+          const originLabel=point.origin==='ai_reasoning'?msg("Agent reasoning"):
+            point.origin==='original_comment'?msg("Source position"):pointOrigin(point.origin);
+          if(originLabel)bubble.append(node('small',originLabel,'answer-origin'));
+        }
+        previousOrigin=point.origin;
+        const text=node('p',point.text,'answer-text');
+        if(point.point_id)text.id='point-'+point.point_id;
+        bubble.append(text);
+      }
+      if(!developed.length&&m.evidence_scope==='seeded_provenance'){
+        bubble.append(node('small',msg("Only the source position is available for this question.")));
+      }
+      for(const point of points){
+        const origin=pointOrigin(point.origin);
+        if(origin)evidence.append(node('small',origin));
+        if(!developed.includes(point)){
+          const text=node('p',point.text);
+          if(!primary.includes(point)&&point.point_id)text.id='point-'+point.point_id;
+          evidence.append(text);
+        }else if(developed.length>1){
+          evidence.append(node('p',point.text));
+        }
+        if (m.evidence_scope === 'seeded_provenance' && point.origin === 'ai_reasoning' &&
+            point.citations?.anchor_claim_ids?.length) {
+          const aliases = [...new Set(point.text.match(/\bE[1-9]\d*\b/g) || [])];
+          if (aliases.length) {
+            const view = perspective(m.agent_id);
+            const claims = new Map((view?.grounds || []).map(ground => [ground.claim_id, claimText(ground.claim_id, ground.text)]));
+            if (view) claims.set(view.core_claim_id, claimText(view.core_claim_id, view.text));
+            const details = node('details', undefined, 'source-disclosure');
+            details.append(node('summary', msg("{0} · Referenced claims",aliases.join(', '))),
+              node('p', msg("An E-number identifies a claim the agent referred to when writing its explanation.")));
+            for (const id of new Set(point.citations.anchor_claim_ids)) {
+              if (claims.has(id)) details.append(node('blockquote', claims.get(id)));
+            }
+            evidence.append(details);
           }
-          bubble.append(details);
+        }
+        sourceButtons(evidence,point,seen);
+        for(const target of point.target_edges||[]){
+          appendPointLinks(evidence,[target.point_id],state.room,msg("Reply target · {0}",label(target.agent_id)));
         }
       }
-      sourceButtons(bubble,point);
-      for(const target of point.target_edges||[]){
-        appendPointLinks(bubble,[target.point_id],state.room,msg("Reply target · {0}",label(target.agent_id)));
+      if(m.status==='abstain')bubble.append(node('small',msg("The sources support only a limited answer to this question.")));
+      if(m.limitation==='verification_hold')evidence.append(node('small',msg("Only the verified parts of the explanation are shown.")));
+      if(m.required_premises?.length){
+        evidence.append(node('small',msg("Premises and conditions to consider")));
+        for(const point of m.required_premises){evidence.append(node('p',point.text));sourceButtons(evidence,point,seen);}
       }
+      bubble.append(evidence);
     }
-    if(m.status==='abstain'&&m.points?.length)bubble.append(node('small',msg("The sources support only a limited answer to this question.")));
-    if(m.points?.length&&m.limitation==='verification_hold')bubble.append(node('small',msg("Only the verified parts of the explanation are shown.")));
-    if(m.required_premises?.length){bubble.append(node('small',msg("Premises and conditions to consider")));for(const point of m.required_premises){bubble.append(node('p',point.text));sourceButtons(bubble,point);}}
     box.append(bubble);$('messages').append(box);
   }
 }
@@ -949,9 +992,12 @@ function appendPointLinks(parent,pointIds,room,title){
     link.type='button';
     link.onclick=()=>{
       const point=$('point-'+pointId);
-      point?.scrollIntoView({block:'center'});
-      point?.parentElement?.setAttribute('tabindex','-1');
-      point?.parentElement?.focus({preventScroll:true});
+      if(!point)return;
+      for(let parent=point.parentElement;parent;parent=parent.parentElement){
+        if(parent.tagName==='DETAILS')parent.open=true;
+      }
+      point.scrollIntoView({block:'center'});
+      point.setAttribute('tabindex','-1');point.focus({preventScroll:true});
     };
     parent.append(link);
   }
@@ -988,7 +1034,8 @@ function renderConclusion(room){
     const references=node('div',undefined,'debate-references');
     appendPointLinks(references,claim.premise_point_ids||[],room);
     sourceButtons(references,claim);
-    card.append(references);
+    const details=node('details',undefined,'turn-evidence');
+    details.append(node('summary',msg("Evidence from these turns")),references);card.append(details);
     panel.append(card);
   }
   if(result.disagreements?.length){
@@ -1024,7 +1071,10 @@ function renderConclusion(room){
       read.onclick=()=>source(id,resource);
       references.append(read);
     }
-    card.append(references);
+    if(references.childElementCount){
+      const details=node('details',undefined,'turn-evidence');
+      details.append(node('summary',msg("Original comments for the consensus agent")),references);card.append(details);
+    }
     const ask=node('button',msg("Ask the consensus agent"),'primary');
     ask.type='button';
     ask.id='ask-synthesis-agent';
@@ -1039,18 +1089,117 @@ function renderConclusion(room){
     panel.append(followup);
   }
 }
+let renderedTranscript;
+let renderedParticipants;
+let pendingQuestionRoom=null;
+let consensusProfile=null;
+
+function loadConsensusProfile(room){
+  const id=room.participant_ids[0], key=state.session.session_id+'/'+id;
+  if(consensusProfile?.key===key)return consensusProfile.data;
+  const record={key,data:null};consensusProfile=record;
+  api('/synthesis-agents/'+encodeURIComponent(id)).then(agent=>{
+    if(consensusProfile!==record)return;
+    record.data=agent;
+    if(state.room?.room_id===room.room_id){renderedParticipants=null;renderParticipants(state.room);}
+  }).catch(()=>{});
+  return null;
+}
+
+function roundProgress(room){
+  const ids=room.participant_ids||[];
+  if(room.kind==='structured_debate'){
+    const completed=room.turn_count;
+    return {completed,total:room.turn_limit,active_agent_id:['opening','replying'].includes(room.state)?ids[completed%ids.length]:null};
+  }
+  return room.round_progress||{};
+}
+function renderConversationProgress(room){
+  const progress=$('turn-progress'),description=$('progress-description'),panel=$('conversation-progress');
+  const {completed,total,active_agent_id}=roundProgress(room);
+  const preparing=state.openingPending&&room.state==='idle'||Boolean(pendingQuestionRoom&&pendingQuestionRoom===room.room_id);
+  const active=activeRoomStates.has(room.state);
+  panel.hidden=!preparing&&!active;
+  if(panel.hidden){progress.removeAttribute('value');return;}
+  const speaking=!preparing&&total>0&&['running','opening','replying','pausing'].includes(room.state);
+  let caption;
+  if(speaking){
+    progress.max=total;progress.value=completed;
+    const count=msg("{0} of {1} turns published",completed,total);
+    caption=active_agent_id?joinText([msg("{0} is preparing a reply",label(active_agent_id)),count]):count;
+  }else{
+    progress.removeAttribute('value');
+    caption=preparing?msg("Preparing your question…"):room.state==='synthesizing'?msg("Checking which ideas everyone accepts…"):
+      room.state==='compiling'?msg("Preparing the consensus agent…"):roomStates[room.state];
+  }
+  if(description.textContent!==formatText(caption))setText(description,caption);
+}
+function renderParticipants(room){
+  const panel=$('participant-panel'),list=$('participant-list');
+  const ids=room.participant_ids||[],active=roundProgress(room).active_agent_id;
+  panel.hidden=!ids.length;
+  const key=JSON.stringify([state.session.session_id,room.room_id,ids,active,room.last_seq,
+    state.analysis.status,room.messages.find(m=>m.author_kind==='agent')?.evidence_scope,state.session.initial_opinion.revision]);
+  if(key===renderedParticipants)return;
+  renderedParticipants=key;
+  const open=new Set([...list.querySelectorAll('details[open]')].map(e=>e.dataset.speaker));
+  list.replaceChildren();
+  for(const id of ids){
+    const card=node('article',undefined,'participant-card'),p=perspective(id);
+    const latest=room.messages.findLast(m=>m.agent_id===id);
+    const expired=state.analysis.status==='expired'||latest?.evidence_scope==='expired';
+    const pending=active&&(!latest||room.state==='replying'&&latest.phase!=='reply'||
+      room.state==='running'&&latest.round_id!==room.messages.findLast(m=>m.author_kind==='user')?.round_id);
+    card.append(node('strong',label(id)),node('small',active===id?msg("Speaking"):latest&&!pending?msg("Published"):msg("Waiting to speak")));
+    if(p&&!expired){
+      card.append(node('small',msg("Starting position")),node('p',claimText(p.core_claim_id,p.text)));
+    }else if(room.kind==='synthesis_chat'&&!expired){
+      const agent=loadConsensusProfile(room);
+      if(agent&&Date.parse(agent.expires_at)>Date.now()){
+        for(const claim of agent.accepted_claims)card.append(node('p',claim.text));
+      }else card.append(node('p',msg("Ask about a shared claim or one of its conditions.")));
+    }
+    const grounds=(p?.grounds||[]).filter(g=>g.role==='essential_condition');
+    const idea=latest?.points?.find(point=>point.origin==='ai_reasoning')||latest?.points?.find(point=>point.origin==='external_evidence');
+    if(!expired&&(idea||grounds.length)){
+      const detail=node('details');detail.dataset.speaker=id;detail.open=open.has(id);
+      detail.append(node('summary',idea?msg("Latest contribution"):msg("Premises and conditions to consider")));
+      if(idea)detail.append(node('p',idea.text));
+      for(const g of grounds)detail.append(node('p',joinText([msg("Condition:"),claimText(g.claim_id,g.text)],' ')));
+      card.append(detail);
+    }
+    list.append(card);
+  }
+  if(state.session.initial_opinion.text.trim()){
+    const own=node('details',undefined,'participant-card');own.dataset.speaker='user';own.open=open.has('user');
+    own.append(node('summary',msg("My starting view")),node('p',state.session.initial_opinion.text));list.append(own);
+  }
+}
+function updateTranscript(room){
+  const key=JSON.stringify([state.session.session_id,room.room_id,room.messages.find(m=>m.author_kind==='agent')?.evidence_scope==='expired']);
+  const previous=renderedTranscript;
+  if(previous?.key!==key||previous.count>room.messages.length)renderMessages();
+  else if(previous.count<room.messages.length)renderMessages(previous.count);
+  renderedTranscript={key,count:room.messages.length};
+}
 function renderRoom(){
   const room=state.room;
   $('empty-conversation').hidden=true;$('chat-workspace').hidden=false;
-  renderMessages();
+  updateTranscript(room);
   renderRooms();
   renderConclusion(room);
+  renderParticipants(room);
+  renderConversationProgress(room);
   const ids=room.participant_ids||[];
   $('room-avatars').replaceChildren(...ids.map(id=>avatar(id)));
   setText($('room-title'), ids.length ? joinText(ids.map(label),' × ') : msg("Your conversation"));
   const automatic=room.kind==='structured_debate'||room.kind==='debate_draft';
   $('messages').classList.toggle('structured-transcript',automatic);
   $('show-debate-result').hidden=!room.conclusion;
+  $('return-to-group').hidden=!room.plan?.source_room_id;
+  $('group-consensus').hidden=automatic||room.mode!=='group'||!room.turn_count||
+    !supportsDebate(ids.length)||!['awaiting_user','paused','closed','exhausted'].includes(room.state);
+  $('group-consensus').disabled=Boolean(pendingQuestionRoom);
   setText($('room-summary'), automatic?msg("Read the positions, replies and final conclusion."):
     room.kind==='synthesis_chat'?msg("Ask about the shared claims and conditions."):
     room.mode==='group'?msg("Different perspectives, in one conversation."):msg("A conversation with this perspective."));
@@ -1064,7 +1213,8 @@ function renderRoom(){
     error:msg("Some replies could not be completed. Earlier turns are saved."),
     exhausted:msg("This conversation reached its limit."),needs_reconciliation:msg("The run status needs review.")
   };
-  const stateParts = [names[room.state]||roomStates[room.state]||room.state, room.turn_count+'/'+room.turn_limit];
+  const stateParts = [names[room.state]||roomStates[room.state]||room.state];
+  if(automatic&&room.conclusion)stateParts.push(room.turn_count+'/'+room.turn_limit);
   if(room.error_code)stateParts.push(msg(errorText(room.error_code)));
   setText($('room-state'),joinText(stateParts));
   $('recover-room').hidden=automatic||room.state!=='error';
@@ -1541,6 +1691,7 @@ $('opening').onsubmit=async event=>{
     return;
   }
   state.openingPending=true;
+  renderConversationProgress(room);
   status('');
   $('opening').querySelector('button[type=submit]').disabled=true;
   try{
@@ -1585,18 +1736,60 @@ async function revisionForQuestion(roomId) {
   }
   return state.room?.room_id === roomId ? state.room.revision : null;
 }
+function asksForGroupConclusion(question){
+  // Only explicit collective requests take this shortcut. The button is available for any wording.
+  const text=question.trim().toLowerCase();
+  if(/합의.{0,8}(말고|아니|하지\s*마|어렵|불가능)|((don't|do not|without|why|how is)\s+.{0,30}(consensus|agreement|common ground))/.test(text))return false;
+  return /(합의점|공통\s*결론|공통\s*제안|공통점).{0,18}(뭐|무엇|찾아|정리|도출|제안|알려|있[나어을])|(?:너희|여러분|셋|둘|모두|다들|다\s*같이).{0,15}결론.{0,10}(뭐|무엇|정리|내려|알려)|(?:what|find|give|reach|suggest|summari[sz]e).{0,48}(?:common ground|shared (?:idea|proposal|conclusion)|group consensus|all agree (?:on|to)|your consensus)|what(?:’s|'s| is) (?:the|your) consensus/.test(text);
+}
+async function findGroupConclusion(question){
+  const sourceRoom=state.room;
+  if(pendingQuestionRoom||!sourceRoom?.room_id||!supportsDebate(sourceRoom.participant_ids.length))return;
+  if([...question].length>1000){status(msg("Use 1,000 characters or fewer for your question."));return;}
+  pendingQuestionRoom=sourceRoom.room_id;renderConversationProgress(sourceRoom);$('group-consensus').disabled=true;
+  try{
+    if(activeRoomStates.has(sourceRoom.state))await revisionForQuestion(sourceRoom.room_id);
+    if(state.room?.room_id!==sourceRoom.room_id)return;
+    const room=state.room;
+    const created=await retryableWrite('group-conclusion-'+room.room_id,base()+'/debates','POST',{
+      analysis_revision:state.session.bundle_revision,participant_ids:room.participant_ids,
+      question,initial_revision:state.session.initial_opinion.revision,
+      source_room_id:room.room_id,source_cutoff_seq:room.last_seq});
+    if(state.room?.room_id!==room.room_id)return;
+    setRoom(created);rememberConversation();renderRoom();
+    pendingQuestionRoom=created.room_id;renderConversationProgress(created);
+    await refreshSession();
+    if(created.state==='idle')await retryableWrite('start-conclusion-'+created.room_id,roomPath(created)+'/start','POST',
+      {expected_revision:created.revision});
+    status('');
+  }catch(error){status(error.message);}
+  finally{
+    const pending=pendingQuestionRoom;pendingQuestionRoom=null;
+    if(state.room?.room_id===pending||state.room?.room_id===sourceRoom.room_id)await refreshRoom().catch(error=>status(error.message));
+  }
+}
+$('group-consensus').onclick=()=>findGroupConclusion($('question').value.trim()||
+  formatText(msg("What practical idea can we agree on from this discussion, and under what conditions?")));
+$('return-to-group').onclick=()=>chooseRoom(state.room.plan.source_room_id).catch(error=>status(error.message));
 $('interject').onsubmit=async event=>{
   event.preventDefault();
   const button=$('interject').querySelector('button[type=submit]'),roomId=state.room?.room_id;
   const question=$('question').value,recipient=$('address-agent').hidden?'':$('question-target').value;
-  if(button.disabled||!roomId||!question.trim())return;
+  if(button.disabled||pendingQuestionRoom||!roomId||!question.trim())return;
+  if(!recipient&&state.room.mode==='group'&&state.room.turn_count>0&&supportsDebate(state.room.participant_ids.length)&&asksForGroupConclusion(question)){
+    await findGroupConclusion(question);return;
+  }
   button.disabled=true;
+  pendingQuestionRoom=roomId;renderConversationProgress(state.room);
   try{
     await retryableWrite('message-'+roomId,'/rooms/'+roomId+'/messages','POST',{
       text:question,reply_to_message_id:null,...(recipient?{target_agent_id:recipient}:{})
     },()=>revisionForQuestion(roomId));
     if(state.room?.room_id===roomId){if($('question').value===question)$('question').value='';await refreshRoom();}
-  }catch(error){status(error.message);}finally{button.disabled=false;}
+  }catch(error){status(error.message);}finally{
+    pendingQuestionRoom=null;button.disabled=false;
+    if(state.room?.room_id===roomId){renderConversationProgress(state.room);$('group-consensus').disabled=false;}
+  }
 };
 document.querySelectorAll('[data-prompt]').forEach(button=>button.onclick=()=>{$('question').value=formatText(msg(button.dataset.prompt));$('question').focus();});
 $('agent-info').onclick=async()=>{

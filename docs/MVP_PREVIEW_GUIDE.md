@@ -45,7 +45,8 @@ python3 -m venv .venv
 
 1. **처음 열기.** 초기 의견에 `Safety checks matter, but their cost depends on the risk.`를 적고 **Save & explore perspectives**를 누릅니다. 빈 의견으로도 시작할 수 있습니다.
 2. **Explore.** **Compare with my view**에서 한 관점과 초기 의견을 비교합니다. 비교 창을 닫고 두 관점 카드의 체크박스를 선택한 뒤 **Converse with selected perspectives**를 누릅니다. 관점 한 개를 선택하면 1:1 질문이 열립니다.
-3. **자동 토론.** `어떤 위험에서는 안전 검토가 필요하며 어떤 예외를 둘 수 있나요?`를 입력하고 **자동 토론 시작**을 한 번 누릅니다. 두 관점의 입장 발언 2개와 상호 응답 2개가 자동으로 게시됩니다. **원문**과 **응답 대상**을 눌러 근거와 답한 발언을 확인할 수 있습니다.
+3. **자동 토론.** `어떤 위험에서는 안전 검토가 필요하며 어떤 예외를 둘 수 있나요?`를 입력하고 **자동 토론 시작**을 한 번 누릅니다. 두 관점의 입장 발언 2개와 상호 응답 2개가 자동으로 게시됩니다. 각 발언의 **근거와 조건 보기**를 펼쳐 **원문**과 **응답 대상**을 눌러 근거와 답한 발언을 확인할 수 있습니다.
+   자유롭게 의견을 주고받으려면 Converse의 **새 대화 → 그룹 대화**를 고릅니다. 개별 Agent를 지목할 수 있고, **이 대화의 합의점 찾기**를 누르면 같은 참여자들이 대화에서 나온 아이디어를 검토합니다. 대화의 출발 입장과 최근 발언은 사이드바, 지금 쓰고 있는 Agent와 턴 수는 진행바에서 볼 수 있습니다. 완료된 결론은 기록 위에 표시되며 **원래 그룹 대화로** 돌아갈 수 있습니다.
 4. **최종 결론.** 상단 **토론 결론 보기** 또는 기록 끝에서 공통 주장, 수락한 관점, 조건, 남은 이견을 확인합니다. 예시에서는 두 관점이 수락한 공통 주장 1개로 별도 합의 Agent 1개가 만들어집니다. [토론 결론과 합의 Agent 화면](images/mvp-preview/debate-result.png)
 5. **합의 Agent에 질문.** **계보 원문**으로 근거 댓글을 열고, **합의 Agent에 질문하기**를 누릅니다. 새 방에 `What exactly was agreed and what remains uncertain?`을 입력한 뒤 **Start conversation**을 누릅니다. [합의 Agent 후속 답변 화면](images/mvp-preview/synthesis-agent-followup.png)
 6. **Reflect.** **Reflect on your own view**를 눌러 참고할 발언을 선택하고 현재 의견을 적습니다. **Analyze my reflection**에서 제안을 확인하거나 직접 내용을 작성한 뒤 **Save my reflection**을 누릅니다. 새로고침 후 **Reflect → 성찰 보기 · 저장본**으로 돌아옵니다. 제안에서 채택한 관련 대화 링크로 같은 발언을 열 수 있습니다. [성찰 재열람 화면](images/mvp-preview/reflected-after-reload.png)

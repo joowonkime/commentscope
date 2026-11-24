@@ -64,7 +64,7 @@ def draft(analysis, participants, points, query, frozen, scope, run):
         'reference_ids': ids(references),
     }), maximum=3)})
     value = generate(run, 'draft-generate', scope, '''
-Propose up to three independent possible common claims answering the QUESTION.
+Propose up to three independent possible common claims answering the QUESTION. Lead with the single most useful actionable common idea when the transcript supports one. Retain important conditions and explain the practical choice in plain language.
 Use only the published POINTS and their REFERENCES. These are proposals, not participant votes.
 Write each claim as one short, complete sentence. Keep essential qualifiers in that sentence.
 Aim for at most 350 characters to leave room below the 600-character schema limit.

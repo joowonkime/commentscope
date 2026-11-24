@@ -82,7 +82,7 @@ def opening_context(messages, speaker):
     return own, peers, targets
 
 
-def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None):
+def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None, prior_discussion=None):
     if derived is None:
         entries, core_id = perspective(analysis, speaker)
         required_conditions = conditions(speaker, entries, core_id)
@@ -116,8 +116,14 @@ def turn(analysis, speaker, query, scope, phase, messages, run, *, derived=None)
             'CORE': next((a for a, key in aliases.items() if key == core_id), None),
             'CONDITIONS': required_conditions, 'REFERENCES': inventory, 'TARGETS': targets,
             'OWN_CONTEXT': own, 'OTHER_CONTEXT_ONLY': peers}
+    if prior_discussion is not None:
+        data['PRIOR_DISCUSSION_CONTEXT_ONLY'] = prior_discussion
     value = generate(run, 'turn-generate', scope, '''
 Address the original QUESTION from this perspective's CLAIMS, respecting CONDITIONS and PHASE_TASK.
+Give the reader your position or a concrete proposal first, followed by its reason or decisive condition.
+Use the language of QUESTION for each new sentence. Speak in a concise conversational voice.
+If PRIOR_DISCUSSION_CONTEXT_ONLY is present, use the user's earlier questions and previous public
+ideas to resolve references to this discussion. Ground any new point in your own available CLAIMS.
 In a reply, use the supplied TARGETS and your own grounds.
 Other speakers are context. Their statements are not your evidence or proof.
 Keep fictional claims within their fictional world. A derived perspective may cite other speakers
@@ -169,6 +175,7 @@ invented sources, or knowledge beyond the allowed scope. Use the user's language
         checks.update(addressed(alias, 'PROPOSED_POINTS', point_checks))
     answers, receipt = observe(run, 'turn-verify', scope,
         {'QUESTION': query, 'PHASE_TASK': phase_task, 'TARGETS': targets, 'CONDITIONS': required_conditions,
+         **({'PRIOR_DISCUSSION_CONTEXT_ONLY': prior_discussion} if prior_discussion else {}),
          'ATTRIBUTED_DISAGREEMENT_ONLY': peers if derived is not None else [],
          'PROPOSED_POINTS': proposed, 'EVIDENCE': used, 'ANSWERABILITY': value['answerability']}, checks)
     surviving = {alias: row for alias, row in proposed.items() if supported(answers, alias, TURN_CHECKS)}

@@ -250,3 +250,30 @@ test('generated evidence aliases explain the registered claim without renumberin
   assert.doesNotMatch(text(render([{...point, origin: 'original_comment'}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
   assert.doesNotMatch(text(render([{...point, citations: {}}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
 });
+
+test('the conversation leads with developed ideas and keeps repeated links in one closed evidence section',()=>{
+  const ref={url:'https://example.invalid/study',title:'A study'};
+  const view=render([
+    {origin:'original_comment',text:'A registered starting position',citations:{comment_evidence:[{source_id:'s'}]}},
+    {origin:'ai_reasoning',text:'I would test shorter days if pay stays the same.'},
+    {origin:'external_evidence',text:'The study compared schedules.',citations:{external_evidence:[ref,ref]}}
+  ]);
+  const details=flatten(view).find(n=>n.tagName==='details');
+  assert.ok(details&&!details.open);
+  assert.match(text(details),/A registered starting position/);
+  assert.equal(flatten(details).filter(n=>n.tagName==='a').length,1);
+  const bubble=flatten(view).find(n=>n.children.includes(details));
+  const visible=bubble.children.filter(n=>n!==details).map(text).join(' ');
+  assert.match(visible,/I would test shorter days/);
+  assert.doesNotMatch(visible,/A registered starting position/);
+});
+test('explicit collective requests and ordinary questions take different paths in both interface languages',()=>{
+  const context=vm.createContext({});
+  vm.runInContext(appSource.slice(appSource.indexOf('function asksForGroupConclusion'),appSource.indexOf('async function findGroupConclusion')),context);
+  for(const question of ['그래서 너희 셋의 결론은 뭐야?', '공통점을 정리해 줘', 'What can we all agree on?', 'Find common ground.']){
+    assert.equal(context.asksForGroupConclusion(question),true,question);
+  }
+  for(const question of ['네 입장의 근거는 뭐야?', '합의점을 찾지 말고 다른 아이디어를 알려 줘', 'Why is consensus difficult?', 'What do you think about the schedule?']){
+    assert.equal(context.asksForGroupConclusion(question),false,question);
+  }
+});

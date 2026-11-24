@@ -18,7 +18,7 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.ingestion.youtube import video_id_from_input
 from commentscope.providers.budget import BudgetExhausted
 from commentscope.product import contracts as contract, debate_store
-from commentscope.product.debate_service import DebateService
+from commentscope.product.debate_service import DebateService, discussion_context
 from commentscope.product.input import cursor, integer, text, uid
 from commentscope.product.store import Store, encode, decode
 
@@ -156,6 +156,10 @@ class ProductApp:
         if value['state'] in ('error','exhausted','needs_reconciliation') and value.get('job_id'):
             row=db.execute('SELECT data FROM jobs WHERE id=?',(value['job_id'],)).fetchone()
             if row:public['error_code']=(decode(row).get('error') or {}).get('code')
+        completed=value['cursor']
+        schedule=value['schedule'][:max(0,18-value.get('round_start_turn',0))]
+        public['round_progress']={'completed':min(completed,len(schedule)), 'total':len(schedule),
+            'active_agent_id':schedule[completed]['agent_id'] if value['state']=='running' and completed<len(schedule) else None}
         public['turn_limit']=18
         return public
 
@@ -560,7 +564,7 @@ class ProductApp:
                 task=room['schedule'][room['cursor']];messages=self._messages(db,rid)
                 peer=next((m for m in reversed(messages) if m['author_kind']=='agent' and m['agent_id']!=task['agent_id']),None) if task['phase']=='reply' else None
                 history=[m['_history'] for m in messages if m.get('agent_id')==task['agent_id']][-2:]
-                question=room['question'] if task['phase']!='reply' else 'Respond to the preceding perspective using your own position and explicit grounds.'
+                question=room['question']
                 cost_before=Decimal(room['cost_usd']);limit=Decimal(room['maximum_cost_usd'])
             charged=Decimal(0)
             seeded=seed_policy.seeded(analysis.bundle)
@@ -600,7 +604,12 @@ class ProductApp:
             self._analysis(session)
             context=None if peer is None else {'message_id':peer['message_id'],'agent_id':peer['agent_id'],
                                               'points':peer.get('points',[]),'body':peer.get('body')}
-            agent=(SeededSession(analysis.bundle,task['agent_id'],generator=generate,verifier=verify,peer=context)
+            prior=None
+            if seeded and room['mode']=='group' and task['phase']=='answer':
+                question_seq=next(m['seq'] for m in reversed(messages) if m['message_id']==room['user_message_id'])
+                prior=discussion_context(messages,question_seq,room['participant_ids'])
+            agent=(SeededSession(analysis.bundle,task['agent_id'],generator=generate,verifier=verify,
+                                 peer=context,prior_discussion=prior)
                    if seeded else RoomAgent(analysis.bundle,task['agent_id'],provider=provider,peer=context))
             agent.history=deepcopy(history)
             try:

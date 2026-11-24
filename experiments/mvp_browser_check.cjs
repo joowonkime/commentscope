@@ -252,8 +252,10 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
 
   if(debateResult==='consensus'){
     checks.shared_claim_conditions_and_agent_card=await evaluate("document.querySelector('.debate-claim h3')?.textContent.includes('Consider the risks and costs')&&document.querySelector('.debate-claim').innerText.includes('조건 ·')&&!!document.querySelector('.synthesis-card #ask-synthesis-agent')");
+    await click('.debate-claim details > summary');
     await click('.debate-claim .debate-references button');
-    checks.claim_links_to_posted_turn=await evaluate("document.activeElement?.classList.contains('bubble')");
+    checks.claim_links_to_posted_turn=await evaluate("document.activeElement?.id.startsWith('point-')&&!!document.activeElement.closest('.message.agent')");
+    await click('.synthesis-card details > summary');
     await click('.synthesis-card .source-button');
     await until(()=>evaluate("document.querySelector('#source-dialog')?.open&&document.querySelector('#source').textContent.includes('Safety reviews')"));
     checks.derived_agent_source_drawer=requests.some(item=>item.method==='GET'&&/\/synthesis-agents\/[^/]+\/sources\//.test(item.path));
@@ -345,4 +347,31 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.close_uses_debate_and_keeps_conclusion=postCount(/\/debates\/[^/]+\/control$/)>0&&
     await evaluate("!document.querySelector('#debate-conclusion').hidden");
   report.metrics=metrics();
+  if(debateResult==='consensus'){
+    await click('#new-chat');
+    await click('#chat-options label:nth-child(1) input');
+    await click('#chat-options label:nth-child(2) input');
+    await click('#chat-picker button[type=submit]');
+    await until(()=>evaluate("state.room?.mode==='group'&&!state.room.kind&&state.room.state==='idle'"));
+    await fill('#opening-question','어떤 방식으로 시작할까요?');
+    await click('#opening button[type=submit]');
+    await until(()=>evaluate("!document.querySelector('#conversation-progress').hidden&&document.querySelector('#turn-progress').max===4"));
+    checks.participant_status_during_generation=await evaluate("document.querySelector('#participant-list').innerText.includes('답변 작성 중')");
+    await until(()=>evaluate("state.room.state==='awaiting_user'"));
+    checks.sources_folded_until_requested=await evaluate("Array.from(document.querySelectorAll('.turn-evidence')).every(d=>!d.open)&&document.querySelectorAll('.message.agent .answer-text').length>0");
+    const originalRoom=await evaluate("state.room.room_id");
+    await fill('#question','그래서 너희 둘의 결론은 뭐야?');
+    await evaluate("document.querySelector('#question-target').selectedIndex=1");
+    await click('#interject button[type=submit]');
+    await until(()=>evaluate("state.room.turn_count===5&&state.room.state==='awaiting_user'"));
+    checks.individual_address_does_not_start_debate=await evaluate("state.room.room_id==="+JSON.stringify(originalRoom));
+    await evaluate("document.querySelector('#question-target').selectedIndex=0");
+    await fill('#question','그래서 너희 둘의 결론은 뭐야? 뭐가 가장 합당한 하나의 합의점이야?');
+    await click('#interject button[type=submit]');
+    await until(()=>evaluate("state.room.kind==='structured_debate'&&state.room.state==='completed'"));
+    checks.group_question_produces_one_conclusion=await evaluate("state.room.plan.source_room_id==="+JSON.stringify(originalRoom)+"&&!!state.room.synthesis_agent&&!!(document.querySelector('#debate-conclusion').compareDocumentPosition(document.querySelector('#messages'))&Node.DOCUMENT_POSITION_FOLLOWING)");
+    await click('#return-to-group');
+    await until(()=>evaluate("state.room.room_id==="+JSON.stringify(originalRoom)+"&&state.room.messages?.length>0"));
+    checks.original_group_still_readable=await evaluate("state.room.turn_count===5&&!document.querySelector('#group-consensus').hidden");
+  }
 }

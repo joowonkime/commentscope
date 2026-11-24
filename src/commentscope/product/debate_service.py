@@ -21,6 +21,22 @@ FINAL = {
 MAX_ROOM_TURNS = 18
 
 
+def discussion_context(messages, cutoff, participants):
+    """Bound an owned room snapshot to its opening/latest questions and one published idea per speaker."""
+    visible = [m for m in messages if m['seq'] <= cutoff]
+    questions = [m['body'] for m in visible if m['author_kind'] == 'user' and m['body']]
+    turns = []
+    for speaker in participants:
+        latest = next((m for m in reversed(visible) if m.get('agent_id') == speaker), None)
+        if latest is None:
+            continue
+        points = latest.get('points', [])
+        idea = next((p for p in points if p.get('origin') == 'ai_reasoning'), next(iter(points), None))
+        turns.append({'agent_id': speaker, 'message_id': latest['message_id'],
+                      'answerability': latest.get('answerability'), 'idea': idea['text'] if idea else None})
+    return {'questions': list(dict.fromkeys(questions[:1] + questions[-1:])), 'turns': turns}
+
+
 class DebateService:
     def __init__(self, app, execution_binding):
         self.app = app
@@ -33,7 +49,9 @@ class DebateService:
 
     def create(self, db, session, body):
         app = self.app
-        app._fields(body, 'analysis_revision participant_ids question initial_revision request_id')
+        fields = 'analysis_revision participant_ids question initial_revision request_id'
+        from_discussion = 'source_room_id' in body or 'source_cutoff_seq' in body
+        app._fields(body, fields + (' source_room_id source_cutoff_seq' if from_discussion else ''))
 
         def create():
             analysis = app._analysis(session)
@@ -49,6 +67,30 @@ class DebateService:
                     or len(set(selected)) != len(selected)):
                 raise WebError(422, 'invalid_participants')
             query = text(body['question'], 1000, empty=False)
+            if from_discussion:
+                source_id = text(body['source_room_id'], 80, empty=False)
+                cutoff = integer(body['source_cutoff_seq'], minimum=1)
+                row = db.execute('SELECT data FROM rooms WHERE id=? AND session_id=?',
+                                 (source_id, session['session_id'])).fetchone()
+                if row is None:
+                    raise WebError(404, 'resource_missing')
+                parent = decode(row)
+                if (parent.get('kind') or parent['mode'] != 'group' or parent['participant_ids'] != selected
+                        or parent['analysis_revision'] != analysis.revision):
+                    raise WebError(422, 'invalid_participants')
+                if cutoff != parent['last_seq']:
+                    raise WebError(409, 'revision_conflict')
+                if not parent['turn_count']:
+                    raise WebError(409, 'room_not_ready')
+                existing = db.execute(
+                    """SELECT d.room_id,d.data FROM debates d JOIN rooms r ON r.id=d.room_id
+                       WHERE r.session_id=? AND json_extract(d.data,'$.plan.source_room_id')=?
+                       AND json_extract(d.data,'$.plan.source_cutoff_seq')=?
+                       AND json_extract(d.data,'$.plan.question')=? AND json_extract(d.data,'$.plan.initial_revision')=?""",
+                    (session['session_id'], source_id, cutoff, query, body['initial_revision'])).fetchone()
+                if existing:
+                    return 200, self.public(db, decode(existing), room_at(db, existing['room_id']), analysis)
+
             n = len(selected)
             did = uid('D')
             room = app._new_room(db, session, analysis, 'group', selected, body['initial_revision'],
@@ -59,6 +101,8 @@ class DebateService:
                     'max_turns': 2*n, 'max_synthesis_candidates': 3, 'max_physical_calls': 6*n+2,
                     'generation_max_tokens': MAX_GENERATION_TOKENS, 'execution_sha256': self.binding,
                     'maximum_cost_usd': room['maximum_cost_usd']}
+            if from_discussion:
+                plan.update(source_room_id=source_id, source_cutoff_seq=cutoff)
             debate = {'debate_id': did, 'plan': plan, 'plan_sha256': digest(plan)}
             db.execute('INSERT INTO debates VALUES(?,?,?,?,?,?,?)',
                        (debate['debate_id'], room['room_id'], VERSION, debate['plan_sha256'], 1, 'idle', encode(debate)))
@@ -221,6 +265,10 @@ class DebateService:
             _, debate = debate_store.load_debate(db, did)
             plan, plan_sha = debate['plan'], debate['plan_sha256']
             self.preflight(initial, plan)
+            prior = None
+            if 'source_room_id' in plan:
+                messages = app._messages(db, plan['source_room_id'])
+                prior = discussion_context(messages, plan['source_cutoff_seq'], plan['participant_ids'])
         participants, query = plan['participant_ids'], plan['question']
         limit = plan['max_physical_calls']
         while True:
@@ -237,7 +285,7 @@ class DebateService:
             scope = {'debate_id': did, 'plan_sha256': plan_sha, 'epoch': room['epoch'],
                      'position': pos, 'agent_id': aid, 'phase': phase}
             execution = Execution(app, job, session, scope, limit)
-            response = turn(analysis, aid, query, scope, phase, openings, execution)
+            response = turn(analysis, aid, query, scope, phase, openings, execution, prior_discussion=prior)
             with app.store.transaction() as db:
                 current = self._current(db, job, session)
                 _, _, targets = opening_context(openings, aid)

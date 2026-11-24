@@ -104,6 +104,51 @@ class AutomaticDebateTests(unittest.TestCase):
         return self.call('POST', path+'/control', {'action': action, 'expected_revision': current['revision'],
                                                  'request_id': request_id or action})
 
+    def test_group_discussion_is_frozen_for_all_speakers_and_cannot_vote(self):
+        from test_seeded_runtime import response, verifier
+        group = self.call('POST', self.base+'/rooms', {
+            'mode':'group','participant_ids':['P2','P1'],'initial_revision':1,'request_id':'chat'})[1]
+        path='/api/v1/rooms/'+group['room_id']
+        model, decide = self.app.model, self.app.decision
+        self.app.model=lambda stage, request: {'output':response(), 'errors':[], 'new_cost_usd':'0.0001'}
+        self.app.decision=lambda stage, request: verifier(request)
+        def speak(endpoint, fields):
+            room=self.call('GET',path)[1]
+            return self.job(self.call('POST',path+endpoint,{
+                **fields,'expected_revision':room['revision'],'request_id':endpoint.strip('/')})[1])
+        self.assertEqual(speak('/start',{'opening_question':'어떤 조건을 원해?'})['state'],'succeeded')
+        group=self.call('GET',path)[1]
+        payload={'analysis_revision':self.analysis.revision,'participant_ids':['P2','P1'],
+                 'initial_revision':1,'question':'셋의 합의점은?', 'request_id':'from-chat',
+                 'source_room_id':group['room_id'],'source_cutoff_seq':group['last_seq']}
+        _,debate=self.call('POST',self.base+'/debates',payload)
+        status,same=self.call('POST',self.base+'/debates',{**payload,'request_id':'second-tab'})
+        self.assertEqual((status,same['debate_id']),(200,debate['debate_id']))
+        other_token=secrets.token_urlsafe(32)
+        _,other=self.call('POST','/api/v1/sessions',{'analysis_id':self.analysis.id,
+            'bundle_revision':self.analysis.revision,'initial_opinion':'','request_id':'other'},token=other_token)
+        with self.assertRaises(WebError) as foreign:
+            self.call('POST','/api/v1/sessions/'+other['session_id']+'/debates',payload,token=other_token)
+        self.assertEqual(foreign.exception.status,404)
+        for change in ({'source_room_id':'missing'},{'participant_ids':['P1','P3']},
+                       {'source_cutoff_seq':group['last_seq']+1}):
+            with self.assertRaises(WebError):
+                self.call('POST',self.base+'/debates',{**payload,**change,'request_id':'invalid'})
+        self.assertEqual(speak('/messages',{'text':'나중 질문','reply_to_message_id':None})['state'],'succeeded')
+        self.app.model,self.app.decision=model,decide
+        debate_path='/api/v1/debates/'+debate['debate_id']
+        self.assertEqual(self.job(self.start(debate_path,debate)[1])['state'],'succeeded')
+        generations=[r['data'] for stage,r in self.events if stage=='turn-generate']
+        context=generations[0]['PRIOR_DISCUSSION_CONTEXT_ONLY']
+        self.assertTrue(all(g['PRIOR_DISCUSSION_CONTEXT_ONLY']==context for g in generations))
+        self.assertEqual(context['questions'],['어떤 조건을 원해?'])
+        self.assertEqual([t['agent_id'] for t in context['turns']],['P2','P1'])
+        final=self.call('GET',debate_path)[1]
+        self.assertEqual(final['state'],'completed')
+        own_points={p['point_id'] for m in final['messages'] for p in m.get('points',[])}
+        for claim in final['conclusion']['shared_claims']:
+            self.assertLessEqual(set(claim['premise_point_ids']),own_points)
+
     def test_full_debate_lineage_restart_derived_question_and_reflection(self):
         path, final = self.complete()
         self.assertEqual(final['state'], 'completed')
