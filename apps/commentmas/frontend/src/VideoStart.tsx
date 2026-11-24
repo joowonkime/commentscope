@@ -1,21 +1,48 @@
 import {useEffect, useRef, useState, type FormEvent} from 'react';
 import {request, RequestError} from './api';
-import {Spinner} from './components';
 import {videoThumbnail, type Catalog} from './types';
 
 type Video = Catalog['video'];
 type Options = {demo:Video|null; can_generate:boolean; comment_limit:number};
-type Job = {video_id:string; status:'running'|'failed'|'ready'; stage?:string; error?:string};
+type Job = {video_id:string; status:'running'|'failed'|'ready'; stage?:string; elapsed_seconds?:number; error?:string};
 
-const stages:Record<string,string> = {
-  collecting:'Collecting public comments',
-  filtering:'Finding comments with a viewpoint',
-  grouping:'Grouping related perspectives',
-  creating_agents:'Creating agents from supporting comments',
-  preparing_cards:'Preparing perspective cards',
-};
+const stages = [
+  {id:'collecting', label:'Collecting public comments'},
+  {id:'filtering', label:'Finding comments with a viewpoint'},
+  {id:'grouping', label:'Grouping related perspectives'},
+  {id:'creating_agents', label:'Creating agents from supporting comments'},
+  {id:'preparing_cards', label:'Preparing perspective cards'},
+];
 const videoLink = (id:string) => '?video=' + encodeURIComponent(id);
 const watchLink = (id:string) => 'https://www.youtube.com/watch?v=' + id;
+
+function PreparationProgress({job, checkingUrl}:{job:Job|null; checkingUrl:boolean}) {
+  const index = stages.findIndex(stage=>stage.id===job?.stage);
+  const current = stages[index];
+  const step = current && `Step ${index+1} of ${stages.length}`;
+  const label = current?.label ?? (checkingUrl ? 'Checking video…' : 'Checking preparation…');
+  const elapsed = job?.elapsed_seconds;
+
+  return <div className="preparation-progress">
+    <div className="preparation-heading">
+      <div role="status" aria-atomic="true">
+        {current && <span className="preparation-step">{step}</span>}
+        <strong>{label}</strong>
+      </div>
+      {elapsed !== undefined && <span className="preparation-time" role="timer" aria-live="off">
+        Elapsed {Math.floor(elapsed/60)}:{String(elapsed%60).padStart(2,'0')}
+      </span>}
+    </div>
+    <div className="preparation-track" role="progressbar" aria-label="Agent generation progress"
+      aria-valuemin={0} aria-valuemax={stages.length} aria-valuenow={current ? index : undefined}
+      aria-valuetext={current ? `${step}. ${label}.` : undefined}>
+      {current ? stages.map((stage,i)=><span key={stage.id} aria-hidden="true"
+        data-state={i<index ? 'done' : i===index ? 'current' : undefined}/>)
+        : <span aria-hidden="true" data-state="current"/>}
+    </div>
+    {!checkingUrl && <p>Preparing a new video can take a few minutes. You can refresh this page to check progress.</p>}
+  </div>;
+}
 
 export default function VideoStart() {
   const resume = new URLSearchParams(location.search).get('prepare');
@@ -109,7 +136,7 @@ export default function VideoStart() {
         {!pollId && <button className="primary" disabled={!url.trim() || submitting || !options || (!options.can_generate && !options.comment_limit)}>
           {submitting?'Checking video…':options?.can_generate?'Generate agents':'Open video'}</button>}
       </form>
-      {pollId && !pollError && <Spinner label={(job?.stage && stages[job.stage]) || 'Checking preparation…'}/>}
+      {(submitting || pollId) && !pollError && <PreparationProgress job={job} checkingUrl={!pollId}/>}
       {loadError && <div role="alert">{loadError} <button className="text-button" onClick={()=>setReload(n=>n+1)}>Reload video options</button></div>}
       {error && <div className="intake-error" role="alert">{error} {pollError &&
         <button className="text-button" onClick={()=>{setError('');setPollError(false);}}>Check progress</button>}</div>}

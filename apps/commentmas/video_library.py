@@ -105,10 +105,15 @@ class VideoLibrary:
         return self.demo and self.demo["video_id"] == vid
 
     def _public(self, record):
-        if record["status"] == "running" and record["updated"] + self.LEASE_SECONDS <= time.time():
-            return {"video_id": record["video_id"], "status": "failed",
-                    "error": "Preparation was interrupted. Retry to prepare this video."}
-        return {k: record[k] for k in ("video_id", "status", "stage", "error") if k in record}
+        public = {k: record[k] for k in ("video_id", "status", "stage", "error") if k in record}
+        if record["status"] == "running":
+            now = time.time()
+            if record["updated"] + self.LEASE_SECONDS <= now:
+                return {"video_id": record["video_id"], "status": "failed",
+                        "error": "Preparation was interrupted. Retry to prepare this video."}
+            if "started_at" in record:
+                public["elapsed_seconds"] = max(0, int(now - record["started_at"]))
+        return public
 
     def status(self, vid):
         if not VIDEO_ID.fullmatch(vid):
@@ -138,8 +143,9 @@ class VideoLibrary:
                 raise IntakeError(503, "New videos need a YouTube API key on the server. Open a prepared video instead.")
             if self.active is not None:
                 raise IntakeError(429, "Another video is being prepared. Please try again shortly.")
+            now = time.time()
             record = {"video_id": vid, "status": "running", "stage": "collecting",
-                      "attempt": uuid.uuid4().hex, "updated": time.time()}
+                      "attempt": uuid.uuid4().hex, "started_at": now, "updated": now}
             try:
                 self.store.save(key, record, digest(old) if old else None)
             except RecordConflict:
