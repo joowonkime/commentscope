@@ -3,6 +3,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from tools.perspective_groups.group_comments import (ModelRunner, assignment_schema, discovery_schema, group_source, model_comments,
                             save_results, validate_assignments, validate_discovery, validate_result, validate_summary)
@@ -179,7 +180,7 @@ class GroupTests(unittest.TestCase):
                 return {'data':{'bad':True},'model':self.model,'usage':{}}
         client=BadClient()
         runner=ModelRunner(client,self.output)
-        with self.assertRaises(ValueError):
+        with patch('time.time_ns', return_value=0), self.assertRaises(ValueError):
             runner.call('assign','rules',{},assignment_schema(['c1'],['g1']),lambda d:validate_assignments(d,['c1'],['g1']))
         self.assertEqual(client.requests,2)
         self.assertFalse((self.output/'.cache').exists())

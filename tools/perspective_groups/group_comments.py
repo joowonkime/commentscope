@@ -5,11 +5,11 @@ import csv
 import json
 import math
 import threading
-import time
 from collections import Counter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
+from uuid import uuid4
 
 from .filter_comments import digest, load_source, positive_int, probability, write_json
 from .llm_client import ModelError, create_client, read_settings
@@ -210,7 +210,7 @@ class ModelRunner:
                 data = validate(response["data"])
             except (ValueError, KeyError, TypeError, AttributeError):
                 self.record(key, stage, response, False, False)
-                write_json(self.output / ".rejected" / f"{stage}_{key}_{time.time_ns()}.json", response)
+                write_json(self.output / ".rejected" / f"{stage}_{key}_{uuid4().hex}.json", response)
                 if attempt == 0:
                     continue
                 raise ValueError(f"{stage}: model failed result validation twice; completed calls remain cached.") from None
