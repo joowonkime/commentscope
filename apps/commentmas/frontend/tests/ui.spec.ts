@@ -40,17 +40,20 @@ async function initial(page:Page){await page.goto('/');await page.getByRole('lin
 test('A submitted URL survives reload and opens a conversation in that video', async({page})=>{
   const api=await mockApi(page);
   const id='newvideo123', video={video_id:id,title:'A new discussion',url:'https://youtu.be/'+id};
-  let ready=false, starts=0, reads=0;
+  let ready=false, starts=0, reads=0, stage='grouping', elapsed=64;
+  let accept!:()=>void;
+  const submitted=new Promise<void>(resolve=>{accept=resolve;});
   await page.route('**/api/**',async route=>{
     const req=route.request(),path=new URL(req.url()).pathname;
     if(path==='/api/videos' && req.method()==='POST'){
       starts++;
       expect(req.postDataJSON()).toEqual({url:video.url});
+      await submitted;
       return route.fulfill({status:202,json:{video_id:id,status:'running',stage:'collecting'}});
     }
     if(path==='/api/videos/'+id){
       reads++;
-      return route.fulfill({json:{video_id:id,status:ready?'ready':'running',stage:'grouping'}});
+      return route.fulfill({json:{video_id:id,status:ready?'ready':'running',stage,elapsed_seconds:elapsed}});
     }
     if(path==='/api/bootstrap' && req.headers()['x-review-video']===id)
       return route.fulfill({json:{...catalog,video,fingerprint:id,agents:[agents[0]]}});
@@ -62,13 +65,30 @@ test('A submitted URL survives reload and opens a conversation in that video', a
   await expect(start).toBeDisabled();
   await page.getByLabel('YouTube video URL').fill(video.url);
   await start.click();
+  const progress=page.getByRole('progressbar',{name:'Agent generation progress'});
+  try {
+    await expect(progress).toBeVisible();
+    await expect(progress).not.toHaveAttribute('aria-valuenow',/.+/);
+  } finally {
+    accept();
+  }
   await expect(page).toHaveURL(/\?prepare=newvideo123$/);
   await expect(page.getByRole('status')).toContainText('Grouping related perspectives');
+  await expect(progress).toHaveAttribute('aria-valuenow','2');
+  await expect(page.getByRole('status')).toContainText('Step 3 of 5');
+  await expect(page.getByRole('timer')).toHaveText('Elapsed 1:04');
+  elapsed=67;
   await page.reload();
-  await expect(page.getByRole('status')).toContainText('Grouping related perspectives');
+  await expect(progress).toHaveAttribute('aria-valuenow','2');
+  await expect(page.getByRole('timer')).toHaveText('Elapsed 1:07');
   expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth)).toBe(false);
+  stage='preparing_cards';elapsed=145;
+  await expect(progress).toHaveAttribute('aria-valuenow','4');
+  await expect(page.getByRole('status')).toContainText('Step 5 of 5');
+  await expect(page.getByRole('timer')).toHaveText('Elapsed 2:25');
   ready=true;
   await expect(page).toHaveURL(/\?video=newvideo123$/);
+  await expect(progress).toHaveCount(0);
   await page.getByLabel('Your initial view',{exact:true}).fill('I want to understand this video.');
   await page.getByRole('button',{name:'Save & explore perspectives'}).click();
   await expect(page.locator('.perspective-card')).toHaveCount(1);
@@ -104,6 +124,7 @@ test('Invalid links and failed preparations leave the URL editable and the examp
   await input.fill('https://youtu.be/'+id);
   await page.getByRole('button',{name:'Generate agents'}).click();
   await expect(page.getByRole('alert')).toContainText('Comments are disabled');
+  await expect(page.getByRole('progressbar')).toHaveCount(0);
   await expect(input).toBeEditable();
   await page.getByRole('link',{name:'Open prepared video'}).click();
   await expect(page.getByLabel('Your initial view',{exact:true})).toBeVisible();

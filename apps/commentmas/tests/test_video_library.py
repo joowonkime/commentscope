@@ -125,6 +125,34 @@ class VideoIntakeTests(unittest.TestCase):
                 with self.assertRaises(IntakeError):
                     lib.directory(FIRST)
 
+    def test_running_job_reports_time_since_submission_across_stages_and_workers(self):
+        store = LocalRecords(self.root/'db')
+        advance, grouped, finish = threading.Event(), threading.Event(), threading.Event()
+        def generate(vid, api, client, limit, directory, progress):
+            advance.wait(5)
+            progress('grouping')
+            grouped.set()
+            finish.wait(5)
+            return {}
+        worker = self.library(store=store, generate=generate)
+        reader = self.library('reader', key='', store=store)
+        self.addCleanup(finish.set)
+        self.addCleanup(advance.set)
+        with patch('video_library.time.time', return_value=1000) as clock:
+            self.assertEqual(worker.start(FIRST)['elapsed_seconds'], 0)
+            clock.return_value = 1145
+            advance.set()
+            self.assertTrue(grouped.wait(3))
+            state = reader.start('https://youtu.be/'+FIRST)
+            self.assertEqual((state['stage'], state['elapsed_seconds']), ('grouping', 145))
+            self.assertEqual(reader.status(FIRST), state)
+            finish.set()
+            self.assertNotIn('elapsed_seconds', self.terminal(worker))
+            # A running job created by the previous release has no recorded start time.
+            store.save('jobs/'+SECOND, {'video_id': SECOND, 'status': 'running', 'stage': 'filtering',
+                                        'updated': 1140, 'attempt': 'previous-release'}, None)
+            self.assertNotIn('elapsed_seconds', reader.status(SECOND))
+
     def test_http_generation_reuse_and_private_rooms_across_users_and_videos(self):
         store = LocalRecords(self.root/'shared.sqlite3')
         lib = self.library(store=store)
