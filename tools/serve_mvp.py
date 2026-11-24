@@ -13,14 +13,12 @@ ROOT=Path(__file__).resolve().parents[1]
 for item in (ROOT,ROOT/'src'):
     if str(item) not in sys.path:sys.path.insert(0,str(item))
 
-from commentscope.agents.grounded_web import GroundedApp
 from commentscope.agents import seed_policy
 from commentscope.agents.debate_contracts import VERSION as DEBATE_PROTOCOL
 from commentscope.agents.web import WebError
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
-from commentscope.product.analysis import Analysis,from_factory
-from commentscope.product.app import ProductApp
+from commentscope.product.analysis import from_factory
 from commentscope.product.web import ProductServer
 from commentscope.providers import openrouter
 from commentscope.providers import openrouter_decisions as decisions
@@ -36,6 +34,7 @@ from commentscope.storage import write_json_exclusive as write
 from experiments.openrouter_factory_pipeline import provider_preflight,archive_sources
 from experiments.openrouter_factory_probe import key_metadata,private,validate_spend_policy
 from experiments.source_semantics_diagnostic import CYCLE_VERSION,cycle_guard
+from tools import product_server_app
 from tools import product_trial_budget as trial_budget
 
 VERSION='commentscope-product-server-20261105-v1'
@@ -65,7 +64,7 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         raise ValueError('Explicit product lifetime and bounded room budget required')
     if directory.exists():raise ValueError('New product server plan required')
     analysis=from_factory(factory_run);factory_plan=read_json(factory_run/'plan.json')
-    files=[factory_run/'plan.json',factory_run/'artifacts/agent-inputs.json',
+    files=[Path(product_server_app.__file__),factory_run/'plan.json',factory_run/'artifacts/agent-inputs.json',
            factory_run/'artifacts/output.json',Path(factory_plan['snapshot']),cycle_file,
            Path(cycle['shared_policy_file'])]
     catalog=[analysis]
@@ -279,36 +278,8 @@ class Broker:
 
 
 def build(directory):
-    directory=Path(directory);plan=validate(directory)
-    if not os.environ.get('OPENROUTER_API_KEY','').strip():raise ValueError('OPENROUTER_API_KEY required')
-    provider_preflight(plan['deployment'])
-    if 'seeded_verifier_deployment' in plan:decisions.preflight(plan['seeded_verifier_deployment'])
-    catalog=[]
-    for record in [plan['analysis'],*plan.get('additional_analyses',[])]:
-        registered=Analysis(record['bundle'],record['provenance'],record.get('presentation'))
-        if registered.id!=record['analysis_id'] or registered.revision!=record['bundle_revision']:
-            raise ValueError('Registered product analysis changed')
-        catalog.append(registered)
-    if len(catalog)!=len({registered.id for registered in catalog}):
-        raise ValueError('Duplicate registered analysis')
-    analysis=catalog[0]
-    broker=Broker(directory,plan)
-    product=ProductApp(directory/'app.sqlite',catalog,broker.model,
-        session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
-        active_session_limit=plan.get('active_session_limit',8),
-        reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
-        decision=broker.verify if broker.typed_client is not None else None,
-        decision_reservation=broker.decision_reservation if broker.typed_client is not None else None,
-        debate_execution_binding=sha(directory/'plan.json') if 'debate_protocol' in plan else None,
-        debate_balance=broker.debate_balance if 'debate_protocol' in plan else None)
-    class Legacy(GroundedApp):
-        def public(self,item):
-            value=super().public(item);value['remote_status']=broker.status()
-            if value['remote_status']!='ready':value['can_ask']=False
-            return value
-    legacy=Legacy(analysis.bundle,directory/'legacy-sessions',provider=broker.legacy_provider,
-                  revalidate=lambda:validate(directory))
-    return product,legacy,broker
+    return product_server_app.build(directory, validate=validate, broker_factory=Broker,
+                                    provider_preflight=provider_preflight)
 
 
 def main(argv=None):

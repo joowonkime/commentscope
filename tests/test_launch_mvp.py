@@ -73,6 +73,18 @@ class LaunchTests(unittest.TestCase):
             for cap,deadline in [('2',until),('1',None)]:
                 with self.assertRaisesRegex(ValueError,'bound'):launch.server_plan(*self.args,cap,deadline)
 
+    def test_team_credit_starts_a_fresh_evaluation_with_less_than_a_full_room_left(self):
+        until = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+        remaining = {'limit': 150, 'limit_remaining': 0.9, 'usage': 149.1}
+        with patch.object(launch.serve_mvp, 'key_metadata', return_value=remaining), \
+                patch.object(launch.serve_mvp, 'prepare', side_effect=lambda path,*args,**kwargs:path.mkdir()):
+            with self.assertRaisesRegex(ValueError, 'Insufficient'):
+                launch.server_plan(*self.args, '2', until)
+            result = launch.server_plan(*self.args, '2', until, team_key_budget=True)
+            self.assertTrue(result.is_dir())
+            with self.assertRaisesRegex(ValueError, 'deadline'):
+                launch.server_plan(*self.args, '2', None, team_key_budget=True)
+
     def test_bad_deadline_does_not_freeze_authorization(self):
         with patch.object(launch.serve_mvp,'key_metadata',return_value={'limit':150,'limit_remaining':115,'usage':33}):
             now = datetime.now(timezone.utc)

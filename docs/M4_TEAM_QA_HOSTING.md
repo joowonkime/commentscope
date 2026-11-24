@@ -10,7 +10,7 @@
 2. Converse에서 **New chat**을 열고 한 명에게 질문하거나 둘 이상을 선택해 자동 토론을 시작한다. 토론의 발언·결론을 읽고 비준된 합의가 있으면 합의 Agent에 질문한다.
 3. Reflect에서 생각을 저장한 뒤 같은 브라우저의 Library에서 다시 연다. 평가 서버의 개인 세션은 생성 후 24시간 동안 유지된다.
 
-운영자는 같은 고정 IP와 지속 디스크를 재사용한다. 재배포 시 기존 `runs/qa-server/`의 지출 기록과 세션을 보존한다. 서버 전체의 OpenRouter 추가 사용 한도는 21일 합산 $2다. Google Cloud의 프로젝트 예산 알림은 7,000원의 50%, 90%, 100%에 설정했다. 평가 기간이 끝난 뒤에도 주소를 예약하면 IPv4 비용이 계속 발생한다. [Google Cloud IP 요금](https://cloud.google.com/vpc/network-pricing)
+운영자는 같은 고정 IP와 지속 디스크를 재사용한다. 재배포 시 기존 `runs/qa-server/`의 지출 기록과 세션을 보존한다. REQ-008·TASK-012에 따라 공개 평가 서버는 팀 OpenRouter 키의 실제 잔액을 공유한다. 키에 설정한 총 한도와 기존 정산 기록, 방별 상한 및 운영 종료 시각을 적용한다. Google Cloud의 프로젝트 예산 알림은 7,000원의 50%, 90%, 100%에 설정했다. 평가 기간이 끝난 뒤에도 주소를 예약하면 IPv4 비용이 계속 발생한다. [Google Cloud IP 요금](https://cloud.google.com/vpc/network-pricing)
 
 ## 공개 QA 기록과 판정 기준
 
@@ -148,12 +148,18 @@ python tools/perspective_translations.py publish runs/VIDEO /private/views.json 
 공개 호스트에 Python 3.12 이상과 지속 디스크를 준비한다. 운영 백업의 `runs/qa-inputs/`를 같은 버전의 서버 코드 아래에 복원한다. 기본 영상은 `catalog.json`의 첫 항목이다. 같은 사용자로 같은 절대 경로에서 실행하고 재시작 시 `runs/qa-server/` 전체를 재사용한다. 여기에 세션 SQLite, 권한 바인딩, 이전 지출과 호출 영수증이 저장된다. 채점 중에는 고정한 코드와 자료 버전을 사용한다.
 
 1. 운영 서비스의 환경 변수에 팀용 `OPENROUTER_API_KEY`를 설정한다. 팀원이 브라우저를 열 때는 개인 키를 입력할 필요가 없다. 기존 분석만 제공하는 서버는 YouTube 키 없이 실행된다.
-2. 운영자의 실제 HTTPS 호스트와 종료시각을 넣어 아래 명령을 실행한다. 평가용 창은 최초 시작부터 최대 21일이고 등록 근거 만료 전에 끝나야 한다. 명시한 총액은 이 기간 전체에 적용되며 최대 2달러다. 예산이 소진되면 새 AI 호출이 멈춘다. 실행 중인 서버에서 기존 기록 읽기와 수동 성찰 저장은 각 세션 유효기간 안에 가능하다.
+2. 운영자의 실제 HTTPS 호스트와 종료시각을 넣어 아래 명령을 실행한다. 평가용 창은 최초 시작부터 최대 21일이고 등록 근거 만료 전에 끝나야 한다. 기본 실행은 명시한 금액을 평가 기간 전체에 적용한다. 아래 계정 예산 모드를 선택하면 방문자 전체의 AI 요청에 팀 키 잔액을 사용한다. 예산이 소진되면 새 AI 호출이 멈춘다. 실행 중인 서버에서 기존 기록 읽기와 수동 성찰 저장은 각 세션 유효기간 안에 가능하다.
 
 ```sh
 python3 tools/launch_mvp.py --check
 python3 tools/launch_mvp.py --port 8080 --public-origin "https://YOUR_HOST" \
-  --evaluation-until "YYYY-MM-DDT23:59:00+09:00" --max-usd 2
+  --evaluation-until "YYYY-MM-DDT23:59:00+09:00" --max-usd 2 --team-key-budget
+```
+
+팀 키 모드에서 위의 2달러는 개별 대화방의 상한이다. 생성과 검증은 같은 계정 장부에 기록되고 각 호출은 OpenRouter의 남은 금액을 확인한다. 기존에 준비된 공개 서버는 같은 실행 디렉터리와 포트를 사용해 다음 명령으로 전환할 수 있다. 먼저 새 모델 작업의 접수를 멈추고 진행 중인 호출을 마친 뒤 기존 프로세스를 교체한다. 기존 방과 합의 Agent, 호출 영수증, 운영 종료 시각은 원래 실행 계획을 따른다.
+
+```sh
+python3 tools/serve_assessment_credit.py /path/to/existing/assessment-plan --public-origin "https://YOUR_HOST" --port 8080
 ```
 
 3. 서비스 관리자가 같은 명령을 재시작하도록 설정하고 HTTPS 프록시가 같은 VM의 `127.0.0.1:8080`으로 원래 Host를 전달하게 한다. 사이트의 `/mvp`, `/mvp/*`, `/api/v1/*`만 전달한다. 아래는 Caddy에서 사용할 구성이다.

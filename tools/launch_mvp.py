@@ -46,10 +46,12 @@ def write_matching(path, value):
         write_json_exclusive(path, value)
 
 
-def server_plan(state, catalog, folders, analyses, deployment, cap, until):
+def server_plan(state, catalog, folders, analyses, deployment, cap, until, *, team_key_budget=False):
     key = os.environ.get('OPENROUTER_API_KEY','').strip()
     if not key:
         raise ValueError('Set OPENROUTER_API_KEY in the server environment.')
+    if team_key_budget and until is None:
+        raise ValueError('Team key credit requires a grading deadline.')
     if not 0 < units(cap) <= units('2'):
         raise ValueError('The shared product window accepts a positive cap up to 2 USD.')
     cap = dollars(units(cap))
@@ -76,7 +78,7 @@ def server_plan(state, catalog, folders, analyses, deployment, cap, until):
             raise ValueError('The team OpenRouter key needs a configured spend limit.')
         total = units(metadata['limit'])
         opening = max(units(metadata['usage']),total-units(metadata['limit_remaining']))
-        if total-opening < units(cap):
+        if total <= opening or (not team_key_budget and total - opening < units(cap)):
             raise ValueError('Insufficient remaining key credit for this window.')
         start = datetime.now(timezone.utc)
         expires = min(datetime.fromisoformat(a.compiled['expires_at']) for a in analyses)
@@ -109,10 +111,14 @@ def main(argv=None):
     parser.add_argument('--state',type=Path,default=Path('runs/qa-server'))
     parser.add_argument('--check',action='store_true',help='Validate the archived Factory analyses offline.')
     parser.add_argument('--max-usd',default='1')
+    parser.add_argument('--team-key-budget', action='store_true',
+                        help='Use team key credit across the hosted assessment. --max-usd still bounds a room.')
     parser.add_argument('--evaluation-until',help=f'Fixed ISO timestamp, up to {MAX_EVALUATION_DURATION.days} days from the first launch.')
     parser.add_argument('--port',type=int,default=8080)
     parser.add_argument('--public-origin',help='Exact HTTPS origin of the reverse proxy.')
     args=parser.parse_args(argv)
+    if args.team_key_budget and not args.evaluation_until:
+        parser.error('--team-key-budget requires --evaluation-until')
     os.chdir(ROOT)
     catalog=args.catalog.resolve()
     folders,analyses,deployment=load_catalog(catalog)
@@ -130,8 +136,13 @@ def main(argv=None):
     private(state)
     state.mkdir(parents=True,exist_ok=True,mode=0o700)
     with experiment_lock(state):
-        directory=server_plan(state,catalog,folders,analyses,deployment,args.max_usd,args.evaluation_until)
-        product,legacy,broker=serve_mvp.build(directory)
+        directory=server_plan(state,catalog,folders,analyses,deployment,args.max_usd,args.evaluation_until,
+                              team_key_budget=args.team_key_budget)
+        if args.team_key_budget:
+            from tools import serve_assessment_credit
+            product,legacy,broker=serve_assessment_credit.build(directory)
+        else:
+            product,legacy,broker=serve_mvp.build(directory)
         try:
             with ProductServer(product,legacy,args.port,public_origin=args.public_origin) as server:
                 address=args.public_origin or f'http://127.0.0.1:{server.server_port}'

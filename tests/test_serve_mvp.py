@@ -1,5 +1,6 @@
 from copy import deepcopy
 from decimal import Decimal
+from hashlib import sha256
 from datetime import datetime,timedelta,timezone
 import json
 import os
@@ -11,6 +12,7 @@ import unittest
 from unittest.mock import patch
 
 from tools import serve_mvp as server
+from tools import serve_assessment_credit as assessment_credit
 from commentscope.product.analysis import Analysis
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.storage import write_json_exclusive as write
@@ -57,6 +59,60 @@ class ProductServerPlanTests(unittest.TestCase):
             bind_cycle(self.cycle_file,self.cycle['selected_deployment'],self.policy,'1')
         for change in ({'maximum_additional_usd':'2.01'},{'user_request':' '},{'tasks':['TASK-005']},{'shared_policy_sha256':'f'*64}):
             with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
+
+    def test_public_credit_reuses_the_session_and_counts_old_spend_across_restarts(self):
+        from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION
+        key = os.environ['OPENROUTER_API_KEY']
+        self.policy['account_id'] = 'product-' + sha256(key.encode()).hexdigest()[:16]
+        (self.root / 'policy.json').write_text(json.dumps(self.policy))
+        self.product_cycle()
+        self.cycle.update(version=EVALUATION_CYCLE_VERSION, maximum_additional_usd='2')
+        self.cycle_file.write_text(json.dumps(self.cycle))
+        self.analysis.compiled['expires_at'] = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+        directory, frozen = self.prepare()
+        old, _, capped = server.build(directory)
+        token = secrets.token_urlsafe(32)
+        try:
+            _, session = old.handle('POST', '/api/v1/sessions', token, {
+                'analysis_id': self.analysis.id, 'bundle_revision': self.analysis.revision,
+                'initial_opinion': 'Keep my entry.', 'request_id': 'original'})
+            charge = capped.ledger.reserve(frozen['spend_scope_sha256'], 'b'*64, '2',
+                                          run_limit_usd='2', key_remaining_usd='49.9')
+            capped.ledger.finish(charge, '2')
+            self.assertEqual(capped.status(), 'budget_exhausted')
+            self.assertEqual(capped.debate_balance(), Decimal('0'))
+        finally:
+            old.close()
+        product, _, broker = assessment_credit.build(directory)
+        try:
+            self.assertEqual(product.handle('GET', '/api/v1/sessions/' + session['session_id'], token)[0], 200)
+            self.assertEqual(product.room_limit, Decimal(frozen['room_maximum_usd']))
+            self.assertEqual(broker.debate_balance(), Decimal('47.9'))
+            with patch.object(server, 'key_metadata', return_value={'limit_remaining': '0.21'}):
+                self.assertEqual(broker.debate_balance(), Decimal('0.21'))
+            with patch.object(server, 'key_metadata', return_value={'limit_remaining': None}):
+                with self.assertRaises(server.WebError):
+                    broker.debate_balance()
+            self.assertEqual(self.compare(product)['state'], 'succeeded')
+            self.assertEqual(broker._charged(), Decimal('0.00001'))
+        finally:
+            product.close()
+        again, _, resumed = assessment_credit.build(directory)
+        try:
+            self.assertEqual(resumed.plan['spend_scope_sha256'], broker.plan['spend_scope_sha256'])
+            self.assertEqual(resumed.ledger.summary()['charged_usd'], '2.10001')
+            self.assertEqual(resumed._charged(), broker._charged())
+            self.assertEqual(server.validate(directory), frozen)
+        finally:
+            again.close()
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'other-team-key'}):
+            with self.assertRaisesRegex(ValueError, 'bound'):
+                assessment_credit.build(directory)
+        with self.assertRaisesRegex(ValueError, 'hosted evaluation'):
+            assessment_credit.key_credit_plan({**frozen, 'factory_trial': {}}, key)
+        self.product_cycle()
+        with self.assertRaisesRegex(ValueError, 'hosted evaluation'):
+            assessment_credit.key_credit_plan({**frozen, 'cycle': self.cycle}, key)
 
     def test_three_week_evaluation_is_product_only_and_bound_to_source_lifetime(self):
         from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION, bind_cycle, cycle_guard
