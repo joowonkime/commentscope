@@ -94,7 +94,13 @@ class DecisionControlsTests(unittest.TestCase):
         self.assertEqual(od.preflight(od.DEPLOYMENT,metadata)['reservation_usd'],'0.011010048')
         zdr = {**e,'tag':'typesafe/zdr'}
         self.assertEqual(od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':[zdr]})['endpoint'],zdr)
-        for endpoints in ([e,zdr],[zdr,{**e,'tag':'typesafe/other'}],[{**e,'tag':'typesafe/other'}],
+        for endpoints in ([e,zdr],[zdr,e]):
+            checked=od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':endpoints})
+            self.assertEqual(checked['endpoint'],e)
+            self.assertEqual(checked['validated_tags'],['typesafe','typesafe/zdr'])
+        for endpoints in ([e,e],[zdr,zdr],[e,{**zdr,'context_length':131072}],
+                          [e,{**zdr,'pricing':{'prompt':'0.00000009','completion':'0'}}],
+                          [zdr,{**e,'tag':'typesafe/other'}],[{**e,'tag':'typesafe/other'}],
                           [{**zdr,'provider_name':'Different'}]):
             with self.subTest(endpoints=endpoints),self.assertRaises(ValueError):
                 od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':endpoints})
