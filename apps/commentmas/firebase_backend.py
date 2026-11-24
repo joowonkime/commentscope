@@ -15,6 +15,10 @@ class AuthenticationError(Exception):
     pass
 
 
+class RecordConflict(ValueError):
+    pass
+
+
 class FirebaseBackend:
     def __init__(self, project_id):
         import firebase_admin
@@ -36,19 +40,27 @@ class FirebaseBackend:
             raise AuthenticationError('Invalid account.')
         return uid
 
-    def for_user(self, uid):
-        return FirestoreStore(self.db, self.firestore, uid)
+    def for_user(self, uid, video_id=None):
+        root = self.db.collection('users').document(uid)
+        if video_id:
+            root = root.collection('videos').document(video_id)
+        return FirestoreStore(self.db, self.firestore, root)
+
+    def video_store(self):
+        root = self.db.collection('videoLibraries').document('v1')
+        return FirestoreStore(self.db, self.firestore, root, collections=('jobs', 'datasets'))
 
 
 class FirestoreStore:
     CHUNK_SIZE = 700_000
 
-    def __init__(self, db, firestore, uid):
+    def __init__(self, db, firestore, root, collections=("rooms", "reflections", "profile")):
         self.db, self.firestore = db, firestore
-        self.root = db.collection('users').document(uid)
+        self.root = root
+        self.collections = collections
 
     def ref(self, key):
-        if not re.fullmatch(r'(rooms|reflections|profile)/[A-Za-z0-9_-]{1,160}', key):
+        if not re.fullmatch(r'[a-z]+/[A-Za-z0-9_-]{1,160}', key) or key.split('/')[0] not in self.collections:
             raise ValueError('Invalid record key.')
         collection, name = key.split('/')
         return self.root.collection(collection).document(name)
@@ -85,7 +97,7 @@ class FirestoreStore:
             snapshot = ref.get(transaction=transaction)
             previous = snapshot.to_dict() if snapshot.exists else None
             if (previous or {}).get('hash') != expected_hash:
-                raise ValueError('Record changed in another request. Reload before saving.')
+                raise RecordConflict('Record changed in another request. Reload before saving.')
             for i, chunk in enumerate(chunks):
                 transaction.set(ref.collection('chunks').document(f'{version}-{i}'), {'data': chunk})
             transaction.set(ref, {'hash': digest(value), 'version': version, 'chunks': len(chunks),

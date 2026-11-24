@@ -40,19 +40,46 @@ def load_api_key() -> str:
     return key
 
 
+VIDEO_ID = re.compile(r"[A-Za-z0-9_-]{11}")
+
+
 def parse_video_id(value: str) -> str:
-    if re.fullmatch(r"[\w-]{11}", value):
-        return value
-    url = urllib.parse.urlparse(value)
-    if url.hostname and url.hostname.endswith("youtu.be"):
-        candidate = url.path.lstrip("/").split("/")[0]
-    elif url.path.startswith(("/shorts/", "/embed/", "/live/")):
-        candidate = url.path.split("/")[2]
-    else:
-        candidate = urllib.parse.parse_qs(url.query).get("v", [""])[0]
-    if not re.fullmatch(r"[\w-]{11}", candidate):
-        sys.exit(f"Could not find a video ID in: {value}")
-    return candidate
+    """Accept the same watch, short-link, shorts, live and embed forms as the URL library."""
+    if isinstance(value, str) and len(value) <= 2048:
+        value = value.strip()
+        if VIDEO_ID.fullmatch(value):
+            return value
+        try:
+            url = urllib.parse.urlsplit(value)
+            if url.scheme not in ("http", "https") or url.username is not None or url.password is not None or url.port is not None:
+                raise ValueError
+            parts = url.path.strip("/").split("/")
+            candidate = ""
+            if url.hostname in ("youtu.be", "www.youtu.be") and len(parts) == 1:
+                candidate = parts[0]
+            elif url.hostname in ("youtube.com", "www.youtube.com", "m.youtube.com", "music.youtube.com"):
+                if url.path == "/watch":
+                    ids = urllib.parse.parse_qs(url.query, keep_blank_values=True).get("v", [])
+                    candidate = ids[0] if len(ids) == 1 else ""
+                elif len(parts) == 2 and parts[0] in ("shorts", "live", "embed"):
+                    candidate = parts[1]
+            if VIDEO_ID.fullmatch(candidate):
+                return candidate
+        except ValueError:
+            pass
+    raise ValueError("Enter a YouTube video link or its 11-character video ID.")
+
+
+class YouTubeError(Exception):
+    def __init__(self, reason):
+        self.reason = reason
+        messages = {
+            "commentsDisabled": "Comments are disabled for this video. Choose another video.",
+            "videoNotFound": "This video is private, unavailable, or does not exist.",
+            "quotaExceeded": "The YouTube quota is exhausted. Try again later.",
+            "dailyLimitExceeded": "The YouTube quota is exhausted. Try again later.",
+        }
+        super().__init__(messages.get(reason, "YouTube could not retrieve public comments. Try again later."))
 
 
 class YouTubeAPI:
@@ -77,15 +104,14 @@ class YouTubeAPI:
                 try:
                     error = json.loads(body)["error"]
                     reason = error["errors"][0].get("reason", "")
-                    message = error.get("message", "")
-                except (ValueError, KeyError, IndexError):
-                    reason, message = "", body[:200]
-                sys.exit(f"YouTube API error {exc.code} {reason}: {message}")
-            except urllib.error.URLError as exc:
+                except (ValueError, KeyError, IndexError, TypeError):
+                    reason = ""
+                raise YouTubeError(reason) from None
+            except (urllib.error.URLError, TimeoutError):
                 if attempt < 2:
                     time.sleep(2 ** attempt)
                     continue
-                sys.exit(f"Network error: {exc.reason}")
+                raise YouTubeError("network") from None
         raise RuntimeError("unreachable")
 
 
@@ -104,35 +130,51 @@ def to_row(comment: dict, parent_id: str | None, reply_count: int | None) -> dic
     }
 
 
-def fetch_replies(api: YouTubeAPI, parent_id: str) -> list[dict]:
+def fetch_replies(api: YouTubeAPI, parent_id: str, limit: int | None = None) -> list[dict]:
     replies, token = [], None
     while True:
-        data = api.get("comments", part="snippet", parentId=parent_id, maxResults=100,
+        data = api.get("comments", part="snippet", parentId=parent_id, maxResults=min(100, limit-len(replies)) if limit else 100,
                        textFormat="plainText", pageToken=token)
         replies.extend(to_row(item, parent_id, None) for item in data.get("items", []))
+        if limit and len(replies) >= limit:
+            return replies[:limit]
         token = data.get("nextPageToken")
         if not token:
             return replies
 
 
-def collect(api: YouTubeAPI, video_id: str, limit: int | None, with_replies: bool) -> list[dict]:
+def collect(api: YouTubeAPI, video_id: str, limit: int | None, with_replies: bool, *,
+            max_rows: int | None = None, order: str = "time") -> list[dict]:
     rows, token, threads = [], None, 0
+    seen = set()
     while True:
+        page_size = min(100, max_rows-len(rows)) if max_rows else 100
         data = api.get("commentThreads", part="snippet,replies" if with_replies else "snippet",
-                       videoId=video_id, maxResults=100, textFormat="plainText",
-                       order="time", pageToken=token)
+                       videoId=video_id, maxResults=page_size, textFormat="plainText",
+                       order=order, pageToken=token)
         for item in data.get("items", []):
             top = item["snippet"]["topLevelComment"]
+            if top["id"] in seen:
+                continue
+            seen.add(top["id"])
             reply_count = item["snippet"].get("totalReplyCount", 0)
             rows.append(to_row(top, None, reply_count))
             threads += 1
+            if max_rows and len(rows) >= max_rows:
+                return rows
             if with_replies and reply_count:
                 included = item.get("replies", {}).get("comments", [])
-                if len(included) >= reply_count:
+                remaining = min(3, max_rows - len(rows)) if max_rows else None
+                if len(included) >= min(reply_count, remaining or reply_count):
                     replies = [to_row(r, top["id"], None) for r in included]
                 else:
-                    replies = fetch_replies(api, top["id"])
-                rows.extend(sorted(replies, key=lambda r: r["published_at"]))
+                    replies = fetch_replies(api, top["id"], remaining)
+                unique = {r["comment_id"]: r for r in replies if r["comment_id"] not in seen}
+                selected = sorted(unique.values(), key=lambda r: r["published_at"])[:remaining]
+                rows.extend(selected)
+                seen.update(r["comment_id"] for r in selected)
+                if max_rows and len(rows) >= max_rows:
+                    return rows
             if limit and threads >= limit:
                 return rows
         print(f"  top-level {threads}, total {len(rows)} rows, requests {api.requests}", flush=True)
@@ -179,4 +221,7 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (ValueError, YouTubeError) as exc:
+        sys.exit(str(exc))
