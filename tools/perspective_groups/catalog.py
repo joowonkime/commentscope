@@ -11,7 +11,6 @@ from commentscope.factory.automatic_contract import digest
 from commentscope.factory.fact_checks import claim_identity, live
 from commentscope.product.analysis import Analysis
 from .filter_comments import digest as team_digest, write_json
-from .group_comments import validate_result
 
 
 FORMAT = 'grouped-perspectives-v1'
@@ -94,13 +93,26 @@ def recent_originals(decisions, refresh):
     return original, expiry
 
 
-def register(directory, reference=None, refresh=None):
+def register(directory, reference=None, refresh=None, *, save_profiles=False):
+    from .profiles import build_bundle, validate_bundle
+
     directory = Path(directory)
     decisions = read(directory/'01_filter/decisions.json')
     filtered = read(directory/'01_filter/filtered.json')
     grouped = read(directory/'02_group/groups.json')
-    assignments = read(directory/'02_group/assignments.json')['assignments']
-    validate_result(filtered, {**grouped, 'assignments': assignments})
+    assigned_file = read(directory/'02_group/assignments.json')
+    if assigned_file['meta'] != grouped['meta']:
+        raise ValueError('Assignments and groups are from different runs')
+    assignments = assigned_file['assignments']
+    prepared = build_bundle(grouped, assigned_file, filtered)
+    agent_path = directory/'03_agents/agents.json'
+    if save_profiles:
+        write_json(agent_path, prepared)
+    elif agent_path.is_file():
+        archived = validate_bundle(read(agent_path))
+        if any(archived['meta'][key] != prepared['meta'][key] for key in ('content_sha256', 'grouping_sha256')):
+            raise ValueError('Archived profiles and evidence differ from the supplied groups')
+    profiles = {row['agent_id']: row for row in prepared['agents']}
     kept = {row['comment']['comment_id']: row['comment'] for row in decisions['decisions']
             if row['classification']['status'] == 'keep'}
     if kept != {r['comment_id']: r for r in filtered['comments']}:
@@ -121,12 +133,9 @@ def register(directory, reference=None, refresh=None):
         catalog = read(catalog_path)
         if catalog['video']['video_id'] != video_id:
             raise ValueError('Translated catalog belongs to another video')
-        agent_path = directory/'03_agents/agents.json'
-        if agent_path.is_file():
-            agents = read(agent_path)
-            fingerprint = agents['meta']['content_sha256']
-            if agents['meta']['grouping_sha256'] != team_digest(grouped) or catalog['fingerprint'] != team_digest(['english-web-v2', fingerprint, grouped]):
-                raise ValueError('Translated catalog is from a different group revision')
+        fingerprint = prepared['meta']['content_sha256']
+        if catalog['fingerprint'] != team_digest(['english-web-v2', fingerprint, grouped]):
+            raise ValueError('Translated catalog is from a different group revision')
         translations = {a['agent_id']: a for a in catalog['agents']}
     groups = {g['group_id']: g for g in grouped['groups']}
     membership = {a['comment']['comment_id']: a['grouping'] for a in assignments if a['comment']['comment_id'] in sources}
@@ -167,9 +176,7 @@ def register(directory, reference=None, refresh=None):
         raise ValueError('Missing or unknown group ID')
     for gid in order:
         group = groups[gid]
-        summary = group['summary']
-        if group['summary_status'] != 'ready' or not summary:
-            raise ValueError('Group has no grounded summary')
+        summary = profiles[gid]
         assigned = set(deposits[gid])
         translation = translations.get(gid,{})
         stance_ids = set(summary['stance_evidence_comment_ids']) & assigned

@@ -188,3 +188,7 @@ YOUR_HOST {
 새 방문자가 SBS 영상을 열면 **업종별 서비스 공백, 임금·고용 여건, 매일의 근무시간, 포괄임금·무급 야근, 평일 하루 휴식**을 비교한다. 카드와 분포의 댓글 수는 주된 관점에 한 번 배정된 수다. 그룹 안에서도 입장과 이유의 예시 원문을 따로 열 수 있다. 그룹 배정 수와 특정 발언을 지지하는 원문 수는 의미가 다르다. 한국어·영어 선택, 기존 Library 기록, 원래 대화·자동 토론·합의 Agent·Reflect는 공개판 API를 사용한다.
 
 운영자는 표준 수집 snapshot 또는 팀 수집 JSON에서 `PYTHONPATH=src python -m tools.perspective_groups.prepare SNAPSHOT PRIVATE_OUTPUT --provider openrouter --model OPENROUTER_MODEL_ID`로 새 영상을 준비할 수 있다. 이 명령은 모델을 호출한다. 이미 준비된 표본은 `PYTHONPATH=src python -m tools.perspective_groups.catalog PRIVATE_PREPARED_DIR PRIVATE_CATALOG_JSON`으로 다시 등록한다. `--youtube-refresh`에는 재확인한 댓글 본문·부모·영상 귀속 자료를, `--reference`에는 같은 영상의 검토된 문헌과 만료일을 전달할 수 있다. 이 등록에는 모델 호출이 없다. 운영 데이터와 대화 DB는 비공개로 보관한다.
+
+팀 전달본의 초기 Agent 빌더는 관점별 입장, 근거 ID, 그룹 내부의 이견, 한계, 담당 댓글과 댓글별 해석을 `03_agents/agents.json`에 기록한다. 기존 산출물을 등록할 때도 같은 빌더로 다시 구성해 프로필 내용과 그룹 입력 해시를 대조한다. 대화 시작 시에는 서버가 등록한 해당 버전의 Agent를 사용한다.
+
+11월 24일 공개 SBS QA에서 의견 댓글 1,144개 중 857개가 5개 관점에 배정됐고, 기타 의견은 287개였다. 서비스 공백과 평일 휴식 관점에 공동 시범안을 요청한 토론은 첫 2턴에서 부분 응답으로 종료됐다. 같은 두 관점에 각자가 지지하는 변화와 이유를 물은 토론은 4턴을 완료했다. 두 참여자가 함께 승인한 주장 1개로 합의 Agent가 생성돼 후속 질문에 답했다. 두 사례는 질문별 실행 결과이며, 토론 후 설득력 향상은 별도 측정이 필요하다.

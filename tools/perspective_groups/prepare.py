@@ -27,7 +27,7 @@ def prepare(source, directory, client, workers=1):
     retained = read(first/'filtered.json')
     groups = group_comments.group_source(retained, client, second, topic=topic, context_rows=source['comments'], workers=workers)
     group_comments.save_results(second, groups)
-    record = register(directory)
+    record = register(directory, save_profiles=True)
     write_json(directory/'grouped.json',record)
     return record
 

@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from tools.perspective_groups.catalog import load_record, register
+from tools.perspective_groups.catalog import load_record, read, register, write_json
 from tools.perspective_groups.prepare import prepare
 from test_team_group_discovery import FakeClient, comment
 
@@ -53,3 +53,12 @@ class GroupedCatalogTests(unittest.TestCase):
         self.record['presentation']['grouping']['retained'] += 1
         with self.assertRaisesRegex(ValueError,'presentation'):
             load_record(self.record)
+
+    def test_prepared_persona_cannot_drift_from_the_groups(self):
+        agent_path = self.directory/'03_agents/agents.json'
+        staged = read(agent_path)
+        self.assertEqual(staged['meta']['agent_count'], 2)
+        staged['agents'][0]['stance'] = 'Unrelated position'
+        write_json(agent_path, staged)
+        with self.assertRaisesRegex(ValueError, 'bundle content changed'):
+            register(self.directory)
