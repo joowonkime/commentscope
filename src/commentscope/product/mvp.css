@@ -318,3 +318,7 @@ dialog header > .interface-language { margin-inline-start: auto; }
   .conversation-progress { margin:8px 14px; }
 }
 .message .bubble .answer-origin { font-size:.72rem; margin:.45rem 0 0; color:#5c5271; }
+
+.debate-idea { border-left: 3px solid #b4a4dc; margin: .65rem 0; padding: .3rem .8rem; }
+.debate-idea small { color: #574b71; }
+.debate-idea p { margin: .3rem 0; line-height: 1.5; }

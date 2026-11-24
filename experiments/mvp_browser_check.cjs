@@ -247,6 +247,9 @@ async function verifyAutomaticDebate({command,evaluate,screenshot}){
   checks.bounded_debate_calls=metrics().synthetic_provider_calls-afterComparisons.synthetic_provider_calls===7
     &&metrics().synthetic_typed_calls-afterComparisons.synthetic_typed_calls===7;
   await click('#show-debate-result');
+  if(debateResult!=='consensus'){
+    checks.separate_unratified_ideas=await evaluate("document.querySelectorAll('.debate-idea').length===2&&!document.querySelector('#ask-synthesis-agent')&&!!document.querySelector('.debate-idea .source-button')");
+  }
   checks.conclusion_reachable=await evaluate("document.activeElement?.id==='debate-conclusion'");
   await screenshot('debate-result.png');
 

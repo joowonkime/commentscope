@@ -1042,6 +1042,22 @@ function renderConclusion(room){
     details.append(node('summary',msg("Evidence from these turns")),references);card.append(details);
     panel.append(card);
   }
+  if(result.evidence_scope!=='expired'&&!result.shared_claims?.length){
+    const ideas=[];
+    for(const id of room.participant_ids){
+      const points=room.messages.filter(m=>m.agent_id===id).reverse().flatMap(m=>m.points||[]);
+      const point=points.find(p=>p.origin==='ai_reasoning')||points.find(p=>p.origin==='external_evidence');
+      if(point)ideas.push({id,point});
+    }
+    if(ideas.length){
+      panel.append(node('h3',msg("What you can take from this discussion")));
+      for(const {id,point} of ideas){
+        const item=node('article',undefined,'debate-idea');
+        item.append(node('small',joinText([label(id),point.origin==='ai_reasoning'?msg("Individual proposal"):msg("Claim based on an external source")])),node('p',point.text));
+        appendPointLinks(item,[point.point_id],room,msg("Read this turn"));panel.append(item);
+      }
+    }
+  }
   if(result.disagreements?.length){
     panel.append(node('h3',msg("Disagreements and conditional responses")));
     const list=node('ul');
