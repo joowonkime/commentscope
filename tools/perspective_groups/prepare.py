@@ -3,6 +3,7 @@ import argparse
 import os
 from pathlib import Path
 
+from commentscope.factory.automatic_contract import digest
 from . import filter_comments, group_comments
 from .catalog import read, register, write_json
 from .llm_client import create_client
@@ -26,6 +27,9 @@ def prepare(source, directory, client, workers=1):
     filter_comments.save_results(first, filtered)
     retained = read(first/'filtered.json')
     groups = group_comments.group_source(retained, client, second, topic=topic, context_rows=source['comments'], workers=workers)
+    # Record the implementation at generation time so later imports and display changes keep the original identity.
+    scripts = (Path(filter_comments.__file__), Path(group_comments.__file__))
+    groups['meta']['preparation_runtime_sha256'] = digest([p.read_text(encoding='utf-8').encode().hex() for p in scripts])
     group_comments.save_results(second, groups)
     record = register(directory, save_profiles=True)
     write_json(directory/'grouped.json',record)

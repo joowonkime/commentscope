@@ -90,7 +90,7 @@ class GroupTests(unittest.TestCase):
             for cid in g['summary']['stance_evidence_comment_ids']:
                 self.assertIn(cid,{x['comment_id'] for x in g['comments']})
         save_results(self.output,result)
-        self.assertEqual(json.loads((self.output/'groups.json').read_text())['groups'],result['groups'])
+        self.assertEqual(json.loads((self.output/'groups.json').read_text(encoding="utf-8"))['groups'],result['groups'])
 
     def test_resume_uses_all_stage_caches_without_new_requests(self):
         client=FakeClient()

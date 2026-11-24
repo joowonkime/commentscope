@@ -295,7 +295,7 @@ def group_source(source, client, output, *, topic, context_rows=None, max_groups
                             discovery_schema(ids, max_groups), lambda d: validate_discovery(d, ids, max_groups))
     definitions = discovery["groups"]
     group_ids = [g["group_id"] for g in definitions]
-    print("Discovered: " + ", ".join(g["name"] for g in definitions), flush=True)
+    print(f"Discovered {len(definitions)} perspectives.", flush=True)
     batch_list = list(pack_batches(items, batch_size))
 
     def assign(task):

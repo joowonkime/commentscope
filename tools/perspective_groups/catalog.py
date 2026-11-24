@@ -15,6 +15,8 @@ from .filter_comments import digest as team_digest, write_json
 
 FORMAT = 'grouped-perspectives-v1'
 DISPLAY_ORDER = ('g4', 'g5', 'g2', 'g3', 'g1')
+# The delivered v2 artifacts predate the per-run runtime fingerprint.
+V2_HANDOFF_RUNTIME = 'ac9447dcc603b5963ec35adf3bcef2597783a1cbf50dc53ba4a276fe98e02557'
 
 
 def read(path):
@@ -139,7 +141,11 @@ def register(directory, reference=None, refresh=None, *, save_profiles=False):
         translations = {a['agent_id']: a for a in catalog['agents']}
     groups = {g['group_id']: g for g in grouped['groups']}
     membership = {a['comment']['comment_id']: a['grouping'] for a in assignments if a['comment']['comment_id'] in sources}
-    runtime = digest([Path(__file__).with_name(f).read_bytes().hex() for f in ('filter_comments.py','group_comments.py')])
+    runtime = meta.get('preparation_runtime_sha256')
+    if not runtime:
+        if (decisions['meta']['policy_version'], meta['policy_version']) != ('perspective-filter-v2', 'perspective-groups-v2-unassigned'):
+            raise ValueError('Missing preparation runtime for this policy version')
+        runtime = V2_HANDOFF_RUNTIME
     model = meta['model']
     identity = {'kind':'remote_llm','provider':'OpenAI','name':model,'revision':model,'language_scope':'multilingual',
                 'runtime_sha256':runtime,'deployment_sha256':digest([meta['provider'],model,meta.get('reasoning_effort')])}

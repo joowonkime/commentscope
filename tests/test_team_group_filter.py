@@ -79,7 +79,7 @@ class FilterTests(unittest.TestCase):
         self.assertEqual(result["meta"]["counts"], {"keep": 1, "exclude": 2, "review": 1})
         rows = []
         for file in ["filtered.json", "review.json", "excluded.json"]:
-            rows.extend(json.loads((self.output / file).read_text())["comments"])
+            rows.extend(json.loads((self.output / file).read_text(encoding="utf-8"))["comments"])
         self.assertCountEqual(rows, original["comments"])
         self.assertEqual(result["meta"]["source_meta"], source["meta"])
 
