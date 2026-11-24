@@ -1,6 +1,7 @@
 """Run the three product workflows on a generated development analysis."""
 import argparse
 from copy import deepcopy
+from datetime import datetime
 from decimal import Decimal
 import json
 import os
@@ -12,18 +13,18 @@ ROOT=Path(__file__).resolve().parents[1]
 for item in (ROOT,ROOT/'src'):
     if str(item) not in sys.path:sys.path.insert(0,str(item))
 
-from commentscope.agents.grounded_web import GroundedApp
 from commentscope.agents import seed_policy
+from commentscope.agents.debate_contracts import VERSION as DEBATE_PROTOCOL
 from commentscope.agents.web import WebError
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.file_integrity import source_code_hashes
-from commentscope.product.analysis import Analysis,from_factory
-from commentscope.product.app import ProductApp
+from commentscope.product.analysis import from_factory
 from commentscope.product.web import ProductServer
 from commentscope.providers import openrouter
 from commentscope.providers import openrouter_decisions as decisions
 from commentscope.providers.budget import InferenceBudget,BudgetExhausted
 from commentscope.providers.checkpoint_calls import CheckpointRunner,PendingCallError,run_origin
+from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION
 from commentscope.providers.execution_lock import experiment_lock
 from commentscope.providers.openrouter_budget import SpendLedger,units
 from commentscope.providers.remote_verification import WireBudget,WIRE_BUDGET
@@ -33,6 +34,7 @@ from commentscope.storage import write_json_exclusive as write
 from experiments.openrouter_factory_pipeline import provider_preflight,archive_sources
 from experiments.openrouter_factory_probe import key_metadata,private,validate_spend_policy
 from experiments.source_semantics_diagnostic import CYCLE_VERSION,cycle_guard
+from tools import product_server_app
 from tools import product_trial_budget as trial_budget
 
 VERSION='commentscope-product-server-20261105-v1'
@@ -40,9 +42,19 @@ ASSETS=[ROOT/'src/commentscope/product'/name for name in ('mvp.html','mvp.js','m
 ASSETS+=sorted((ROOT/'src/commentscope/product/assets').glob('*'))
 
 
-def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,factory_trial=None):
+def analysis_record(analysis):
+    return {'bundle':deepcopy(analysis.bundle),'provenance':deepcopy(analysis.provenance),
+            'analysis_id':analysis.id,'bundle_revision':analysis.revision,
+            **({'presentation':deepcopy(analysis.presentation)} if analysis.presentation else {})}
+
+
+def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_usd,
+            factory_trial=None,automatic_debate=False,additional_factory_runs=()):
     directory=Path(directory);factory_run=Path(factory_run);cycle_file=Path(cycle_file)
-    for path in (directory,factory_run,cycle_file):private(path)
+    additional_factory_runs=tuple(map(Path,additional_factory_runs))
+    for path in (directory,factory_run,cycle_file,*additional_factory_runs):private(path)
+    if factory_trial is not None and additional_factory_runs:
+        raise ValueError('A linked Factory trial registers only its bounded analysis')
     cycle=read_json(cycle_file);cycle_guard(cycle)
     deployment=openrouter.validate(cycle['selected_deployment'])
     allocation=openrouter.generation_allocation(deployment,require_explicit=True)
@@ -52,9 +64,25 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         raise ValueError('Explicit product lifetime and bounded room budget required')
     if directory.exists():raise ValueError('New product server plan required')
     analysis=from_factory(factory_run);factory_plan=read_json(factory_run/'plan.json')
-    files=[factory_run/'plan.json',factory_run/'artifacts/agent-inputs.json',
+    files=[Path(product_server_app.__file__),factory_run/'plan.json',factory_run/'artifacts/agent-inputs.json',
            factory_run/'artifacts/output.json',Path(factory_plan['snapshot']),cycle_file,
            Path(cycle['shared_policy_file'])]
+    catalog=[analysis]
+    for path in additional_factory_runs:
+        registered=from_factory(path)
+        registered.live()
+        files.extend([path/'plan.json',path/'artifacts/agent-inputs.json',path/'artifacts/output.json',
+                      Path(read_json(path/'plan.json')['snapshot'])])
+        catalog.append(registered)
+    files.extend(path/'perspective-names.json' for path in (factory_run,*additional_factory_runs)
+                 if (path/'perspective-names.json').is_file())
+    if cycle['version']==EVALUATION_CYCLE_VERSION:
+        end=datetime.fromisoformat(cycle['deadline'])
+        if factory_trial is not None or any(end>datetime.fromisoformat(a.compiled['expires_at']) for a in catalog):
+            raise ValueError('Evaluation requires registered product sources valid through the deadline')
+    if len(catalog)!=len({registered.id for registered in catalog}):
+        raise ValueError('Duplicate registered analysis')
+    seeded=any(seed_policy.seeded(registered.bundle) for registered in catalog)
     link=None
     if factory_trial is not None:
         private(Path(factory_trial))
@@ -64,6 +92,8 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
         files.extend([Path(link['file']),factory_run/'completed.json',factory_run/'artifacts/runtime.json',
                       Path(factory_trial),ROOT/'tools/product_trial_budget.py'])
         files.extend(ROOT/p for p in trial_budget.shared.TOOL_FILES)
+    if automatic_debate and not seeded:
+        raise ValueError('Automatic debate requires registered comment-seeded perspectives')
     provider=provider_preflight(deployment)
     plan={'artifact_kind':VERSION,'run_directory':str(directory.resolve()),
           'factory_run':str(factory_run.resolve()),'cycle_file':str(cycle_file.resolve()),'cycle':cycle,
@@ -72,17 +102,20 @@ def prepare(directory,factory_run,cycle_file,*,session_ttl_seconds,room_maximum_
           'generation_allocation':allocation,'inputs':{str(p.resolve()):sha(p) for p in files},
           'code_sha256':source_code_hashes(),'entrypoint_sha256':sha(Path(__file__)),
           'assets_sha256':{str(p.relative_to(ROOT)):sha(p) for p in ASSETS},
-          'analysis':{'bundle':deepcopy(analysis.bundle),'provenance':deepcopy(analysis.provenance),
-                      'analysis_id':analysis.id,'bundle_revision':analysis.revision},
+          'analysis':analysis_record(analysis),
           'session_ttl_seconds':session_ttl_seconds,'room_maximum_usd':str(room_maximum_usd),
+          'active_session_limit':64 if cycle['version']==EVALUATION_CYCLE_VERSION else 8,
           'limits':{'analysis_seconds':None,'call_seconds':deployment['call_seconds']},
           'quality_gate_passed':False,'semantic_reliability':'not_assessed',
           'cross_run_response_reuse':False,'development_product_scope':True}
+    if additional_factory_runs:plan['additional_analyses']=[analysis_record(item) for item in catalog[1:]]
     plan['billing_policy']=WIRE_BUDGET
+    if automatic_debate:
+        plan['debate_protocol']=DEBATE_PROTOCOL
     if link is not None:
         plan.update(factory_trial=link,spend_scope_sha256=factory_plan['spend_scope_sha256'],
                     money_owner_limit_usd=factory_plan['maximum_cost_usd'])
-    if seed_policy.seeded(analysis.bundle):
+    if seeded:
         plan['seeded_verifier_deployment']=deepcopy(decisions.DEPLOYMENT)
         plan['seeded_verifier_at_prepare']=decisions.preflight(plan['seeded_verifier_deployment'])
     write(directory/'plan.json',plan);write(directory/'frozen.json',{'plan_sha256':sha(directory/'plan.json')})
@@ -113,9 +146,14 @@ def validate(directory):
     elif plan['spend_scope_sha256']!=sha(plan['cycle_file']):raise ValueError('Product cycle money changed')
     if plan['generation_allocation']!=openrouter.generation_allocation(plan['deployment'],require_explicit=True):
         raise ValueError('Product generation allocation changed')
-    expected=decisions.DEPLOYMENT if seed_policy.seeded(plan['analysis']['bundle']) else None
+    catalog=[plan['analysis'],*plan.get('additional_analyses',[])]
+    if 'factory_trial' in plan and len(catalog)>1:
+        raise ValueError('A linked Factory trial registers only its bounded analysis')
+    expected=decisions.DEPLOYMENT if any(seed_policy.seeded(item['bundle']) for item in catalog) else None
     if plan.get('seeded_verifier_deployment')!=expected:
         raise ValueError('Seeded product verifier deployment changed or missing')
+    if 'debate_protocol' in plan and (plan['debate_protocol']!=DEBATE_PROTOCOL or expected is None):
+        raise ValueError('Automatic debate protocol or admission policy changed')
     return plan
 
 
@@ -173,6 +211,16 @@ class Broker:
         if own['calls'] and Decimal(own['remaining_usd'])<=0:return 'budget_exhausted'
         return 'ready'
 
+    def debate_balance(self):
+        ledger = self.ledger
+        own = ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])
+        available = [Decimal(ledger.summary()['remaining_usd']),
+                     Decimal(self.plan.get('money_owner_limit_usd',self.plan['maximum_cost_usd'])) -
+                     Decimal(own['charged_usd'])]
+        if self.factory is not None:
+            available.append(trial_budget.remaining(ledger,self.plan['factory_trial'],self.factory))
+        return max(Decimal(0), min(available))
+
     def model(self,stage,request):
         with self.lock:
             validate(self.directory)
@@ -191,7 +239,11 @@ class Broker:
         return Decimal(self.ledger.summary(plan_sha256=self.plan['spend_scope_sha256'])['charged_usd'])
 
     def _dispatch(self,callback,before):
-        try:return callback()
+        try:
+            result=callback()
+            if result.get('errors')==['bounded_call_failed'] and self.ledger.summary()['uncertain_calls']:
+                raise WebError(503,'unconfirmed_provider_call')
+            return result
         except Exception as exc:
             error=exc
             if isinstance(exc,BudgetExhausted):
@@ -226,27 +278,8 @@ class Broker:
 
 
 def build(directory):
-    directory=Path(directory);plan=validate(directory)
-    if not os.environ.get('OPENROUTER_API_KEY','').strip():raise ValueError('OPENROUTER_API_KEY required')
-    provider_preflight(plan['deployment'])
-    if 'seeded_verifier_deployment' in plan:decisions.preflight(plan['seeded_verifier_deployment'])
-    analysis=Analysis(plan['analysis']['bundle'],plan['analysis']['provenance'])
-    if analysis.id!=plan['analysis']['analysis_id'] or analysis.revision!=plan['analysis']['bundle_revision']:
-        raise ValueError('Registered product analysis changed')
-    broker=Broker(directory,plan)
-    product=ProductApp(directory/'app.sqlite',[analysis],broker.model,
-        session_ttl_seconds=plan['session_ttl_seconds'],room_maximum_usd=plan['room_maximum_usd'],
-        reservation=broker.reservation,revalidate=lambda:validate(directory),generation_status=broker.status,
-        decision=broker.verify if broker.typed_client is not None else None,
-        decision_reservation=broker.decision_reservation if broker.typed_client is not None else None)
-    class Legacy(GroundedApp):
-        def public(self,item):
-            value=super().public(item);value['remote_status']=broker.status()
-            if value['remote_status']!='ready':value['can_ask']=False
-            return value
-    legacy=Legacy(analysis.bundle,directory/'legacy-sessions',provider=broker.legacy_provider,
-                  revalidate=lambda:validate(directory))
-    return product,legacy,broker
+    return product_server_app.build(directory, validate=validate, broker_factory=Broker,
+                                    provider_preflight=provider_preflight)
 
 
 def main(argv=None):
@@ -255,6 +288,8 @@ def main(argv=None):
     p.add_argument('--factory-run',type=Path,required=True);p.add_argument('--cycle-file',type=Path,required=True)
     p.add_argument('--session-ttl-seconds',type=int,required=True);p.add_argument('--room-maximum-usd',required=True)
     p.add_argument('--factory-trial',type=Path)
+    p.add_argument('--additional-factory-run',action='append',type=Path,default=[])
+    p.add_argument('--automatic-debate',action='store_true',help='Enable the experimental DS-v2 backend in a new product plan')
     p=actions.add_parser('serve');p.add_argument('directory',type=Path)
     p.add_argument('--key-file',type=Path);p.add_argument('--port',type=int,default=8767)
     p.add_argument('--bind',choices=('127.0.0.1','0.0.0.0'),default='127.0.0.1')
@@ -264,7 +299,8 @@ def main(argv=None):
     if args.action=='prepare':
         plan=prepare(args.directory,args.factory_run,args.cycle_file,
                      session_ttl_seconds=args.session_ttl_seconds,room_maximum_usd=args.room_maximum_usd,
-                     factory_trial=args.factory_trial)
+                     factory_trial=args.factory_trial,automatic_debate=args.automatic_debate,
+                     additional_factory_runs=args.additional_factory_run)
         print(json.dumps({'prepared':str(args.directory),'analysis_id':plan['analysis']['analysis_id'],
                           'quality_gate_passed':False,'inference_calls':0}));return
     if args.key_file is not None:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()

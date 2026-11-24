@@ -35,6 +35,8 @@ class ProductHandler(GroundedHandler):
         assets={'/mvp':('mvp.html','text/html; charset=utf-8'),
                 '/mvp/':('mvp.html','text/html; charset=utf-8'),
                 '/mvp/app.js':('mvp.js','text/javascript; charset=utf-8'),
+                '/mvp/opinion-samples.json':('opinion-samples.json','application/json; charset=utf-8'),
+                '/mvp/perspective-translations.json':('perspective-translations.json','application/json; charset=utf-8'),
                 '/mvp/app.css':('mvp.css','text/css; charset=utf-8')}
         if path.startswith('/mvp/assets/'):
             if not re.fullmatch(r'/mvp/assets/[A-Za-z0-9_-]+\.(svg|png|woff2)',path):

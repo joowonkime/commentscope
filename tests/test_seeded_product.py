@@ -34,11 +34,11 @@ class SeededProductTests(unittest.TestCase):
     def decide(self,stage,payload):
         self.decisions.append(deepcopy(payload));return verifier(payload)
 
-    def start(self,mode='group'):
+    def start(self,mode='group',question='Why?'):
         room=self.room() if mode=='group' else self.call('POST',self.base+'/rooms',{
             'mode':'one_to_one','participant_ids':['P1'],'initial_revision':1,'request_id':'direct'})[1]
         path='/api/v1/rooms/'+room['room_id']
-        args={'opening_question':'Why?','expected_revision':room['revision'],'request_id':'start'}
+        args={'opening_question':question,'expected_revision':room['revision'],'request_id':'start'}
         job=self.call('POST',path+'/start',args)[1]
         return path,args,self.job(job)
 
@@ -65,6 +65,31 @@ class SeededProductTests(unittest.TestCase):
         self.assertEqual(len(self.calls),4)
         self.app.close();self.app=self.build()
         self.assertEqual(self.call('GET',path)[1]['messages'],room['messages'])
+
+    def test_reply_and_verifier_keep_the_actual_question_and_original_language(self):
+        query='두 방식 중 어떤 방법을 시도해 볼까요?'
+        path,_,job=self.start(question=query)
+        self.assertEqual(job['state'],'succeeded')
+        for request, decision in zip(self.calls,self.decisions,strict=True):
+            self.assertEqual(request['data']['QUESTION'],query)
+            self.assertEqual(decision['state']['QUESTION'],query)
+        self.assertTrue(self.calls[2]['data']['PEER_CONTEXT_ONLY']['points'])
+        self.assertEqual(self.call('GET',path)[1]['round_progress'],
+                         {'completed':4,'total':4,'active_agent_id':None})
+
+    def test_group_followup_gives_all_speakers_the_same_prior_public_ideas(self):
+        path,_,_=self.start(question='어떻게 시작할까요?')
+        room=self.call('GET',path)[1]
+        query='그 아이디어의 조건은 무엇인가요?'
+        job=self.call('POST',path+'/messages',{'text':query,'reply_to_message_id':None,
+            'expected_revision':room['revision'],'request_id':'followup'})[1]
+        self.assertEqual(self.job(job)['state'],'succeeded')
+        context=self.calls[-1]['data']['PRIOR_DISCUSSION_CONTEXT_ONLY']
+        self.assertEqual(context,self.calls[-2]['data']['PRIOR_DISCUSSION_CONTEXT_ONLY'])
+        self.assertEqual(context,self.decisions[-1]['state']['PRIOR_DISCUSSION_CONTEXT_ONLY'])
+        self.assertEqual(context['questions'],['어떻게 시작할까요?',query])
+        self.assertEqual(len(context['turns']),2)
+        self.assertTrue(all(t['idea'] for t in context['turns']))
 
     def test_one_to_one_and_public_count_scope(self):
         path,args,job=self.start('direct');self.assertEqual(job['state'],'succeeded')

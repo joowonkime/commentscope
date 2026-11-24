@@ -66,6 +66,13 @@ class SeededRuntimeTests(unittest.TestCase):
         self.session(value).ask('Develop the position.')
         payload=self.verifications[0]
         self.assertEqual(set(payload['state']['PARAGRAPHS']),{'P000','P001'})
+        self.assertIn('AI discussion participant',payload['state']['SPEAKER'])
+        rows=payload['state']['PARAGRAPHS']
+        for row in rows.values():
+            self.assertEqual(set(row['anchor_positions']),set(row['comment_ids']))
+        self.assertNotEqual(payload['questions']['p0_basis']['instructions'],payload['questions']['p1_basis']['instructions'])
+        self.assertIn('need not already say',payload['questions']['p0_basis']['instructions'])
+        self.assertIn('every empirical assertion',payload['questions']['p1_basis']['instructions'])
         for i in range(2):
             for suffix in ('kind','attribution','scope','basis'):
                 self.assertIn('PARAGRAPHS.P00'+str(i),payload['questions'][f'p{i}_{suffix}']['instructions'])

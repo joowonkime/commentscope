@@ -12,11 +12,23 @@ class Element {
 }
 const flatten=n=>[n,...n.children.flatMap(flatten)];
 const text=n=>n.textContent+n.children.map(text).join('');
+const appSource = fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
+const html = fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.html'),'utf8');
+const koreanCopy = JSON.parse(html.match(/<script type="application\/json" id="interface-copy">([\s\S]*?)<\/script>/)[1]);
+function installUiStrings(context, language) {
+  context.koreanInterface = koreanCopy;
+  context.interfaceLanguage = language;
+  vm.runInContext(appSource.slice(appSource.indexOf('function msg('),appSource.indexOf('function uiTextNode(')),context);
+  vm.runInContext(appSource.slice(appSource.indexOf('function interfaceNotice('),appSource.indexOf('function asset(')),context);
+  context.setText = (element,value) => { element.textContent = context.formatText(value); };
+}
 function render(points,extra={}){
   const js=fs.readFileSync(path.join(__dirname,'../src/commentscope/product/mvp.js'),'utf8');
   const container=new Element('div');
   const context=vm.createContext({URL,state:{room:{messages:[{author_kind:'agent',agent_id:'P1',message_id:'M1',points,...extra}]}},
-    $:()=>container,node:(tag,t)=>new Element(tag,t),avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{}});
+    $:()=>container,avatar:()=>new Element('img'),label:()=> 'Perspective 1',source:()=>{},perspective:()=>({core_claim_id:'claim',text:'Registered stance',source_ids:['c1']})});
+  installUiStrings(context, 'ko');
+  context.node = (tag,value) => new Element(tag,context.formatText(value));
   vm.runInContext(js.slice(js.indexOf('function sourceButtons('),js.indexOf('// API span offsets')),context);
   vm.runInContext(js.slice(js.indexOf('function renderMessages('),js.indexOf('async function refreshRoom(')),context);
   vm.runInContext('renderMessages()',context);return container;
@@ -41,8 +53,240 @@ test('unsafe schemes and credential URLs never become external links',()=>{
   assert.equal(flatten(result).filter(n=>n.tagName==='a').length,0);
 });
 
+test('a held live response links its registered stance separately and an expired response does not',()=>{
+  const held=render([],{evidence_scope:'seeded_provenance',status:'abstain',limitation:'verification_hold'});
+  const detail=flatten(held).find(n=>n.tagName==='details');
+  assert.match(text(held),/답변을 검증하지 못/);
+  assert.match(text(detail),/기존 입장.*Registered stance/);
+  assert.equal(flatten(detail).filter(n=>n.tagName==='button').length,1);
+  const expired=render([],{evidence_scope:'expired',status:'abstain'});
+  assert.ok(!flatten(expired).some(n=>n.tagName==='details'));
+});
+
 test('explanatory abstention is visible even when checked paragraphs are present',()=>{
   const result=render([{origin:'external_evidence',text:'A limited study is not a universal guarantee.'}],{status:'abstain',answerability:'abstain'});
   assert.match(text(result),/요청한 답을 확인할 수 없어/);
   assert.match(text(result),/A limited study/);
+});
+
+async function restoreRoom(navigateWhileLoading) {
+  const js = fs.readFileSync(path.join(__dirname, '../src/commentscope/product/mvp.js'), 'utf8');
+  const document = {body: {dataset: {step: 'before'}}};
+  const state = {session: {rooms: [{room_id: 'room-1'}]}};
+  let finish;
+  const loading = new Promise(resolve => { finish = resolve; });
+  const context = vm.createContext({
+    document, state,
+    setRoom: room => { state.room = room; },
+    refreshRoom: () => loading,
+    showStep: step => { document.body.dataset.step = step; },
+  });
+  vm.runInContext(js.slice(js.indexOf('async function chooseRoom('), js.indexOf('function renderRooms(')), context);
+  const restore = vm.runInContext('chooseRoom("room-1")', context);
+  if (navigateWhileLoading) document.body.dataset.step = 'reflect';
+  finish();
+  await restore;
+  assert.equal(state.room.room_id, 'room-1');
+  return document.body.dataset.step;
+}
+
+test('a restored discussion does not override a later navigation to Reflect', async () => {
+  assert.equal(await restoreRoom(true), 'reflect');
+});
+
+test('a discussion still opens when the user stays on the loading step', async () => {
+  assert.equal(await restoreRoom(false), 'converse');
+});
+
+function memoryStorage() {
+  const entries = new Map();
+  return {
+    getItem: key => entries.get(key) ?? null,
+    setItem: (key, value) => entries.set(key, String(value)),
+    removeItem: key => entries.delete(key),
+  };
+}
+
+function browserTab(sharedStorage = memoryStorage(), api = undefined) {
+  const context = vm.createContext({crypto: require('node:crypto').webcrypto, api, btoa, TextEncoder,
+    sessionStorage: memoryStorage(), localStorage: sharedStorage, lastRoomKey: 'last-room'});
+  vm.runInContext(appSource.slice(0, appSource.indexOf('function node(')), context);
+  vm.runInContext(appSource.slice(appSource.indexOf('async function retryableWrite('), appSource.indexOf('function indexOf(')), context);
+  vm.runInContext(appSource.slice(appSource.indexOf('function readStored('), appSource.indexOf('function availableAnalysis(')), context);
+  return context;
+}
+
+test('retrying a lost write reuses its request ID and session credential until acknowledged', async () => {
+  const cases = [
+    ['begin', '/sessions', 'POST'], ['chat', '/sessions/S/rooms', 'POST'],
+    ['chat', '/synthesis-agents/A/rooms', 'POST'], ['initial', '/sessions/S/opinions/initial', 'PUT'],
+    ['current', '/sessions/S/opinions/current', 'PUT'], ['reflection', '/sessions/S/reflections', 'POST'],
+    ['reflection', '/sessions/S/reflections/R', 'PUT'],
+  ];
+  for (const [slot, path, method] of cases) {
+    const attempts = [];
+    const tab = browserTab(undefined, async (_path, _method, fields, token) => {
+      attempts.push({id: fields.request_id, token});
+      if (attempts.length === 1) throw Error('response lost');
+      return 'acknowledged';
+    });
+    const key = 'commentscope-mvp-pending-' + slot;
+    const write = vm.runInContext('retryableWrite', tab);
+    const fields = {text: 'a private draft'};
+    await assert.rejects(write(slot, path, method, fields), /response lost/);
+    assert.ok(tab.sessionStorage.getItem(key));
+    assert.ok(!tab.sessionStorage.getItem(key).includes(fields.text));
+    assert.equal(await write(slot, path, method, fields), 'acknowledged');
+    assert.deepEqual(attempts[1], attempts[0]);
+    assert.equal(tab.sessionStorage.getItem(key), null);
+    if (path === '/sessions') assert.match(attempts[0].token, /^[A-Za-z0-9_-]{43}$/);
+    await write(slot, path, method, fields);
+    assert.notEqual(attempts[2].id, attempts[0].id);
+  }
+});
+
+test('a changed pending opinion starts a distinct write', async () => {
+  const attempts = [];
+  const tab = browserTab(undefined, async (_path, _method, fields) => {
+    attempts.push(fields.request_id);
+    throw Error('response lost');
+  });
+  const write = vm.runInContext('retryableWrite', tab);
+  for (const text of ['first draft', 'second draft', 'second draft']) {
+    await assert.rejects(write('current', '/opinions/current', 'PUT', {text}), /response lost/);
+  }
+  assert.notEqual(attempts[0], attempts[1]);
+  assert.equal(attempts[1], attempts[2]);
+});
+
+test('a lost follow-up preserves the first room revision, then permits a deliberate repeat', async () => {
+  const attempts = [];
+  const tab = browserTab(undefined, async (_path, _method, payload) => {
+    attempts.push({...payload});
+    if (attempts.length === 1) throw Error('response lost');
+  });
+  const write = vm.runInContext('retryableWrite', tab);
+  let preparations = 0;
+  const send = target => write('message-R', '/rooms/R/messages', 'POST', {text:'Why?', target_agent_id:target},
+    async () => 8 + 4 * preparations++);
+  await assert.rejects(send('first'), /response lost/);
+  await send('first');
+  assert.equal(preparations, 1);
+  assert.deepEqual(attempts[0], attempts[1]);
+  assert.equal(attempts[1].expected_revision, 8);
+  await send('first');
+  await send('second');
+  assert.equal(preparations, 3);
+  assert.notEqual(attempts[2].request_id, attempts[1].request_id);
+  assert.equal(attempts[2].expected_revision, 12);
+  assert.equal(attempts[3].target_agent_id, 'second');
+});
+
+test('a confirmed room revision conflict lets the next send prepare against the current room', async () => {
+  const attempts = [];
+  const tab = browserTab(undefined, async (_path, _method, payload) => {
+    attempts.push({...payload});
+    if (attempts.length === 1) throw Object.assign(Error('room changed'), {code:'revision_conflict'});
+  });
+  const write = vm.runInContext('retryableWrite', tab);
+  const send = () => write('message-R', '/rooms/R/messages', 'POST', {text:'Why?'}, async () => attempts.length + 1);
+  await assert.rejects(send(), /room changed/);
+  await send();
+  assert.notEqual(attempts[1].request_id, attempts[0].request_id);
+  assert.equal(attempts[1].expected_revision, 2);
+});
+
+test('independent tabs restore their own reviews and the shared Library retains both', () => {
+  const shared = memoryStorage();
+  const first = browserTab(shared), second = browserTab(shared);
+  first.rememberSession('first', 'one');
+  assert.equal(second.activeAccess().session_id, 'first');
+  second.rememberSession('second', 'two');
+  assert.equal(first.activeAccess().session_id, 'first');
+  assert.equal(second.activeAccess().session_id, 'second');
+  first.leaveSession();
+  assert.equal(first.activeAccess(), null);
+  assert.equal(second.activeAccess().session_id, 'second');
+  assert.equal(browserTab(shared).activeAccess().session_id, 'second');
+  assert.deepEqual(Array.from(first.browserRecords(), record => record.session_id).sort(), ['first', 'second']);
+});
+
+test('restoring a saved reflection clears the startup message and preserves newer feedback', async () => {
+  const session = {analysis: {}, analysis_id: 'analysis', reflections: [{reflection_id: 'reflection'}]};
+  const elements = new Map();
+  const document = {body: {dataset: {step: 'before'}}, querySelectorAll: () => []};
+  const context = vm.createContext({
+    state: {}, selectedAnalysisKey: 'analysis', sessionStorage: memoryStorage(), document,
+    $: id => {
+      if (!elements.has(id)) elements.set(id, {});
+      return elements.get(id);
+    },
+    setSession() {}, renderAnalysis() {}, renderPerspectives() {},
+    showStep: step => { document.body.dataset.step = step; },
+  });
+  installUiStrings(context, 'en');
+  vm.runInContext(appSource.slice(appSource.indexOf('function status('), appSource.indexOf('function errorText(')), context);
+  vm.runInContext(appSource.slice(appSource.indexOf('async function enter('), appSource.indexOf("$('initial').oninput")), context);
+  context.status('Loading the registered discussion…');
+  let complete;
+  context.openSavedReflection = () => new Promise(resolve => { complete = resolve; });
+  const restore = context.enter(session, {reflection_id: 'reflection'});
+  assert.equal(document.body.dataset.step, 'reflect');
+  assert.equal(context.$('status').textContent, '');
+  context.status('A newer action is in progress');
+  complete();
+  await restore;
+  assert.equal(context.$('status').textContent, 'A newer action is in progress');
+});
+
+test('generated evidence aliases explain the registered claim without renumbering original comments', () => {
+  const citations = {anchor_claim_ids: ['claim'], comment_evidence: [{source_id: 'comment'}]};
+  const point = {origin: 'ai_reasoning', text: 'E1 supports the pilot.', citations};
+  const message = render([point], {evidence_scope: 'seeded_provenance'});
+  assert.match(text(message), /E1 · 참조한 주장/);
+  assert.match(text(flatten(message).find(n => n.tagName === 'details')), /Registered stance/);
+  assert.match(text(message), /E1 supports the pilot\./);
+  assert.equal(flatten(message).filter(n => n.tagName === 'button').length, 1);
+  assert.doesNotMatch(text(render([{...point, origin: 'original_comment'}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
+  assert.doesNotMatch(text(render([{...point, citations: {}}], {evidence_scope: 'seeded_provenance'})), /참조한 주장/);
+});
+
+test('the conversation leads with developed ideas and keeps repeated links in one closed evidence section',()=>{
+  const ref={url:'https://example.invalid/study',title:'A study'};
+  const view=render([
+    {origin:'original_comment',text:'A registered starting position',citations:{comment_evidence:[{source_id:'s'}]}},
+    {origin:'ai_reasoning',text:'I would test shorter days if pay stays the same.'},
+    {origin:'external_evidence',text:'The study compared schedules.',citations:{external_evidence:[ref,ref]}}
+  ]);
+  const details=flatten(view).find(n=>n.tagName==='details');
+  assert.ok(details&&!details.open);
+  assert.match(text(details),/A registered starting position/);
+  assert.equal(flatten(details).filter(n=>n.tagName==='a').length,1);
+  const bubble=flatten(view).find(n=>n.children.includes(details));
+  const visible=bubble.children.filter(n=>n!==details).map(text).join(' ');
+  assert.match(visible,/I would test shorter days/);
+  assert.doesNotMatch(visible,/A registered starting position/);
+});
+test('explicit collective requests and ordinary questions take different paths in both interface languages',()=>{
+  const context=vm.createContext({});
+  vm.runInContext(appSource.slice(appSource.indexOf('function asksForGroupConclusion'),appSource.indexOf('async function findGroupConclusion')),context);
+  for(const question of ['그래서 너희 셋의 결론은 뭐야?', '공통점을 정리해 줘', 'What can we all agree on?', 'Find common ground.']){
+    assert.equal(context.asksForGroupConclusion(question),true,question);
+  }
+  for(const question of ['네 입장의 근거는 뭐야?', '합의점을 찾지 말고 다른 아이디어를 알려 줘', 'Why is consensus difficult?', 'What do you think about the schedule?']){
+    assert.equal(context.asksForGroupConclusion(question),false,question);
+  }
+});
+
+test('when developed reasoning is held, show an actual source reason and distinguish a predicted effect',()=>{
+  const view=render([
+    {origin:'original_comment',text:'Try a later start.',declared_role:'core'},
+    {origin:'original_comment',text:'People might have more time to eat.',declared_role:'reason',kind:'prediction'},
+    {origin:'original_comment',text:'Start later!',declared_role:'core_restatement'}
+  ],{evidence_scope:'seeded_provenance'});
+  const detail=flatten(view).find(n=>n.tagName==='details');
+  const bubble=flatten(view).find(n=>n.children.includes(detail));
+  const visible=bubble.children.filter(n=>n!==detail).map(text).join(' ');
+  assert.match(visible,/댓글에서 기대한 효과.*People might have more time to eat/);
+  assert.doesNotMatch(visible,/Start later!/);
 });

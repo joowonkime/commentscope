@@ -8,31 +8,22 @@ import hashlib
 import json
 import re
 from urllib.parse import urlsplit, parse_qs
-from uuid import uuid4
 
 from commentscope.agents import seed_policy
 from commentscope.agents.seeded_runtime import SeededSession
 from commentscope.agents.grounded_runtime import GroundedSession
 from commentscope.agents.web import WebError
+from commentscope.errors import PipelineError
 from commentscope.factory.automatic_contract import digest
+from commentscope.ingestion.youtube import video_id_from_input
 from commentscope.providers.budget import BudgetExhausted
-from commentscope.product import contracts as contract
+from commentscope.product import contracts as contract, debate_store
+from commentscope.product.debate_service import DebateService, discussion_context
+from commentscope.product.input import cursor, integer, text, uid
 from commentscope.product.store import Store, encode, decode
 
 
 def now(): return datetime.now(timezone.utc)
-def uid(prefix): return prefix+uuid4().hex
-
-
-def text(value, maximum, *, empty=True):
-    if not isinstance(value,str) or len(value)>maximum or not empty and not value.strip():
-        raise WebError(400,'invalid_input')
-    return value
-
-
-def integer(value, minimum=0):
-    if type(value) is not int or value<minimum: raise WebError(400,'invalid_revision')
-    return value
 
 
 def token_hash(token):
@@ -43,6 +34,14 @@ def token_hash(token):
         if len(raw)!=32 or base64.urlsafe_b64encode(raw).decode().rstrip('=')!=token:raise ValueError()
     except ValueError:raise WebError(401,'session_token_required') from None
     return hashlib.sha256(token.encode()).hexdigest()
+
+
+def public_message(value):
+    result = {k: deepcopy(v) for k, v in value.items() if not k.startswith('_')}
+    for key in ('points', 'required_premises'):
+        if key in result:
+            result[key] = [{k: v for k, v in row.items() if not k.startswith('_')} for row in result[key]]
+    return result
 
 
 class RoomAgent(GroundedSession):
@@ -62,9 +61,13 @@ entries cannot address the point, select not_in_evidence.'''
 
 class ProductApp:
     def __init__(self,path,analyses,model,*,session_ttl_seconds,room_maximum_usd,reservation,
-                 revalidate=None,generation_status=None,decision=None,decision_reservation=None):
+                 revalidate=None,generation_status=None,decision=None,decision_reservation=None,
+                 debate_execution_binding=None,debate_balance=None,active_session_limit=8):
         if type(session_ttl_seconds) is not int or not 0<session_ttl_seconds<=86400:
             raise ValueError('Explicit session lifetime required')
+        if type(active_session_limit) is not int or active_session_limit < 1:
+            raise ValueError('Positive active session limit required')
+        self.active_session_limit = active_session_limit
         self.analyses={a.id:a for a in analyses}
         if not self.analyses:raise ValueError('Registered analyses required')
         self.ttl=session_ttl_seconds;self.room_limit=Decimal(room_maximum_usd)
@@ -76,6 +79,8 @@ class ProductApp:
         self.store=Store(path);self.model=model;self.reservation=reservation
         self.revalidate=revalidate or (lambda:None)
         self.generation_status=generation_status or (lambda:'ready')
+        self.debate_balance=debate_balance
+        self.debates=DebateService(self,debate_execution_binding)
         self.pool=ThreadPoolExecutor(max_workers=1,thread_name_prefix='commentscope-product')
 
     def close(self): self.pool.shutdown(wait=True)
@@ -124,7 +129,7 @@ class ProductApp:
         return [decode(r) for r in db.execute('SELECT data FROM messages WHERE room_id=? ORDER BY seq',(rid,))]
 
     def _message_public(self,value,analysis):
-        result={k:deepcopy(v) for k,v in value.items() if not k.startswith('_')}
+        result=public_message(value)
         if analysis.public()['status']=='expired' and result['author_kind']=='agent':
             result.update(points=[],required_premises=[],body=None,evidence_scope='expired')
         return result
@@ -140,6 +145,21 @@ class ProductApp:
                 'completed':value['cursor']>=len(value['schedule']) and not value.get('round_failed'),
                 'committed_turns':value['turn_count']-value.get('round_start_turn',0)})
         public['can_ask']=value['state'] in ('paused','awaiting_user') and value['turn_count']<18
+        public['can_resume']=value['state']=='paused' and value['cursor']<len(value['schedule']) and value['turn_count']<18
+        if value.get('kind'):
+            public['kind']=value['kind']
+            if value['kind']=='structured_debate':
+                public['debate_id']=value['debate_id']
+                public['can_ask']=False
+                public['turn_limit']=len(value['participant_ids'])*2
+                return public
+        if value['state'] in ('error','exhausted','needs_reconciliation') and value.get('job_id'):
+            row=db.execute('SELECT data FROM jobs WHERE id=?',(value['job_id'],)).fetchone()
+            if row:public['error_code']=(decode(row).get('error') or {}).get('code')
+        completed=value['cursor']
+        schedule=value['schedule'][:max(0,18-value.get('round_start_turn',0))]
+        public['round_progress']={'completed':min(completed,len(schedule)), 'total':len(schedule),
+            'active_agent_id':schedule[completed]['agent_id'] if value['state']=='running' and completed<len(schedule) else None}
         public['turn_limit']=18
         return public
 
@@ -158,9 +178,9 @@ class ProductApp:
 
     def _job(self,db,session,operation,args,room=None):
         if operation in ('comparison','reflection'):
-            for previous in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation=? AND state='succeeded'",(session['session_id'],operation)):
+            for previous in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation=? AND state IN ('queued','running','succeeded')",(session['session_id'],operation)):
                 candidate=decode(previous)
-                if candidate['args']==args:return 200,{'job_id':candidate['job_id'],'state':'succeeded','room_id':None}
+                if candidate['args']==args:return 200,{'job_id':candidate['job_id'],'state':candidate['state'],'room_id':None}
         status=self.generation_status()
         if status not in ('ready','busy'):raise WebError(503,status)
         if db.execute("SELECT 1 FROM jobs WHERE state='needs_reconciliation' LIMIT 1").fetchone():
@@ -179,8 +199,19 @@ class ProductApp:
 
     def _save_room(self,db,room):
         db.execute('UPDATE rooms SET data=? WHERE id=?',(encode(room),room['room_id']))
+        debate_store.sync_room(db,room)
 
-    def _append_message(self,db,room,author,*,body=None,agent_id=None,reply_to=None,turn=None,history=None):
+    def _new_room(self,db,session,analysis,mode,participants,initial_revision,**kind):
+        room={'room_id':uid('R'),'mode':mode,'participant_ids':participants,
+              'initial_revision':initial_revision,'analysis_revision':analysis.revision,
+              'state':'idle','revision':1,'epoch':0,'cursor':0,'last_seq':0,'turn_count':0,
+              'schedule':[],'round_id':0,'rounds':[],'round_failed':False,'round_start_turn':0,
+              'question':'','cost_usd':'0','maximum_cost_usd':str(self.room_limit),'job_id':None,
+              **kind}
+        db.execute('INSERT INTO rooms VALUES(?,?,?)',(room['room_id'],session['session_id'],encode(room)))
+        return room
+
+    def _append_message(self,db,room,author,*,body=None,agent_id=None,reply_to=None,turn=None,history=None,phase=None):
         room['last_seq']+=1;room['revision']+=1
         value={'message_id':uid('M'),'room_id':room['room_id'],'seq':room['last_seq'],
                'round_id':room['round_id'],'author_kind':author,'agent_id':agent_id,
@@ -190,30 +221,54 @@ class ProductApp:
             value.update({key:deepcopy(turn[key]) for key in
                           ('points','required_premises','answerability','limitation','status')})
             value['evidence_scope']='seeded_provenance' if turn.get('answer_mode')=='seeded_provenance' else 'full_allowlist';value['_history']=deepcopy(history)
+        if phase is not None:
+            value.update(phase=phase,coverage=turn['coverage'],_observation=turn['_observation'])
+            for index, point in enumerate(value['points'], 1):
+                point['point_id']=f'{value["message_id"]}:{index}'
         db.execute('INSERT INTO messages VALUES(?,?,?,?)',
                    (value['message_id'],room['room_id'],value['seq'],encode(value)))
         return value
 
     def _session_public(self,db,session):
         analysis=self._analysis(session,live=False);sid=session['session_id']
-        return {**deepcopy(session),'analysis':analysis.public(),
-                'initial_opinion':self._opinion(db,sid,'initial'),
+        initial=self._opinion(db,sid,'initial')
+        public=analysis.public()
+        comparisons={}
+        for row in db.execute("SELECT data FROM jobs WHERE session_id=? AND operation='comparison' AND state='succeeded'",(sid,)):
+            job=decode(row)
+            if public['status']!='expired' and job['args']['initial_revision']==initial['revision']:
+                comparisons[job['args']['perspective_id']]={'job_id':job['job_id'],
+                    'available':job['result']['available'],
+                    'relations':list(dict.fromkeys(item['relation'] for item in job['result']['items']))}
+        return {**deepcopy(session),'analysis':public,'comparisons':comparisons,
+                'initial_opinion':initial,
                 'current_opinion':self._opinion(db,sid,'current'),
-                'rooms':[{'room_id':r['room_id'],'mode':r['mode'],'state':r['state'],'revision':r['revision']}
+                'rooms':[{key:r[key] for key in ('room_id','mode','state','revision','kind','debate_id') if key in r}
                          for r in [decode(x) for x in db.execute('SELECT data FROM rooms WHERE session_id=?',(sid,))]],
                 'reflections':[{'reflection_id':r['id'],'revision':r['revision']} for r in db.execute(
                     'SELECT id,max(revision) AS revision FROM reflections WHERE session_id=? GROUP BY id',(sid,))],
-                'capabilities':{'explore_comparison':True,'one_to_one':True,'group':True,'reflection':True}}
+                'capabilities':{'explore_comparison':True,'one_to_one':True,'group':True,'reflection':True,
+                                **({'structured_debate':True} if self.debates.available(analysis) else {})}}
 
     def handle(self,method,path,token,body=None):
         parsed=urlsplit(path);parts=parsed.path.strip('/').split('/');schedule=None
         if parts[:2]!=['api','v1']:raise WebError(404,'not_found')
         if method=='GET' and parts==['api','v1','analyses']:
-            return 200,{'analyses':[a.public() for a in self.analyses.values()],
+            analyses=self.analyses.values()
+            query=parse_qs(parsed.query,keep_blank_values=True)
+            if 'video' in query:
+                values=query['video']
+                if len(values)!=1 or len(values[0])>2048:raise WebError(400,'invalid_video_url')
+                try:video_id=video_id_from_input(values[0])
+                except PipelineError as error:raise WebError(400,'invalid_video_url') from error
+                analyses=(analysis for analysis in analyses
+                          if any(analysis.provenance.get('video',{}).get(key)==video_id
+                                 for key in ('video_id','id')))
+            return 200,{'analyses':[a.public() for a in analyses],
                         'generation_status':self.generation_status()}
         if method!='GET' and not isinstance(body,dict):raise WebError(400,'invalid_body')
         try:
-            with self.store.transaction() as db:
+            with self.store.transaction(write=method != 'GET') as db:
                 if method=='POST' and parts==['api','v1','sessions']:
                     self._fields(body,'analysis_id bundle_revision initial_opinion request_id')
                     hashed=token_hash(token);analysis=self.analyses.get(body['analysis_id'])
@@ -225,7 +280,7 @@ class ProductApp:
                     if row:session=self._session(db,token)
                     else:
                         active=sum(datetime.fromisoformat(decode(x)['expires_at'])>now() for x in db.execute('SELECT data FROM app_sessions'))
-                        if active>=8:raise WebError(429,'session_capacity')
+                        if active>=self.active_session_limit:raise WebError(429,'session_capacity')
                         session={'session_id':uid('S'),'analysis_id':analysis.id,'bundle_revision':analysis.revision,
                                  'expires_at':(now()+timedelta(seconds=self.ttl)).isoformat()}
                         db.execute('INSERT INTO app_sessions VALUES(?,?,?)',(session['session_id'],hashed,encode(session)))
@@ -239,13 +294,16 @@ class ProductApp:
                     session=self._session(db,token,parts[3]);result=self._session_route(db,method,parts[4:],session,body)
                 elif len(parts)>=4 and parts[2]=='rooms':
                     session,room=self._room(db,token,parts[3]);result=self._room_route(db,method,parts[4:],session,room,body,parse_qs(parsed.query))
+                elif len(parts)>=4 and parts[2] in ('debates','syntheses','synthesis-agents'):
+                    result=self.debates.route(db,method,parts[2],parts[3],parts[4:],token,body,
+                                              parse_qs(parsed.query,keep_blank_values=True))
                 elif method=='GET' and len(parts)==4 and parts[2]=='jobs':
                     row=db.execute('SELECT * FROM jobs WHERE id=?',(parts[3],)).fetchone()
                     if row is None:raise WebError(404,'resource_missing')
                     session=self._session(db,token,row['session_id']);job=decode(row)
                     public={k:deepcopy(job[k]) for k in ('job_id','state','room_id','result','error')}
                     public['stale']=any(job['args'].get(kind+'_revision',self._opinion(db,session['session_id'],kind)['revision'])!=
-                        self._opinion(db,session['session_id'],kind)['revision'] for kind in ('initial','current')) if job['operation']!='room' else False
+                        self._opinion(db,session['session_id'],kind)['revision'] for kind in ('initial','current')) if job['operation'] not in ('room','debate') else False
                     if self._analysis(session,live=False).public()['status']=='expired':public['result']={'available':False,'reason':'source_expired'}
                     result=200,public
                 else:raise WebError(404,'not_found')
@@ -283,6 +341,8 @@ class ProductApp:
                 return self._job(db,session,'comparison',{'perspective_id':body['perspective_id'],
                     'initial_revision':opinion['revision']})
             return self._mutate(db,sid,'comparison',body,compare)
+        if method=='POST' and tail==['debates']:
+            return self.debates.create(db,session,body)
         if method=='POST' and tail==['rooms']:
             self._fields(body,'mode participant_ids initial_revision request_id')
             def create_room():
@@ -292,12 +352,7 @@ class ProductApp:
                         or len(ids)!=len(set(ids)) or any(i not in available for i in ids)
                         or body['mode']=='one_to_one' and len(ids)!=1
                         or body['mode']=='group' and not 2<=len(ids)<=3):raise WebError(422,'invalid_participants')
-                room={'room_id':uid('R'),'mode':body['mode'],'participant_ids':ids,
-                    'initial_revision':body['initial_revision'],'analysis_revision':analysis.revision,
-                    'state':'idle','revision':1,'epoch':0,'cursor':0,'last_seq':0,'turn_count':0,
-                    'schedule':[],'round_id':0,'rounds':[],'round_failed':False,'round_start_turn':0,
-                    'question':'','cost_usd':'0','maximum_cost_usd':str(self.room_limit),'job_id':None}
-                db.execute('INSERT INTO rooms VALUES(?,?,?)',(room['room_id'],sid,encode(room)))
+                room=self._new_room(db,session,analysis,body['mode'],ids,body['initial_revision'])
                 return 201,self._room_public(db,room,analysis)
             return self._mutate(db,sid,'create-room',body,create_room)
         if method=='POST' and tail==['reflection-analyses']:
@@ -318,7 +373,7 @@ class ProductApp:
         for mid in ids:
             row=db.execute('SELECT m.data FROM messages m JOIN rooms r ON r.id=m.room_id WHERE m.id=? AND r.session_id=?',(mid,sid)).fetchone()
             if row is None:raise WebError(404,'resource_missing')
-            values.append({k:v for k,v in decode(row).items() if not k.startswith('_')})
+            values.append(public_message(decode(row)))
         return values
 
     def _reflection_route(self,db,method,tail,session,body):
@@ -362,14 +417,15 @@ class ProductApp:
     def _room_route(self,db,method,tail,session,room,body,query):
         analysis=self._analysis(session,live=False);rid=room['room_id']
         if method=='GET' and not tail:
-            if set(query)-{'after_seq'} or any(len(v)!=1 for v in query.values()):raise WebError(400,'invalid_cursor')
-            after=int(query.get('after_seq',['0'])[0]);integer(after)
-            return 200,self._room_public(db,room,analysis,after)
+            return 200,self._room_public(db,room,analysis,cursor(query))
+        if room.get('kind')=='structured_debate':raise WebError(409,'debate_controls_required')
         if method!='POST' or len(tail)!=1:raise WebError(404,'not_found')
         action=tail[0]
         if action=='control':self._fields(body,'action expected_revision request_id')
         elif action=='start':self._fields(body,'opening_question expected_revision request_id')
-        elif action=='messages':self._fields(body,'text reply_to_message_id expected_revision request_id')
+        elif action=='messages':
+            fields='text reply_to_message_id expected_revision request_id'
+            self._fields(body,fields+(' target_agent_id' if 'target_agent_id' in body else ''))
         else:raise WebError(404,'not_found')
         def mutate():
             integer(body['expected_revision'])
@@ -388,7 +444,16 @@ class ProductApp:
                 room['revision']+=1;self._save_room(db,room)
                 return 200,self._room_public(db,room,analysis)
             self._analysis(session)
+            if room.get('kind')=='synthesis_chat':
+                self.debates._agent(db,room['participant_ids'][0],session)
+                if control=='next_round':raise WebError(400,'invalid_control')
             if room['turn_count']>=18:raise WebError(409,'turn_limit')
+            participants=room['participant_ids']
+            if action=='messages' and 'target_agent_id' in body:
+                target=body['target_agent_id']
+                if room['mode']!='group' or not isinstance(target,str) or target not in participants:
+                    raise WebError(422,'invalid_participants')
+                participants=[target]
             if action=='start':
                 if room['state']!='idle':raise WebError(409,'room_not_ready')
                 question=text(body['opening_question'],1000,empty=False)
@@ -400,7 +465,7 @@ class ProductApp:
                 if mid is not None and not any(m['message_id']==mid for m in self._messages(db,rid)):
                     raise WebError(404,'resource_missing')
             elif control=='resume':
-                if room['state']!='paused':raise WebError(409,'room_not_ready')
+                if room['state']!='paused' or room['cursor']>=len(room['schedule']):raise WebError(409,'room_not_ready')
                 room['state']='running';room['revision']+=1
                 return self._job(db,session,'room',{'epoch':room['epoch']},room)
             elif control=='next_round':
@@ -413,7 +478,8 @@ class ProductApp:
                     'committed_turns':room['turn_count']-room.get('round_start_turn',0)})
             room.update(epoch=room['epoch']+1,round_id=room['round_id']+1,cursor=0,state='running',question=question,
                         round_failed=False,round_start_turn=room['turn_count'])
-            room['schedule']=[{'agent_id':cid,'phase':phase} for phase in phases for cid in room['participant_ids']]
+            room.pop('_stages',None)
+            room['schedule']=[{'agent_id':cid,'phase':phase} for phase in phases for cid in participants]
             if action in ('start','messages'):
                 message=self._append_message(db,room,'user',body=question,reply_to=body.get('reply_to_message_id'))
                 room['user_message_id']=message['message_id']
@@ -435,7 +501,12 @@ class ProductApp:
                 self._finish_job(db,job,'running')
                 initial=self._opinion(db,session['session_id'],'initial',job['args'].get('initial_revision'))
                 current=self._opinion(db,session['session_id'],'current',job['args'].get('current_revision'))
-            if job['operation']=='room':return self._work_room(job,session,analysis)
+            if job['operation']=='debate':return self.debates.run(job,session,analysis)
+            if job['operation']=='room':
+                with self.store.transaction() as db:
+                    room=decode(db.execute('SELECT data FROM rooms WHERE id=?',(job['room_id'],)).fetchone())
+                if room.get('kind')=='synthesis_chat':return self.debates.run(job,session,analysis)
+                return self._work_room(job,session,analysis)
             if job['operation']=='comparison':
                 if not initial['segments']:result={'available':False,'items':[],'reason':'empty_initial_opinion'}
                 else:
@@ -468,7 +539,10 @@ class ProductApp:
                         room['state']='closed'
                         if state!='needs_reconciliation':self._finish_job(db,job,'cancelled',error={'code':code,'retryable':False})
                     else:
-                        room['state']='needs_reconciliation' if state=='needs_reconciliation' else 'exhausted' if code=='budget_exhausted' else 'error'
+                        failure='failed' if room.get('kind')=='structured_debate' else 'error'
+                        room['state']='needs_reconciliation' if state=='needs_reconciliation' else 'exhausted' if code=='budget_exhausted' else failure
+                    if room.get('kind')=='structured_debate':
+                        self.debates.failure(room,code)
                     room['round_failed']=True
                     room['revision']+=1;self._save_room(db,room)
 
@@ -490,7 +564,7 @@ class ProductApp:
                 task=room['schedule'][room['cursor']];messages=self._messages(db,rid)
                 peer=next((m for m in reversed(messages) if m['author_kind']=='agent' and m['agent_id']!=task['agent_id']),None) if task['phase']=='reply' else None
                 history=[m['_history'] for m in messages if m.get('agent_id')==task['agent_id']][-2:]
-                question=room['question'] if task['phase']!='reply' else 'Respond to the preceding perspective using your own position and explicit grounds.'
+                question=room['question']
                 cost_before=Decimal(room['cost_usd']);limit=Decimal(room['maximum_cost_usd'])
             charged=Decimal(0)
             seeded=seed_policy.seeded(analysis.bundle)
@@ -530,7 +604,12 @@ class ProductApp:
             self._analysis(session)
             context=None if peer is None else {'message_id':peer['message_id'],'agent_id':peer['agent_id'],
                                               'points':peer.get('points',[]),'body':peer.get('body')}
-            agent=(SeededSession(analysis.bundle,task['agent_id'],generator=generate,verifier=verify,peer=context)
+            prior=None
+            if seeded and room['mode']=='group' and task['phase']=='answer':
+                question_seq=next(m['seq'] for m in reversed(messages) if m['message_id']==room['user_message_id'])
+                prior=discussion_context(messages,question_seq,room['participant_ids'])
+            agent=(SeededSession(analysis.bundle,task['agent_id'],generator=generate,verifier=verify,
+                                 peer=context,prior_discussion=prior)
                    if seeded else RoomAgent(analysis.bundle,task['agent_id'],provider=provider,peer=context))
             agent.history=deepcopy(history)
             try:

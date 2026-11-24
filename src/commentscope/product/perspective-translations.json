@@ -1,0 +1,232 @@
+{
+  "AN2d373d76d4864b900f9f2071": {
+    "source_language": "ko",
+    "fields": {
+      "issue": {
+        "sha256": "c4629b65f2dd342a41ed9c434c283a6dfadf8007312416ef412083bc51b3cdde",
+        "en": "How should South Korea change its working days and hours?"
+      },
+      "name:MC064d0983242f252130ad73720fb07cad1abef7a01c730f6fe0765ec152108bbf": {
+        "sha256": "9ff88b59ffc8c83f3f07b7a3322f4722336e6b487c224de6f3aa9acbb1ef86e0",
+        "en": "Proposal to finish work at 4 p.m."
+      },
+      "claim:MC064d0983242f252130ad73720fb07cad1abef7a01c730f6fe0765ec152108bbf:C": {
+        "sha256": "5ca4367e0cb0b521e874dee49a9e09ba26d9a403102fa38f5ef9a42d8d6fca7c",
+        "en": "I think working from 9 a.m. to 4 p.m. would be good."
+      },
+      "claim:SE989343a8863f8e9abf428b89ccaea25fc4bb3bc4feee82d02bf99fe6eec948c5": {
+        "sha256": "1924eb7dc8d333255684ec35bd00a8faf9881ae4eec1ac99c407d233e1d512de",
+        "en": "Getting off work one hour earlier feels awkward."
+      },
+      "name:MC218735dca1443fe1d4d162acf900e4a5b75dd19ce7a0ed0972f1dc9e15dc9d17": {
+        "sha256": "afecd3c7bd48860ccaf3b97be3411960f8602df3991706bec0a772aa483b756a",
+        "en": "Call to overhaul the inclusive wage system"
+      },
+      "claim:MC218735dca1443fe1d4d162acf900e4a5b75dd19ce7a0ed0972f1dc9e15dc9d17:C": {
+        "sha256": "b86018d34d0a92137ba831f02373b0c6309d2d2d529e47d10780fd0a2d8cc6fa",
+        "en": "The inclusive wage system needs an overhaul."
+      },
+      "name:MC23d1bccab55e657ef99d7f4d0a64dde50775da1c31af89379d4a64e8c8e590c4": {
+        "sha256": "c39d6995a97c48c976b4b84b74f8c4f7f4df4d604025f081673ab3445106f85d",
+        "en": "Support for moving toward shorter working hours"
+      },
+      "claim:MC23d1bccab55e657ef99d7f4d0a64dde50775da1c31af89379d4a64e8c8e590c4:C": {
+        "sha256": "3d4cd98e693773c7e6a267f653ab1bccd440070fc7316d73517f13c9bdfeaaa2",
+        "en": "We should move toward shorter working hours."
+      },
+      "name:MC5423718a87db97fcf6b999e546244e6b5869e36c66cce75ad292bbf06be142c2": {
+        "sha256": "c68e5a70045088155051743a71143f21536b7f715912e771c999da39031f77a0",
+        "en": "Proposal to adopt a 9-to-5 schedule"
+      },
+      "claim:MC5423718a87db97fcf6b999e546244e6b5869e36c66cce75ad292bbf06be142c2:C": {
+        "sha256": "2f8541b1ab2d26b692ca11055cfa3fd05445d596c953b85625158310e5a4a552",
+        "en": "Let’s introduce a schedule that starts at 9 a.m. and ends at 5 p.m."
+      },
+      "claim:SE0d5cb083e59c465e2aa00aa119e2775c7c808c124fc5084f97660d31b49136ac": {
+        "sha256": "fbb9536af35c884c628701139db756faabc2ea93ca1ee2334e604277933b7c8b",
+        "en": "Then we’d have a healthy society where people don’t skip breakfast."
+      },
+      "name:MC830cebf60f5ed3b288fed657692e1a4384c137efdaaf9664ea78f0b20649e07e": {
+        "sha256": "ff4a602e83a0f552edb0480f7c56e1d8b27a1dea27753dbac703c5ad074e4555",
+        "en": "Doubts about a 4.5-day workweek"
+      },
+      "claim:MC830cebf60f5ed3b288fed657692e1a4384c137efdaaf9664ea78f0b20649e07e:C": {
+        "sha256": "257e9aa9def08a524574ade2116bb351478db8b62c774271198767d2046cc1bf",
+        "en": "A 4.5-day workweek is an unrealistic policy."
+      },
+      "name:MC8d01282fca21d41b5d76deee865a39f955db7dbce3e78f58193facdac05caaf6": {
+        "sha256": "31efb82ffb63947d5e28d3f13ebdc24e8a255202a82e4cf8dbce4fd73f2eaa64",
+        "en": "Call to abolish the inclusive wage system"
+      },
+      "claim:MC8d01282fca21d41b5d76deee865a39f955db7dbce3e78f58193facdac05caaf6:C": {
+        "sha256": "1491cb52fe15bd99550f0c7209e7d3073d1d4f7c24b6b7caa904eedb25d5ec75",
+        "en": "The inclusive wage system should be abolished."
+      },
+      "name:MC9b2f3d116a8fdcb109084f1f6c52d8abb8e462488399b2a81201609d167de072": {
+        "sha256": "652b258063bc69018f2582a152908557554826878be60c6b9d83f3f68de4c23d",
+        "en": "Keep five workdays and shorten each day"
+      },
+      "claim:MC9b2f3d116a8fdcb109084f1f6c52d8abb8e462488399b2a81201609d167de072:C": {
+        "sha256": "cca731604c33b9ca624329e0e386913943b2443f49d520f9033eb9b5a84e1524",
+        "en": "I favor keeping a five-day workweek but shortening each day so people finish at 4 or 5 p.m."
+      },
+      "name:MCb46a01c92c94875932b1f9279e64f408862d2c13ea58580cdd1443d29eea7cc8": {
+        "sha256": "e2e0f39ddf42465ed2db2bff79999473ce1d12ae28049ec980f5647955b30c03",
+        "en": "Call to reduce working hours"
+      },
+      "claim:MCb46a01c92c94875932b1f9279e64f408862d2c13ea58580cdd1443d29eea7cc8:C": {
+        "sha256": "caa1218cf4f6be182119e61dff60cd8c4d5e64cc14b57e4f3afb007804048af7",
+        "en": "Working hours should be reduced."
+      },
+      "name:MCd5d0b09d80bcd3fceebc362b9570d2582d32a18ed61f9248906e3614eb6bf5f7": {
+        "sha256": "6cbe8a801f6e7c7406e87b3c6786fa1d5a28356c847dbefaeb632c53242a32b5",
+        "en": "Preference for finishing at 5 p.m."
+      },
+      "claim:MCd5d0b09d80bcd3fceebc362b9570d2582d32a18ed61f9248906e3614eb6bf5f7:C": {
+        "sha256": "c7491d6f0e5fd5311c9f8e7500c3ea61530042509a69fe641ef5442bc876d088",
+        "en": "Finishing work at 5 p.m. is preferable."
+      },
+      "name:MCe180243574f9d90ce91d2626450493a4534f04f89b538092ff2bcc70f39ed1a5": {
+        "sha256": "60db64e2d82f06fa6528c0d8be08cbe1785a6a2e35d92138afdfa028d7794050",
+        "en": "Call for shorter work hours"
+      },
+      "claim:MCe180243574f9d90ce91d2626450493a4534f04f89b538092ff2bcc70f39ed1a5:C": {
+        "sha256": "9fb025e5e05fc58b7146dfba8e388fd244aa64b932fe1682207a9a167daad190",
+        "en": "Work hours should be shortened."
+      },
+      "name:MCfb51b131d79180df6cf63a89536a9016c6cbae7f8add9933a4bf448f293b579a": {
+        "sha256": "46b01827ebbe4f67cb771915d7fa39bfa053e6f45062bce983f971803ccab15f",
+        "en": "Preference for a 9-to-5 schedule"
+      },
+      "claim:MCfb51b131d79180df6cf63a89536a9016c6cbae7f8add9933a4bf448f293b579a:C": {
+        "sha256": "b6ccd12e5b3cfb869aaa508386ef97f911594e3943c7b343bf99e948fb0ac4cf",
+        "en": "A schedule that runs from 9 a.m. to 5 p.m. is desirable."
+      }
+    },
+    "topics": [
+      {
+        "en": "Daily schedules and finishing times",
+        "ko": "하루 근무시간과 퇴근 시각",
+        "members": [
+          "MC064d0983242f252130ad73720fb07cad1abef7a01c730f6fe0765ec152108bbf",
+          "MC5423718a87db97fcf6b999e546244e6b5869e36c66cce75ad292bbf06be142c2",
+          "MC9b2f3d116a8fdcb109084f1f6c52d8abb8e462488399b2a81201609d167de072",
+          "MCd5d0b09d80bcd3fceebc362b9570d2582d32a18ed61f9248906e3614eb6bf5f7",
+          "MCfb51b131d79180df6cf63a89536a9016c6cbae7f8add9933a4bf448f293b579a"
+        ]
+      },
+      {
+        "en": "Shortening working hours",
+        "ko": "전반적인 노동시간 단축",
+        "members": [
+          "MC23d1bccab55e657ef99d7f4d0a64dde50775da1c31af89379d4a64e8c8e590c4",
+          "MCb46a01c92c94875932b1f9279e64f408862d2c13ea58580cdd1443d29eea7cc8",
+          "MCe180243574f9d90ce91d2626450493a4534f04f89b538092ff2bcc70f39ed1a5"
+        ]
+      },
+      {
+        "en": "The inclusive wage system",
+        "ko": "포괄임금제",
+        "members": [
+          "MC218735dca1443fe1d4d162acf900e4a5b75dd19ce7a0ed0972f1dc9e15dc9d17",
+          "MC8d01282fca21d41b5d76deee865a39f955db7dbce3e78f58193facdac05caaf6"
+        ]
+      },
+      {
+        "en": "Feasibility of a 4.5-day week",
+        "ko": "주 4.5일제의 현실성",
+        "members": [
+          "MC830cebf60f5ed3b288fed657692e1a4384c137efdaaf9664ea78f0b20649e07e"
+        ]
+      }
+    ]
+  },
+  "AN86686e2ac5ada934d9ba3b23": {
+    "source_language": "en",
+    "fields": {
+      "issue": {
+        "sha256": "518c72be6da2263a1b037a4c8f812b5eb5a4987eeb968996272c2e499dae4d71",
+        "ko": "기업은 주당 근무를 줄여야 할까?"
+      },
+      "name:MC092f0d5ac8eb2106e118d54a9fa0160c85e861208d31e5d5ab7abd2e60c92a92": {
+        "sha256": "46c6c69e46ffad9ab0c688d477f0f635d90549aea6f28232f7dd25f608b7c47b",
+        "ko": "근무일 수 단축 지지"
+      },
+      "claim:MC092f0d5ac8eb2106e118d54a9fa0160c85e861208d31e5d5ab7abd2e60c92a92:C": {
+        "sha256": "12c69ee1f40abd46f601c10ed123bf4794aaceb6ce741a7bf43713cdee7e4c6d",
+        "ko": "나는 일주일에 일하는 날을 줄이는 데 찬성한다."
+      },
+      "claim:SE1e40259b149714929a6cdc5972f0663e903651de6d4706b1338ff7d9edcadb38": {
+        "sha256": "786a1ad3c10b5e8e0fb9b3c3472f795c1cdce7aa1c1f426ab7cab537d16a44e5",
+        "ko": "솔직히 이틀 쉬는 걸로는 부족하다고 느낀다."
+      },
+      "name:MC349adb7f2b614d251ea9ed6413cb17f2dc1c95450ad514ac60be6074752472c2": {
+        "sha256": "23ab408c2b9cc3dadf46a731503a251f4027860fc6ca06f03292554952e06a99",
+        "ko": "주 4일제 선호"
+      },
+      "claim:MC349adb7f2b614d251ea9ed6413cb17f2dc1c95450ad514ac60be6074752472c2:C": {
+        "sha256": "b2c42c7f9c899511e8a223c170634e06f85fe3fa82e3e0adc4ef1035995b3e8d",
+        "ko": "주 4일 근무가 바람직하다."
+      },
+      "name:MC3c7a9ec0d8c5dd7a6b9b821a9c9ffbaa8e766b8a9a84a8a3c33868d19870ddb2": {
+        "sha256": "bf24454729b3012120dee46c15e4046e3ce52987f9e1823f5188c05cc87a658b",
+        "ko": "일 너머의 삶"
+      },
+      "claim:MC3c7a9ec0d8c5dd7a6b9b821a9c9ffbaa8e766b8a9a84a8a3c33868d19870ddb2:C": {
+        "sha256": "0009f067a1d5e0967b076cbd3ab7d7fe63a8e715a43e51968918bcf8972eff35",
+        "ko": "삶에는 일 말고도 더 많은 것이 있다."
+      },
+      "name:MCbdc5cdf67669ab59fc3e5c31ef995356306e7c26ab0413d16da061d4f303ee76": {
+        "sha256": "08ed1372bdb39a512d37ea2620a41fc5493d8f66db78c0dc5104cbb8a4f00527",
+        "ko": "주 4일제 도입 요구"
+      },
+      "claim:MCbdc5cdf67669ab59fc3e5c31ef995356306e7c26ab0413d16da061d4f303ee76:C": {
+        "sha256": "2efb462a125dfbb4096113281029212443f82b7ae2bac66484d153bcbfae2610",
+        "ko": "주 4일 근무제를 도입해야 한다."
+      }
+    },
+    "topics": [
+      {
+        "en": "Number of working days",
+        "ko": "주당 근무일수",
+        "members": [
+          "MC092f0d5ac8eb2106e118d54a9fa0160c85e861208d31e5d5ab7abd2e60c92a92",
+          "MC349adb7f2b614d251ea9ed6413cb17f2dc1c95450ad514ac60be6074752472c2",
+          "MCbdc5cdf67669ab59fc3e5c31ef995356306e7c26ab0413d16da061d4f303ee76"
+        ]
+      },
+      {
+        "en": "Time outside work",
+        "ko": "일 밖의 시간",
+        "members": [
+          "MC3c7a9ec0d8c5dd7a6b9b821a9c9ffbaa8e766b8a9a84a8a3c33868d19870ddb2"
+        ]
+      }
+    ]
+  },
+  "ANfd69493b361ad885010fc447": {
+    "source_language": "en",
+    "fields": {
+      "issue": {
+        "sha256": "d771070e339062097291c84a67e16076aa239c897e0863ce365842af0972f509",
+        "ko": "교육에서 AI는 어떤 역할을 해야 할까?"
+      },
+      "name:MC221806eb7aec867557fb60ac330700c91961ea5e553d902dbf3ff3c343eeaeb6": {
+        "sha256": "9798b1bfabb3e313f2b429f124b57aa9e36d8e977dc4d7c59a27cf0de7ca7f0c",
+        "ko": "책임감 있는 도구 사용"
+      },
+      "claim:MC221806eb7aec867557fb60ac330700c91961ea5e553d902dbf3ff3c343eeaeb6:C": {
+        "sha256": "e96fdc86beede582e09962b11cae2348b8001ba08631f5a544f68d623abda7e2",
+        "ko": "무책임한 사람이 어떤 도구든 책임감 있게 쓸 거라고 믿을 수 없다."
+      },
+      "name:MC6bb0235af59e0d0726c62a01cd427ac80bbe8546c49b31247953cac98546ed55": {
+        "sha256": "dbbe6d9ecd53f4d4de4e7520771f83f651b0611ce69847b297c8feb5043d47a8",
+        "ko": "AI 탐지기에 대한 회의"
+      },
+      "claim:MC6bb0235af59e0d0726c62a01cd427ac80bbe8546c49b31247953cac98546ed55:C": {
+        "sha256": "f2b12b504b6d55a4f097673aae8ba9919c3b79e6285b487fb64a7de9b020f9d5",
+        "ko": "AI 탐지기를 신뢰해서는 안 된다."
+      }
+    }
+  }
+}

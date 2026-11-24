@@ -1,6 +1,8 @@
 # DS-v2 API·저장·프론트 연결 계약
 
-DEC-030 제품 흐름 accepted, DEC-029 기술 상세 proposed. 신규 endpoint·DB v2·화면은 **미구현**이다.
+DEC-030 제품 흐름 accepted, DEC-029 기술 상세 proposed.
+[백엔드 구현과 통합 안내](DEBATE_IMPLEMENTATION.md)에 신규 endpoint와 DB v2의 opt-in 상태, 실행 방법을 기록했다.
+I6의 `/mvp` 연결은 자동 토론 기능을 활성화한 환경에서 확인할 수 있다.
 기존 [PRODUCT_API](../PRODUCT_API.md)를 보존하고 opt-in capability로 추가한다.
 [프로토콜](DEBATE_SYNTHESIS_PROTOCOL.md)의 의미를 프론트나 API 계층에서 다시 정하지 않는다.
 
@@ -177,3 +179,8 @@ SPA framework 교체·extension 필수화·임의 URL 분석·개인 기록 홈�
 미구현 API의 mock은 합성 개발용으로 표시하고 실제 동작/품질처럼 시연하지 않는다.
 완료 기준은 사용자가 전체목록에서선택해한번시작하고기록을읽다가마지막결론/합의Agent에
 도달할수있는가다. Agent수·합의율이나내부검사통과만으로이사용가치를입증하지않는다.
+
+
+### 그룹 대화에서 합의 요청 (REQ-006·012)
+
+기존 토론 생성 요청에 선택적으로 `source_room_id`와 `source_cutoff_seq`를 함께 보낸다. 같은 세션·분석·참가자 순서의 그룹 방에서 게시된 발언이 있어야 한다. 다른 방의 최신 발언과 섞이지 않도록 서버가 현재 마지막 순번을 확인한다. 두 필드를 생략하면 독립 토론을 시작한다. 같은 대화 시점·사용자 질문·초기 의견 버전의 반복 요청은 기존 토론을 반환한다. 방 상세의 `round_progress`는 일반 대화의 이번 라운드에서 게시된 발언 수, 예정된 발언 수, 작성 중인 Agent ID를 제공한다.

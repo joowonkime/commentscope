@@ -73,14 +73,21 @@ def preflight(deployment,metadata=None):
     if metadata is None:
         url='https://openrouter.ai/api/v1/models/'+deployment['model']+'/endpoints'
         with build_opener(ProxyHandler({}),NoRedirect()).open(url,timeout=20) as response:metadata=json.load(response)['data']
-    endpoints=[e for e in metadata.get('endpoints',[]) if e.get('tag')==deployment['provider']]
-    if metadata.get('id')!=deployment['model'] or len(endpoints)!=1:raise ValueError('Pinned provider endpoint required')
-    e=endpoints[0];prices=endpoint_price_ceiling(e['pricing'])
-    if (e.get('provider_name')!=deployment['provider_name'] or e.get('context_length')!=deployment['context']
-            or e.get('status')!=0 or e.get('name','').split(' | ')[-1] not in deployment['response_models']
-            or any(Decimal(str(prices[k]))>Decimal(v) for k,v in deployment['prices'].items())):
-        raise ValueError('Provider, model limits or price ceiling changed')
-    return {'model':deployment['model'],'endpoint':deepcopy(e),'reservation_usd':str(reservation(deployment))}
+    provider=deployment['provider']
+    endpoints=[e for e in metadata.get('endpoints',[]) if str(e.get('tag','')).partition('/')[0]==provider]
+    tags=[e['tag'] for e in endpoints]
+    if (metadata.get('id')!=deployment['model'] or not endpoints or len(set(tags))!=len(tags)
+            or set(tags)-{provider,provider+'/zdr'}):
+        raise ValueError('Pinned provider endpoint required')
+    for endpoint in endpoints:
+        prices=endpoint_price_ceiling(endpoint['pricing'])
+        if (endpoint.get('provider_name')!=deployment['provider_name'] or endpoint.get('context_length')!=deployment['context']
+                or endpoint.get('status')!=0 or endpoint.get('name','').split(' | ')[-1] not in deployment['response_models']
+                or any(Decimal(str(prices[k]))>Decimal(v) for k,v in deployment['prices'].items())):
+            raise ValueError('Provider, model limits or price ceiling changed')
+    primary=next((e for e in endpoints if e['tag']==provider),endpoints[0])
+    return {'model':deployment['model'],'endpoint':deepcopy(primary),'validated_tags':sorted(tags),
+            'reservation_usd':str(reservation(deployment))}
 
 
 def answers(payload,response,deployment):

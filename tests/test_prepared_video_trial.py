@@ -59,6 +59,41 @@ class PreparedVideoTests(unittest.TestCase):
         self.assertEqual(plan['admission_policy'],t.seed_policy.POLICY)
         self.assertFalse(plan['quality_gate_passed'])
 
+    def test_three_thousand_comments_reach_plan_guard_and_product_registration(self):
+        from commentscope.product.analysis import from_factory
+        from experiments.grounding_contract_demo import fixture
+        snapshot=self.snapshot.to_dict()
+        bundle=fixture()
+        sources={s['id']:s['text'] for s in bundle['sources']}
+        sources.update({f'extra-{i}':f'A separate observation about proposal {i}.' for i in range(3000-len(sources))})
+        template=snapshot['comments'][0]
+        snapshot['comments']=[{**template,'comment_id':cid,'text_original':message,'likes':1} for cid,message in sources.items()]
+        # The same text in a root and in a reply denotes two distinct canonical sources.
+        next(c for c in snapshot['comments'] if c['comment_id']=='c3').update(parent_id='c1',parent_status='present')
+        snapshot['sampling']['target_count']=3000
+        self.snapshot_file.write_text(json.dumps(snapshot))
+        root,plan=self.prepare()
+        self.assertEqual(plan['canonical_population'],3000)
+        self.assertFalse(t.guard(plan)['new_money_owner'])
+        generated={'bundle':bundle}
+        t.write(root/'artifacts/agent-inputs.json',generated)
+        t.write(root/'artifacts/output.json',{'agent_inputs':generated,'membership_search_policy':t.SEARCH})
+        public=from_factory(root).public()
+        self.assertEqual((public['analyzed_comments'],public['engagement']['total_likes']),(3000,3000))
+        self.assertEqual(sum(row['count'] for row in public['composition']),3000)
+
+    def test_optional_new_video_budget_preserves_balance_and_frozen_limit(self):
+        root=self.root/'limited'
+        t.prepare(root,self.snapshot_file,self.refs,self.owner_file,self.policy_file,
+                  user_request='Bound this video',maximum_new_usd='1.5')
+        plan=t.read_json(root/'plan.json')
+        self.assertEqual((plan['subcap_usd'],plan['opening_scope_charge_usd']),('1.5','0.3'))
+        self.assertEqual(t.guard(plan)['maximum_new_usd'],'1.5')
+        plan['subcap_usd']='150'
+        (root/'plan.json').write_text(json.dumps(plan))
+        (root/'frozen.json').write_text(json.dumps({'plan_sha256':t.sha(root/'plan.json')}))
+        with self.assertRaises(ValueError):t.guard(plan)
+
     def test_second_plan_keeps_same_cumulative_owner_and_old_charges(self):
         _,first=self.prepare('first');_,second=self.prepare('second')
         self.assertEqual(first['spend_scope_sha256'],second['spend_scope_sha256'])
@@ -187,7 +222,10 @@ class PreparedVideoTests(unittest.TestCase):
             return {'provider':'OpenAI','model':t.e.remote.SOL['model'],
                 'choices':[{'finish_reason':'stop','message':{'content':json.dumps(value)}}],
                 'usage':{'cost':0.00001,'prompt_tokens':1,'completion_tokens':1}}
-        with patch.object(t,'from_factory',return_value=analysis),patch.object(t.e,'check_quota'),patch.object(t.e,'InferenceBudget') as budget:
+        with (patch.object(t, 'from_factory', return_value=analysis),
+              patch.object(t.e, 'check_quota'),
+              patch.object(t.e.api_resources.SpaceGuard, 'check'),
+              patch.object(t.e, 'InferenceBudget') as budget):
             budget.return_value.call.side_effect=reply
             app,legacy,session=t.build(root)
             try:

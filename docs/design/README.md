@@ -10,6 +10,8 @@ DEC-030의 전체적격Agent→사용자선택→자동턴제→최종결론/합
 
 **구현 전 검토할 신규 설계:** [토론·합의·파생 Agent](DEBATE_SYNTHESIS.md), [프로토콜/자료](DEBATE_SYNTHESIS_PROTOCOL.md), [API/저장/화면](DEBATE_SYNTHESIS_API.md), [작업/검증 인계](DEBATE_SYNTHESIS_HANDOFF.md). TASK031 문서 작업과 DEC029 proposed를 구별한다. 상세 제안의 수락 전032~037을구현완료/활성으로바꾸지않는다.
 
+**자동 토론 백엔드 검토본:** [계층별 구현과 무료 통합 방법](DEBATE_IMPLEMENTATION.md). TASK-032~035의 코드·합성 검증을 기술 계약 수락, 조원 화면, 실제 품질과 구별한다.
+
 **인수인계 진입:** [현재 구조·역할·용량 경계](IMPLEMENTED_STRUCTURE.md)와 [새 담당자 실행 안내](../HANDOFF.md). 999코호트/기본1000전달결함/명시3000설정을구별하며현재웹의1:1·그룹·성찰을미구현으로기록하지않는다.
 
 **현재 구현 계약:** [1출처 관점과 토론 논거 확장](SEEDED_PERSPECTIVE_DEBATE.md). 사용자 승인 DEC-028/TASK-026이며 legacy3출처와 새제품1출처·AI추론/외부문헌 경계를 구별한다. [기능·실제 대화 결과](SEEDED_PERSPECTIVE_RUNTIME_RESULT.md)를 확인하고, 다음 TASK-027은 구별되는 관점과 게시답변 유용성을 다룬다.

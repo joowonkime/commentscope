@@ -1,5 +1,6 @@
 from copy import deepcopy
 from decimal import Decimal
+from hashlib import sha256
 from datetime import datetime,timedelta,timezone
 import json
 import os
@@ -11,16 +12,31 @@ import unittest
 from unittest.mock import patch
 
 from tools import serve_mvp as server
+from tools import serve_assessment_credit as assessment_credit
 from commentscope.product.analysis import Analysis
 from commentscope.factory.claim_clusters import read_json,sha
 from commentscope.storage import write_json_exclusive as write
 from commentscope.providers.openrouter_budget import SpendLedger
 from commentscope.providers.budget import BudgetExhausted
+from commentscope.providers.remote_verification import SOL
 from experiments.grounding_contract_demo import fixture
 from test_openrouter import deployment
 
 
 class ProductServerPlanTests(unittest.TestCase):
+    def test_terminal_provider_error_explains_the_hold_and_keeps_the_charge(self):
+        self.product_cycle()
+        directory, _ = self.prepare()
+        product, _, broker = server.build(directory)
+        self.base.call.side_effect = RuntimeError('synthetic transport failure')
+        try:
+            job = self.compare(product)
+            self.assertEqual(job['error']['code'], 'unconfirmed_provider_call')
+            self.assertEqual(broker.status(), 'reconcile_required')
+            self.assertEqual(broker.ledger.summary()['uncertain_calls'], 1)
+        finally:
+            product.close()
+
     def product_cycle(self):
         from commentscope.providers.execution_cycle import PRODUCT_CYCLE_VERSION
         self.cycle.update(version=PRODUCT_CYCLE_VERSION,tasks=['TASK-011','TASK-012'],
@@ -43,6 +59,78 @@ class ProductServerPlanTests(unittest.TestCase):
             bind_cycle(self.cycle_file,self.cycle['selected_deployment'],self.policy,'1')
         for change in ({'maximum_additional_usd':'2.01'},{'user_request':' '},{'tasks':['TASK-005']},{'shared_policy_sha256':'f'*64}):
             with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
+
+    def test_public_credit_reuses_the_session_and_counts_old_spend_across_restarts(self):
+        from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION
+        key = os.environ['OPENROUTER_API_KEY']
+        self.policy['account_id'] = 'product-' + sha256(key.encode()).hexdigest()[:16]
+        (self.root / 'policy.json').write_text(json.dumps(self.policy))
+        self.product_cycle()
+        self.cycle.update(version=EVALUATION_CYCLE_VERSION, maximum_additional_usd='2')
+        self.cycle_file.write_text(json.dumps(self.cycle))
+        self.analysis.compiled['expires_at'] = (datetime.now(timezone.utc) + timedelta(days=2)).isoformat()
+        directory, frozen = self.prepare()
+        old, _, capped = server.build(directory)
+        token = secrets.token_urlsafe(32)
+        try:
+            _, session = old.handle('POST', '/api/v1/sessions', token, {
+                'analysis_id': self.analysis.id, 'bundle_revision': self.analysis.revision,
+                'initial_opinion': 'Keep my entry.', 'request_id': 'original'})
+            charge = capped.ledger.reserve(frozen['spend_scope_sha256'], 'b'*64, '2',
+                                          run_limit_usd='2', key_remaining_usd='49.9')
+            capped.ledger.finish(charge, '2')
+            self.assertEqual(capped.status(), 'budget_exhausted')
+            self.assertEqual(capped.debate_balance(), Decimal('0'))
+        finally:
+            old.close()
+        product, _, broker = assessment_credit.build(directory)
+        try:
+            self.assertEqual(product.handle('GET', '/api/v1/sessions/' + session['session_id'], token)[0], 200)
+            self.assertEqual(product.room_limit, Decimal(frozen['room_maximum_usd']))
+            self.assertEqual(broker.debate_balance(), Decimal('47.9'))
+            with patch.object(server, 'key_metadata', return_value={'limit_remaining': '0.21'}):
+                self.assertEqual(broker.debate_balance(), Decimal('0.21'))
+            with patch.object(server, 'key_metadata', return_value={'limit_remaining': None}):
+                with self.assertRaises(server.WebError):
+                    broker.debate_balance()
+            self.assertEqual(self.compare(product)['state'], 'succeeded')
+            self.assertEqual(broker._charged(), Decimal('0.00001'))
+        finally:
+            product.close()
+        again, _, resumed = assessment_credit.build(directory)
+        try:
+            self.assertEqual(resumed.plan['spend_scope_sha256'], broker.plan['spend_scope_sha256'])
+            self.assertEqual(resumed.ledger.summary()['charged_usd'], '2.10001')
+            self.assertEqual(resumed._charged(), broker._charged())
+            self.assertEqual(server.validate(directory), frozen)
+        finally:
+            again.close()
+        with patch.dict(os.environ, {'OPENROUTER_API_KEY': 'other-team-key'}):
+            with self.assertRaisesRegex(ValueError, 'bound'):
+                assessment_credit.build(directory)
+        with self.assertRaisesRegex(ValueError, 'hosted evaluation'):
+            assessment_credit.key_credit_plan({**frozen, 'factory_trial': {}}, key)
+        self.product_cycle()
+        with self.assertRaisesRegex(ValueError, 'hosted evaluation'):
+            assessment_credit.key_credit_plan({**frozen, 'cycle': self.cycle}, key)
+
+    def test_three_week_evaluation_is_product_only_and_bound_to_source_lifetime(self):
+        from commentscope.providers.execution_cycle import EVALUATION_CYCLE_VERSION, bind_cycle, cycle_guard
+        self.product_cycle()
+        start=datetime.fromisoformat(self.cycle['started_at'])
+        end=(start+timedelta(days=21)).isoformat()
+        with self.assertRaises(ValueError):cycle_guard({**self.cycle,'deadline':end})
+        self.cycle.update(version=EVALUATION_CYCLE_VERSION,deadline=end)
+        self.cycle_file.write_text(json.dumps(self.cycle))
+        cycle_guard(self.cycle)
+        with self.assertRaisesRegex(ValueError,'Product-only'):
+            bind_cycle(self.cycle_file,self.cycle['selected_deployment'],self.policy,'1')
+        for change in ({'deadline':(start+timedelta(days=21,seconds=1)).isoformat()},{'maximum_additional_usd':'2.01'}):
+            with self.subTest(change=change),self.assertRaises(ValueError):cycle_guard({**self.cycle,**change})
+        self.analysis.compiled['expires_at']=(start+timedelta(days=10)).isoformat()
+        with self.assertRaisesRegex(ValueError,'through the deadline'):self.prepare()
+        self.analysis.compiled['expires_at']=(start+timedelta(days=22)).isoformat()
+        self.assertEqual(self.prepare()[1]['active_session_limit'],64)
 
     def setUp(self):
         temp=tempfile.TemporaryDirectory(dir='runs',prefix='mvp-plan-test-');self.addCleanup(temp.cleanup)
@@ -98,8 +186,38 @@ class ProductServerPlanTests(unittest.TestCase):
         directory,plan=self.prepare()
         self.base.call.assert_not_called()
         self.assertEqual(plan['spend_scope_sha256'],sha(self.cycle_file))
+        self.assertEqual(plan['active_session_limit'],8)
         self.assertFalse(plan['quality_gate_passed'])
         self.assertNotIn('synthetic-test-key',(directory/'plan.json').read_text(encoding='utf-8'))
+
+    def test_registered_video_library_reads_both_frozen_analyses_without_inference(self):
+        other_path=self.root/'second-factory'
+        write(other_path/'snapshot.json',{'synthetic':True})
+        write(other_path/'plan.json',{'snapshot':str(other_path/'snapshot.json')})
+        write(other_path/'artifacts/agent-inputs.json',{})
+        write(other_path/'artifacts/output.json',{})
+        other=Analysis(fixture(),{'video':{'title':'Second registered video'}})
+        directory=self.root/'catalog'
+        with patch.object(server,'from_factory',side_effect=[self.analysis,other]):
+            plan=server.prepare(directory,self.factory,self.cycle_file,session_ttl_seconds=3600,
+                                room_maximum_usd='1',additional_factory_runs=(other_path,))
+        self.assertEqual(plan['spend_scope_sha256'],sha(self.cycle_file))
+        self.assertIn(str((other_path/'snapshot.json').resolve()),plan['inputs'])
+        app,_,_=server.build(directory)
+        try:
+            _,inventory=app.handle('GET','/api/v1/analyses','')
+            self.assertEqual([item['analysis_id'] for item in inventory['analyses']],[self.analysis.id,other.id])
+        finally:app.close()
+        (other_path/'snapshot.json').write_text('{}',encoding='utf-8')
+        with self.assertRaisesRegex(ValueError,'Frozen product server'):
+            server.build(directory)
+        self.base.call.assert_not_called()
+
+    def test_duplicate_registered_analysis_refuses_before_inference(self):
+        with self.assertRaisesRegex(ValueError,'Duplicate registered analysis'):
+            server.prepare(self.root/'duplicate',self.factory,self.cycle_file,session_ttl_seconds=3600,
+                           room_maximum_usd='1',additional_factory_runs=(self.factory,))
+        self.base.call.assert_not_called()
 
     def test_two_server_plans_share_one_existing_cycle_charge(self):
         for name in ('first','second'):
@@ -286,6 +404,35 @@ class ProductServerPlanTests(unittest.TestCase):
         with app.store.transaction() as db:
             stored=decode(db.execute('SELECT data FROM rooms WHERE id=?',(room['room_id'],)).fetchone())
             return Decimal(stored['cost_usd'])
+
+    def test_automatic_debate_start_uses_strict_provider_reservation(self):
+        self.seeded()
+        bundle = deepcopy(self.analysis.bundle)
+        bundle['candidates'].append({**deepcopy(bundle['candidates'][0]), 'id': 'P2'})
+        self.analysis = Analysis(bundle, {'synthetic': True})
+        server.from_factory.return_value = self.analysis
+        self.cycle['selected_deployment'] = deepcopy(SOL)
+        self.cycle_file.write_text(json.dumps(self.cycle))
+        directory = self.root/'automatic-debate'
+        server.prepare(directory, self.factory, self.cycle_file, session_ttl_seconds=3600,
+                       room_maximum_usd='1', automatic_debate=True)
+        product, _, _ = server.build(directory)
+        try:
+            token = secrets.token_urlsafe(32)
+            _, session = product.handle('POST', '/api/v1/sessions', token, {
+                'analysis_id': self.analysis.id, 'bundle_revision': self.analysis.revision,
+                'initial_opinion': '', 'request_id': 'create'})
+            _, debate = product.handle('POST', '/api/v1/sessions/'+session['session_id']+'/debates', token, {
+                'analysis_revision': self.analysis.revision, 'participant_ids': ['P1', 'P2'],
+                'initial_revision': 1, 'question': 'What should we do?', 'request_id': 'debate'})
+            with patch.object(product, '_job', return_value=(202, {'job_id': 'queued'})) as enqueue:
+                status, _ = product.handle('POST', '/api/v1/debates/'+debate['debate_id']+'/start', token,
+                                           {'expected_revision': debate['revision'], 'request_id': 'start'})
+                self.assertEqual(status, 202)
+                enqueue.assert_called_once()
+            self.base.call.assert_not_called()
+        finally:
+            product.close()
 
     def test_seeded_server_freezes_verifier_and_routes_both_charges_without_duplicate_dispatch(self):
         self.seeded();directory,plan=self.prepare()

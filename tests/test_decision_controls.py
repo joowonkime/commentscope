@@ -92,6 +92,19 @@ class DecisionControlsTests(unittest.TestCase):
            'context_length':262144,'status':0,'pricing':{'prompt':'0.000000042','completion':'0'}}
         metadata={'id':od.DEPLOYMENT['model'],'endpoints':[e]}
         self.assertEqual(od.preflight(od.DEPLOYMENT,metadata)['reservation_usd'],'0.011010048')
+        zdr = {**e,'tag':'typesafe/zdr'}
+        self.assertEqual(od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':[zdr]})['endpoint'],zdr)
+        for endpoints in ([e,zdr],[zdr,e]):
+            checked=od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':endpoints})
+            self.assertEqual(checked['endpoint'],e)
+            self.assertEqual(checked['validated_tags'],['typesafe','typesafe/zdr'])
+        for endpoints in ([e,e],[zdr,zdr],[e,{**zdr,'context_length':131072}],
+                          [e,{**zdr,'pricing':{'prompt':'0.00000009','completion':'0'}}],
+                          [zdr,{**e,'tag':'typesafe/other'}],[{**e,'tag':'typesafe/other'}],
+                          [{**zdr,'provider_name':'Different'}]):
+            with self.subTest(endpoints=endpoints),self.assertRaises(ValueError):
+                od.preflight(od.DEPLOYMENT,{**metadata,'endpoints':endpoints})
+
         for field,value in [('context_length',131072),('pricing',{'prompt':'0.000000043','completion':'0'})]:
             bad=deepcopy(metadata);bad['endpoints'][0][field]=value
             with self.assertRaises(ValueError):od.preflight(od.DEPLOYMENT,bad)

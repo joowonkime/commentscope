@@ -26,6 +26,20 @@ class ProductHTTPTests(unittest.TestCase):
         status,headers,body=get('/mvp/assets/4ea9b.svg')
         self.assertEqual(status,200);self.assertTrue(body)
         policy=dict(headers)['Content-Security-Policy'];self.assertIn("font-src 'self'",policy);self.assertNotIn('unsafe-inline',policy)
+        status, headers, body = get('/mvp/opinion-samples.json')
+        self.assertEqual(status, 200)
+        self.assertIn('application/json', dict(headers)['Content-Type'])
+        for sample in json.loads(body).values():
+            self.assertEqual(sample['sample_size'], sample['positions'] + sample['no_position'] + sample['unclear'])
+            self.assertNotIn('comments', sample)
+        status, headers, body = get('/mvp/perspective-translations.json')
+        self.assertEqual(status, 200)
+        self.assertIn('application/json', dict(headers)['Content-Type'])
+        for record in json.loads(body).values():
+            self.assertIn(record['source_language'], ('en', 'ko'))
+            for field in record['fields'].values():
+                self.assertRegex(field['sha256'], r'^[a-f0-9]{64}$')
+                self.assertNotIn('original', field)
         for path in ('/mvp/assets/../mvp.js','/mvp/assets/missing.svg','/mvp/assets/key.txt'):
             self.assertEqual(get(path)[0],404)
         self.assertFalse(self.calls)

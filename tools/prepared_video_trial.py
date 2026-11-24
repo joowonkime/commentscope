@@ -31,6 +31,7 @@ from commentscope.product.app import ProductApp
 from commentscope.product.web import ProductServer
 from commentscope.providers import host_resources,openrouter_decisions as decisions
 from commentscope.providers.execution_lock import experiment_lock
+from commentscope.providers.openrouter_budget import dollars, units
 from commentscope.providers.generation_limits import allocate
 from commentscope.storage import write_json_exclusive as write
 from tools.serve_mvp import ASSETS
@@ -52,14 +53,18 @@ def window(auth,*,call_seconds=0,allow_expired=False,now=None):
         raise TimeoutError('Prepared-video execution window expired')
 
 
-def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user_request):
+def registered_sources(snapshot):
+    return sources(snapshot,include_video_context=True,maximum_comments=SEARCH['maximum_snapshot_comments'])
+
+
+def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user_request,maximum_new_usd=None):
     directory=Path(directory).resolve()
     paths=[Path(p).resolve() for p in (snapshot_file,reference_file,owner_file,policy_file)]
     for path in [directory,*paths]:e.private(path)
     snapshot_file,reference_file,owner_file,policy_file=paths
     if directory.exists() or not isinstance(user_request,str) or not user_request.strip():
         raise ValueError('Fresh explicit registered-video request required')
-    snapshot=load_snapshot(snapshot_file).snapshot;registry=sources(snapshot,include_video_context=True)
+    snapshot=load_snapshot(snapshot_file).snapshot;registry=registered_sources(snapshot)
     if not 1<=len(snapshot.comments)<=3000:raise ValueError('Fixed registered comment pool required')
     owner=read_json(owner_file);policy=read_json(policy_file);refs=read_json(reference_file)
     if (policy['maximum_usd']!='150' or owner['maximum_usd']!='150'
@@ -75,6 +80,11 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
     if account['reserved_calls'] or account['uncertain_calls']:raise e.BudgetExhausted('Unsettled existing account')
     key=e.key_metadata()
     if key['limit']!=150:raise ValueError('Observed team150 limit required')
+    if maximum_new_usd is not None:
+        amount=units(maximum_new_usd)
+        if not 0<amount<=min(units(account['remaining_usd']),units(key['limit_remaining'])):
+            raise ValueError('New video budget must fit remaining account and key credit')
+        maximum_new_usd=dollars(amount)
     providers={'generation':e.provider_preflight(e.remote.SOL),'embedding':e.embedding_preflight(),
                'typed':decisions.preflight(decisions.DEPLOYMENT)}
     cutoff,history=previous.history(policy);now=datetime.now(timezone.utc)
@@ -84,6 +94,7 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
           'opening_account':account,'opening_owner':own,'history_cutoff':cutoff,'history_sha256':history,
           'maximum_new_physical_calls':MAX_CALLS,'new_money_owner':False,'retries':0,'fallback':None,
           'key_observation':key,'providers':providers}
+    if maximum_new_usd is not None:auth['maximum_new_usd']=maximum_new_usd
     directory.mkdir();write(directory/'authorization.json',auth)
     files=[*paths,*(ROOT/p for p in TOOLS),*ASSETS]
     plan={'artifact_kind':VERSION,'run_directory':str(directory),'snapshot':str(snapshot_file),
@@ -92,7 +103,8 @@ def prepare(directory,snapshot_file,reference_file,owner_file,policy_file,*,user
           'video_id':snapshot.to_dict()['video']['video_id'],'expires_at':snapshot.usage.expires_at,
           'authorization':{'file':str(directory/'authorization.json'),'sha256':sha(directory/'authorization.json')},
           'spend_policy':policy,'policy_file':str(policy_file),'spend_scope_sha256':sha(owner_file),
-          'maximum_cost_usd':'150','subcap_usd':'150','opening_scope_charge_usd':'0',
+          'maximum_cost_usd':'150','subcap_usd':maximum_new_usd or '150',
+          'opening_scope_charge_usd':own['charged_usd'] if maximum_new_usd else '0',
           'deployment':deepcopy(e.remote.SOL),'verification_deployment':deepcopy(e.remote.SOL),
           'embedding_deployment':deepcopy(e.remote.EMBEDDING),'membership_deployment':deepcopy(decisions.DEPLOYMENT),
           'membership_judge_protocol':jev_membership.VERSION,'membership_search_policy':deepcopy(SEARCH),
@@ -129,8 +141,10 @@ def guard(plan,*,call_seconds=0,allow_expired=False,require_settled=True):
             or plan['spend_scope_sha256']!=owner['sha256']
             or plan['spend_policy']!=read_json(plan['policy_file'])
             or plan['spend_policy']['maximum_usd']!='150'
-            or any(plan[k]!='150' for k in ('maximum_cost_usd','subcap_usd','room_maximum_usd'))
-            or plan['opening_scope_charge_usd']!='0' or plan['admission_policy']!=seed_policy.POLICY
+            or any(plan[k]!='150' for k in ('maximum_cost_usd','room_maximum_usd'))
+            or plan['subcap_usd']!=auth.get('maximum_new_usd','150')
+            or not 0<units(plan['subcap_usd'])<=units('150')
+            or plan['opening_scope_charge_usd']!=(auth['opening_owner']['charged_usd'] if 'maximum_new_usd' in auth else '0') or plan['admission_policy']!=seed_policy.POLICY
             or plan['membership_search_policy']!=SEARCH or plan['membership_judge_protocol']!=jev_membership.VERSION
             or plan['source_evidence_protocol']!=graph.VERSION or plan['deployment']!=e.remote.SOL
             or plan['verification_policy']!=graph.VERIFICATION_POLICY or plan['role_registry']!=e.remote.ROLES
@@ -142,7 +156,7 @@ def guard(plan,*,call_seconds=0,allow_expired=False,require_settled=True):
             or plan['formal_admission_eligible'] is not False or plan['quality_gate_passed'] is not False
             or plan['cross_run_response_reuse'] is not False):
         raise ValueError('Prepared-video inherited finance or role contract changed')
-    snapshot=load_snapshot(Path(plan['snapshot'])).snapshot;registry=sources(snapshot,include_video_context=True)
+    snapshot=load_snapshot(Path(plan['snapshot'])).snapshot;registry=registered_sources(snapshot)
     refs=read_json(plan['reference_file'])
     if (plan['documents']!=refs['documents'] or plan['selections']!=refs['selections']
             or plan['classifier']!=e.model_identity()
@@ -173,7 +187,7 @@ class Session(shared.Session):
             raise ValueError('Use the original prepared-video directory')
         guard(plan,allow_expired=True)
         super().__init__(directory,plan,dispatch,authorization_guard=guard)
-        self.registry=sources(load_snapshot(Path(plan['snapshot'])).snapshot,include_video_context=True)
+        self.registry=registered_sources(load_snapshot(Path(plan['snapshot'])).snapshot)
         self.allowed=set(plan['scope_ids']);self.seen=set();self.counts=Counter();self.runtime_lock=threading.Lock()
         for p in self.directory.joinpath('calls').glob('*.request.json'):
             self.seen.add(read_json(p)['request_sha256'])
@@ -346,11 +360,12 @@ def main():
     p=sub.add_parser('prepare');p.add_argument('directory',type=Path)
     for name in ('snapshot','reference','owner','policy'):p.add_argument('--'+name,type=Path,required=True)
     p.add_argument('--user-request',required=True)
+    p.add_argument('--max-new-usd',help='Maximum additional spend for this video on the existing owner')
     p=sub.add_parser('run');p.add_argument('directory',type=Path)
     p=sub.add_parser('serve');p.add_argument('directory',type=Path);p.add_argument('--port',type=int,default=8767)
     args=parser.parse_args()
     if args.key_file:os.environ['OPENROUTER_API_KEY']=args.key_file.read_text().strip()
-    if args.action=='prepare':result=prepare(args.directory,args.snapshot,args.reference,args.owner,args.policy,user_request=args.user_request)
+    if args.action=='prepare':result=prepare(args.directory,args.snapshot,args.reference,args.owner,args.policy,user_request=args.user_request,maximum_new_usd=args.max_new_usd)
     elif args.action=='run':result=run(args.directory)
     else:
         with experiment_lock(args.directory):
